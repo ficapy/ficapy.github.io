@@ -1,0 +1,527 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>V2EX签到脚本 - 邹雷</title>
+    <meta name="author" content="Ficapy">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本
+顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫
+凑字数完毕→_→
+哦，情人节！！！">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="V2EX签到脚本">
+<meta property="og:url" content="http://ficapy.com/2014/08/02/v2ex_signin/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本
+顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫
+凑字数完毕→_→
+哦，情人节！！！">
+<meta property="og:updated_time" content="2016-03-03T09:13:59.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="V2EX签到脚本">
+<meta name="twitter:description" content="本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本
+顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫
+凑字数完毕→_→
+哦，情人节！！！">
+<meta name="twitter:creator" content="@aec4d">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-ejlztp1tasruqfvoz6xmgqng0anzae8ox7cqjj5yibieqgcmhe9fwxfae6zj.min.css" type="text/css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?a6ac3798de98c504fa2cbff2cc8bd755";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="3">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <h1 class="header-title">
+        <a class="header-title-link" href="/ ">邹雷</a>
+    </h1>
+    
+        
+            <a  class="header-right-picture "
+                href="/#about">
+        
+        
+            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="3">
+    
+        <div class="sidebar-profile">
+            <a href="/#about">
+                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+            </a>
+            <span class="sidebar-profile-name">Ficapy</span>
+        </div>
+    
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/ "
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                    <span class="sidebar-button-desc">首页</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-categories"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                    <span class="sidebar-button-desc">分类</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-tags"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                    <span class="sidebar-button-desc">标签</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-archives"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                    <span class="sidebar-button-desc">归档</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link st-search-show-outputs"
+                         href="/#search"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                    <span class="sidebar-button-desc">搜索</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/#about"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                    <span class="sidebar-button-desc">关于</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://github.com/Ficapy" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                    <span class="sidebar-button-desc">GitHub</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                    <span class="sidebar-button-desc">Twitter</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                    <span class="sidebar-button-desc">邮箱</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/atom.xml"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                    <span class="sidebar-button-desc">RSS</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+</nav>
+
+            
+            <div id="main" data-behavior="3"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            V2EX签到脚本
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" content="Sat Aug 02 2014 22:18:00 GMT+0800">
+	
+		    8月 02, 2014
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+
+
+    
+</div>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本</p>
+<p>顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫</p>
+<p>凑字数完毕→_→</p>
+<p>哦，情人节！！！</p>
+<a id="more"></a>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ==UserScript==</span></span><br><span class="line"><span class="comment">// @name        V2EX签到</span></span><br><span class="line"><span class="comment">// @description V2EX任意页面自动签到</span></span><br><span class="line"><span class="comment">// @include     http*://*.v2ex.com/*</span></span><br><span class="line"><span class="comment">// @include     http*://v2ex.com/*</span></span><br><span class="line"><span class="comment">// @author      ficapy</span></span><br><span class="line"><span class="comment">// @grant       GM_getValue</span></span><br><span class="line"><span class="comment">// @grant       GM_setValue</span></span><br><span class="line"><span class="comment">// @grant       GM_xmlhttpRequest</span></span><br><span class="line"><span class="comment">// @version     2014.7.18</span></span><br><span class="line"><span class="comment">// @namespace   None</span></span><br><span class="line"><span class="comment">// ==/UserScript==</span></span><br><span class="line"><span class="comment">// 注：参照 http://www.v2ex.com/t/80927 所修改</span></span><br><span class="line"> </span><br><span class="line"><span class="comment">//在V2EX搜索框显示需要提示的信息</span></span><br><span class="line"><span class="keyword">var</span> showInformation = <span class="function"><span class="keyword">function</span> (<span class="params">text</span>) </span>&#123;</span><br><span class="line">    <span class="built_in">document</span>.getElementById(<span class="string">"q"</span>).value = text;</span><br><span class="line">&#125;;</span><br><span class="line"> </span><br><span class="line"><span class="comment">//检测是否登录</span></span><br><span class="line"><span class="keyword">if</span> (<span class="built_in">document</span>.getElementsByClassName(<span class="string">"bigger"</span>).length)&#123;</span><br><span class="line">    <span class="keyword">var</span> userId = <span class="built_in">document</span>.getElementsByClassName(<span class="string">"bigger"</span>)[<span class="number">0</span>].textContent;</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    <span class="keyword">var</span> userId = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment">// 间隔上次签到一天并且登陆再进行操作(或者切换了账号)→_→</span></span><br><span class="line"><span class="keyword">if</span> ((<span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate() != GM_getValue(<span class="string">"sign"</span>, <span class="string">"25:name"</span>).split(<span class="string">":"</span>)[<span class="number">0</span>] || userId != GM_getValue(<span class="string">"sign"</span>, <span class="string">"25:name"</span>).split(<span class="string">":"</span>)[<span class="number">1</span>]) &amp;&amp; userId )&#123;</span><br><span class="line">    showInformation(<span class="string">"正在检测每日签到状态..."</span>);</span><br><span class="line">    GM_xmlhttpRequest(&#123;</span><br><span class="line">        <span class="string">"method"</span> : <span class="string">"GET"</span>,</span><br><span class="line">        <span class="string">"url"</span> : <span class="string">"/mission/daily"</span>,</span><br><span class="line">        <span class="string">"onload"</span> : <span class="function"><span class="keyword">function</span>(<span class="params">response</span>)</span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (response.responseText.match(<span class="string">"领取 X 铜币"</span>))&#123;</span><br><span class="line">                <span class="keyword">var</span> days = response.responseText.match(<span class="regexp">/已连续登录.+天/</span>)[<span class="number">0</span>];</span><br><span class="line">                showInformation(<span class="string">"正在领取今日签到奖励"</span>);</span><br><span class="line">                GM_xmlhttpRequest(&#123;</span><br><span class="line">                        <span class="string">"method"</span> : <span class="string">"GET"</span>,</span><br><span class="line">                        <span class="string">"url"</span> : response.responseText.match(<span class="regexp">/(?=\/).+?(?=\')/g</span>)[<span class="number">1</span>],</span><br><span class="line">                        <span class="string">"onload"</span> : <span class="function"><span class="keyword">function</span> (<span class="params">resp</span>) </span>&#123;</span><br><span class="line">                            showInformation(<span class="string">"正在提交"</span>);</span><br><span class="line">                            days = <span class="string">"已连续登陆"</span> + (<span class="built_in">parseInt</span>(days.slice(<span class="number">5</span>,-<span class="number">1</span>)) + <span class="number">1</span>) + <span class="string">"天"</span>;<span class="comment">//返回连续登陆天数</span></span><br><span class="line">                            GM_xmlhttpRequest(&#123;</span><br><span class="line">                                <span class="string">"method"</span> : <span class="string">"GET"</span>,</span><br><span class="line">                                <span class="string">"url"</span> : <span class="string">"/balance"</span>,</span><br><span class="line">                                <span class="string">"onload"</span> : <span class="function"><span class="keyword">function</span>(<span class="params">res</span>)</span>&#123;</span><br><span class="line">                                    <span class="comment">//格式化日期，将缺0补齐.网站很坑爹的时间是GTM+8，后面的描述文件却没有加上，凌晨测试发现</span></span><br><span class="line">                                    <span class="function"><span class="keyword">function</span> <span class="title">p</span>(<span class="params">s</span>) </span>&#123;<span class="keyword">return</span> s&lt;<span class="number">10</span> ? <span class="string">"0"</span>+s :s; &#125;</span><br><span class="line">                                    <span class="keyword">var</span> today = <span class="keyword">new</span> <span class="built_in">Date</span>().getUTCFullYear() + p(<span class="keyword">new</span> <span class="built_in">Date</span>().getUTCMonth()+<span class="number">1</span>) +p(<span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate());</span><br><span class="line">                                    <span class="keyword">if</span> (res.responseText.match(today + <span class="string">" 的每日登录奖励"</span>))&#123;</span><br><span class="line">                                        showInformation(days + <span class="string">"，本次领取到"</span> + res.responseText.match(<span class="built_in">eval</span>(<span class="string">"/"</span>+today+<span class="string">".+铜币/"</span>))[<span class="number">0</span>].split(<span class="string">"奖励"</span>)[<span class="number">1</span>].replace(<span class="regexp">/ /g</span>, <span class="string">""</span>));</span><br><span class="line">                                        GM_setValue(<span class="string">"sign"</span>, <span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate() + <span class="string">":"</span> + userId);</span><br><span class="line">                                    &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                                        showInformation(<span class="string">"自动领取遇到意外，你可以手动领取试试"</span>)</span><br><span class="line">                                    &#125;</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;)</span><br><span class="line">                        &#125;,</span><br><span class="line">                        <span class="string">"onerror"</span> : <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123; showInformation(<span class="string">"网络异常"</span>);&#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                )</span><br><span class="line"> </span><br><span class="line">            &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                <span class="keyword">if</span> (response.responseText.match(<span class="string">"已领取"</span>).length)&#123;</span><br><span class="line">                    showInformation(<span class="string">"今日已经领取过了"</span>);</span><br><span class="line">                    GM_setValue(<span class="string">"sign"</span>, <span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate() + <span class="string">":"</span> + userId);</span><br><span class="line">                &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                    showInformation(<span class="string">"无法找到领奖按钮，请检查"</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"> </span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"onerror"</span> : <span class="function"><span class="keyword">function</span>(<span class="params"></span>)</span>&#123;showInformation(<span class="string">"签到页面无法打开，请手动领取"</span>);&#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+            
+                
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/javascript-V2EX-签到/">javascript, V2EX, 签到</a>
+
+            </div>
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/10/29/flask_project_init/"  data-tooltip="Flask项目初始配置">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/" data-tooltip="利用selenium抓取OA数据生成综合图表">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2014/08/02/v2ex_signin/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2014/08/02/v2ex_signin/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2014/08/02/v2ex_signin/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2016 Ficapy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="3">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/10/29/flask_project_init/"  data-tooltip="Flask项目初始配置">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/" data-tooltip="利用selenium抓取OA数据生成综合图表">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2014/08/02/v2ex_signin/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2014/08/02/v2ex_signin/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2014/08/02/v2ex_signin/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="3">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2014/08/02/v2ex_signin/">
+                <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2014/08/02/v2ex_signin/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2014/08/02/v2ex_signin/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+            <h4 id="about-card-name">Ficapy</h4>
+        
+            <h5 id="about-card-bio"><p>author.bio</p>
+</h5>
+        
+        
+            <h5 id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </h5>
+        
+        
+            <h5 id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                浙江杭州
+            </h5>
+        
+    </div>
+</div>
+
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+    </body>
+    <!--SCRIPTS-->
+<script src="/assets/js/scrip-gfmrkxcl0qohe3cfdgxhzvc0yrceqta8i4iix0txvn8q4o2adlqd5n0jmkvt.min.js" type="text/javascript"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'http://ficapy.com/2014/08/02/v2ex_signin/';
+                 
+                    this.page.identifier = '2014/08/02/v2ex_signin/';
+                                  
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'ficapy';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+    <script type="text/javascript">
+        (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+                (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+            e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+        })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+        _st('install','5GxB3Y3jmUYysWov4ees','2.0.0');
+    </script>
+
+
+</html>

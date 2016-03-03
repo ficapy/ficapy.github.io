@@ -1,0 +1,523 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>将pycharm的运行配置脚本路径修改为当前选中文件 - 邹雷</title>
+    <meta name="author" content="Ficapy">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~
+使用pycharm的时候每次运行脚本都会有一个基于默认设置的python运行环境设置，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="将pycharm的运行配置脚本路径修改为当前选中文件">
+<meta property="og:url" content="http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~
+使用pycharm的时候每次运行脚本都会有一个基于默认设置的python运行环境设置，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/865uap38l.png">
+<meta property="og:updated_time" content="2016-03-03T09:13:17.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="将pycharm的运行配置脚本路径修改为当前选中文件">
+<meta name="twitter:description" content="这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~
+使用pycharm的时候每次运行脚本都会有一个基于默认设置的python运行环境设置，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣">
+<meta name="twitter:creator" content="@aec4d">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-ejlztp1tasruqfvoz6xmgqng0anzae8ox7cqjj5yibieqgcmhe9fwxfae6zj.min.css" type="text/css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?a6ac3798de98c504fa2cbff2cc8bd755";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="3">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <h1 class="header-title">
+        <a class="header-title-link" href="/ ">邹雷</a>
+    </h1>
+    
+        
+            <a  class="header-right-picture "
+                href="/#about">
+        
+        
+            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="3">
+    
+        <div class="sidebar-profile">
+            <a href="/#about">
+                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+            </a>
+            <span class="sidebar-profile-name">Ficapy</span>
+        </div>
+    
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/ "
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                    <span class="sidebar-button-desc">首页</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-categories"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                    <span class="sidebar-button-desc">分类</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-tags"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                    <span class="sidebar-button-desc">标签</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-archives"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                    <span class="sidebar-button-desc">归档</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link st-search-show-outputs"
+                         href="/#search"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                    <span class="sidebar-button-desc">搜索</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/#about"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                    <span class="sidebar-button-desc">关于</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://github.com/Ficapy" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                    <span class="sidebar-button-desc">GitHub</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                    <span class="sidebar-button-desc">Twitter</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                    <span class="sidebar-button-desc">邮箱</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/atom.xml"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                    <span class="sidebar-button-desc">RSS</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+</nav>
+
+            
+            <div id="main" data-behavior="3"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            将pycharm的运行配置脚本路径修改为当前选中文件
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" content="Wed Mar 18 2015 00:47:00 GMT+0800">
+	
+		    3月 18, 2015
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/随笔/">随笔</a>
+
+
+    
+</div>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~</p>
+<p>使用pycharm的时候每次运行脚本都会有一个<strong><span
+style="text-decoration: underline;"><em><span
+style="color: #ff0000; text-decoration: underline;">基于默认设置的python运行环境设置</span></em></span></strong>，如下图所示<img src="https://ficapy.b0.upaiyun.com/blogimg/865uap38l.png" alt=""><br>哈哈哈哈哈哈~~~~~~~~对着这张图看了好久<br>突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣<br>还是记录下来吧 临时发现这个也算是福气哇~~<br><a id="more"></a></p>
+<p>每次右键点击再执行文件的时候都会生成一个python运行配置，这一步骤只是运行配置中的script项有所改变。假如你有很多个文件。那么执行多个文件后就将有多个运行配置了，看着真是相当不爽，如果你知道pycharm的external<br>tool，里面有insert<br>macros，其中\$FilePath\$就代表当前选择的文件绝对路径。可惜该参数无法填入script项，否则就能减少非常多python运行配置，大部分项目仅一个就可以了。</p>
+<p>如果项目使用的是本地python解释器&amp;没有复杂的配置，那么直接右键点击再执行会自动生成一个python运行配置可以正常执行，也就不会有俺最开始的苦恼了。我使用的是vagrant开发环境，代码是从本机映射到虚拟机上，所以直接执行会显示路径错误~~~我的处理流程是这样的</p>
+<ol>
+<li>最开始选择照旧执行，报错后进入运行设置添加路径映射</li>
+<li>可是特喵每次都添加映射好烦啊，映射路径好长的好咩，反正其他的不变，仅仅是运行文件改变了，于是乎选择要运行的时候就将一个好的运行设置修改文件路径为当前就好了</li>
+<li>就是现在了，觉得2也好烦。。。。</li>
+</ol>
+<p>以上烦恼就是因为忘记了针对每一个项目都有默认的环境设置，其实将默认的环境设置设置好以后自动继承就ok了&gt;_&lt;当想到3的时候总体方针就是自动修改script参数为当前文件路径。最开始是想写脚本找出该项目下所有py文件中最后修改的那个，然后就想可能pycharm对于每个项目都有一个配置文件，修改配置文件中script的地址就好了~~~可是最后没找到。最后就想到了模拟点击到设置页面修改了。然后就试了以下几个sikulix、aauto(快手)、按键精灵、Automa。第一四个一看便可上手，就和上手python的库那么简单，就几个特好理解的函数，二看了一下虽有auto但不适合做模拟点击，而且想立马使用也是没多大可能的，按键精灵我咋看着想吐呢，宁可去背几个函数也不想插入插入插入。。。。</p>
+<p>最后还是亮上用sikulix和automa写的代码吧，炒鸡简单<a href="https://github.com/aec4d/ScriptLet/tree/master/pycharm\_script\_path\_autochange">https://github.com/aec4d/ScriptLet/tree/master/pycharm\_script\_path\_autochange</a><br>需要注意的是需按照官网提示配置好环境。2个都是使用绝对坐标定位然后点击，屏幕分辨率1366*768，pycharm版本4.0.5</p>
+<p>bingo~~~~~~~~~~~~`</p>
+
+            
+                
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/05/26/film_reviews/"  data-tooltip="观影感">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/03/09/linode-rescue-mode-reset-root-password/" data-tooltip="Linode紧急模式修改密码">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2016 Ficapy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="3">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/05/26/film_reviews/"  data-tooltip="观影感">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/03/09/linode-rescue-mode-reset-root-password/" data-tooltip="Linode紧急模式修改密码">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="3">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/">
+                <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+            <h4 id="about-card-name">Ficapy</h4>
+        
+            <h5 id="about-card-bio"><p>author.bio</p>
+</h5>
+        
+        
+            <h5 id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </h5>
+        
+        
+            <h5 id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                浙江杭州
+            </h5>
+        
+    </div>
+</div>
+
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+    </body>
+    <!--SCRIPTS-->
+<script src="/assets/js/scrip-gfmrkxcl0qohe3cfdgxhzvc0yrceqta8i4iix0txvn8q4o2adlqd5n0jmkvt.min.js" type="text/javascript"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/';
+                 
+                    this.page.identifier = '2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/';
+                                  
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'ficapy';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+    <script type="text/javascript">
+        (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+                (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+            e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+        })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+        _st('install','5GxB3Y3jmUYysWov4ees','2.0.0');
+    </script>
+
+
+</html>

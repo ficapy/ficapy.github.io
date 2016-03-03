@@ -1,0 +1,562 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>Flask项目初始配置 - 邹雷</title>
+    <meta name="author" content="Ficapy">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：
+
+windows7 X64
+vagrant
+ubuntu14
+xshell
+cmder(可选)
+pycharm">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Flask项目初始配置">
+<meta property="og:url" content="http://ficapy.com/2014/10/29/flask_project_init/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：
+
+windows7 X64
+vagrant
+ubuntu14
+xshell
+cmder(可选)
+pycharm">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/pycharm_remote_interoreters_config.png">
+<meta property="og:updated_time" content="2016-03-03T09:13:36.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flask项目初始配置">
+<meta name="twitter:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：
+
+windows7 X64
+vagrant
+ubuntu14
+xshell
+cmder(可选)
+pycharm">
+<meta name="twitter:creator" content="@aec4d">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-ejlztp1tasruqfvoz6xmgqng0anzae8ox7cqjj5yibieqgcmhe9fwxfae6zj.min.css" type="text/css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?a6ac3798de98c504fa2cbff2cc8bd755";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="3">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <h1 class="header-title">
+        <a class="header-title-link" href="/ ">邹雷</a>
+    </h1>
+    
+        
+            <a  class="header-right-picture "
+                href="/#about">
+        
+        
+            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="3">
+    
+        <div class="sidebar-profile">
+            <a href="/#about">
+                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+            </a>
+            <span class="sidebar-profile-name">Ficapy</span>
+        </div>
+    
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/ "
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                    <span class="sidebar-button-desc">首页</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-categories"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                    <span class="sidebar-button-desc">分类</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-tags"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                    <span class="sidebar-button-desc">标签</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-archives"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                    <span class="sidebar-button-desc">归档</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link st-search-show-outputs"
+                         href="/#search"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                    <span class="sidebar-button-desc">搜索</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/#about"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                    <span class="sidebar-button-desc">关于</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://github.com/Ficapy" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                    <span class="sidebar-button-desc">GitHub</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                    <span class="sidebar-button-desc">Twitter</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                    <span class="sidebar-button-desc">邮箱</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/atom.xml"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                    <span class="sidebar-button-desc">RSS</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+</nav>
+
+            
+            <div id="main" data-behavior="3"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            Flask项目初始配置
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" content="Wed Oct 29 2014 22:19:00 GMT+0800">
+	
+		    10月 29, 2014
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/Flask/">Flask</a>
+
+
+    
+</div>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！<br>使用工具：</p>
+<ul>
+<li>windows7 X64</li>
+<li>vagrant</li>
+<li>ubuntu14</li>
+<li>xshell</li>
+<li>cmder(可选)</li>
+<li>pycharm</li>
+</ul>
+<a id="more"></a>
+<p>准备步骤：</p>
+<h2 id="1-环境搭建"><a href="#1-环境搭建" class="headerlink" title="1.环境搭建"></a><strong>1.环境搭建</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">vagrant box add ubuntu14 URL(或者先下载box文件用文件名替代)  </span><br><span class="line">vagrant init ubuntu14  </span><br><span class="line">vagrant up  </span><br><span class="line">vagrant halt</span><br></pre></td></tr></table></figure>
+<p><strong>NOTE.</strong><br>vagrant使用可谓相当简单了,使用单文件配置,整个周期分为add/init/up/reload/suspend/halt/destroy;</p>
+<p>另外推荐将22端口进行转发。默认转发到2222，但是当打开多个虚拟机的时候因为2222端口被占用所有会随机指定一个端口。So，固定一下对自己的设置是相当有利的。当然因为Flask默认使用5000端口进行测试，对它进行转发也是理所当然的;</p>
+<p>至于使用vagrant<br>ssh登陆,用系统自带的CMD那是相当难受滴,使用cmder全功能版不错。用过一段时间不得不说相对CMD真实赏心悦目,在我的使用中感觉确定有两个。毕竟不是专业的SSH客户端，对于中文文件名无能为力，或许是我不会设置，其二是无法设置代理而且连接到远程VPS时候输入卡顿严重。所以最后还是回归了Xshell。</p>
+<p>开机关机每次进入cmder cd c:\path 进入vagrant 在运行vagrant<br>up是相当厌烦的，用python脚本启动它是个不错的选择</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> os</span><br><span class="line"></span><br><span class="line">os.system(<span class="string">'cd "c:\\\\ficapy\\\\microblog" &amp;&amp; vagrant reload'</span>)  </span><br><span class="line"><span class="comment">#是不是异常简单呢 切换到目录执行reload操作→不一定要先启动再重载！  </span></span><br><span class="line"><span class="comment"># &amp;&amp;表示上个操作执行完毕后在执行下面的操作</span></span><br></pre></td></tr></table></figure>
+<h2 id="2-Linux配置"><a href="#2-Linux配置" class="headerlink" title="2.Linux配置"></a><strong>2.Linux配置</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get update upgrade \<span class="comment">#更新源&amp;升级系统  </span></span><br><span class="line">sudo apt-get install git git-core python python-dev python-setuptools  </span><br><span class="line">sudo easy\_install pip  </span><br><span class="line">sudo pip install virtualenv virtualenvwrapper  </span><br><span class="line">nano \~/.bashrc  </span><br><span class="line">添加下面两行配置后重新运行(<span class="built_in">source</span> \~/.bashrc)  </span><br><span class="line"><span class="built_in">export</span> WORKON\_HOME=\<span class="variable">$HOME</span>/.virtualenvs  </span><br><span class="line"><span class="built_in">source</span> /usr/<span class="built_in">local</span>/bin/virtualenvwrapper.sh</span><br></pre></td></tr></table></figure>
+<p><strong>NOTE:</strong><br>virtualenvwarpper顾名思义是对virtualenv的二次包装,给我的赶脚就是环境不是在放在开发文件夹下面了，而且命令行直观友好容易记忆，还有TAB自动补全哟。常用的大致有mkvirtualenv/rmvirtualenv/lsvirtualenv/workon/deactive;</p>
+<p>另外使用pip安装第三方包的时候不要使用sudo pip<br>install,该操作会导致安装到全局，而不是安装到当前环境中.直接使用pip<br>install安装.Linux比较小白，暂时我也不知道为什么</p>
+<p>ubuntu14自带python2.7可以不用安装python。可是python-dev这个必装，否则pip安装一些需要编译安装的第三方包的时候会报一些莫名其妙的错误，比如pycurl等。同时直接使用二进制包python-pip安装pip有时候安装包会出错（一朝被蛇咬，十年怕井绳啊，所以我还是使用官方推荐的easy_install方式安装了，还有一种是下载get.py方式）</p>
+<h2 id="3-windows端Pycharm设置"><a href="#3-windows端Pycharm设置" class="headerlink" title="3.windows端Pycharm设置"></a><strong>3.windows端Pycharm设置</strong></h2><p>使用vagrant后，默认设置文件将该目录映射到虚拟的的/vagrant文件夹。我们就将项目统一放在该文件夹下</p>
+<p>不得不说的是pycharm上的vagrant插件在windows上是无法使用的,至少对我来说是这样，手动配置远端python解释器，如下图</p>
+<p><img src="https://ficapy.b0.upaiyun.com/blogimg/pycharm_remote_interoreters_config.png" alt="pycharm\_remote\_interoreters\_config">Note.在这里点击fill<br>from vagrant config就有用了,改变2222端口是一个很好的选择</p>
+<p>设置远端python解释器后就可以在本地调用了，这还不够，同时还需要设置项目目录映射，以便解释器能够根据本地文件映射到虚拟机文件的地址让解释器执行。选择Run→Configureations,最主要的设置是一、选择解释器；二、设置work<br>directory和Path mapping之后就能正确的使用虚拟机的python运行本地文件了;</p>
+<p>另外，有时候不想用xshell连接后运行python。这时候使用pycharm也是相当方便的。Tools→run<br>python<br>console就够了,会默认添加当前目录到python的包索引列表方便导入,只是有时候这个目录并不完全正确,可能是设置还是有错误吧，我每次都重运行sys.path.extend([‘/vagrant/path~~~~~~‘])手动解决</p>
+<p>~~~~~~~~还想写个安装heroku客户端的,自己还没有很好的实践,以后试试吧，至少测试部署还是相当方便的</p>
+<p>参考：<br><a href="http://blog.segmentfault.com/fenbox/1190000000264347">http://blog.segmentfault.com/fenbox/1190000000264347</a><br><a href="http://pedrokroger.net/getting-started-pycharm-python-ide/">http://pedrokroger.net/getting-started-pycharm-python-ide/</a><br><a href="http://bliker.github.io/cmder/">http://bliker.github.io/cmder/</a></p>
+
+            
+                
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/Flask配置-pycharm-vagrant/">Flask配置, pycharm, vagrant</a>
+
+            </div>
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/03/09/linode-rescue-mode-reset-root-password/"  data-tooltip="Linode紧急模式修改密码">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/08/02/v2ex_signin/" data-tooltip="V2EX签到脚本">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2014/10/29/flask_project_init/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2014/10/29/flask_project_init/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2014/10/29/flask_project_init/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2016 Ficapy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="3">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/03/09/linode-rescue-mode-reset-root-password/"  data-tooltip="Linode紧急模式修改密码">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/08/02/v2ex_signin/" data-tooltip="V2EX签到脚本">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2014/10/29/flask_project_init/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2014/10/29/flask_project_init/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2014/10/29/flask_project_init/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="3">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2014/10/29/flask_project_init/">
+                <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2014/10/29/flask_project_init/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2014/10/29/flask_project_init/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+            <h4 id="about-card-name">Ficapy</h4>
+        
+            <h5 id="about-card-bio"><p>author.bio</p>
+</h5>
+        
+        
+            <h5 id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </h5>
+        
+        
+            <h5 id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                浙江杭州
+            </h5>
+        
+    </div>
+</div>
+
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+    </body>
+    <!--SCRIPTS-->
+<script src="/assets/js/scrip-gfmrkxcl0qohe3cfdgxhzvc0yrceqta8i4iix0txvn8q4o2adlqd5n0jmkvt.min.js" type="text/javascript"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'http://ficapy.com/2014/10/29/flask_project_init/';
+                 
+                    this.page.identifier = '2014/10/29/flask_project_init/';
+                                  
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'ficapy';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+    <script type="text/javascript">
+        (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+                (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+            e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+        })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+        _st('install','5GxB3Y3jmUYysWov4ees','2.0.0');
+    </script>
+
+
+</html>
