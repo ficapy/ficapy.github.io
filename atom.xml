@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-03-07T03:04:49.000Z</updated>
+  <updated>2016-03-12T14:02:15.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -14,6 +14,39 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>阿里云OSS绑定letsencrypt证书</title>
+    <link href="http://ficapy.com/2016/03/11/letsencrypt_aliyun_oss/"/>
+    <id>http://ficapy.com/2016/03/11/letsencrypt_aliyun_oss/</id>
+    <published>2016-03-11T10:28:34.000Z</published>
+    <updated>2016-03-12T14:02:15.000Z</updated>
+    
+    <content type="html">&lt;p&gt;继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&quot;关于RSA的那些事儿&quot;&gt;&lt;a href=&quot;#关于RSA的那些事儿&quot; class=&quot;headerlink&quot; title=&quot;关于RSA的那些事儿&quot;&gt;&lt;/a&gt;关于RSA的那些事儿&lt;/h2&gt;&lt;p&gt;web安全离不开RSA非对称加密算法，说真的数学原理我没看明白。仅仅知道最后生成的公钥和私钥其实都是一对数字。可是我们经常看到生成的公私钥是字符串。其实它只是经过了一些编码(下见参考)。然后一个密钥用来加密一个密钥用来解密（意味着公私钥都能加密）。其次是签名，签名就是将需要签名的信息使用信息摘要算法（比如sha256）获取摘要。然后使用私钥进行加密，对方使用相同的步骤算出摘要，然后使用公钥对你加密的信息进行解密。如果解密的信息和算出摘要的信息相同则证明该信息完整且为对方发出。其实和HMAC相当的相似，只不过HMAC使用对称密钥。再其实。签名算法都差不多这样OVER&lt;/p&gt;
+&lt;h2 id=&quot;关于letsencrypt的内部流程&quot;&gt;&lt;a href=&quot;#关于letsencrypt的内部流程&quot; class=&quot;headerlink&quot; title=&quot;关于letsencrypt的内部流程&quot;&gt;&lt;/a&gt;关于letsencrypt的内部流程&lt;/h2&gt;&lt;p&gt;本节参考&lt;a href=&quot;https://github.com/diafygi/acme-tiny/blob/master/acme_tiny.py&quot;&gt;acme-tiny脚本&lt;/a&gt;。过程中最重要的为用户认证流程。普遍的用户认证流程为获取token，即用户登录获取token，后续的API请求和该token关联。然而letsencrypt的流程非常不同(主要因为它不需要去letsencrypt网站进行注册)。一个独立的账户依靠本地生成证书来认证&lt;code&gt;openssl genrsa 4096 &amp;gt; account.key&lt;/code&gt;，该证书为PEM证书。即文件中含有公钥和私钥。对于所有的API请求都会要求签名。&lt;br&gt;签名代码如下：&lt;/p&gt;
+&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;_send_signed_request&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(url, payload)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    payload64 = _b64(json.dumps(payload).encode(&lt;span class=&quot;string&quot;&gt;&#39;utf8&#39;&lt;/span&gt;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    protected = copy.deepcopy(header)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    protected[&lt;span class=&quot;string&quot;&gt;&quot;nonce&quot;&lt;/span&gt;] = urlopen(CA + &lt;span class=&quot;string&quot;&gt;&quot;/directory&quot;&lt;/span&gt;).headers[&lt;span class=&quot;string&quot;&gt;&#39;Replay-Nonce&#39;&lt;/span&gt;]&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    protected64 = _b64(json.dumps(protected).encode(&lt;span class=&quot;string&quot;&gt;&#39;utf8&#39;&lt;/span&gt;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    proc = subprocess.Popen([&lt;span class=&quot;string&quot;&gt;&quot;openssl&quot;&lt;/span&gt;, &lt;span class=&quot;string&quot;&gt;&quot;dgst&quot;&lt;/span&gt;, &lt;span class=&quot;string&quot;&gt;&quot;-sha256&quot;&lt;/span&gt;, &lt;span class=&quot;string&quot;&gt;&quot;-sign&quot;&lt;/span&gt;, account_key],&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    out, err = proc.communicate(&lt;span class=&quot;string&quot;&gt;&quot;&amp;#123;0&amp;#125;.&amp;#123;1&amp;#125;&quot;&lt;/span&gt;.format(protected64, payload64).encode(&lt;span class=&quot;string&quot;&gt;&#39;utf8&#39;&lt;/span&gt;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; proc.returncode != &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;raise&lt;/span&gt; IOError(&lt;span class=&quot;string&quot;&gt;&quot;OpenSSL Error: &amp;#123;0&amp;#125;&quot;&lt;/span&gt;.format(err))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    data = json.dumps(&amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;string&quot;&gt;&quot;header&quot;&lt;/span&gt;: header, &lt;span class=&quot;string&quot;&gt;&quot;protected&quot;&lt;/span&gt;: protected64,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;string&quot;&gt;&quot;payload&quot;&lt;/span&gt;: payload64, &lt;span class=&quot;string&quot;&gt;&quot;signature&quot;&lt;/span&gt;: _b64(out),&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;#125;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;try&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        resp = urlopen(url, data.encode(&lt;span class=&quot;string&quot;&gt;&#39;utf8&#39;&lt;/span&gt;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; resp.getcode(), resp.read()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;except&lt;/span&gt; IOError &lt;span class=&quot;keyword&quot;&gt;as&lt;/span&gt; e:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; getattr(e, &lt;span class=&quot;string&quot;&gt;&quot;code&quot;&lt;/span&gt;, &lt;span class=&quot;keyword&quot;&gt;None&lt;/span&gt;), getattr(e, &lt;span class=&quot;string&quot;&gt;&quot;read&quot;&lt;/span&gt;, e.__str__)()&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;可以看出从证书中取出公钥。然后依照&lt;code&gt;公钥+(公钥+服务器随机数+信息)+第二部分的签名&lt;/code&gt;证明自己的身份。即：一个公钥对应一个身份。&lt;br&gt;后续的流程就是：①身份注册→→→→②获取域名列表→→→→(③发送http挑战请求→→→→④根据返回内容建立文件→→→→⑤自身测试下载→→→→⑥发送挑战测试请求)→→→→⑦提交csr文件返回签名证书&lt;/p&gt;
+&lt;h2 id=&quot;移植到OSS上&quot;&gt;&lt;a href=&quot;#移植到OSS上&quot; class=&quot;headerlink&quot; title=&quot;移植到OSS上&quot;&gt;&lt;/a&gt;移植到OSS上&lt;/h2&gt;&lt;p&gt;网上大多数教程都是部署到服务器。和部署到OSS最大的差别在于上面的划括号的部分。部署在服务器上是在服务器生成文件，如果部署到阿里云OSS，则应该上传文件到阿里云。没有别的区别。另外还可以使用DNS挑战。如果你使用cloudxns作DNS解析。也可以使用它，从而通过验证，另外一点。生成的证书文件需要在阿里云CDN设置页面设置。&lt;code&gt;然而！！！阿里云并没有提供API接口！！！&lt;/code&gt;，意味着需要手工操作。然而至少每3个月更新一次还是很频繁的。。。。。。所以，要真用在上面还得三思&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Ficapy/23bb5dd5a187ec0bacf2&quot;&gt;这是我参照acme-tiny改写的证书脚本&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&quot;hexo使用的一些建议&quot;&gt;&lt;a href=&quot;#hexo使用的一些建议&quot; class=&quot;headerlink&quot; title=&quot;hexo使用的一些建议&quot;&gt;&lt;/a&gt;hexo使用的一些建议&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;将图片文件进行压缩放到CDN上面。压缩工具灰常之多。笔者就不例举了&lt;/li&gt;
+&lt;li&gt;引用的国外JS文件能换成国内镜像源的全部替换&lt;/li&gt;
+&lt;li&gt;上传图片不如试试我写的脚本&lt;a href=&quot;https://gist.github.com/Ficapy/8c57998d14c434ab5df3&quot;&gt;https://gist.github.com/Ficapy/8c57998d14c434ab5df3&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;swiftype加载真的好慢好慢。如果为了加载速度绝对要替换掉&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;参考&quot;&gt;&lt;a href=&quot;#参考&quot; class=&quot;headerlink&quot; title=&quot;参考&quot;&gt;&lt;/a&gt;参考&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;http://www.ruanyifeng.com/blog/2013/06/rsa_algorithm_part_one.html&quot;&gt;RSA算法原理&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://zh.wikipedia.org/wiki/%E9%87%91%E9%91%B0%E9%9B%9C%E6%B9%8A%E8%A8%8A%E6%81%AF%E9%91%91%E5%88%A5%E7%A2%BC&quot;&gt;HMAC中文维基&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://blog.sina.com.cn/s/blog_4fcd1ea30100yh4s.html&quot;&gt;pem格式&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://imququ.com/post/letsencrypt-certificate.html&quot;&gt;letsencrypt部署&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。&lt;br&gt;
+    
+    </summary>
+    
+      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>将hexo部署到阿里云OSS</title>
@@ -718,41 +751,6 @@ style=&quot;color: #000000;&quot;&gt;另外everything还支持正则表达式（
     
     
       <category term="everything, windows, 对比, 索引" scheme="http://ficapy.com/tags/everything-windows-%E5%AF%B9%E6%AF%94-%E7%B4%A2%E5%BC%95/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>IDM-Internet Download Manager</title>
-    <link href="http://ficapy.com/2013/09/30/idm-internet-download-manager/"/>
-    <id>http://ficapy.com/2013/09/30/idm-internet-download-manager/</id>
-    <published>2013-09-29T23:17:00.000Z</published>
-    <updated>2016-03-03T09:14:55.000Z</updated>
-    
-    <content type="html">&lt;p&gt;创建一个新目录，善用佳软&lt;/p&gt;
-&lt;p&gt;名字没什么新意，因为有个推荐好软件的名字就是善用佳软:&lt;a href=&quot;http://xbeta.info/&quot;&gt;http://xbeta.info/&lt;/a&gt;，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;br&gt;Internet Download Manager&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/IDM.jpg&quot; alt=&quot;IDM&quot;&gt;&lt;/p&gt;
-&lt;p&gt;官方网站:&lt;a href=&quot;http://www.internetdownloadmanager.com/&quot;&gt;http://www.internetdownloadmanager.com/&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;为啥我介绍的第一款软件是它。。。。。因为它是我自愿购买的第一款正版软件，所以这也是我第一篇介绍些IDM的原因~~~虽然截图用的是D版（谁让一个激活码只能在一台电脑上使用嘞&amp;gt;+&amp;lt;）。&lt;/p&gt;
-&lt;p&gt;和众小白一样，用过的第一款下载软件是迅雷，臃肿的体积，打开甚至关闭速度让人诟病，利用P2P上传。呵呵，以至于现在迅雷发展到了直接对非会员限速的地步。&lt;/p&gt;
-&lt;p&gt;直到有一次用了它。看的过去的UI，秒开秒关，多浏览器集成(不怎么用，用xthunder调用IDM)，让人满意的下载速度。一切都那么美妙&lt;/p&gt;
-&lt;p&gt;再说说&lt;span style=&quot;color: #ff0000;&quot;&gt;&lt;strong&gt;缺点&lt;/strong&gt;&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;1.首先IDM只支持HTTP/HTTPS/FTP协议，意味着遇到其他的下载协议不得不使用迅雷或者其他下载工具(我知道的著名的是utorrent)。可以让IDM同迅雷协作，让下载更高效，以后可能会写一遍博文。&lt;/p&gt;
-&lt;p&gt;2.IDM的下载速度不真实可信，有一点欺骗的味道。我想这也是为什么下载完成后IDM不显示下载用时的原因。IDM单位换算按照1000kb=1mb(但是通用换算是1024KB=1MB)，so你看到的下载速度除以1.1大概就是真实的速度。&lt;/p&gt;
-&lt;p&gt;3.IDM不适合下载大文件，之所以很喜欢这款软件。就是因为我的平时使用很少遇到这种情况。IDM是分段下载之后合并。大文件合并异常消耗内存，容易造成电脑假死。据我的经验–单文件用IDM下载最好不要超过2G~~~&lt;/p&gt;
-&lt;p&gt;注明:它不是一个免费软件。国内购买大概100rmb。百度很容易下载到D版~~&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;创建一个新目录，善用佳软&lt;/p&gt;
-&lt;p&gt;名字没什么新意，因为有个推荐好软件的名字就是善用佳软:&lt;a href=&quot;http://xbeta.info/&quot;&gt;http://xbeta.info/&lt;/a&gt;，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。&lt;br&gt;
-    
-    </summary>
-    
-      <category term="善用佳软" scheme="http://ficapy.com/categories/%E5%96%84%E7%94%A8%E4%BD%B3%E8%BD%AF/"/>
-    
-    
-      <category term="IDM, Internet Download Manager, 优缺点" scheme="http://ficapy.com/tags/IDM-Internet-Download-Manager-%E4%BC%98%E7%BC%BA%E7%82%B9/"/>
     
   </entry>
   

@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://ficapy.com/2016/03/11/letsencrypt_aliyun_oss/</loc>
+    
+    <lastmod>2016-03-12T14:02:15.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://ficapy.com/2016/03/06/install_hexo_to_aliyun_oss/</loc>
     
     <lastmod>2016-03-07T03:04:49.000Z</lastmod>
