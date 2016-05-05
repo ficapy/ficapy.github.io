@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-03-12T14:02:15.000Z</updated>
+  <updated>2016-05-05T15:14:05.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -14,6 +14,43 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>openwrt刷机常识</title>
+    <link href="http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/"/>
+    <id>http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/</id>
+    <published>2016-05-05T12:59:17.000Z</published>
+    <updated>2016-05-05T15:14:05.000Z</updated>
+    
+    <content type="html">&lt;p&gt;openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;h2 id=&quot;BootLoader&quot;&gt;&lt;a href=&quot;#BootLoader&quot; class=&quot;headerlink&quot; title=&quot;BootLoader&quot;&gt;&lt;/a&gt;BootLoader&lt;/h2&gt;&lt;p&gt;一般刷机教程中不大会出现该名词，可是它其实是非常重要的。它和我们常听到的BIOS是一类程序–&lt;code&gt;引导程序&lt;/code&gt;，在我们给电脑重装系统的时候通常都是开机的时候按特定的功能键然后进入图形界面和BIOS交互。openwrt刷机中其实也非常类似，只是交互的方式不同→→→直接造成了下面几个名词的产生&lt;/p&gt;
+&lt;h2 id=&quot;不死UBoot&quot;&gt;&lt;a href=&quot;#不死UBoot&quot; class=&quot;headerlink&quot; title=&quot;不死UBoot&quot;&gt;&lt;/a&gt;不死UBoot&lt;/h2&gt;&lt;p&gt;即为上面描述的&lt;code&gt;引导程序&lt;/code&gt;的一种(即还有别的引导程序)。试想我们给电脑装系统的时候。无论怎么失败，都是可以进入BIOS设置，然后一次次的重装系统的。可是有的openwrt的引导程序则不同。他们只给你一次失败的机会。如果失败就要用特殊的手段重装(比如TTL串口)，不死Uboot即相对那种失败就死的Bootloader而言的(其实感觉这应该是一个理所当然的自带功能,然而并没有)。不死UBoot提供这样的交互→→→如果刷机失败，无法ssh进入到openwrt系统，那么Uboot提供一个web服务，路由器运行的时候直接通过LAN接口连接电脑，然后通过web页面上传固件刷机。这样无论刷固件如何失败。都可以反复刷固件。&lt;code&gt;可以看出不死Uboot它只是提供了一种比较方便的和引导程序交互的途径&lt;/code&gt;。其他常见途径还包括自动读取U盘里面的固件、使用TTL串口等&lt;/p&gt;
+&lt;h2 id=&quot;TTL刷机&quot;&gt;&lt;a href=&quot;#TTL刷机&quot; class=&quot;headerlink&quot; title=&quot;TTL刷机&quot;&gt;&lt;/a&gt;TTL刷机&lt;/h2&gt;&lt;p&gt;听起来很高大上有没有，其实也仅仅只是和BootLoader进行交互的一种手段。所以如果你感觉它能解救任何砖机那就大错特错了。因为它需要设备预留口而且需要TTL串口设备，所以普通玩家是不会太有机会通过该方法刷机的，不死Uboot通过web交互，TTL刷机通过TTL串口。所以他们并没有实质的区别，都是和boot进行交互。&lt;/p&gt;
+&lt;h2 id=&quot;mtd&quot;&gt;&lt;a href=&quot;#mtd&quot; class=&quot;headerlink&quot; title=&quot;mtd&quot;&gt;&lt;/a&gt;mtd&lt;/h2&gt;&lt;p&gt;Memory_Technology_Device,如果执行命令刷机，那么在教程中mtd这个词并不陌生，它提供&lt;code&gt;对文件系统读写的接口&lt;/code&gt;（描述可能不准确）。和linux中的dd差不多吧&lt;/p&gt;
+&lt;h2 id=&quot;锁UBoot&quot;&gt;&lt;a href=&quot;#锁UBoot&quot; class=&quot;headerlink&quot; title=&quot;锁UBoot&quot;&gt;&lt;/a&gt;锁UBoot&lt;/h2&gt;&lt;p&gt;即限制mtd去擦写u-boot分区。如果执行命令写入的时候提示被锁就是锁了(好像是废话)。解决办法就是先刷一个允许写入u-boot分区的固件，当然锁住也不是完全没道理的，因为刷uboot是刷openwrt中危险性最高的一步。当然也有恶心的产品同时限制你擦写固件分区，比如极路由3。遇上这种普通方法无解了。既然刷uboot风险高，那么为何要刷呢。我想因为是自带的BootLoader不支持不死这种方式造成的，或者官方通过boot限制安装非官方固件&lt;/p&gt;
+&lt;h2 id=&quot;Flash-内存等参数&quot;&gt;&lt;a href=&quot;#Flash-内存等参数&quot; class=&quot;headerlink&quot; title=&quot;Flash/内存等参数&quot;&gt;&lt;/a&gt;Flash/内存等参数&lt;/h2&gt;&lt;p&gt;下载玩家自制固件的时候需要知道自己的设备参数，可以通过&lt;a href=&quot;https://wiki.openwrt.org/toh/start&quot;&gt;openwrt官方查找&lt;/a&gt;。ssh进入openwrt可以通过free查看内存大小。注意通过df -h查看到的并不是Flash大小，至于为什么我也不大明白。&lt;/p&gt;
+&lt;h2 id=&quot;刷机小总结&quot;&gt;&lt;a href=&quot;#刷机小总结&quot; class=&quot;headerlink&quot; title=&quot;刷机小总结&quot;&gt;&lt;/a&gt;刷机小总结&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;ssh进入openwrt，小心谨慎使用mtd刷不死uboot(因为该步成功后刷固件失败也可安然无恙，so该步收益大于风险)，当然要是你这一步就失败了。机器基本就变砖了。因为TTL这类科技也是和boot交互的。boot都被刷挂了。基本没戏了，只能通过专用设备写入来解决了&lt;/li&gt;
+&lt;li&gt;有了不死uboot这类科技护体，意味着你只要不要乱作死去随便反复刷boot那么反反复复刷固件都是没事的，即使刷固件变砖。另:有没有看到网上很多教程都写的通过LAN口来刷固件，其实看完上面的一些概念，是完全不需要这样的(因为有的笔记本并没有LAN接口)。进入到openwrt里面通过mtd刷固件和进入到uboot的web页面并没有任何区别&lt;/li&gt;
+&lt;li&gt;选择固件的时候可以在淘宝上找店主。毕竟别人存货多XD&lt;/li&gt;
+&lt;li&gt;网上找几个和自己一样设备的教程贴，思索下别人的操作发生了什么。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;原厂固件和sysupgrade的区别见参考资料最后一个链接&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;笔者刷机过程&quot;&gt;&lt;a href=&quot;#笔者刷机过程&quot; class=&quot;headerlink&quot; title=&quot;笔者刷机过程&quot;&gt;&lt;/a&gt;笔者刷机过程&lt;/h2&gt;&lt;p&gt;因为我的路由出厂就是不死uboot，所以我在收集了一天资料之后，进行了如下操作&lt;br&gt;&lt;figure class=&quot;highlight bash&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;下载固件firmware&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;scp firmware root@&lt;span class=&quot;number&quot;&gt;192.168&lt;/span&gt;.&lt;span class=&quot;number&quot;&gt;8.1&lt;/span&gt;:/tmp&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mtd -r write /tmp/firmware firmware&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;br&gt;over 然后等两三分钟就好了，当然我凭着好奇的心理随便刷了几个别的固件。很不出意外的变砖了。然后通过LAN连接，再刷就好了&lt;/p&gt;
+&lt;h2 id=&quot;参考资料&quot;&gt;&lt;a href=&quot;#参考资料&quot; class=&quot;headerlink&quot; title=&quot;参考资料&quot;&gt;&lt;/a&gt;参考资料&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;http://www.shuyz.com/fix-openwrt-connection-with-putty.html&quot;&gt;关于串口TTL、USB转接实例(含图)&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://www.right.com.cn/forum/thread-154561-1-1.html&quot;&gt;关于刷UBoot&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://www.v2ex.com/t/160078&quot;&gt;不死uboot在v2ex上的一个讨论&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://blog.csdn.net/xcoderone/article/details/48030771&quot;&gt;TTL线刷原理&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://www.right.com.cn/forum/forum.php?mod=viewthread&amp;amp;tid=54647#pid392795&quot;&gt;另一个TTL线刷原理&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://blog.csdn.net/xcoderone/article/details/48031279&quot;&gt;再来一个TTL线刷实例&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://wiki.openwrt.org/doc/techref/bootloader&quot;&gt;关于BootLoader&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://blog.atime.me/research/openwrt-pandorabox-introduction.html&quot;&gt;初探OpenWrt&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/Memory_Technology_Device&quot;&gt;MTD维基百科介绍&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://www.crifan.com/files/doc/docbook/linux_nand_driver/release/webhelp/mtd_memory_technology_device.html&quot;&gt;MTD扩展阅读&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://myop.cf/archives/546&quot;&gt;如果你看不懂这篇文章，那么全篇你是白看了&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>阿里云OSS绑定letsencrypt证书</title>
@@ -713,44 +750,6 @@ style=&quot;color: #ff0000;&quot;&gt;特别注明，请尽量使用英文帮助&
     
     
       <category term="everything函数, everything进阶, everything高级教程" scheme="http://ficapy.com/tags/everything%E5%87%BD%E6%95%B0-everything%E8%BF%9B%E9%98%B6-everything%E9%AB%98%E7%BA%A7%E6%95%99%E7%A8%8B/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>everything--文件搜索神器</title>
-    <link href="http://ficapy.com/2013/10/02/everything_magical_file_search_software/"/>
-    <id>http://ficapy.com/2013/10/02/everything_magical_file_search_software/</id>
-    <published>2013-10-02T04:50:00.000Z</published>
-    <updated>2016-03-03T09:14:26.000Z</updated>
-    
-    <content type="html">&lt;p&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/everything.jpg&quot; alt=&quot;everything&quot;&gt;&lt;/p&gt;
-&lt;p&gt;官方网站:&lt;a href=&quot;http://www.voidtools.com/&quot;&gt;www.voidtools.com&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;br&gt;&lt;span style=&quot;color: #ff0000;&quot;&gt;系统自带搜索和everything简单对比&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;everything:简单粗暴，实力见证一切，体积小，占用内存低，无广告不流氓，而且还是免费软件，太TM良心了~~&lt;/p&gt;
-&lt;p&gt;很多人说windows自带的搜索慢~~~其实这是一种错误的观念，君不见你每次用windows搜索它都会提示”在没有索引的位置搜索可能比较慢，请单击以添到索引..”&lt;br&gt;目测这句话被很多人无视了。其实创建索引后windows自身搜索也不是那么慢，只是创建更新索引的速度确实没那么让人满意。而且界面远远没有everything友好。。。。目测自带的搜索真是一无是处~~~是的，我也这么认为。但是就我看来自带的对比everything还是有2个很实在有用的功能：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;1.支持FAT32文件系统（everything只支持NTFS.但是在FAT32能无损转换成NTFS，且NTFS性能更优的情况下。。。。还有人会用FAT32么）&amp;gt;+&amp;lt;&lt;/li&gt;
-&lt;li&gt;2.everything只支持文件名搜索。但是系统自带的还是有一定的OCR&lt;span&gt;（Optical&lt;br&gt;Character&lt;br&gt;Recognition，光学字符识别）&lt;/span&gt;能力。范例就是如果你有很多TIF扫描件，那么&lt;span
-style=&quot;color: #0000ff;&quot;&gt;&lt;a href=&quot;http://technet.microsoft.com/zh-cn/library/dd744701%28WS.10%29.aspx&quot;&gt;&lt;span style=&quot;color: #0000ff;&quot;&gt;Windows TIFF&lt;br&gt;IFilter&lt;/span&gt;&lt;/a&gt;&lt;/span&gt;就对你很有用了。虽然搜索扫描件内容不是那么的精确，并不是每次都能找到。但是有总比没有强~~&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;span
-style=&quot;color: #000000;&quot;&gt;另外everything还支持正则表达式（不会，不做评论）以及附带http和ftp服务器.&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;截图略过，开启和使用比较简单。经常用的是http服务器（ftp无搜索功能，且对中文字符乱码）。打开之后局域网内的电脑就能通过访问你的IP地址下载你电脑上的内容。比较蛋疼的是开启这个功能之后别人可以访问你电脑上的任何内容，加上everything快如闪电的搜索.呵呵，某个蛋疼的人用.mp4|.avi|.rmvb看到你的小秘密就不好咯,鉴于此对于局域网文件分享这个功能，Http&lt;br&gt;File Server更好用，如果你只用QQ发送文件…..当我没说~~~~&lt;/p&gt;
-&lt;p&gt;附送个不是技巧的技巧 比如你要搜索的文件在dropbox文件夹之下&lt;br&gt;，搜索的时候可以添加上 \dropbox&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/everything.jpg&quot; alt=&quot;everything&quot;&gt;&lt;/p&gt;
-&lt;p&gt;官方网站:&lt;a href=&quot;http://www.voidtools.com/&quot;&gt;www.voidtools.com&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！&lt;br&gt;
-    
-    </summary>
-    
-      <category term="善用佳软" scheme="http://ficapy.com/categories/%E5%96%84%E7%94%A8%E4%BD%B3%E8%BD%AF/"/>
-    
-    
-      <category term="everything, windows, 对比, 索引" scheme="http://ficapy.com/tags/everything-windows-%E5%AF%B9%E6%AF%94-%E7%B4%A2%E5%BC%95/"/>
     
   </entry>
   
