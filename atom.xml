@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-05-05T15:14:05.000Z</updated>
+  <updated>2016-05-24T16:07:48.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -14,6 +14,53 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>我的网络学习工具</title>
+    <link href="http://ficapy.com/2016/05/24/my_network_learn_tools/"/>
+    <id>http://ficapy.com/2016/05/24/my_network_learn_tools/</id>
+    <published>2016-05-24T13:26:52.000Z</published>
+    <updated>2016-05-24T16:07:48.000Z</updated>
+    
+    <content type="html">&lt;p&gt;虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工具及资源(内容不定期更新)&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;h2 id=&quot;软件&quot;&gt;&lt;a href=&quot;#软件&quot; class=&quot;headerlink&quot; title=&quot;软件&quot;&gt;&lt;/a&gt;软件&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;tcpdump/dumpcap/wireshark&lt;/p&gt;
+&lt;p&gt; 这应该是最广为人知的数据嗅探工具了，他们之间的区别和联系在stackexchange有一个回答&lt;/p&gt;
+&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;wireshark - powerfull sniffer which can decode lots of protocols, lots of filters.&amp;#10; &amp;#10;tshark - command line version of wireshark&amp;#10; &amp;#10;dumpcap (part of wireshark) - can only capture traffic and can be used by wireshark / tshark&amp;#10; &amp;#10;tcpdump - limited protocol decoding but available on most *NIX platforms&amp;#10; &amp;#10;ettercap - used for injecting traffic not sniffing&amp;#10; &amp;#10;All tools use libpcap (on windows winpcap) for sniffing. Wireshark / tshark / dumpcap can use tcpdump filter syntax as capture filter.&amp;#10; &amp;#10;As tcpdump is available on most *NIX system I usually use tcpdump. Depending on the problem I sometimes use tcpdump to capture traffic and write it to a file and the later use wireshark to analyze it. If available I use tshark but if the problem gets more complicated I still like to write the data to a file and then use Wireshark for analysis.&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt; 比较牛的是以上产品均出自The Tcpdump team组织，更牛的是查看github统计数据得知大概主要仅有四个人维护。。。。。。&lt;br&gt; 作为低端用户本人使用tcpdump和wireshark就够了。为了减少数据包。我一般会用vagrant开虚拟机抓包查看请求。使用&lt;code&gt;vagrant ssh -c &amp;quot;sudo tcpdump -i eth0 -s 0 -U -w - not port 22 and tcp&amp;quot; -- -ntt| wireshark -k -i -&lt;/code&gt; 或者 &lt;code&gt;vagrant ssh -c &amp;quot;sudo dumpcap -P -i any -w - -f &amp;#39;not tcp port 22 and tcp&amp;#39;&amp;quot; -- -ntt | wireshark -k -i -&lt;/code&gt; 均可。一般dumpcap没有预装~~。把tcpdump的参数解释下,-i(interface)表示监听某一个接口或全部，-s表示单个数据包最大多少，很明显0代表没限制，-U设置每个包输出为一行，-w保存。后面即为过滤表达式，注意:一定要加上&lt;code&gt;-- -ntt&lt;/code&gt;不加上wireshark会报错，至于为什么我还真没搞明白。。。。很明显使用tcpdump和wireshark最基本的技能是学会过滤表达式的语法，否则过于嘈杂的信息流马上会触发密集恐惧症吧。注意:wireshark中capture filter和display filter是决然不同的语法。快速入门请查看&lt;a href=&quot;http://packetlife.net/media/library/12/tcpdump.pdf&quot;&gt;capture filter速查表&lt;/a&gt;和&lt;a href=&quot;http://packetlife.net/media/library/13/Wireshark_Display_Filters.pdf&quot;&gt;display filter速查表&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt; 是否对嗅探的原理感到灰常好奇。一图胜千言。希望下面这张图能够初步解决你的疑惑(谷歌搜索图片libpcap)&lt;/p&gt;
+&lt;p&gt; &lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/packetfilter.png&quot; alt=&quot;嗅探原理&quot;&gt;&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;a href=&quot;http://www.secdev.org/projects/scapy/&quot;&gt;scapy&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt; 大概可以看成是python对libpcap的封装。可以不仅仅可以嗅探，还可以直接构建一个包发送出去(以上wireshark是不支持的)，所支持的协议也是灰常之多。可谓是学习之利器。可以查看&lt;a href=&quot;http://www.secdev.org/projects/scapy/demo.html&quot;&gt;官方DEMO体验下&lt;/a&gt;，不过此软件相对的依赖较多。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;a href=&quot;http://www.dest-unreach.org/socat/&quot;&gt;socat&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt; 和netcat是一类，据说更强大。至于有多强大我就不知道了。有待以后挖掘。本人也就按照tldr上的示例按需要进行体验了下&lt;code&gt;socat - TCP-LISTEN:8080,fork&lt;/code&gt;感觉是挺好用哒&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/jkbrzt/httpie&quot;&gt;httpie&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt; 某一天我发现github上python类目star数目最多的是这货。然后我就试用了下。。。。。对于调试来说易用性简直秒杀curl无数倍(仅从调试角度)。完全就是python里面requests和urllib的对比哇。使用灰常简单，比如&lt;code&gt;http g.cn -v --debug&lt;/code&gt;(读者不妨亲自体验下),比较值得关注的是httpie的session使用以及它支持配置文件，详情请查看文档&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;tldr&lt;/p&gt;
+&lt;p&gt; 该软件不属于该类别，可是命令行对于刚接触的新手是不那么有好的。比如tcp -h得到&lt;/p&gt;
+ &lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;    tcpdump version 4.7.3 -- Apple version 67&amp;#10;libpcap version 1.5.3 - Apple version 54&amp;#10;Usage: tcpdump [-aAbdDefhHIJKlLnNOpqRStuUvxX#] [ -B size ] [ -c count ]&amp;#10;&amp;#9;&amp;#9;[ -C file_size ] [ -E algo:secret ] [ -F file ] [ -G seconds ]&amp;#10;&amp;#9;&amp;#9;[ -i interface ] [ -j tstamptype ] [ -M secret ]&amp;#10;&amp;#9;&amp;#9;[ -Q metadata-filter-expression ]&amp;#10;&amp;#9;&amp;#9;[ -r file ] [ -s snaplen ] [ -T type ] [ --version ] [ -V file ]&amp;#10;&amp;#9;&amp;#9;[ -w file ] [ -W filecount ] [ -y datalinktype ] [ -z command ]&amp;#10;&amp;#9;&amp;#9;[ -Z user ] [ expression ]&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt; 也是灰常容易让人摸不着头脑,&lt;code&gt;tldr tcpdump&lt;/code&gt;可以给出常用的最基本的用法。对于初学者非常友好，能够最开始就体验到神器的强大，这样至少兴趣是产生了吧~~~&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;资源&quot;&gt;&lt;a href=&quot;#资源&quot; class=&quot;headerlink&quot; title=&quot;资源&quot;&gt;&lt;/a&gt;资源&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;http://packetlife.net/library/cheat-sheets/&quot;&gt;抓包专业资料较多,cheat-sheet值得一看。另外此博客友链也可以看看&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://coolshell.cn/articles/11564.html&quot;&gt;酷 壳–TCP 的那些事儿&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&quot;相关资料&quot;&gt;&lt;a href=&quot;#相关资料&quot; class=&quot;headerlink&quot; title=&quot;相关资料&quot;&gt;&lt;/a&gt;相关资料&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;https://en.wikipedia.org/wiki/Pcap&quot;&gt;libpcap维基百科&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://networkengineering.stackexchange.com/questions/10073/difference-between-sniffer-tools&quot;&gt;tcpdump/dumpcap区别&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://ask.wireshark.org/questions/6660/what-is-the-difference-between-capture-filter-and-display-filter&quot;&gt;capture filter和display filter不同&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://binxian.chetui.org/?p=129&quot;&gt;基于libpcap的sniffer实现&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工具及资源(内容不定期更新)&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="network" scheme="http://ficapy.com/categories/network/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>openwrt刷机常识</title>
@@ -698,58 +745,6 @@ style=&quot;color: #ff0000;&quot;&gt;扫描文件，必须注意的是要设置�
     
     
       <category term="snagit, 图片格式转换" scheme="http://ficapy.com/tags/snagit-%E5%9B%BE%E7%89%87%E6%A0%BC%E5%BC%8F%E8%BD%AC%E6%8D%A2/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>everything进阶教程</title>
-    <link href="http://ficapy.com/2013/10/06/everything_tutorial/"/>
-    <id>http://ficapy.com/2013/10/06/everything_tutorial/</id>
-    <published>2013-10-06T03:22:00.000Z</published>
-    <updated>2016-03-03T09:14:38.000Z</updated>
-    
-    <content type="html">&lt;p&gt;你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;br&gt;但是出现了这么一次。我需要确定搜索文件的大小范围和时间范围。问一些使用everything的朋友他们也不知道，在网上也没看到类似的资料，甚至有些网友回答用everything不能做到。很简单的一个问题却困扰了我很久。so，有了这篇文章。本篇博文只是在基础上进行了一些延伸。不建立在修改设置的基础之上。希望能帮到过往的朋友~~&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/everything.jpg&quot; alt=&quot;&quot;&gt;&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color: #ff0000;&quot;&gt;首先你得在&lt;a href=&quot;http://www.voidtools.com/&quot;&gt;&lt;span
-style=&quot;color: #ff0000;&quot;&gt;everything官网&lt;/span&gt;&lt;/a&gt;下载最新版（beta版本），不要下载稳定版。因为稳定版没有搜索语法帮助文件，不利于查看语法帮助。&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;&lt;span style=&quot;color: #ff0000;&quot;&gt;其次看帮助文件最好看&lt;span
-style=&quot;color: #0000ff;&quot;&gt;英文原版&lt;/span&gt;，否则会把你坑的不轻~~~~&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;从截图的帮助文件看出everything提供了3种帮助文件-搜索语法、正则语法、命令行。。。。其中第三种基本可以无视。基本上关于搜索的结果都是调用图形界面。还有些蛋疼的功能估计也没必要听闻~~~例举如下：&lt;/p&gt;
-&lt;p&gt;WIN+R 输入CMD                                   #进入命令行界面&lt;/p&gt;
-&lt;p&gt;D:&lt;br&gt;#切换到everything安装盘&lt;/p&gt;
-&lt;p&gt;cd \Program Files\Everything       #进入安装目录&lt;/p&gt;
-&lt;p&gt;everything.exe -search dropbox #其结果是打开everything搜索dropbox&lt;/p&gt;
-&lt;p&gt;加强搜索的帮助是搜索语法和正则，其中正则的帮助文件异常简单。用很简单的语言介绍了几个元字符的用法。如果你有正则表达式的基础在everything上面完全没问题。你会知道什么时候使用正则会让你马上找到你需要的结果（目测要用到正则的情况并不多见）。如果没有，推荐你看正则表达式的&lt;span
-style=&quot;color: #0000ff;&quot;&gt;&lt;a href=&quot;http://www.cnblogs.com/deerchao/archive/2006/08/24/zhengzhe30fengzhongjiaocheng.html&quot;&gt;入门教程&lt;/a&gt;，&lt;span
-style=&quot;color: #000000;&quot;&gt;呵呵。30分钟入门，绝对超赞的教程额~~~但是everything对正则的支持稍显薄弱。可用元字符不多，另外&lt;span
-style=&quot;color: #ff0000;&quot;&gt;无法和函数搭配使用&lt;/span&gt;也是一大遗憾。&lt;/span&gt;&lt;/span&gt;&lt;/p&gt;
-&lt;p&gt;让你的搜索技巧提升到一个高度，其实用函数才是最简单同时也是最有效的办法。函数是个大杀器。例举如下&lt;/p&gt;
-&lt;p&gt;要搜索在13年6到9月创建的一个文件名为某某计划的excel文档，文件大小大概在10到30kb之间，如果你直接用”计划&lt;br&gt;.xls”搜索按时间排序无法确定文件大小。单独按照文件大小排序同理~~~~难道只能用windows自带的搜索，忍受那坑爹的速度么，用它的函数功能异常简单，”*计划&lt;br&gt;.xls file: dm:2013/6-2013/9&lt;br&gt;size:10kb-30kb”（加了些无用的东西，方便下面说明）&lt;/p&gt;
-&lt;p&gt;但是初看everything的函数语法帮助文件并不好理解，分为了几大类操作符、通配符、宏、修饰符、函数、函数语法、大小语法、大小常数、日期语法、属性常数~~~~~这介绍的确让人纳闷。用刚才的举例来说明&lt;/p&gt;
-&lt;p&gt;操作符:大概用的最多的就是空格了，and，or，not很好理解，至于还有2个~~~我也没明白；&lt;/p&gt;
-&lt;p&gt;通配符:* ？*.&lt;br&gt;算是填充不确定的位置吧，前2个好像没必要使用，用空格可以代替。第三个指定搜索为文件夹不为文件；&lt;/p&gt;
-&lt;p&gt;宏:不明~~~~&lt;/p&gt;
-&lt;p&gt;修饰符:增加条件，进一步缩小范围，比如文中的file:&lt;br&gt;代表只显示文件，不显示文件夹；&lt;/p&gt;
-&lt;p&gt;函数:基本包含了精确搜索的主要功能了，有关日期，大小，类型，文件属性，文件名长度等，其中日期有2种，文件创建日期和修日期。我一般会使用文件修改日期，因为和everything主界面的更新日期含义一致，如果用dc：…….你可能会怀疑是不是软件出错了~~~~；&lt;/p&gt;
-&lt;p&gt;函数语法:无它，就是让你确定函数参数的值和范围；&lt;/p&gt;
-&lt;p&gt;&lt;span
-style=&quot;color: #0000ff;&quot;&gt;&lt;strong&gt;特别注明&lt;/strong&gt;&lt;/span&gt;：everything搜索文件名超快，但是基于其他的条件未知，搜索条件可能是从左到右，所以尽量先添加一些限定条件把文件限制的一定的范围，比如文件格式”.txt”等，最后添加函数比如”size:&amp;gt;1mb”，如果你输入”size:&amp;gt;1mb&lt;br&gt;A”等格式~~轻则软件提示停止搜索，重则会导致需强制注销&lt;/p&gt;
-&lt;p&gt;–引用自:&lt;a href=&quot;http://forum.voidtools.com/viewtopic.php?f=2&amp;amp;t=1640#&quot;&gt;http://forum.voidtools.com/viewtopic.php?f=2&amp;amp;t=1640#&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;后面的大小语法等就没说的必要了，就是函数的参数部分内容。&lt;span
-style=&quot;color: #ff0000;&quot;&gt;特别注明，请尽量使用英文帮助&lt;/span&gt;。中文你会看到比较坑的地方，比如中文关于日期语法是这样的日期语法：&lt;br&gt;year&lt;br&gt;month/year&lt;br&gt;day/month/year&lt;/p&gt;
-&lt;p&gt;英文版是这样的,Date Syntax:&lt;br&gt;year&lt;br&gt;month/year or year/month depending on locale settings&lt;br&gt;day/month/year, month/day/year or year/month/day depending on locale&lt;br&gt;settings&lt;br&gt;…看到区别了吗depending on locale&lt;br&gt;settings，中文帮助或许没跟上。这部分是直接略过的，让我纠结了很长时间，甚至发现了年月格式可以用jan/2013等，顺便吐槽下学好英语在实际应用中的重要性&amp;gt;_&amp;lt;~~~&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。&lt;br&gt;
-    
-    </summary>
-    
-      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
-    
-    
-      <category term="everything函数, everything进阶, everything高级教程" scheme="http://ficapy.com/tags/everything%E5%87%BD%E6%95%B0-everything%E8%BF%9B%E9%98%B6-everything%E9%AB%98%E7%BA%A7%E6%95%99%E7%A8%8B/"/>
     
   </entry>
   

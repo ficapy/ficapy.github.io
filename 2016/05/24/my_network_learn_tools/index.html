@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>openwrt刷机常识 - 邹雷</title>
+    <title>我的网络学习工具 - 邹雷</title>
     <meta name="author" content="Ficapy">
     <script type="text/javascript">
     var url = window.location.href;
@@ -20,16 +20,17 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。">
+    <meta name="description" content="虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="openwrt刷机常识">
-<meta property="og:url" content="http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/index.html">
+<meta property="og:title" content="我的网络学习工具">
+<meta property="og:url" content="http://ficapy.com/2016/05/24/my_network_learn_tools/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。">
-<meta property="og:updated_time" content="2016-05-05T15:14:05.000Z">
+<meta property="og:description" content="虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/packetfilter.png">
+<meta property="og:updated_time" content="2016-05-24T16:07:48.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="openwrt刷机常识">
-<meta name="twitter:description" content="openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。">
+<meta name="twitter:title" content="我的网络学习工具">
+<meta name="twitter:description" content="虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -240,19 +241,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            openwrt刷机常识
+            我的网络学习工具
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" content="Thu May 05 2016 20:59:17 GMT+0800">
+    <time itemprop="datePublished" content="Tue May 24 2016 21:26:52 GMT+0800">
 	
-		    5月 05, 2016
+		    5月 24, 2016
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+    <a class="category-link" href="/categories/network/">network</a>
 
 
     
@@ -261,23 +262,33 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。</p>
+            <p>虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工具及资源(内容不定期更新)</p>
 <a id="more"></a>
-<h2 id="BootLoader"><a href="#BootLoader" class="headerlink" title="BootLoader"></a>BootLoader</h2><p>一般刷机教程中不大会出现该名词，可是它其实是非常重要的。它和我们常听到的BIOS是一类程序–<code>引导程序</code>，在我们给电脑重装系统的时候通常都是开机的时候按特定的功能键然后进入图形界面和BIOS交互。openwrt刷机中其实也非常类似，只是交互的方式不同→→→直接造成了下面几个名词的产生</p>
-<h2 id="不死UBoot"><a href="#不死UBoot" class="headerlink" title="不死UBoot"></a>不死UBoot</h2><p>即为上面描述的<code>引导程序</code>的一种(即还有别的引导程序)。试想我们给电脑装系统的时候。无论怎么失败，都是可以进入BIOS设置，然后一次次的重装系统的。可是有的openwrt的引导程序则不同。他们只给你一次失败的机会。如果失败就要用特殊的手段重装(比如TTL串口)，不死Uboot即相对那种失败就死的Bootloader而言的(其实感觉这应该是一个理所当然的自带功能,然而并没有)。不死UBoot提供这样的交互→→→如果刷机失败，无法ssh进入到openwrt系统，那么Uboot提供一个web服务，路由器运行的时候直接通过LAN接口连接电脑，然后通过web页面上传固件刷机。这样无论刷固件如何失败。都可以反复刷固件。<code>可以看出不死Uboot它只是提供了一种比较方便的和引导程序交互的途径</code>。其他常见途径还包括自动读取U盘里面的固件、使用TTL串口等</p>
-<h2 id="TTL刷机"><a href="#TTL刷机" class="headerlink" title="TTL刷机"></a>TTL刷机</h2><p>听起来很高大上有没有，其实也仅仅只是和BootLoader进行交互的一种手段。所以如果你感觉它能解救任何砖机那就大错特错了。因为它需要设备预留口而且需要TTL串口设备，所以普通玩家是不会太有机会通过该方法刷机的，不死Uboot通过web交互，TTL刷机通过TTL串口。所以他们并没有实质的区别，都是和boot进行交互。</p>
-<h2 id="mtd"><a href="#mtd" class="headerlink" title="mtd"></a>mtd</h2><p>Memory_Technology_Device,如果执行命令刷机，那么在教程中mtd这个词并不陌生，它提供<code>对文件系统读写的接口</code>（描述可能不准确）。和linux中的dd差不多吧</p>
-<h2 id="锁UBoot"><a href="#锁UBoot" class="headerlink" title="锁UBoot"></a>锁UBoot</h2><p>即限制mtd去擦写u-boot分区。如果执行命令写入的时候提示被锁就是锁了(好像是废话)。解决办法就是先刷一个允许写入u-boot分区的固件，当然锁住也不是完全没道理的，因为刷uboot是刷openwrt中危险性最高的一步。当然也有恶心的产品同时限制你擦写固件分区，比如极路由3。遇上这种普通方法无解了。既然刷uboot风险高，那么为何要刷呢。我想因为是自带的BootLoader不支持不死这种方式造成的，或者官方通过boot限制安装非官方固件</p>
-<h2 id="Flash-内存等参数"><a href="#Flash-内存等参数" class="headerlink" title="Flash/内存等参数"></a>Flash/内存等参数</h2><p>下载玩家自制固件的时候需要知道自己的设备参数，可以通过<a href="https://wiki.openwrt.org/toh/start">openwrt官方查找</a>。ssh进入openwrt可以通过free查看内存大小。注意通过df -h查看到的并不是Flash大小，至于为什么我也不大明白。</p>
-<h2 id="刷机小总结"><a href="#刷机小总结" class="headerlink" title="刷机小总结"></a>刷机小总结</h2><ol>
-<li>ssh进入openwrt，小心谨慎使用mtd刷不死uboot(因为该步成功后刷固件失败也可安然无恙，so该步收益大于风险)，当然要是你这一步就失败了。机器基本就变砖了。因为TTL这类科技也是和boot交互的。boot都被刷挂了。基本没戏了，只能通过专用设备写入来解决了</li>
-<li>有了不死uboot这类科技护体，意味着你只要不要乱作死去随便反复刷boot那么反反复复刷固件都是没事的，即使刷固件变砖。另:有没有看到网上很多教程都写的通过LAN口来刷固件，其实看完上面的一些概念，是完全不需要这样的(因为有的笔记本并没有LAN接口)。进入到openwrt里面通过mtd刷固件和进入到uboot的web页面并没有任何区别</li>
-<li>选择固件的时候可以在淘宝上找店主。毕竟别人存货多XD</li>
-<li>网上找几个和自己一样设备的教程贴，思索下别人的操作发生了什么。</li>
-<li><strong>原厂固件和sysupgrade的区别见参考资料最后一个链接</strong></li>
+<h2 id="软件"><a href="#软件" class="headerlink" title="软件"></a>软件</h2><ol>
+<li><p>tcpdump/dumpcap/wireshark</p>
+<p> 这应该是最广为人知的数据嗅探工具了，他们之间的区别和联系在stackexchange有一个回答</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">wireshark - powerfull sniffer which can decode lots of protocols, lots of filters.&#10; &#10;tshark - command line version of wireshark&#10; &#10;dumpcap (part of wireshark) - can only capture traffic and can be used by wireshark / tshark&#10; &#10;tcpdump - limited protocol decoding but available on most *NIX platforms&#10; &#10;ettercap - used for injecting traffic not sniffing&#10; &#10;All tools use libpcap (on windows winpcap) for sniffing. Wireshark / tshark / dumpcap can use tcpdump filter syntax as capture filter.&#10; &#10;As tcpdump is available on most *NIX system I usually use tcpdump. Depending on the problem I sometimes use tcpdump to capture traffic and write it to a file and the later use wireshark to analyze it. If available I use tshark but if the problem gets more complicated I still like to write the data to a file and then use Wireshark for analysis.</span><br></pre></td></tr></table></figure>
+<p> 比较牛的是以上产品均出自The Tcpdump team组织，更牛的是查看github统计数据得知大概主要仅有四个人维护。。。。。。<br> 作为低端用户本人使用tcpdump和wireshark就够了。为了减少数据包。我一般会用vagrant开虚拟机抓包查看请求。使用<code>vagrant ssh -c &quot;sudo tcpdump -i eth0 -s 0 -U -w - not port 22 and tcp&quot; -- -ntt| wireshark -k -i -</code> 或者 <code>vagrant ssh -c &quot;sudo dumpcap -P -i any -w - -f &#39;not tcp port 22 and tcp&#39;&quot; -- -ntt | wireshark -k -i -</code> 均可。一般dumpcap没有预装~~。把tcpdump的参数解释下,-i(interface)表示监听某一个接口或全部，-s表示单个数据包最大多少，很明显0代表没限制，-U设置每个包输出为一行，-w保存。后面即为过滤表达式，注意:一定要加上<code>-- -ntt</code>不加上wireshark会报错，至于为什么我还真没搞明白。。。。很明显使用tcpdump和wireshark最基本的技能是学会过滤表达式的语法，否则过于嘈杂的信息流马上会触发密集恐惧症吧。注意:wireshark中capture filter和display filter是决然不同的语法。快速入门请查看<a href="http://packetlife.net/media/library/12/tcpdump.pdf">capture filter速查表</a>和<a href="http://packetlife.net/media/library/13/Wireshark_Display_Filters.pdf">display filter速查表</a></p>
+<p> 是否对嗅探的原理感到灰常好奇。一图胜千言。希望下面这张图能够初步解决你的疑惑(谷歌搜索图片libpcap)</p>
+<p> <img src="https://ficapy.b0.upaiyun.com/blogimg/packetfilter.png" alt="嗅探原理"></p>
+</li>
+<li><p><a href="http://www.secdev.org/projects/scapy/">scapy</a></p>
+<p> 大概可以看成是python对libpcap的封装。可以不仅仅可以嗅探，还可以直接构建一个包发送出去(以上wireshark是不支持的)，所支持的协议也是灰常之多。可谓是学习之利器。可以查看<a href="http://www.secdev.org/projects/scapy/demo.html">官方DEMO体验下</a>，不过此软件相对的依赖较多。</p>
+</li>
+<li><p><a href="http://www.dest-unreach.org/socat/">socat</a></p>
+<p> 和netcat是一类，据说更强大。至于有多强大我就不知道了。有待以后挖掘。本人也就按照tldr上的示例按需要进行体验了下<code>socat - TCP-LISTEN:8080,fork</code>感觉是挺好用哒</p>
+</li>
+<li><p><a href="https://github.com/jkbrzt/httpie">httpie</a></p>
+<p> 某一天我发现github上python类目star数目最多的是这货。然后我就试用了下。。。。。对于调试来说易用性简直秒杀curl无数倍(仅从调试角度)。完全就是python里面requests和urllib的对比哇。使用灰常简单，比如<code>http g.cn -v --debug</code>(读者不妨亲自体验下),比较值得关注的是httpie的session使用以及它支持配置文件，详情请查看文档</p>
+</li>
+<li><p>tldr</p>
+<p> 该软件不属于该类别，可是命令行对于刚接触的新手是不那么有好的。比如tcp -h得到</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    tcpdump version 4.7.3 -- Apple version 67&#10;libpcap version 1.5.3 - Apple version 54&#10;Usage: tcpdump [-aAbdDefhHIJKlLnNOpqRStuUvxX#] [ -B size ] [ -c count ]&#10;&#9;&#9;[ -C file_size ] [ -E algo:secret ] [ -F file ] [ -G seconds ]&#10;&#9;&#9;[ -i interface ] [ -j tstamptype ] [ -M secret ]&#10;&#9;&#9;[ -Q metadata-filter-expression ]&#10;&#9;&#9;[ -r file ] [ -s snaplen ] [ -T type ] [ --version ] [ -V file ]&#10;&#9;&#9;[ -w file ] [ -W filecount ] [ -y datalinktype ] [ -z command ]&#10;&#9;&#9;[ -Z user ] [ expression ]</span><br></pre></td></tr></table></figure>
+<p> 也是灰常容易让人摸不着头脑,<code>tldr tcpdump</code>可以给出常用的最基本的用法。对于初学者非常友好，能够最开始就体验到神器的强大，这样至少兴趣是产生了吧~~~</p>
+</li>
 </ol>
-<h2 id="笔者刷机过程"><a href="#笔者刷机过程" class="headerlink" title="笔者刷机过程"></a>笔者刷机过程</h2><p>因为我的路由出厂就是不死uboot，所以我在收集了一天资料之后，进行了如下操作<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">下载固件firmware</span><br><span class="line">scp firmware root@<span class="number">192.168</span>.<span class="number">8.1</span>:/tmp</span><br><span class="line">mtd -r write /tmp/firmware firmware</span><br></pre></td></tr></table></figure><br>over 然后等两三分钟就好了，当然我凭着好奇的心理随便刷了几个别的固件。很不出意外的变砖了。然后通过LAN连接，再刷就好了</p>
-<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a href="http://www.shuyz.com/fix-openwrt-connection-with-putty.html">关于串口TTL、USB转接实例(含图)</a><br><a href="http://www.right.com.cn/forum/thread-154561-1-1.html">关于刷UBoot</a><br><a href="https://www.v2ex.com/t/160078">不死uboot在v2ex上的一个讨论</a><br><a href="http://blog.csdn.net/xcoderone/article/details/48030771">TTL线刷原理</a><br><a href="http://www.right.com.cn/forum/forum.php?mod=viewthread&amp;tid=54647#pid392795">另一个TTL线刷原理</a><br><a href="http://blog.csdn.net/xcoderone/article/details/48031279">再来一个TTL线刷实例</a><br><a href="https://wiki.openwrt.org/doc/techref/bootloader">关于BootLoader</a><br><a href="http://blog.atime.me/research/openwrt-pandorabox-introduction.html">初探OpenWrt</a><br><a href="https://en.wikipedia.org/wiki/Memory_Technology_Device">MTD维基百科介绍</a><br><a href="http://www.crifan.com/files/doc/docbook/linux_nand_driver/release/webhelp/mtd_memory_technology_device.html">MTD扩展阅读</a><br><a href="https://myop.cf/archives/546">如果你看不懂这篇文章，那么全篇你是白看了</a></p>
+<h2 id="资源"><a href="#资源" class="headerlink" title="资源"></a>资源</h2><p><a href="http://packetlife.net/library/cheat-sheets/">抓包专业资料较多,cheat-sheet值得一看。另外此博客友链也可以看看</a><br><a href="http://coolshell.cn/articles/11564.html">酷 壳–TCP 的那些事儿</a></p>
+<h2 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h2><p><a href="https://en.wikipedia.org/wiki/Pcap">libpcap维基百科</a><br><a href="http://networkengineering.stackexchange.com/questions/10073/difference-between-sniffer-tools">tcpdump/dumpcap区别</a><br><a href="https://ask.wireshark.org/questions/6660/what-is-the-difference-between-capture-filter-and-display-filter">capture filter和display filter不同</a><br><a href="http://binxian.chetui.org/?p=129">基于libpcap的sniffer实现</a></p>
 
             
                 
@@ -292,7 +303,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/05/24/my_network_learn_tools/"  data-tooltip="我的网络学习工具">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -300,7 +311,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/03/11/letsencrypt_aliyun_oss/" data-tooltip="阿里云OSS绑定letsencrypt证书">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/05/05/openwrt_recovery_you_need_to_know/" data-tooltip="openwrt刷机常识">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -315,17 +326,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/05/24/my_network_learn_tools/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/05/24/my_network_learn_tools/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/05/24/my_network_learn_tools/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -373,7 +384,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/05/24/my_network_learn_tools/"  data-tooltip="我的网络学习工具">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -381,7 +392,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/03/11/letsencrypt_aliyun_oss/" data-tooltip="阿里云OSS绑定letsencrypt证书">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/05/05/openwrt_recovery_you_need_to_know/" data-tooltip="openwrt刷机常识">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -396,17 +407,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/05/24/my_network_learn_tools/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/05/24/my_network_learn_tools/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/05/24/my_network_learn_tools/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -432,17 +443,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="3">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/05/24/my_network_learn_tools/">
                 <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/05/24/my_network_learn_tools/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/05/24/my_network_learn_tools/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -499,9 +510,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/';
+                 this.page.url = 'http://ficapy.com/2016/05/24/my_network_learn_tools/';
                  
-                    this.page.identifier = '2016/05/05/openwrt_recovery_you_need_to_know/';
+                    this.page.identifier = '2016/05/24/my_network_learn_tools/';
                                   
              };
             (function() {
