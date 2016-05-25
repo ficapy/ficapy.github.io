@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-05-24T16:07:48.000Z</updated>
+  <updated>2016-05-25T10:28:55.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -16,11 +16,37 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>Gmail设置自动删除推广邮件</title>
+    <link href="http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/"/>
+    <id>http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/</id>
+    <published>2016-05-25T09:40:01.000Z</published>
+    <updated>2016-05-25T10:28:55.000Z</updated>
+    
+    <content type="html">&lt;p&gt;一直以来我都是多个邮箱混合使用，对Gmail邮箱也不是特别感冒(主力邮箱是outlook(因为没有被墙))。或许是几天没有打开foxmail，刚打开就有那么几十封各种垃圾推广邮件。或许是心情不大好我去搜了下如何过滤掉这些邮件，让他们不会被foxmail客户端接收。于是感受到了outlook和gmail的明显差距，忍不住发篇博文展示下。&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;p&gt;本文是基于一个理念，&lt;strong&gt;被归类为垃圾邮件就没必要展示给用户了&lt;/strong&gt;，设想一下服务商邮件系统已经识别出了某邮件是垃圾邮件，客户端还会依旧下载并显示有多少封垃圾邮件，对于用户看到这样的提示总会忍不住去打开垃圾箱扫几眼。至少对于我来说从没在垃圾箱遇到有用的邮件(有些激活码之类的邮件会手动去检查除外)，这样我们完全可以&lt;strong&gt;把被系统判定为我们不需要的邮件直接删除掉&lt;/strong&gt;，这样就不会由邮件客户端展示在我们面前了，当然以上出自一个前提，应该是比较不重要的邮箱(比如鄙人的个人邮箱)。假如某封对你灰常重要的邮件被自动加到了删除邮件组，30天后就再也看不到了。&lt;/p&gt;
+&lt;p&gt;实际上这是一个选择邮件的问题，我们找出邮件然后设定操作。省去对outlook弱鸡流程的吐槽，最坑爹的是它创建规则后不能对历史邮件进行使用。Gmail使用专门的搜索语法，outlook使用选择选择输入文本(看起来对小白友好，效率辣鸡)。归功于Gmail强大的归类。对于自动删除收到的推广邮件在Has the words栏目填写&lt;strong&gt;&lt;span class=&quot;highlight-text red&quot;&gt;category:promotions OR category:social&lt;/span&gt;&lt;/strong&gt;（貌似全篇有用的也就这段语法了，更强大的搜索功能请查看最后给出的相关资料）,至于outlook→→这货不仅没有给邮件默认分类为推广之类的，而且！！垃圾邮件分类都不让你作为规则选择&lt;/p&gt;
+&lt;p&gt;再说一下本人对于邮件处理的碎碎念&lt;br&gt;理念就是使用多个邮箱&lt;br&gt;工作邮箱(当然公司都会提供的,这个没什么好处理的，绝逼是不会收到垃圾邮件的，而且邮件也不会删除)&lt;br&gt;个人邮箱(outlook用来注册各种网站，gmail用来邮件交流)&lt;br&gt;QQ邮箱(有些人比较喜欢QQ邮箱，给他们发文件)&lt;br&gt;163邮箱(订阅各种周报weekly使用)&lt;br&gt;另外一个Gmail邮箱(专门订阅邮件组)&lt;br&gt;这样使用foxmail的时候也能比较明确的知道哪些邮件大概是啥类型的XD&lt;/p&gt;
+&lt;h2 id=&quot;相关资料&quot;&gt;&lt;a href=&quot;#相关资料&quot; class=&quot;headerlink&quot; title=&quot;相关资料&quot;&gt;&lt;/a&gt;相关资料&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;http://duntuk.com/how-create-gmail-filter-automatically-delete-emails-older-x-amount-days&quot;&gt;本文搜索资料&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://support.google.com/mail/answer/7190?hl=en&quot;&gt;gmail高级搜索语法(过滤器通用)&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;一直以来我都是多个邮箱混合使用，对Gmail邮箱也不是特别感冒(主力邮箱是outlook(因为没有被墙))。或许是几天没有打开foxmail，刚打开就有那么几十封各种垃圾推广邮件。或许是心情不大好我去搜了下如何过滤掉这些邮件，让他们不会被foxmail客户端接收。于是感受到了outlook和gmail的明显差距，忍不住发篇博文展示下。&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
+    
+    
+  </entry>
+  
+  <entry>
     <title>我的网络学习工具</title>
     <link href="http://ficapy.com/2016/05/24/my_network_learn_tools/"/>
     <id>http://ficapy.com/2016/05/24/my_network_learn_tools/</id>
     <published>2016-05-24T13:26:52.000Z</published>
-    <updated>2016-05-24T16:07:48.000Z</updated>
+    <updated>2016-05-25T10:25:52.000Z</updated>
     
     <content type="html">&lt;p&gt;虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工具及资源(内容不定期更新)&lt;/p&gt;
 &lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
@@ -40,6 +66,9 @@
 &lt;/li&gt;
 &lt;li&gt;&lt;p&gt;&lt;a href=&quot;https://github.com/jkbrzt/httpie&quot;&gt;httpie&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt; 某一天我发现github上python类目star数目最多的是这货。然后我就试用了下。。。。。对于调试来说易用性简直秒杀curl无数倍(仅从调试角度)。完全就是python里面requests和urllib的对比哇。使用灰常简单，比如&lt;code&gt;http g.cn -v --debug&lt;/code&gt;(读者不妨亲自体验下),比较值得关注的是httpie的session使用以及它支持配置文件，详情请查看文档&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;&lt;a href=&quot;http://www.telerik.com/fiddler&quot;&gt;fiddler&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt; 主要对应用层http进行处理。它主要使用WinInet自动设置代理或者用户手动设置代理。意味着如果无法设置代理那么该软件是无法捕获到需要的数据的。另外它支持导入pcap格式的报文查看http交互(不能实时灰常可惜)，&lt;a href=&quot;http://docs.telerik.com/fiddler/KnowledgeBase/Proxy&quot;&gt;fiddler原理可查看&lt;/a&gt;。最后放一张图&lt;br&gt; &lt;img src=&quot;http://ficapy.b0.upaiyun.com/blogimg/TrafficFlow.png&quot; alt=&quot;fiddler原理&quot;&gt;    &lt;/p&gt;
 &lt;/li&gt;
 &lt;li&gt;&lt;p&gt;tldr&lt;/p&gt;
 &lt;p&gt; 该软件不属于该类别，可是命令行对于刚接触的新手是不那么有好的。比如tcp -h得到&lt;/p&gt;
@@ -707,44 +736,6 @@ style=&quot;color: #ff0000;&quot;&gt;扫描文件，必须注意的是要设置�
     
       <category term="善用佳软" scheme="http://ficapy.com/categories/%E5%96%84%E7%94%A8%E4%BD%B3%E8%BD%AF/"/>
     
-    
-  </entry>
-  
-  <entry>
-    <title>Snagit-截图兼图片转换软件</title>
-    <link href="http://ficapy.com/2013/10/12/cputure_image_and_convert_software/"/>
-    <id>http://ficapy.com/2013/10/12/cputure_image_and_convert_software/</id>
-    <published>2013-10-12T11:17:00.000Z</published>
-    <updated>2016-03-03T09:14:09.000Z</updated>
-    
-    <content type="html">&lt;p&gt;好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~&lt;/p&gt;
-&lt;p&gt;今天介绍的是一款据说主打截图的软件-snagit&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/snagit.png&quot; alt=&quot;snagit&quot;&gt; 官方网站：&lt;a href=&quot;http://www.techsmith.com/&quot;&gt;http://www.techsmith.com/&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia&lt;br&gt;studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~&lt;/p&gt;
-&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
-&lt;p&gt;它的截图功能的定位我真的感觉很怪异，最简便截图我们会用系统自带的print&lt;br&gt;screen或者alt+print&lt;br&gt;screen。如果不用snagit的图片后期处理功能和系统自带截图没什么区别。若是要添加简便的箭头或者文本说明。用QQ也不在话下~~~~~~不在这2者之类的要用到这个软件的截图功能的人我想应该不多.就我看来，这个软件的截图功能算是小众吧。&lt;/p&gt;
-&lt;p&gt;我比较喜欢的是它的另外2个功能&lt;/p&gt;
-&lt;p&gt;1.图片格式转换功能，因为可选参数比较多，比较傻瓜。对于图片压缩效果立竿见影，打开也及其方便，就在右键菜单栏，对比需要调用它的截图功能需要打开软件简直太方便了。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;可批量转换，转换的时候也可以添加一些效果&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;可选格式多，可调空间大&lt;/strong&gt;&lt;/p&gt;
-&lt;p&gt;2.附带虚拟打印机。能够打印出来的文件就能使用它打印出各种格式的图片~~但也有个缺点,不支持A3输出。而且调用速度慢。so，一般用虚拟打印机它只能当做备胎。&lt;/p&gt;
-&lt;p&gt;虽然这是一款主打截图的软件，但是我觉得图片格式转换压缩远比截图好用，用来加强photoshop的图片输出功能是一种不错的选择（吐槽下ps对图片的输出实在太坑爹了，我也没找到牛X的输出增强插件）&lt;/p&gt;
-&lt;p&gt;下载地址:&lt;a href=&quot;http://user.qzone.qq.com/562844847/blog/1370396108#!app=2&amp;amp;via=QZ.HashRefresh&amp;amp;pos=1370396108&quot;&gt;http://user.qzone.qq.com/562844847/blog/1370396108#!app=2&amp;amp;via=QZ.HashRefresh&amp;amp;pos=1370396108&lt;/a&gt;&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~&lt;/p&gt;
-&lt;p&gt;今天介绍的是一款据说主打截图的软件-snagit&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/snagit.png&quot; alt=&quot;snagit&quot;&gt; 官方网站：&lt;a href=&quot;http://www.techsmith.com/&quot;&gt;http://www.techsmith.com/&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia&lt;br&gt;studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="善用佳软" scheme="http://ficapy.com/categories/%E5%96%84%E7%94%A8%E4%BD%B3%E8%BD%AF/"/>
-    
-    
-      <category term="snagit, 图片格式转换" scheme="http://ficapy.com/tags/snagit-%E5%9B%BE%E7%89%87%E6%A0%BC%E5%BC%8F%E8%BD%AC%E6%8D%A2/"/>
     
   </entry>
   
