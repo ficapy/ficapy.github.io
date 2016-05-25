@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-05-25T10:28:55.000Z</updated>
+  <updated>2016-05-25T10:34:51.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -20,14 +20,14 @@
     <link href="http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/"/>
     <id>http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/</id>
     <published>2016-05-25T09:40:01.000Z</published>
-    <updated>2016-05-25T10:28:55.000Z</updated>
+    <updated>2016-05-25T10:34:51.000Z</updated>
     
     <content type="html">&lt;p&gt;一直以来我都是多个邮箱混合使用，对Gmail邮箱也不是特别感冒(主力邮箱是outlook(因为没有被墙))。或许是几天没有打开foxmail，刚打开就有那么几十封各种垃圾推广邮件。或许是心情不大好我去搜了下如何过滤掉这些邮件，让他们不会被foxmail客户端接收。于是感受到了outlook和gmail的明显差距，忍不住发篇博文展示下。&lt;/p&gt;
 &lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
 &lt;p&gt;本文是基于一个理念，&lt;strong&gt;被归类为垃圾邮件就没必要展示给用户了&lt;/strong&gt;，设想一下服务商邮件系统已经识别出了某邮件是垃圾邮件，客户端还会依旧下载并显示有多少封垃圾邮件，对于用户看到这样的提示总会忍不住去打开垃圾箱扫几眼。至少对于我来说从没在垃圾箱遇到有用的邮件(有些激活码之类的邮件会手动去检查除外)，这样我们完全可以&lt;strong&gt;把被系统判定为我们不需要的邮件直接删除掉&lt;/strong&gt;，这样就不会由邮件客户端展示在我们面前了，当然以上出自一个前提，应该是比较不重要的邮箱(比如鄙人的个人邮箱)。假如某封对你灰常重要的邮件被自动加到了删除邮件组，30天后就再也看不到了。&lt;/p&gt;
 &lt;p&gt;实际上这是一个选择邮件的问题，我们找出邮件然后设定操作。省去对outlook弱鸡流程的吐槽，最坑爹的是它创建规则后不能对历史邮件进行使用。Gmail使用专门的搜索语法，outlook使用选择选择输入文本(看起来对小白友好，效率辣鸡)。归功于Gmail强大的归类。对于自动删除收到的推广邮件在Has the words栏目填写&lt;strong&gt;&lt;span class=&quot;highlight-text red&quot;&gt;category:promotions OR category:social&lt;/span&gt;&lt;/strong&gt;（貌似全篇有用的也就这段语法了，更强大的搜索功能请查看最后给出的相关资料）,至于outlook→→这货不仅没有给邮件默认分类为推广之类的，而且！！垃圾邮件分类都不让你作为规则选择&lt;/p&gt;
 &lt;p&gt;再说一下本人对于邮件处理的碎碎念&lt;br&gt;理念就是使用多个邮箱&lt;br&gt;工作邮箱(当然公司都会提供的,这个没什么好处理的，绝逼是不会收到垃圾邮件的，而且邮件也不会删除)&lt;br&gt;个人邮箱(outlook用来注册各种网站，gmail用来邮件交流)&lt;br&gt;QQ邮箱(有些人比较喜欢QQ邮箱，给他们发文件)&lt;br&gt;163邮箱(订阅各种周报weekly使用)&lt;br&gt;另外一个Gmail邮箱(专门订阅邮件组)&lt;br&gt;这样使用foxmail的时候也能比较明确的知道哪些邮件大概是啥类型的XD&lt;/p&gt;
-&lt;h2 id=&quot;相关资料&quot;&gt;&lt;a href=&quot;#相关资料&quot; class=&quot;headerlink&quot; title=&quot;相关资料&quot;&gt;&lt;/a&gt;相关资料&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;http://duntuk.com/how-create-gmail-filter-automatically-delete-emails-older-x-amount-days&quot;&gt;本文搜索资料&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://support.google.com/mail/answer/7190?hl=en&quot;&gt;gmail高级搜索语法(过滤器通用)&lt;/a&gt;&lt;/p&gt;
+&lt;h2 id=&quot;相关资料&quot;&gt;&lt;a href=&quot;#相关资料&quot; class=&quot;headerlink&quot; title=&quot;相关资料&quot;&gt;&lt;/a&gt;相关资料&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;http://duntuk.com/how-create-gmail-filter-automatically-delete-emails-older-x-amount-days&quot;&gt;本文搜索资料&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://support.google.com/mail/answer/7190?hl=en&quot;&gt;gmail高级搜索语法(过滤器通用)&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://www.iplaysoft.com/shou-fa-gmail.html&quot;&gt;国内如何接收Gmail(如果你不会过墙的话)&lt;/a&gt;&lt;/p&gt;
 </content>
     
     <summary type="html">
