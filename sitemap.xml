@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://ficapy.com/2016/03/11/letsencrypt_aliyun_oss/</loc>
+    
+    <lastmod>2016-05-30T10:41:42.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/</loc>
     
     <lastmod>2016-05-25T10:34:51.000Z</lastmod>
@@ -19,13 +26,6 @@
     <loc>http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/</loc>
     
     <lastmod>2016-05-05T15:14:05.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://ficapy.com/2016/03/11/letsencrypt_aliyun_oss/</loc>
-    
-    <lastmod>2016-03-12T14:02:15.000Z</lastmod>
     
   </url>
   
