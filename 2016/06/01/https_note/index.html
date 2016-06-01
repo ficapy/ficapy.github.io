@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>Gmail设置自动删除推广邮件 - 邹雷</title>
+    <title>https笔记 - 邹雷</title>
     <meta name="author" content="Ficapy">
     <script type="text/javascript">
     var url = window.location.href;
@@ -20,16 +20,19 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="一直以来我都是多个邮箱混合使用，对Gmail邮箱也不是特别感冒(主力邮箱是outlook(因为没有被墙))。或许是几天没有打开foxmail，刚打开就有那么几十封各种垃圾推广邮件。或许是心情不大好我去搜了下如何过滤掉这些邮件，让他们不会被foxmail客户端接收。于是感受到了outlook和gmail的明显差距，忍不住发篇博文展示下。">
+    <meta name="description" content="这年头网络劫持如此普遍，作为搞web开发的说不了解点https都不好意思。简单理解https可以非常简单，可是一旦上升到密码学。ヾ(｡｀Д´｡)牵扯到的概念真是太多了太特么复杂了。鄙人还是从个人实用角度出发。简洁记录一下https相关内容,另外本文作为回顾尚可，不适合作为初次了解https的参考。">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="Gmail设置自动删除推广邮件">
-<meta property="og:url" content="http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/index.html">
+<meta property="og:title" content="https笔记">
+<meta property="og:url" content="http://ficapy.com/2016/06/01/https_note/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="一直以来我都是多个邮箱混合使用，对Gmail邮箱也不是特别感冒(主力邮箱是outlook(因为没有被墙))。或许是几天没有打开foxmail，刚打开就有那么几十封各种垃圾推广邮件。或许是心情不大好我去搜了下如何过滤掉这些邮件，让他们不会被foxmail客户端接收。于是感受到了outlook和gmail的明显差距，忍不住发篇博文展示下。">
-<meta property="og:updated_time" content="2016-05-25T10:34:51.000Z">
+<meta property="og:description" content="这年头网络劫持如此普遍，作为搞web开发的说不了解点https都不好意思。简单理解https可以非常简单，可是一旦上升到密码学。ヾ(｡｀Д´｡)牵扯到的概念真是太多了太特么复杂了。鄙人还是从个人实用角度出发。简洁记录一下https相关内容,另外本文作为回顾尚可，不适合作为初次了解https的参考。">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/ssl_handshake_rsa.jpg">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/2016_06_01_23_20_38.png">
+<meta property="og:image" content="http://ficapy.b0.upaiyun.com/blogimg/ssl_handshake_diffie_hellman.jpg">
+<meta property="og:updated_time" content="2016-06-01T16:46:19.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Gmail设置自动删除推广邮件">
-<meta name="twitter:description" content="一直以来我都是多个邮箱混合使用，对Gmail邮箱也不是特别感冒(主力邮箱是outlook(因为没有被墙))。或许是几天没有打开foxmail，刚打开就有那么几十封各种垃圾推广邮件。或许是心情不大好我去搜了下如何过滤掉这些邮件，让他们不会被foxmail客户端接收。于是感受到了outlook和gmail的明显差距，忍不住发篇博文展示下。">
+<meta name="twitter:title" content="https笔记">
+<meta name="twitter:description" content="这年头网络劫持如此普遍，作为搞web开发的说不了解点https都不好意思。简单理解https可以非常简单，可是一旦上升到密码学。ヾ(｡｀Д´｡)牵扯到的概念真是太多了太特么复杂了。鄙人还是从个人实用角度出发。简洁记录一下https相关内容,另外本文作为回顾尚可，不适合作为初次了解https的参考。">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -240,19 +243,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            Gmail设置自动删除推广邮件
+            https笔记
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" content="Wed May 25 2016 17:40:01 GMT+0800">
+    <time itemprop="datePublished" content="Wed Jun 01 2016 21:54:21 GMT+0800">
 	
-		    5月 25, 2016
+		    6月 01, 2016
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+    <a class="category-link" href="/categories/network/">network</a>
 
 
     
@@ -261,12 +264,24 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>一直以来我都是多个邮箱混合使用，对Gmail邮箱也不是特别感冒(主力邮箱是outlook(因为没有被墙))。或许是几天没有打开foxmail，刚打开就有那么几十封各种垃圾推广邮件。或许是心情不大好我去搜了下如何过滤掉这些邮件，让他们不会被foxmail客户端接收。于是感受到了outlook和gmail的明显差距，忍不住发篇博文展示下。</p>
+            <p>这年头网络劫持如此普遍，作为搞web开发的说不了解点https都不好意思。简单理解https可以非常简单，可是一旦上升到密码学。ヾ(｡｀Д´｡)牵扯到的概念真是太多了太特么复杂了。鄙人还是从个人实用角度出发。简洁记录一下https相关内容,另外本文作为回顾尚可，不适合作为初次了解https的参考。</p>
 <a id="more"></a>
-<p>本文是基于一个理念，<strong>被归类为垃圾邮件就没必要展示给用户了</strong>，设想一下服务商邮件系统已经识别出了某邮件是垃圾邮件，客户端还会依旧下载并显示有多少封垃圾邮件，对于用户看到这样的提示总会忍不住去打开垃圾箱扫几眼。至少对于我来说从没在垃圾箱遇到有用的邮件(有些激活码之类的邮件会手动去检查除外)，这样我们完全可以<strong>把被系统判定为我们不需要的邮件直接删除掉</strong>，这样就不会由邮件客户端展示在我们面前了，当然以上出自一个前提，应该是比较不重要的邮箱(比如鄙人的个人邮箱)。假如某封对你灰常重要的邮件被自动加到了删除邮件组，30天后就再也看不到了。</p>
-<p>实际上这是一个选择邮件的问题，我们找出邮件然后设定操作。省去对outlook弱鸡流程的吐槽，最坑爹的是它创建规则后不能对历史邮件进行使用。Gmail使用专门的搜索语法，outlook使用选择选择输入文本(看起来对小白友好，效率辣鸡)。归功于Gmail强大的归类。对于自动删除收到的推广邮件在Has the words栏目填写<strong><span class="highlight-text red">category:promotions OR category:social</span></strong>（貌似全篇有用的也就这段语法了，更强大的搜索功能请查看最后给出的相关资料）,至于outlook→→这货不仅没有给邮件默认分类为推广之类的，而且！！垃圾邮件分类都不让你作为规则选择</p>
-<p>再说一下本人对于邮件处理的碎碎念<br>理念就是使用多个邮箱<br>工作邮箱(当然公司都会提供的,这个没什么好处理的，绝逼是不会收到垃圾邮件的，而且邮件也不会删除)<br>个人邮箱(outlook用来注册各种网站，gmail用来邮件交流)<br>QQ邮箱(有些人比较喜欢QQ邮箱，给他们发文件)<br>163邮箱(订阅各种周报weekly使用)<br>另外一个Gmail邮箱(专门订阅邮件组)<br>这样使用foxmail的时候也能比较明确的知道哪些邮件大概是啥类型的XD</p>
-<h2 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h2><p><a href="http://duntuk.com/how-create-gmail-filter-automatically-delete-emails-older-x-amount-days">本文搜索资料</a><br><a href="https://support.google.com/mail/answer/7190?hl=en">gmail高级搜索语法(过滤器通用)</a><br><a href="http://www.iplaysoft.com/shou-fa-gmail.html">国内如何接收Gmail(如果你不会过墙的话)</a></p>
+<p>从最简单的角度来说。简单理解HTTPS理解以下字段就好了<code>TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256</code>.任何稍有常识的程序员一定对RSA公私钥体系有所耳闻。以小白的眼光从最简单的角度来看。第一个请求向服务器请求公匙，服务器返回公匙。客户端验证公匙。客户端使用公匙加密一个密钥传递给服务器，然后就用这个密匙使用AES加密传输数据就完事儿了。妈蛋多好理解啊，可是现实环境总是灰常复杂的T_T。不过总体而言也差不了多少。上图2张。<br><img src="https://ficapy.b0.upaiyun.com/blogimg/ssl_handshake_rsa.jpg" alt=""><br><img src="https://ficapy.b0.upaiyun.com/blogimg/2016_06_01_23_20_38.png" alt=""></p>
+<p>wireshark中总体给出了灰常重要的几个关键词</p>
+<ul>
+<li>①Client Hello(发送客户端随机数，支持clipher，一些Extension，最知名的Extension应该是SNI，灰常好理解，就是表明是请求的哪个域名，这样就能够一个IP上放置N个证书哒，然后还有个有趣的东东<a href="https://github.com/dlundquist/sniproxy">sniproxy</a>)</li>
+<li>②Server Hello(发送服务端随机数，返回商量好的clipher) </li>
+<li>③Certificate(服务端返回公钥链)</li>
+<li>④Client Key Exchange(就是传递一个密匙哒)Change Cipher Spec(没啥用TLS1.3已被移出)Finished(发送一段加密的验证数据让服务端验证，包含前面几步的一些信息)</li>
+<li>⑤New Session Ticket(你看上面那么多流程，这里缓存一下结果哒，想要快一点下次直接传ticket就可以省掉好多步骤哒，<code>https优化第一事项</code>)Change Cipher Spec(同上没啥用)Finished(发送一段加密的验证数据让客户端验证)</li>
+<li>⑥Over，开始用AES加密传输</li>
+</ul>
+<p>上面的步骤协商的clipher suite是TLS_RSA_WITH_AES_128_GCM_SHA256，事实上现在只要你自己不做死，是绝不可能出现这种不安全的clipher suite。因为执行openssl cliphers将会看到所有的RSA都会搭配DH算法一起使用，不会单独存在RSA(鄙人开始自己想看看没有DH交换的https交互是怎样的配置了好半天没成功，因为要自己编译openssl，如果不是灰常了解真做不了这个死。后来偶然发现阿里云CDN配置的https符合试验要求)</p>
+<p>为什么不安全，因为想想看啊，wireshark作为一个嗅探抓包工具，导入个证书就能解密传输数据哒。这就意味着只要别人捕获了你的数据那么有朝一日搞到了你的证书私钥就能解密数据。其实也很好理解，因为这里最终协商的密匙是由3个部分组成2个随机数和使用公钥加密的那个字段，只要别人有了私匙就能用同样的办法计算得到最终的AES加密密匙。由此引入了一个DH密匙交换体系</p>
+<p>介个DH交换咱就不说原理了，可以参照后文参考链接，大意就是双方共有一个key，然后我给你发一个随机明文，你给我发一个随机明文。<code>最后双方就灰常神奇了拥有了同样的密匙</code>，达到了密匙交换的目的。可是密匙交换体系有个脆弱的地方。如果第三方知道了共有的那个key，就能够被中间人(自己想一下为什么)~~~,引入密匙交换，握手交互就成了下图的样子<br><img src="http://ficapy.b0.upaiyun.com/blogimg/ssl_handshake_diffie_hellman.jpg" alt=""><br>这样上面的RSA密匙交换变成了DH交换，就有了PSF(向前安全性,即使有了私钥，那么别人也无法解密以前捕获的数据，因为DH交换的那个密匙算不出来嘛)。可是有了证书之后是可以用来中间人的(想想DH的弱项，要不为何叫向前安全性呢23333)</p>
+<h2 id="HSTS-HPKP"><a href="#HSTS-HPKP" class="headerlink" title="HSTS,HPKP"></a>HSTS,HPKP</h2><p>HSTS:想一想你在地址栏输入一个网址你会去完全输入<em><a href="http://www.taobao.com">http://www.taobao.com</a></em>吗，当然不会！！好多人都会直接输入<em>taobao.com</em>（当然更多的人会去百毒淘宝）,那么浏览器怎么知道你要访问<em><a href="http://taobao.com">http://taobao.com</a></em>还是<em><a href="https://taobao.com">https://taobao.com</a></em>呢。毕竟https如此安全肯定是首选，然后就有了个http请求头类似下面这个样子<code>Strict-Transport-Security: max-age=31536000; includeSubDomains; preload</code>客户端第一次收到这种请求就知道了下次要是再访问，那么将直接使用https不再使用http协议，增加安全性避免降级攻击（可以看到凡是开了https的大站点都必定开了此字段并且设置的很长）</p>
+<p>HPKP:相反这个东西就没多大用了╮(╯▽╰)╭，可以试试效果，用chrome或者firefox先访问<em><a href="https://scotthelme.co.uk/">https://scotthelme.co.uk/</a></em> 再访问<em><a href="https://hpkp.scotthelme.co.uk/">https://hpkp.scotthelme.co.uk/</a></em> 会报隐私设置错误。为毛呢，因为有一个header字段是这样的<code>Public-Key-Pins: pin-sha256=&quot;X3pGTSOuJeEVw989IJ/cEtXUEmy52zs1TZQrU06KUKg=&quot;; pin-sha256=&quot;MHJYVThihUrJcxW6wcqyOISTXIsInsdj3xK8QrZbHec=&quot;; pin-sha256=&quot;isi41AizREkLvvft0IRW4u3XMFR2Yg7bvrF7padyCJg=&quot;; pin-sha256=&quot;I/bAACUzdYEFNw2ZKRaypOyYvvOtqBzg21g9a5WVClg=&quot;; pin-sha256=&quot;Y4/Gxyck5JLLnC/zWHtSHfNljuMbOJi6dRQuRJTgYdo=&quot;; pin-sha256=&quot;/oCVQg3nP3DroGpFdAbaiYzenycUftqrH3LAyaIal2g=&quot;; pin-sha256=&quot;0PiItvsnLZy1slbsVPGky8YnDsJavMNtxD0TPwsCdC8=&quot;; pin-sha256=&quot;t3EPvqF+7XoKypCPHyN1b5uey7zTfIGDHn4oBWz2pds=&quot;; pin-sha256=&quot;zqbcEslrpiH0bA9uhNyl2ovpLEfGJQM/QvZSVumMFJ8=&quot;; pin-sha256=&quot;V+J+7lHvE6X0pqGKVqLtxuvk+0f+xowyr3obtq8tbSw=&quot;; pin-sha256=&quot;Myokb3mG16eRkVBE+ZmFSKSpYQzWHKMY1MZbXgA8BkQ=&quot;; pin-sha256=&quot;WSg/oQliyMYyP6yZ0CzDdQ8PHmtUkoUsOsa5svxxXxo=&quot;; pin-sha256=&quot;9lBW+k9EF6yyG9413/fPiHhQy5Ok4UI5sBpBTuOaa/U=&quot;; pin-sha256=&quot;ipMu2Xu72A086/35thucbjLfrPaSjuw4HIjSWsxqkb8=&quot;; pin-sha256=&quot;6OnjvIKf0SxyerXzg9N0RvQ2sgaL6niV+MLn9wBrh+s=&quot;; pin-sha256=&quot;9dNiZZueNZmyaf3pTkXxDgOzLkjKvI+Nza0ACF5IDwg=&quot;; max-age=2592000; includeSubDomains; report-uri=&quot;https://scotthelme.report-uri.io/r/default/hpkp/enforce&quot;</code>它里面包含了公钥信息，如果和服务端返回的公钥不合那么会报错，为什么会有这个字段嘞，想想CA机制，任何一个可信根证书都能给任意域名提供签名证书然后能骗过浏览器进行中间人(类似实现比如<a href="https://github.com/droe/sslsplit">sslsplit</a>)，该情况就能防止这种情况发生。理想很丰满，现实很骨感，这个字段根本没什么人用，仅有有限的几个网站对此进行了设置，原因就是ヾ(｡｀Д´｡)CA跑去伪造你的域名的概率实在太特么小了，另外HSTS和HPKP都有一个特点那就是第一次访问没有被劫持，只有客户端收到了一个正确的HSTS设置才能对后面的请求发生作用。另外HKPK在浏览器设置代理的情况下是不启用的(应该是为了方便调试)，虽然HPKP如此的废柴。可是在另外一个地方实施却是不错的选择，如果你在APP上添加HPKP验证就能防止那些用fiddler抓包的小白，让抓包失效。如果要抓包请反编译APP去掉HPKP逻辑→_→</p>
+<h2 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h2><p><a href="https://cattail.me/tech/2015/11/30/how-https-works.html">https原理简版</a><br><a href="https://blog.helong.info/blog/2015/09/06/tls-protocol-analysis-and-crypto-protocol-design/">见过最完整的https中文博文</a><br><a href="https://scotthelme.co.uk/">国外讲解https比较多的博客</a><br><a href="https://imququ.com">国内讲解https比较多的博客</a><br><a href="http://www.uuu.com.tw/Public/content/article/140825tips.htm">TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256</a><br><a href="https://zh.wikipedia.org/wiki/%E8%BF%AA%E8%8F%B2-%E8%B5%AB%E7%88%BE%E6%9B%BC%E5%AF%86%E9%91%B0%E4%BA%A4%E6%8F%9B">Diffie-Hellman中文维基</a></p>
 
             
                 
@@ -281,7 +296,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/06/01/https_note/"  data-tooltip="https笔记">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -289,7 +304,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/05/24/my_network_learn_tools/" data-tooltip="我的网络学习工具">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/05/25/gmail_auto_delete_promotions_email/" data-tooltip="Gmail设置自动删除推广邮件">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -304,17 +319,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/06/01/https_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/06/01/https_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/06/01/https_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -362,7 +377,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/06/01/https_note/"  data-tooltip="https笔记">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -370,7 +385,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/05/24/my_network_learn_tools/" data-tooltip="我的网络学习工具">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/05/25/gmail_auto_delete_promotions_email/" data-tooltip="Gmail设置自动删除推广邮件">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -385,17 +400,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/06/01/https_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/06/01/https_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/06/01/https_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -421,17 +436,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="3">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/06/01/https_note/">
                 <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/06/01/https_note/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/06/01/https_note/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -488,9 +503,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/';
+                 this.page.url = 'http://ficapy.com/2016/06/01/https_note/';
                  
-                    this.page.identifier = '2016/05/25/gmail_auto_delete_promotions_email/';
+                    this.page.identifier = '2016/06/01/https_note/';
                                   
              };
             (function() {
