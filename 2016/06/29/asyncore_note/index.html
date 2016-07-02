@@ -20,17 +20,17 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。">
+    <meta name="description" content="asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="asyncore源码阅读">
 <meta property="og:url" content="http://ficapy.com/2016/06/29/asyncore_note/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。">
+<meta property="og:description" content="asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/asyncore%E7%AE%80%E6%98%93%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%B5%81%E7%A8%8B%E5%9B%BE.png">
-<meta property="og:updated_time" content="2016-06-29T03:52:35.000Z">
+<meta property="og:updated_time" content="2016-07-02T10:24:51.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="asyncore源码阅读">
-<meta name="twitter:description" content="asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。">
+<meta name="twitter:description" content="asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -262,7 +262,7 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。</p>
+            <p>asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)</p>
 <a id="more"></a>
 <h3 id="dispatcher类-调度"><a href="#dispatcher类-调度" class="headerlink" title="dispatcher类(调度)"></a>dispatcher类(调度)</h3><p>文件asyncore.py中最重要的类为dispatcher，使用的时候只需要继承asyncore.dispatcher就好了</p>
 <p>可以这样理解每一个继承了asyncore.dispatcher的类都代表了一个socket(监听socket或者连接socket)</p>

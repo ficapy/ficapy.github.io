@@ -20,16 +20,16 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp">
+    <meta name="description" content="SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="SocketServer源码阅读">
 <meta property="og:url" content="http://ficapy.com/2016/06/29/socketserver_note/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp">
-<meta property="og:updated_time" content="2016-06-29T04:29:16.000Z">
+<meta property="og:description" content="SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)">
+<meta property="og:updated_time" content="2016-07-02T10:24:36.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="SocketServer源码阅读">
-<meta name="twitter:description" content="SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp">
+<meta name="twitter:description" content="SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -261,7 +261,7 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。<br>要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp</p>
+            <p>SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。<br>要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)</p>
 <a id="more"></a>
 <h3 id="类继承关系"><a href="#类继承关系" class="headerlink" title="类继承关系"></a>类继承关系</h3><p>不说别的，单单看到这张图就能唬住好多人，感觉很高大上有没有<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">+------------+</span><br><span class="line">| BaseServer |</span><br><span class="line">+------------+</span><br><span class="line">      |</span><br><span class="line">      v</span><br><span class="line">+-----------+        +------------------+</span><br><span class="line">| TCPServer |-------&gt;| UnixStreamServer |</span><br><span class="line">+-----------+        +------------------+</span><br><span class="line">      |</span><br><span class="line">      v</span><br><span class="line">+-----------+        +--------------------+</span><br><span class="line">| UDPServer |-------&gt;| UnixDatagramServer |</span><br><span class="line">+-----------+        +--------------------+</span><br></pre></td></tr></table></figure></p>
 <h3 id="同步处理类比"><a href="#同步处理类比" class="headerlink" title="同步处理类比"></a>同步处理类比</h3><p>服务端嘛，请允许我污一下，就像古装剧里面的怡红院，都有个门口接客的老鸨，有客户来就引进去然后交给失足少女。老鸨就是服务端的监听socket，失足少女就是具体处理的业务逻辑。可以写成如下伪代码<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> socket</span><br><span class="line">s = socket.socket()</span><br><span class="line">s.bind((<span class="string">'localhost'</span>,<span class="number">9999</span>))</span><br><span class="line">s.listen(<span class="number">2048</span>)</span><br><span class="line"><span class="keyword">while</span> <span class="keyword">True</span>:</span><br><span class="line">    client,addr = s.accept()</span><br><span class="line">    handle(client,addr,s)</span><br></pre></td></tr></table></figure>    </p>

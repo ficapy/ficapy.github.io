@@ -55,9 +55,9 @@
     <link href="http://ficapy.com/2016/06/29/socketserver_note/"/>
     <id>http://ficapy.com/2016/06/29/socketserver_note/</id>
     <published>2016-06-29T03:53:14.000Z</published>
-    <updated>2016-06-29T04:29:16.000Z</updated>
+    <updated>2016-07-02T10:24:36.000Z</updated>
     
-    <content type="html">&lt;p&gt;SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。&lt;br&gt;要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp&lt;/p&gt;
+    <content type="html">&lt;p&gt;SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。&lt;br&gt;要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)&lt;/p&gt;
 &lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
 &lt;h3 id=&quot;类继承关系&quot;&gt;&lt;a href=&quot;#类继承关系&quot; class=&quot;headerlink&quot; title=&quot;类继承关系&quot;&gt;&lt;/a&gt;类继承关系&lt;/h3&gt;&lt;p&gt;不说别的，单单看到这张图就能唬住好多人，感觉很高大上有没有&lt;br&gt;&lt;figure class=&quot;highlight bash&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;+------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| BaseServer |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      v&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-----------+        +------------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| TCPServer |-------&amp;gt;| UnixStreamServer |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-----------+        +------------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;      v&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-----------+        +--------------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| UDPServer |-------&amp;gt;| UnixDatagramServer |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-----------+        +--------------------+&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
 &lt;h3 id=&quot;同步处理类比&quot;&gt;&lt;a href=&quot;#同步处理类比&quot; class=&quot;headerlink&quot; title=&quot;同步处理类比&quot;&gt;&lt;/a&gt;同步处理类比&lt;/h3&gt;&lt;p&gt;服务端嘛，请允许我污一下，就像古装剧里面的怡红院，都有个门口接客的老鸨，有客户来就引进去然后交给失足少女。老鸨就是服务端的监听socket，失足少女就是具体处理的业务逻辑。可以写成如下伪代码&lt;br&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; socket&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;s = socket.socket()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;s.bind((&lt;span class=&quot;string&quot;&gt;&#39;localhost&#39;&lt;/span&gt;,&lt;span class=&quot;number&quot;&gt;9999&lt;/span&gt;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;s.listen(&lt;span class=&quot;number&quot;&gt;2048&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;True&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    client,addr = s.accept()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    handle(client,addr,s)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;    &lt;/p&gt;
@@ -78,7 +78,7 @@
     
     <summary type="html">
     
-      &lt;p&gt;SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。&lt;br&gt;要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp&lt;/p&gt;
+      &lt;p&gt;SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。&lt;br&gt;要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)&lt;/p&gt;
     
     </summary>
     
@@ -92,9 +92,9 @@
     <link href="http://ficapy.com/2016/06/29/asyncore_note/"/>
     <id>http://ficapy.com/2016/06/29/asyncore_note/</id>
     <published>2016-06-29T03:24:21.000Z</published>
-    <updated>2016-06-29T03:52:35.000Z</updated>
+    <updated>2016-07-02T10:24:51.000Z</updated>
     
-    <content type="html">&lt;p&gt;asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。&lt;/p&gt;
+    <content type="html">&lt;p&gt;asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)&lt;/p&gt;
 &lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
 &lt;h3 id=&quot;dispatcher类-调度&quot;&gt;&lt;a href=&quot;#dispatcher类-调度&quot; class=&quot;headerlink&quot; title=&quot;dispatcher类(调度)&quot;&gt;&lt;/a&gt;dispatcher类(调度)&lt;/h3&gt;&lt;p&gt;文件asyncore.py中最重要的类为dispatcher，使用的时候只需要继承asyncore.dispatcher就好了&lt;/p&gt;
 &lt;p&gt;可以这样理解每一个继承了asyncore.dispatcher的类都代表了一个socket(监听socket或者连接socket)&lt;/p&gt;
@@ -123,7 +123,7 @@
     
     <summary type="html">
     
-      &lt;p&gt;asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。&lt;/p&gt;
+      &lt;p&gt;asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)&lt;/p&gt;
     
     </summary>
     
