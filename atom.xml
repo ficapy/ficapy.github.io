@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-06-29T04:29:16.000Z</updated>
+  <updated>2016-07-02T10:19:40.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -14,6 +14,41 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>http.server源码阅读</title>
+    <link href="http://ficapy.com/2016/07/02/http_server_note/"/>
+    <id>http://ficapy.com/2016/07/02/http_server_note/</id>
+    <published>2016-07-02T09:07:20.000Z</published>
+    <updated>2016-07-02T10:19:40.000Z</updated>
+    
+    <content type="html">&lt;p&gt;上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;p&gt;先上图为敬:D&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/httpserver_note.png&quot; alt=&quot;&quot;&gt;&lt;br&gt;这个模块只需要关心BaseHTTPRequestHandler类，其实里面还有个CGI处理类，不过这玩意儿估计也是上古神兽了。没关注的必要。&lt;/p&gt;
+&lt;h3 id=&quot;代码解读&quot;&gt;&lt;a href=&quot;#代码解读&quot; class=&quot;headerlink&quot; title=&quot;代码解读&quot;&gt;&lt;/a&gt;代码解读&lt;/h3&gt;&lt;ol&gt;
+&lt;li&gt;支持http版本0.9、1.0、1.1，区别就是0.9版本只有body。1.1版本显式支持keep-alive。为了支持keep-alive，代码中有多处处理逻辑&lt;/li&gt;
+&lt;li&gt;对于内容的解析主要是使用parse_request方法。该方法逻辑主要解析第一行request line。如果出错就直接调用send_error返回错误内容。header部分主要引入了email.parser.Parser进行解析&lt;/li&gt;
+&lt;li&gt;parser_request对&lt;code&gt;Except:100-continue&lt;/code&gt;进行了特殊处理，见附录&lt;/li&gt;
+&lt;li&gt;返回status line和header是先使用send_response_only创建一个列表，然后调用send_header依次在列表中添加数据，最后调用end_headers发送数据&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;send_error函数就是一个回复的典范&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;剩下就是日志函数和几个辅助函数了&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&quot;示例&quot;&gt;&lt;a href=&quot;#示例&quot; class=&quot;headerlink&quot; title=&quot;示例&quot;&gt;&lt;/a&gt;示例&lt;/h3&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;from&lt;/span&gt; http.server &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; BaseHTTPRequestHandler&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;from&lt;/span&gt; socketserver &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; ThreadingTCPServer&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;class&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;Handle&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(BaseHTTPRequestHandler)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    protocol_version = &lt;span class=&quot;string&quot;&gt;&quot;HTTP/1.1&quot;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;do_GET&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(self)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        self.send_error(&lt;span class=&quot;number&quot;&gt;500&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;do_POST&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(self)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        len = self.headers.get(&lt;span class=&quot;string&quot;&gt;&#39;Content-Length&#39;&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        data = self.rfile.read(int(len))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        self.send_response(&lt;span class=&quot;number&quot;&gt;200&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        self.send_header(&lt;span class=&quot;string&quot;&gt;&#39;Content-Length&#39;&lt;/span&gt;, len)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        self.end_headers()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        self.wfile.write(data)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;ThreadingTCPServer((&lt;span class=&quot;string&quot;&gt;&#39;&#39;&lt;/span&gt;, &lt;span class=&quot;number&quot;&gt;9999&lt;/span&gt;), Handle).serve_forever()&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;这是一个最简的http server。do_GET函数表面send_error就能够响应一个请求。do_POST函数参照send_error的逻辑只不过读取了客户端发送的body字段&lt;/p&gt;
+&lt;h3 id=&quot;小知识&quot;&gt;&lt;a href=&quot;#小知识&quot; class=&quot;headerlink&quot; title=&quot;小知识&quot;&gt;&lt;/a&gt;小知识&lt;/h3&gt;&lt;h6 id=&quot;类变量和实例变量&quot;&gt;&lt;a href=&quot;#类变量和实例变量&quot; class=&quot;headerlink&quot; title=&quot;类变量和实例变量&quot;&gt;&lt;/a&gt;类变量和实例变量&lt;/h6&gt;&lt;p&gt;这2个非常相近，具体区别我就不概述了。在写代码的时候很多人无脑self.xxx = xxx就搞了一个实例变量。大多数时候用实例变量都能够替代类变量的功能。这很容易让人忽略类变量的优点。①含义明确：这是这个类的所有实例共用的。②不需要重载&lt;strong&gt;init&lt;/strong&gt;，这在继承的时候是很有用哒~~~，so，不要有事没事无脑在&lt;strong&gt;init&lt;/strong&gt;里面self.xxx = xxx啦&lt;/p&gt;
+&lt;h3 id=&quot;相关资料&quot;&gt;&lt;a href=&quot;#相关资料&quot; class=&quot;headerlink&quot; title=&quot;相关资料&quot;&gt;&lt;/a&gt;相关资料&lt;/h3&gt;&lt;p&gt;&lt;a href=&quot;http://www.laruence.com/2011/01/20/1840.html&quot;&gt;Expect:100-continue&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://docs.python.org/3.6/library/http.server.html?highlight=http.server#http.server.BaseHTTPRequestHandler&quot;&gt;官方文档&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>SocketServer源码阅读</title>
@@ -760,37 +795,6 @@ style=&quot;font-size: 15px !important; line-height: 17px !important;&quot;&gt;\
     </summary>
     
       <category term="随笔" scheme="http://ficapy.com/categories/%E9%9A%8F%E7%AC%94/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>pip使用国内镜像</title>
-    <link href="http://ficapy.com/2013/12/27/pip_use_china_mirror/"/>
-    <id>http://ficapy.com/2013/12/27/pip_use_china_mirror/</id>
-    <published>2013-12-27T10:54:00.000Z</published>
-    <updated>2016-03-03T09:15:00.000Z</updated>
-    
-    <content type="html">&lt;p&gt;作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~&lt;br&gt;用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。&lt;/p&gt;
-&lt;p&gt;今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;br&gt;教程是这样的&lt;/p&gt;
-&lt;p&gt;使用pip的用户可以如下配置：&lt;br&gt;在unix和macos，配置文件为: \$HOME/.pip/pip.conf&lt;br&gt;在windows上，配置文件为：%HOME%\pip\pip.ini&lt;br&gt;需要在配置文件内加上&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;[global]  &amp;#10;timeout = 60  &amp;#10;index-url = http://e.pypi.python.org/simple&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;首先我在everything里面搜索pip.ini这个文件，发现没有。在google上搜索无果（最可能是姿势不对~~）,怀疑是pycharm安装的pip和原版有差异~~~删除pip文件夹后在pypi上下载安装。还是发现没有，在卸载之从&lt;a href=&quot;http://www.lfd.uci.edu/~gohlke/pythonlibs/&quot;&gt;http://www.lfd.uci.edu/~gohlke/pythonlibs/&lt;/a&gt;上下载安装。。当然还是没有~~~&lt;/p&gt;
-&lt;p&gt;最终的结果是自己新建pip.ini这特么完全是超过我认知范围类了。。。。配置文件居然不在带需要自己新建，再者%HOME%\pip\pip.ini这个地址也是错的，正确的为%USERPROFILE%\pip\pip.ini。网上搜到的教程基本都是错的（估计他们都在linux上开发吧，其本质是官网的说明文档没有更新，%HOME%目测是XP时代的产物）。最后也可能会遇到&lt;code&gt;error: invalid command &amp;#39;egg_info&amp;#39;&lt;/code&gt;&lt;br&gt;这种错误 解决的方案就是&lt;code&gt;pip install --upgrade setuptools&lt;/code&gt;&lt;/p&gt;
-&lt;p&gt;参考文档&lt;br&gt;&lt;a href=&quot;http://www.pip-installer.org/en/latest/configuration.html&quot;&gt;http://www.pip-installer.org/en/latest/configuration.html&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://stackoverflow.com/questions/11425106/python-pip-install-fails-invalid-command-egg-info&quot;&gt;http://stackoverflow.com/questions/11425106/python-pip-install-fails-invalid-command-egg-info&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://bitbucket.org/pypa/pypi/issue/5/pipini-directory-in-windows&quot;&gt;https://bitbucket.org/pypa/pypi/issue/5/pipini-directory-in-windows&lt;/a&gt;&lt;/p&gt;
-&lt;div id=&quot;divLookup&quot;
-style=&quot;background-color: transparent; color: #000000; position: absolute; top: 329px; left: 606px; padding: 0px; z-index: 10000; border-radius: 2px;&quot;&gt;&lt;br&gt;&lt;br&gt;&lt;/div&gt;
-
-
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~&lt;br&gt;用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。&lt;/p&gt;
-&lt;p&gt;今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.&lt;br&gt;
-    
-    </summary>
-    
-      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
     
     
   </entry>

@@ -1,0 +1,528 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>http.server源码阅读 - 邹雷</title>
+    <meta name="author" content="Ficapy">
+    <script type="text/javascript">
+    var url = window.location.href;
+    if (url.indexOf("https") < 0 && url.indexOf("0.0.0.0")<0) {
+    url = url.replace("http:", "https:");
+    window.location.replace(url);
+    }
+    </script>
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="http.server源码阅读">
+<meta property="og:url" content="http://ficapy.com/2016/07/02/http_server_note/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/httpserver_note.png">
+<meta property="og:updated_time" content="2016-07-02T10:19:40.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="http.server源码阅读">
+<meta name="twitter:description" content="上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进">
+<meta name="twitter:creator" content="@aec4d">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-ejlztp1tasruqfvoz6xmgqng0anzae8ox7cqjj5yibieqgcmhe9fwxfae6zj.min.css" type="text/css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?a6ac3798de98c504fa2cbff2cc8bd755";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="3">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <h1 class="header-title">
+        <a class="header-title-link" href="/ ">邹雷</a>
+    </h1>
+    
+        
+            <a  class="header-right-picture "
+                href="/#about">
+        
+        
+            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="3">
+    
+        <div class="sidebar-profile">
+            <a href="/#about">
+                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+            </a>
+            <span class="sidebar-profile-name">Ficapy</span>
+        </div>
+    
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/ "
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                    <span class="sidebar-button-desc">首页</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-categories"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                    <span class="sidebar-button-desc">分类</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-tags"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                    <span class="sidebar-button-desc">标签</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-archives"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                    <span class="sidebar-button-desc">归档</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link st-search-show-outputs"
+                         href="/#search"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                    <span class="sidebar-button-desc">搜索</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/#about"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                    <span class="sidebar-button-desc">关于</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://github.com/Ficapy" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                    <span class="sidebar-button-desc">GitHub</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                    <span class="sidebar-button-desc">Twitter</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                    <span class="sidebar-button-desc">邮箱</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/atom.xml"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                    <span class="sidebar-button-desc">RSS</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+</nav>
+
+            
+            <div id="main" data-behavior="3"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            http.server源码阅读
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" content="Sat Jul 02 2016 17:07:20 GMT+0800">
+	
+		    7月 02, 2016
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/源码解析/">源码解析</a>
+
+
+    
+</div>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)</p>
+<a id="more"></a>
+<p>先上图为敬:D<br><img src="https://ficapy.b0.upaiyun.com/blogimg/httpserver_note.png" alt=""><br>这个模块只需要关心BaseHTTPRequestHandler类，其实里面还有个CGI处理类，不过这玩意儿估计也是上古神兽了。没关注的必要。</p>
+<h3 id="代码解读"><a href="#代码解读" class="headerlink" title="代码解读"></a>代码解读</h3><ol>
+<li>支持http版本0.9、1.0、1.1，区别就是0.9版本只有body。1.1版本显式支持keep-alive。为了支持keep-alive，代码中有多处处理逻辑</li>
+<li>对于内容的解析主要是使用parse_request方法。该方法逻辑主要解析第一行request line。如果出错就直接调用send_error返回错误内容。header部分主要引入了email.parser.Parser进行解析</li>
+<li>parser_request对<code>Except:100-continue</code>进行了特殊处理，见附录</li>
+<li>返回status line和header是先使用send_response_only创建一个列表，然后调用send_header依次在列表中添加数据，最后调用end_headers发送数据</li>
+<li><code>send_error函数就是一个回复的典范</code></li>
+<li>剩下就是日志函数和几个辅助函数了</li>
+</ol>
+<h3 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> http.server <span class="keyword">import</span> BaseHTTPRequestHandler</span><br><span class="line"><span class="keyword">from</span> socketserver <span class="keyword">import</span> ThreadingTCPServer</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Handle</span><span class="params">(BaseHTTPRequestHandler)</span>:</span></span><br><span class="line">    protocol_version = <span class="string">"HTTP/1.1"</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">do_GET</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.send_error(<span class="number">500</span>)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">do_POST</span><span class="params">(self)</span>:</span></span><br><span class="line">        len = self.headers.get(<span class="string">'Content-Length'</span>)</span><br><span class="line">        data = self.rfile.read(int(len))</span><br><span class="line"></span><br><span class="line">        self.send_response(<span class="number">200</span>)</span><br><span class="line">        self.send_header(<span class="string">'Content-Length'</span>, len)</span><br><span class="line">        self.end_headers()</span><br><span class="line">        self.wfile.write(data)</span><br><span class="line"></span><br><span class="line">ThreadingTCPServer((<span class="string">''</span>, <span class="number">9999</span>), Handle).serve_forever()</span><br></pre></td></tr></table></figure>
+<p>这是一个最简的http server。do_GET函数表面send_error就能够响应一个请求。do_POST函数参照send_error的逻辑只不过读取了客户端发送的body字段</p>
+<h3 id="小知识"><a href="#小知识" class="headerlink" title="小知识"></a>小知识</h3><h6 id="类变量和实例变量"><a href="#类变量和实例变量" class="headerlink" title="类变量和实例变量"></a>类变量和实例变量</h6><p>这2个非常相近，具体区别我就不概述了。在写代码的时候很多人无脑self.xxx = xxx就搞了一个实例变量。大多数时候用实例变量都能够替代类变量的功能。这很容易让人忽略类变量的优点。①含义明确：这是这个类的所有实例共用的。②不需要重载<strong>init</strong>，这在继承的时候是很有用哒~~~，so，不要有事没事无脑在<strong>init</strong>里面self.xxx = xxx啦</p>
+<h3 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h3><p><a href="http://www.laruence.com/2011/01/20/1840.html">Expect:100-continue</a><br><a href="https://docs.python.org/3.6/library/http.server.html?highlight=http.server#http.server.BaseHTTPRequestHandler">官方文档</a></p>
+
+            
+                
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/06/29/socketserver_note/" data-tooltip="SocketServer源码阅读">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/02/http_server_note/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/02/http_server_note/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/02/http_server_note/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2016 Ficapy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="3">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/06/29/socketserver_note/" data-tooltip="SocketServer源码阅读">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/02/http_server_note/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/02/http_server_note/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/02/http_server_note/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="3">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/02/http_server_note/">
+                <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/02/http_server_note/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/02/http_server_note/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+            <h4 id="about-card-name">Ficapy</h4>
+        
+            <h5 id="about-card-bio"><p>author.bio</p>
+</h5>
+        
+        
+            <h5 id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </h5>
+        
+        
+            <h5 id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                浙江杭州
+            </h5>
+        
+    </div>
+</div>
+
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+    </body>
+    <!--SCRIPTS-->
+<script src="/assets/js/scrip-gfmrkxcl0qohe3cfdgxhzvc0yrceqta8i4iix0txvn8q4o2adlqd5n0jmkvt.min.js" type="text/javascript"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'http://ficapy.com/2016/07/02/http_server_note/';
+                 
+                    this.page.identifier = '2016/07/02/http_server_note/';
+                                  
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'ficapy';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+    <script type="text/javascript">
+        (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+                (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+            e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+        })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+        _st('install','YXTzZ4TmBqx4iuAdsTbH','2.0.0');
+    </script>
+
+
+</html>
