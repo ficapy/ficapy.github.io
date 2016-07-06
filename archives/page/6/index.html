@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>分类: 源码解析 - 邹雷</title>
+    <title>归档 - 邹雷</title>
     <meta name="author" content="Ficapy">
     <script type="text/javascript">
     var url = window.location.href;
@@ -23,7 +23,7 @@
     <meta name="description">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="邹雷">
-<meta property="og:url" content="http://ficapy.com/categories/源码解析/index.html">
+<meta property="og:url" content="http://ficapy.com/archives/page/6/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description">
 <meta name="twitter:card" content="summary">
@@ -238,90 +238,26 @@
 <section class="postShorten-group main-content-wrap">
     
     
-    <article class="postShorten postShorten--thumbnailimg-bottom" itemscope itemType="http://schema.org/BlogPosting">
-        <div class="postShorten-wrap">
-            <div class="postShorten-header">
-                <h1 class="postShorten-title" itemprop="headline">
-                    
-                        <a class="link-unstyled" href="/2016/07/04/2016-07-04/">
-                            wsgiref源码阅读
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time itemprop="datePublished" content="Mon Jul 04 2016 17:32:07 GMT+0800">
-	
-		    7月 04, 2016
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/源码解析/">源码解析</a>
-
-
-    
-</div>
-            </div>
-            
-            
-                <div class="postShorten-content" itemprop="articleBody">
-                    <pre><code> _ _ _ ____ ____ _ ____ ____ ____    _ _  _ _  _ ____ ____ _ ___
- | | | [__  | __ | |__/ |___ |___    | |\ | |__| |___ |__/ |  |
- |_|_| ___] |__] | |  \ |___ |       | | \| |  | |___ |  \ |  |
-+--------------------------+     +---------------------------------+
-|    wsgiref.WSGIServer    |     |   wsgiref.WSGIRequestHandler    |
-+--------------------------+     +---------------------------------+
-              |
-+-------------v------------+    +------------------------------------+
-|  http.server.HTTPServer  |    | http.server.BaseHTTPRequestHandler |
-+--------------------------+    +------------------------------------+
-
-+--------------------------+    +------------------------------------+
-|  socketserver.TCPServer  |    | socketserver.StreamRequestHandler  |
-+--------------------------+    +------------------------------------+
-                                        overload handle logic
-
-Created with Monodraw
-</code></pre><h2 id="dd"><a href="#dd" class="headerlink" title="dd"></a>dd</h2>
-                    
-                        
-
-                    
-                    
-                        <p>
-                            <a href="/2016/07/04/2016-07-04/#post-footer" class="postShorten-excerpt_link link">
-                                注释和共享
-                            </a>
-                        </p>
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
     <article class="postShorten postShorten--thumbnailimg-right" itemscope itemType="http://schema.org/BlogPosting">
         <div class="postShorten-wrap">
             <div class="postShorten-header">
                 <h1 class="postShorten-title" itemprop="headline">
                     
-                        <a class="link-unstyled" href="/2016/07/02/http_server_note/">
-                            http.server源码阅读
+                        <a class="link-unstyled" href="/2013/09/29/hello_world/">
+                            博客起航
                         </a>
                     
                 </h1>
                 <div class="postShorten-meta">
-    <time itemprop="datePublished" content="Sat Jul 02 2016 17:07:20 GMT+0800">
+    <time itemprop="datePublished" content="Sun Sep 29 2013 11:48:00 GMT+0800">
 	
-		    7月 02, 2016
+		    9月 29, 2013
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/源码解析/">源码解析</a>
+    <a class="category-link" href="/categories/随笔/">随笔</a>
 
 
     
@@ -330,93 +266,12 @@ Created with Monodraw
             
             
                 <div class="postShorten-excerpt" itemprop="articleBody">
-                    <p>上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)</p>
+                    <p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
+<p>：</p>
+<p>为了占行此处无耻的掠过N个字</p>
+<p>:<br>
                     
-                        <a href="/2016/07/02/http_server_note/" class="postShorten-excerpt_link link">
-                            阅读全文
-                        </a>
-                        
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-right" itemscope itemType="http://schema.org/BlogPosting">
-        <div class="postShorten-wrap">
-            <div class="postShorten-header">
-                <h1 class="postShorten-title" itemprop="headline">
-                    
-                        <a class="link-unstyled" href="/2016/06/29/socketserver_note/">
-                            SocketServer源码阅读
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time itemprop="datePublished" content="Wed Jun 29 2016 11:53:14 GMT+0800">
-	
-		    6月 29, 2016
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/源码解析/">源码解析</a>
-
-
-    
-</div>
-            </div>
-            
-            
-                <div class="postShorten-excerpt" itemprop="articleBody">
-                    <p>SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。<br>要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)</p>
-                    
-                        <a href="/2016/06/29/socketserver_note/" class="postShorten-excerpt_link link">
-                            阅读全文
-                        </a>
-                        
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-right" itemscope itemType="http://schema.org/BlogPosting">
-        <div class="postShorten-wrap">
-            <div class="postShorten-header">
-                <h1 class="postShorten-title" itemprop="headline">
-                    
-                        <a class="link-unstyled" href="/2016/06/29/asyncore_note/">
-                            asyncore源码阅读
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time itemprop="datePublished" content="Wed Jun 29 2016 11:24:21 GMT+0800">
-	
-		    6月 29, 2016
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/源码解析/">源码解析</a>
-
-
-    
-</div>
-            </div>
-            
-            
-                <div class="postShorten-excerpt" itemprop="articleBody">
-                    <p>asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)</p>
-                    
-                        <a href="/2016/06/29/asyncore_note/" class="postShorten-excerpt_link link">
+                        <a href="/2013/09/29/hello_world/" class="postShorten-excerpt_link link">
                             阅读全文
                         </a>
                         
@@ -430,8 +285,17 @@ Created with Monodraw
     <div class="pagination-bar">
     <ul class="pagination">
         
+        <li class="pagination-prev">
+            
+                <a class="btn btn--default btn--small" href="/archives/page/5/">
+            
+                <i class="fa fa-angle-left text-base icon-mr"></i>
+                    <span>上一页</span>
+            </a>
+        </li>
         
-        <li class="pagination-number">第 1 页 共 1 页</li>
+        
+        <li class="pagination-number">第 6 页 共 6 页</li>
     </ul>
 </div>
 

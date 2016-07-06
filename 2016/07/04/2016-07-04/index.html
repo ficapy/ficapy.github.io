@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>http.server源码阅读 - 邹雷</title>
+    <title>wsgiref源码阅读 - 邹雷</title>
     <meta name="author" content="Ficapy">
     <script type="text/javascript">
     var url = window.location.href;
@@ -20,17 +20,25 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进">
+    <meta name="description" content="_ _ _ ____ ____ _ ____ ____ ____    _ _  _ _  _ ____ ____ _ ___
+ | | | [__  | __ | |__/ |___ |___    | |\ | |__| |___ |__/ |  |
+ |_|_| ___] |__] | |  \ |___ |       | | \| |  | |___ |  \ |  |
++-------">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="http.server源码阅读">
-<meta property="og:url" content="http://ficapy.com/2016/07/02/http_server_note/index.html">
+<meta property="og:title" content="wsgiref源码阅读">
+<meta property="og:url" content="http://ficapy.com/2016/07/04/2016-07-04/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/httpserver_note.png">
-<meta property="og:updated_time" content="2016-07-02T10:19:40.000Z">
+<meta property="og:description" content="_ _ _ ____ ____ _ ____ ____ ____    _ _  _ _  _ ____ ____ _ ___
+ | | | [__  | __ | |__/ |___ |___    | |\ | |__| |___ |__/ |  |
+ |_|_| ___] |__] | |  \ |___ |       | | \| |  | |___ |  \ |  |
++-------">
+<meta property="og:updated_time" content="2016-07-04T09:38:55.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="http.server源码阅读">
-<meta name="twitter:description" content="上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进">
+<meta name="twitter:title" content="wsgiref源码阅读">
+<meta name="twitter:description" content="_ _ _ ____ ____ _ ____ ____ ____    _ _  _ _  _ ____ ____ _ ___
+ | | | [__  | __ | |__/ |___ |___    | |\ | |__| |___ |__/ |  |
+ |_|_| ___] |__] | |  \ |___ |       | | \| |  | |___ |  \ |  |
++-------">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -241,13 +249,13 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            http.server源码阅读
+            wsgiref源码阅读
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" content="Sat Jul 02 2016 17:07:20 GMT+0800">
+    <time itemprop="datePublished" content="Mon Jul 04 2016 17:32:07 GMT+0800">
 	
-		    7月 02, 2016
+		    7月 04, 2016
     	
     </time>
     
@@ -262,22 +270,24 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)</p>
-<a id="more"></a>
-<p>先上图为敬:D<br><img src="https://ficapy.b0.upaiyun.com/blogimg/httpserver_note.png" alt=""><br>这个模块只需要关心BaseHTTPRequestHandler类，其实里面还有个CGI处理类，不过这玩意儿估计也是上古神兽了。没关注的必要。</p>
-<h3 id="代码解读"><a href="#代码解读" class="headerlink" title="代码解读"></a>代码解读</h3><ol>
-<li>支持http版本0.9、1.0、1.1，区别就是0.9版本只有body。1.1版本显式支持keep-alive。为了支持keep-alive，代码中有多处处理逻辑</li>
-<li>对于内容的解析主要是使用parse_request方法。该方法逻辑主要解析第一行request line。如果出错就直接调用send_error返回错误内容。header部分主要引入了email.parser.Parser进行解析</li>
-<li>parser_request对<code>Except:100-continue</code>进行了特殊处理，见附录</li>
-<li>返回status line和header是先使用send_response_only创建一个列表，然后调用send_header依次在列表中添加数据，最后调用end_headers发送数据</li>
-<li><code>send_error函数就是一个回复的典范</code></li>
-<li>剩下就是日志函数和几个辅助函数了</li>
-</ol>
-<h3 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> http.server <span class="keyword">import</span> BaseHTTPRequestHandler</span><br><span class="line"><span class="keyword">from</span> socketserver <span class="keyword">import</span> ThreadingTCPServer</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Handle</span><span class="params">(BaseHTTPRequestHandler)</span>:</span></span><br><span class="line">    protocol_version = <span class="string">"HTTP/1.1"</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">do_GET</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.send_error(<span class="number">500</span>)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">do_POST</span><span class="params">(self)</span>:</span></span><br><span class="line">        len = self.headers.get(<span class="string">'Content-Length'</span>)</span><br><span class="line">        data = self.rfile.read(int(len))</span><br><span class="line"></span><br><span class="line">        self.send_response(<span class="number">200</span>)</span><br><span class="line">        self.send_header(<span class="string">'Content-Length'</span>, len)</span><br><span class="line">        self.end_headers()</span><br><span class="line">        self.wfile.write(data)</span><br><span class="line"></span><br><span class="line">ThreadingTCPServer((<span class="string">''</span>, <span class="number">9999</span>), Handle).serve_forever()</span><br></pre></td></tr></table></figure>
-<p>这是一个最简的http server。do_GET函数表面send_error就能够响应一个请求。do_POST函数参照send_error的逻辑只不过读取了客户端发送的body字段</p>
-<h3 id="小知识"><a href="#小知识" class="headerlink" title="小知识"></a>小知识</h3><h6 id="类变量和实例变量"><a href="#类变量和实例变量" class="headerlink" title="类变量和实例变量"></a>类变量和实例变量</h6><p>这2个非常相近，具体区别我就不概述了。在写代码的时候很多人无脑self.xxx = xxx就搞了一个实例变量。大多数时候用实例变量都能够替代类变量的功能。这很容易让人忽略类变量的优点。①含义明确：这是这个类的所有实例共用的。②不需要重载<strong>init</strong>，这在继承的时候是很有用哒~~~，so，不要有事没事无脑在<strong>init</strong>里面self.xxx = xxx啦</p>
-<h3 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h3><p><a href="http://www.laruence.com/2011/01/20/1840.html">Expect:100-continue</a><br><a href="https://docs.python.org/3.6/library/http.server.html?highlight=http.server#http.server.BaseHTTPRequestHandler">官方文档</a></p>
+            <pre><code> _ _ _ ____ ____ _ ____ ____ ____    _ _  _ _  _ ____ ____ _ ___
+ | | | [__  | __ | |__/ |___ |___    | |\ | |__| |___ |__/ |  |
+ |_|_| ___] |__] | |  \ |___ |       | | \| |  | |___ |  \ |  |
++--------------------------+     +---------------------------------+
+|    wsgiref.WSGIServer    |     |   wsgiref.WSGIRequestHandler    |
++--------------------------+     +---------------------------------+
+              |
++-------------v------------+    +------------------------------------+
+|  http.server.HTTPServer  |    | http.server.BaseHTTPRequestHandler |
++--------------------------+    +------------------------------------+
 
++--------------------------+    +------------------------------------+
+|  socketserver.TCPServer  |    | socketserver.StreamRequestHandler  |
++--------------------------+    +------------------------------------+
+                                        overload handle logic
+
+Created with Monodraw
+</code></pre><h2 id="dd"><a href="#dd" class="headerlink" title="dd"></a>dd</h2>
             
                 
 
@@ -291,7 +301,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/04/2016-07-04/"  data-tooltip="wsgiref源码阅读">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -299,7 +309,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/06/29/socketserver_note/" data-tooltip="SocketServer源码阅读">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/02/http_server_note/" data-tooltip="http.server源码阅读">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -314,17 +324,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/02/http_server_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/04/2016-07-04/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/02/http_server_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/04/2016-07-04/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/02/http_server_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/04/2016-07-04/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -372,7 +382,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/04/2016-07-04/"  data-tooltip="wsgiref源码阅读">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -380,7 +390,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/06/29/socketserver_note/" data-tooltip="SocketServer源码阅读">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/02/http_server_note/" data-tooltip="http.server源码阅读">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -395,17 +405,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/02/http_server_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/04/2016-07-04/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/02/http_server_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/04/2016-07-04/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/02/http_server_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/04/2016-07-04/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -431,17 +441,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="3">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/02/http_server_note/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/04/2016-07-04/">
                 <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/02/http_server_note/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/04/2016-07-04/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/02/http_server_note/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/04/2016-07-04/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -498,9 +508,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'http://ficapy.com/2016/07/02/http_server_note/';
+                 this.page.url = 'http://ficapy.com/2016/07/04/2016-07-04/';
                  
-                    this.page.identifier = '2016/07/02/http_server_note/';
+                    this.page.identifier = '2016/07/04/2016-07-04/';
                                   
              };
             (function() {

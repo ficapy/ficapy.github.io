@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-07-02T10:19:40.000Z</updated>
+  <updated>2016-07-04T09:38:55.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -14,6 +14,45 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>wsgiref源码阅读</title>
+    <link href="http://ficapy.com/2016/07/04/2016-07-04/"/>
+    <id>http://ficapy.com/2016/07/04/2016-07-04/</id>
+    <published>2016-07-04T09:32:07.000Z</published>
+    <updated>2016-07-04T09:38:55.000Z</updated>
+    
+    <content type="html">&lt;pre&gt;&lt;code&gt; _ _ _ ____ ____ _ ____ ____ ____    _ _  _ _  _ ____ ____ _ ___
+ | | | [__  | __ | |__/ |___ |___    | |\ | |__| |___ |__/ |  |
+ |_|_| ___] |__] | |  \ |___ |       | | \| |  | |___ |  \ |  |
++--------------------------+     +---------------------------------+
+|    wsgiref.WSGIServer    |     |   wsgiref.WSGIRequestHandler    |
++--------------------------+     +---------------------------------+
+              |
++-------------v------------+    +------------------------------------+
+|  http.server.HTTPServer  |    | http.server.BaseHTTPRequestHandler |
++--------------------------+    +------------------------------------+
+
++--------------------------+    +------------------------------------+
+|  socketserver.TCPServer  |    | socketserver.StreamRequestHandler  |
++--------------------------+    +------------------------------------+
+                                        overload handle logic
+
+Created with Monodraw
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&quot;dd&quot;&gt;&lt;a href=&quot;#dd&quot; class=&quot;headerlink&quot; title=&quot;dd&quot;&gt;&lt;/a&gt;dd&lt;/h2&gt;</content>
+    
+    <summary type="html">
+    
+      &lt;pre&gt;&lt;code&gt; _ _ _ ____ ____ _ ____ ____ ____    _ _  _ _  _ ____ ____ _ ___
+ | | | [__  | __ | |__/ |___ |___    | |\ | |__| |___ |__/ |  |
+
+    
+    </summary>
+    
+      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>http.server源码阅读</title>
@@ -756,41 +795,6 @@ style=&quot;font-size: 15px !important; line-height: 17px !important;&quot;&gt;\
     
       &lt;p&gt;当我花六百八在淘宝购买了一个总屏合成，当一个我都不舍得买的SSD离我远去，当上中下三件我超喜欢的物件给我沉痛的打击。趁着今天最后一点日子。来回忆一下今天这个让人忧伤的日子！&lt;/p&gt;
 &lt;p&gt;上午，今天要坐车去质检站，40分钟路途俺早已做好了打算。300m手机流量怎够俺一个月消遣，so！就这样抽风的带上了3G无线路由器。那速度和流量还是相当可观。当我坐在凳子上填好单，起身很顺手的从后裤带掏出了手机。哦，屏幕又TM爆了啊，为什么是又！！！，毕竟是第二次&lt;br&gt;俺的心情也平静了许多。碎就碎了吧，虽然难免有些小桑心但是破镜难圆的道理俺还是明白滴。&lt;br&gt;
-    
-    </summary>
-    
-      <category term="随笔" scheme="http://ficapy.com/categories/%E9%9A%8F%E7%AC%94/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>打造简洁windows</title>
-    <link href="http://ficapy.com/2014/01/17/the_corrent_way_to_use_windows/"/>
-    <id>http://ficapy.com/2014/01/17/the_corrent_way_to_use_windows/</id>
-    <published>2014-01-17T12:03:00.000Z</published>
-    <updated>2016-06-29T03:49:56.000Z</updated>
-    
-    <content type="html">&lt;p&gt;其实感觉自己电脑用的其实挺糟糕的，某天无意间在知乎看到一篇好帖《&lt;a href=&quot;http://www.zhihu.com/question/20491886&quot;&gt;如何优雅的使用windows&lt;/a&gt;》，个人感觉很值得一看，简直不能同意更多。之后根据里面的内容稍微更改了一下自己的使用风格，总结一下大概是这样子的&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;br&gt;①尽量不要使用杀毒软件，它给你带来的“安全感”远比其带来性能损耗导致不流畅体验糟糕的多，当然你觉得要是经常上黄网，经常使用外挂，偶尔还玩点黑客软件，明白自己的电脑非常容易中病毒，可能还是需要杀毒软件。但是当一个小白花上百块钱就能让病毒加壳逃过主流杀毒软件。用杀毒软件真是太没有必要了。好好用自己的电脑，对未知文件保持警惕。不进行明知故犯的SB错误，杀毒软件是没必要安装的。&lt;/p&gt;
-&lt;p&gt;②自己安装原版系统&lt;a href=&quot;http://msdn.itellyou.cn/&quot;&gt;http://msdn.itellyou.cn/&lt;/a&gt;&lt;br&gt;，没必要使用各种ghost版本，除非你是电脑维护人员，每天需要给别人安装系统。&lt;/p&gt;
-&lt;p&gt;③打开windows7的备份和还原功能（大多数ghost版本都关系，而且有些优化软件也会关闭），关键时候一键还原太好用了，恢复到正常使用的状态。&lt;/p&gt;
-&lt;p&gt;④对工作文件、重要文件备份到云端（推荐dropbox）方便发生各种灾难的时候能够马上恢复工作，工作文件一般是各种文档之类。各种视频、电影、AV就没必要向dropbox里面放置了（容量有限，国内各种网盘适合放这些）。&lt;/p&gt;
-&lt;p&gt;⑤国内软件信奉的大概是“社会这么乱，装纯给谁看”，非流氓性质的系统辅助软件实在太少。能使用国外的坚决不适用国内。对于软件。不乏一些“我很丑但是我很温柔”的软件，比如total&lt;br&gt;commander、everything、xnview等。虽然是XP时代的外观，但是功能依旧实用。&lt;/p&gt;
-&lt;p&gt;⑥这一条可能激进了点。网上总流传着这样一个段子男女电脑桌面图标和卧室的对比。桌面为了美观本来只是放置快捷方式的地方，但是从知乎上讲快捷图标放在桌面性能低下，so。删掉所有的桌面图标，使用&lt;strong&gt;RocketDock&lt;/strong&gt;放置在桌面左端。快捷打开软件放弃桌面图标十个不错的选择。我甚至删除了桌面的回收站。&lt;/p&gt;
-&lt;p&gt;⑦隐藏任务栏，只对一个任务进行处理。避免分散注意力。&lt;a href=&quot;http://zyhh.me/delphi/taskbarhider.html&quot;&gt;http://zyhh.me/delphi/taskbarhider.html&lt;/a&gt;&lt;br&gt;该工具不错，值得设置为开机自启动。&lt;/p&gt;
-&lt;p&gt;⑧适当使用快捷键win+1~9、alt+tab、ctrl+l等都是简化操作的必备法宝。&lt;/p&gt;
-&lt;p&gt;⑨花几百块升级SSD，体验跨时代超值快感。顿时幸福感升级。&lt;/p&gt;
-&lt;p&gt;.&lt;/p&gt;
-&lt;p&gt;.&lt;/p&gt;
-&lt;p&gt;.&lt;/p&gt;
-&lt;p&gt;.&lt;/p&gt;
-&lt;p&gt;.&lt;/p&gt;
-&lt;p&gt;以上第一点和最后一点在我看来是重中之重~~~~~~~~~~~~~~`&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;其实感觉自己电脑用的其实挺糟糕的，某天无意间在知乎看到一篇好帖《&lt;a href=&quot;http://www.zhihu.com/question/20491886&quot;&gt;如何优雅的使用windows&lt;/a&gt;》，个人感觉很值得一看，简直不能同意更多。之后根据里面的内容稍微更改了一下自己的使用风格，总结一下大概是这样子的&lt;br&gt;
     
     </summary>
     
