@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-07-10T09:26:19.000Z</updated>
+  <updated>2016-07-15T01:27:15.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -14,6 +14,31 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>pyenv使用镜像加速</title>
+    <link href="http://ficapy.com/2016/07/15/pyenv_use_mirror/"/>
+    <id>http://ficapy.com/2016/07/15/pyenv_use_mirror/</id>
+    <published>2016-07-15T00:57:02.000Z</published>
+    <updated>2016-07-15T01:27:15.000Z</updated>
+    
+    <content type="html">&lt;p&gt;使用&lt;code&gt;pyenv install 3.5.0&lt;/code&gt;的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个pyenv镜像项目的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理&lt;/p&gt;
+&lt;p&gt;如果安装2.7.6你可以选择使用国内七牛的镜像。项目地址&lt;a href=&quot;http://pyenv.qiniudn.com/pythons/&quot;&gt;http://pyenv.qiniudn.com/pythons/&lt;/a&gt;。执行&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;export PYTHON_BUILD_MIRROR_URL=&amp;#34;http://pyenv.qiniudn.com/pythons/&amp;#34;&amp;#10;pyenv install 2.7.6&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;就会使用七牛镜像进行下载速度非常快。&lt;br&gt;缺点就是除了网页上的一些版本。其他的都不支持了。七牛没有对这个项目进行更新&lt;/p&gt;
+&lt;p&gt;我们可以用迅雷或者其他可用的快速的方法把python源码下载到本地。自己开启一个镜像给自己用。这样就好了。比如执行&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;ficapy@L ~&amp;#62; pyenv install 3.5.0                                                                                                                                                                           &amp;#10;Downloading Python-3.5.0.tgz...&amp;#10;-&amp;#62; https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tgz&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;然后把&lt;code&gt;https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tgz&lt;/code&gt;下载到本地。&lt;br&gt;再设置镜像地址&lt;code&gt;export PYTHON_BUILD_MIRROR_URL=&amp;quot;http://127.0.0.1:8000/&amp;quot;&lt;/code&gt;&lt;br&gt;到下载地址执行&lt;code&gt;python3 -m http.server&lt;/code&gt;&lt;br&gt;再次执行&lt;code&gt;pyenv install 3.5.0&lt;/code&gt;发现还是从官网下载。不过此时查看http.server上有一条HEAD请求日志。-_-发现不是直接请问的文件名，而是一个64位的字符。将下载的文件名修改成那64位字符。在执行就ok了~~&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;使用&lt;code&gt;pyenv install 3.5.0&lt;/code&gt;的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个pyenv镜像项目的，只可惜更新频率远不如pyenv。导致安装一些
+    
+    </summary>
+    
+    
+      <category term="python" scheme="http://ficapy.com/tags/python/"/>
+    
+  </entry>
   
   <entry>
     <title>python描述符应用</title>
@@ -762,46 +787,6 @@ style=&quot;font-size: 15px !important; line-height: 17px !important;&quot;&gt;\
       <category term="virtualenv" scheme="http://ficapy.com/tags/virtualenv/"/>
     
       <category term="虚拟环境" scheme="http://ficapy.com/tags/%E8%99%9A%E6%8B%9F%E7%8E%AF%E5%A2%83/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>python简单实现网站打卡签到</title>
-    <link href="http://ficapy.com/2014/04/21/python_implement_login_and_check_in/"/>
-    <id>http://ficapy.com/2014/04/21/python_implement_login_and_check_in/</id>
-    <published>2014-04-21T14:07:00.000Z</published>
-    <updated>2016-06-29T03:49:49.000Z</updated>
-    
-    <content type="html">&lt;p&gt;断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试&lt;a href=&quot;http://bbs.hshy.net/&quot;&gt;http://bbs.hshy.net/&lt;/a&gt;&lt;br&gt;p.s. 该网站已关闭注册&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;br&gt;至于实现原理，就是先使用fiddler抓取登陆和打卡的网址及参数，用python的requests模块实现构造请求网址以及对网址进行POST和GET操作&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/fiddler.png&quot; alt=&quot;fiddler&quot;&gt;&lt;/p&gt;
-&lt;p&gt;中间需要注意的一些小细节：&lt;/p&gt;
-&lt;p&gt;①fiddler搜索功能很强大，在所有会话中快速找到某个参数是如何来的很有用；&lt;/p&gt;
-&lt;p&gt;②进行登陆POST操作的时候如果用户名是中文，需要先解码，这个例子里面是GBK（当初困扰了我一些时间），密码进行了MD5加密；&lt;/p&gt;
-&lt;p&gt;③针对签到失败的处理，本例可选使用nexmo发送短信提醒  &lt;/p&gt;
-&lt;script src=&quot;https://gist.github.com/Ficapy/11130233.js&quot;&gt;&lt;/script&gt; 
-
-&lt;p&gt;在ubuntu远程VPS下的使用：&lt;/p&gt;
-&lt;p&gt;先安装python-pip&lt;/p&gt;
-&lt;figure class=&quot;highlight bash&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;apt-get install python-pip&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
-&lt;p&gt;安装python第三方模块requests&lt;/p&gt;
-&lt;figure class=&quot;highlight bash&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;pip install requests&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
-&lt;p&gt;设置定时任务(路径改成放置文件的路径)&lt;/p&gt;
-&lt;figure class=&quot;highlight bash&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;crontab &lt;span class=&quot;operator&quot;&gt;-e&lt;/span&gt;  &lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;number&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;12&lt;/span&gt; \* \* \* python /root/XXX/hshy_checkin.py&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
-&lt;p&gt;ok，大功告成~~~~~~从此妈妈再也不担心我天天惦记着签到打卡了&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试&lt;a href=&quot;http://bbs.hshy.net/&quot;&gt;http://bbs.hshy.net/&lt;/a&gt;&lt;br&gt;p.s. 该网站已关闭注册&lt;br&gt;
-    
-    </summary>
-    
-      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
-    
-    
-      <category term="python签到" scheme="http://ficapy.com/tags/python%E7%AD%BE%E5%88%B0/"/>
-    
-      <category term="打卡" scheme="http://ficapy.com/tags/%E6%89%93%E5%8D%A1/"/>
     
   </entry>
   
