@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-07-15T01:27:15.000Z</updated>
+  <updated>2016-07-15T01:33:30.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -20,9 +20,9 @@
     <link href="http://ficapy.com/2016/07/15/pyenv_use_mirror/"/>
     <id>http://ficapy.com/2016/07/15/pyenv_use_mirror/</id>
     <published>2016-07-15T00:57:02.000Z</published>
-    <updated>2016-07-15T01:27:15.000Z</updated>
+    <updated>2016-07-15T01:33:30.000Z</updated>
     
-    <content type="html">&lt;p&gt;使用&lt;code&gt;pyenv install 3.5.0&lt;/code&gt;的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个pyenv镜像项目的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理&lt;/p&gt;
+    <content type="html">&lt;p&gt;使用&lt;code&gt;pyenv install 3.5.0&lt;/code&gt;的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个&lt;a href=&quot;https://github.com/yyuu/yyuu.github.com&quot;&gt;pyenv镜像项目&lt;/a&gt;的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理&lt;/p&gt;
 &lt;p&gt;如果安装2.7.6你可以选择使用国内七牛的镜像。项目地址&lt;a href=&quot;http://pyenv.qiniudn.com/pythons/&quot;&gt;http://pyenv.qiniudn.com/pythons/&lt;/a&gt;。执行&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;export PYTHON_BUILD_MIRROR_URL=&amp;#34;http://pyenv.qiniudn.com/pythons/&amp;#34;&amp;#10;pyenv install 2.7.6&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
 &lt;p&gt;就会使用七牛镜像进行下载速度非常快。&lt;br&gt;缺点就是除了网页上的一些版本。其他的都不支持了。七牛没有对这个项目进行更新&lt;/p&gt;
 &lt;p&gt;我们可以用迅雷或者其他可用的快速的方法把python源码下载到本地。自己开启一个镜像给自己用。这样就好了。比如执行&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;ficapy@L ~&amp;#62; pyenv install 3.5.0                                                                                                                                                                           &amp;#10;Downloading Python-3.5.0.tgz...&amp;#10;-&amp;#62; https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tgz&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
@@ -31,7 +31,7 @@
     
     <summary type="html">
     
-      &lt;p&gt;使用&lt;code&gt;pyenv install 3.5.0&lt;/code&gt;的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个pyenv镜像项目的，只可惜更新频率远不如pyenv。导致安装一些
+      &lt;p&gt;使用&lt;code&gt;pyenv install 3.5.0&lt;/code&gt;的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个&lt;a href=&quot;https://github.com/yyuu/
     
     </summary>
     

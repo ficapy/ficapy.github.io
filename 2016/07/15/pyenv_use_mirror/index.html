@@ -28,7 +28,7 @@
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="使用pyenv install 3.5.0的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个pyenv镜像项目的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理
 如果安装2.7.6你可以选择使用国内七牛的镜像。项目地址http://pyenv.qiniudn.com/pythons/。执">
-<meta property="og:updated_time" content="2016-07-15T01:27:15.000Z">
+<meta property="og:updated_time" content="2016-07-15T01:33:30.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="pyenv使用镜像加速">
 <meta name="twitter:description" content="使用pyenv install 3.5.0的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个pyenv镜像项目的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理
@@ -258,7 +258,7 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>使用<code>pyenv install 3.5.0</code>的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个pyenv镜像项目的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理</p>
+            <p>使用<code>pyenv install 3.5.0</code>的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个<a href="https://github.com/yyuu/yyuu.github.com">pyenv镜像项目</a>的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理</p>
 <p>如果安装2.7.6你可以选择使用国内七牛的镜像。项目地址<a href="http://pyenv.qiniudn.com/pythons/">http://pyenv.qiniudn.com/pythons/</a>。执行<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">export PYTHON_BUILD_MIRROR_URL=&#34;http://pyenv.qiniudn.com/pythons/&#34;&#10;pyenv install 2.7.6</span><br></pre></td></tr></table></figure></p>
 <p>就会使用七牛镜像进行下载速度非常快。<br>缺点就是除了网页上的一些版本。其他的都不支持了。七牛没有对这个项目进行更新</p>
 <p>我们可以用迅雷或者其他可用的快速的方法把python源码下载到本地。自己开启一个镜像给自己用。这样就好了。比如执行<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ficapy@L ~&#62; pyenv install 3.5.0                                                                                                                                                                           &#10;Downloading Python-3.5.0.tgz...&#10;-&#62; https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tgz</span><br></pre></td></tr></table></figure></p>
