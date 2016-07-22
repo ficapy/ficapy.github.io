@@ -1,0 +1,542 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>pycallgraph源码分析 - 邹雷</title>
+    <meta name="author" content="Ficapy">
+    <script type="text/javascript">
+    var url = window.location.href;
+    if (url.indexOf("https") < 0 && url.indexOf("0.0.0.0")<0) {
+    url = url.replace("http:", "https:");
+    window.location.replace(url);
+    }
+    </script>
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="pycallgraph源码分析">
+<meta property="og:url" content="http://ficapy.com/2016/07/22/pycallgraph_note/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。">
+<meta property="og:image" content="https://ws2.sinaimg.cn/large/a25f7e36gw1f62u6liqvqj21kw0awdjr.jpg">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/requests_get.png">
+<meta property="og:updated_time" content="2016-07-22T13:17:44.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="pycallgraph源码分析">
+<meta name="twitter:description" content="用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。">
+<meta name="twitter:creator" content="@aec4d">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-ejlztp1tasruqfvoz6xmgqng0anzae8ox7cqjj5yibieqgcmhe9fwxfae6zj.min.css" type="text/css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?a6ac3798de98c504fa2cbff2cc8bd755";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="3">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <h1 class="header-title">
+        <a class="header-title-link" href="/ ">邹雷</a>
+    </h1>
+    
+        
+            <a  class="header-right-picture "
+                href="/#about">
+        
+        
+            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="3">
+    
+        <div class="sidebar-profile">
+            <a href="/#about">
+                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+            </a>
+            <span class="sidebar-profile-name">Ficapy</span>
+        </div>
+    
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/ "
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                    <span class="sidebar-button-desc">首页</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-categories"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                    <span class="sidebar-button-desc">分类</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-tags"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                    <span class="sidebar-button-desc">标签</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-archives"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                    <span class="sidebar-button-desc">归档</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link st-search-show-outputs"
+                         href="/#search"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                    <span class="sidebar-button-desc">搜索</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/#about"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                    <span class="sidebar-button-desc">关于</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://github.com/Ficapy" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                    <span class="sidebar-button-desc">GitHub</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                    <span class="sidebar-button-desc">Twitter</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                    <span class="sidebar-button-desc">邮箱</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/atom.xml"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                    <span class="sidebar-button-desc">RSS</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+</nav>
+
+            
+            <div id="main" data-behavior="3"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            pycallgraph源码分析
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" content="Fri Jul 22 2016 15:13:05 GMT+0800">
+	
+		    7月 22, 2016
+    	
+    </time>
+    
+</div>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。</p>
+<a id="more"></a>
+<h3 id="pycallgraph文件结构"><a href="#pycallgraph文件结构" class="headerlink" title="pycallgraph文件结构"></a>pycallgraph文件结构</h3><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.&#10;&#9500;&#9472;&#9472; __init__.py&#10;&#9500;&#9472;&#9472; color.py                &#26174;&#31034;&#39068;&#33394;&#10;&#9500;&#9472;&#9472; config.py               &#20027;&#35201;&#29992;&#26469;&#30830;&#23450;&#20351;&#29992;&#21738;&#20123;&#36807;&#28388;&#26041;&#27861;&#10;&#9500;&#9472;&#9472; exceptions.py           &#27809;&#21861;&#29992;&#10;&#9500;&#9472;&#9472; globbing_filter.py      &#23601;&#19968;&#20010;fnmatch&#10;&#9500;&#9472;&#9472; memory_profiler.py      &#10;&#9500;&#9472;&#9472; metadata.py&#10;&#9500;&#9472;&#9472; output                  output.py&#26159;&#22522;&#31867;&#65292;&#20854;&#20182;&#20960;&#20010;&#26159;&#20855;&#20307;&#36755;&#20986;&#26041;&#24335;&#10;&#9474;&#160;&#160; &#9500;&#9472;&#9472; __init__.py&#10;&#9474;&#160;&#160; &#9500;&#9472;&#9472; gephi.py&#10;&#9474;&#160;&#160; &#9500;&#9472;&#9472; graphviz.py&#10;&#9474;&#160;&#160; &#9500;&#9472;&#9472; output.py&#10;&#9474;&#160;&#160; &#9500;&#9472;&#9472; pickle.py&#10;&#9474;&#160;&#160; &#9492;&#9472;&#9472; ubigraph.py&#10;&#9500;&#9472;&#9472; pycallgraph.py          &#25972;&#21512;config&#21644;output&#10;&#9500;&#9472;&#9472; tracer.py               &#26680;&#24515;&#25991;&#20214;(&#35843;&#29992;sys.settrace&#30340;&#22320;&#26041;)&#10;&#9492;&#9472;&#9472; util.py</span><br></pre></td></tr></table></figure>
+<h3 id="获取函数被哪些函数调用"><a href="#获取函数被哪些函数调用" class="headerlink" title="获取函数被哪些函数调用"></a>获取函数被哪些函数调用</h3><p>查看下面的相关资料。有这样一段代码<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> traceback</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">f</span><span class="params">()</span>:</span></span><br><span class="line">    g()</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">g</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">for</span> line <span class="keyword">in</span> traceback.format_stack():</span><br><span class="line">        print(line.strip())</span><br><span class="line"></span><br><span class="line">f()</span><br><span class="line"></span><br><span class="line"><span class="comment"># Prints:</span></span><br><span class="line"><span class="comment"># File "so-stack.py", line 10, in &lt;module&gt;</span></span><br><span class="line"><span class="comment">#     f()</span></span><br><span class="line"><span class="comment"># File "so-stack.py", line 4, in f</span></span><br><span class="line"><span class="comment">#     g()</span></span><br><span class="line"><span class="comment"># File "so-stack.py", line 7, in g</span></span><br><span class="line"><span class="comment">#     for line in traceback.format_stack():</span></span><br></pre></td></tr></table></figure><br>当f调用g的时候。在g里面有调用了traceback.format_stack，它显示了当调用函数g的时候的调用路径。实现其实是比较简单的嘛。当调用g的时候，它在栈顶。那么只需要不断的调用frame.f_back就能得到上一个栈，就可以得到以上信息。可以看出它得到的是函数被调用的信息。假如函数g调用了很多底层函数，此时我需要进行一些patch hook，那么要得到是函数g调用了哪些底层函数！这种方法就没用了。好在python提供了sys.settrace</p>
+<h3 id="sys-settrace基本介绍"><a href="#sys-settrace基本介绍" class="headerlink" title="sys.settrace基本介绍"></a>sys.settrace基本介绍</h3><p>首先得对python运行的基本概念有个了解，函数的调用是一种栈结构。当函数被调用(触发call事件)的时候当前帧入栈，当函数执行完毕返回(触发return事件)的时候栈顶的帧出栈。sys.settrace就是对这些事件的hook。看下面这段代码<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">trace</span><span class="params">(frame, event, args,record=[])</span>:</span></span><br><span class="line">    print(frame.f_lineno, frame.f_code.co_filename, event)</span><br><span class="line">    <span class="keyword">if</span> event == <span class="string">'call'</span>:</span><br><span class="line">        record.append(frame)</span><br><span class="line">    <span class="keyword">elif</span> event == <span class="string">'return'</span>:</span><br><span class="line">        pre_frame = record.pop()</span><br><span class="line">        print(pre_frame <span class="keyword">is</span> frame)</span><br><span class="line">    <span class="keyword">return</span> trace</span><br><span class="line">sys.settrace(trace)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">2</span>):</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="number">1</span> / i - <span class="number">1</span></span><br><span class="line">        <span class="keyword">except</span> ZeroDivisionError:</span><br><span class="line">            <span class="keyword">pass</span></span><br><span class="line">main()</span><br><span class="line"></span><br><span class="line"><span class="comment"># 11 /Users/ficapy/Dropbox/source_read/py3/settrace.py call</span></span><br><span class="line"><span class="comment"># 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py line</span></span><br><span class="line"><span class="comment"># 13 /Users/ficapy/Dropbox/source_read/py3/settrace.py line</span></span><br><span class="line"><span class="comment"># 14 /Users/ficapy/Dropbox/source_read/py3/settrace.py line</span></span><br><span class="line"><span class="comment"># 14 /Users/ficapy/Dropbox/source_read/py3/settrace.py exception</span></span><br><span class="line"><span class="comment"># 15 /Users/ficapy/Dropbox/source_read/py3/settrace.py line</span></span><br><span class="line"><span class="comment"># 16 /Users/ficapy/Dropbox/source_read/py3/settrace.py line</span></span><br><span class="line"><span class="comment"># 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py line</span></span><br><span class="line"><span class="comment"># 13 /Users/ficapy/Dropbox/source_read/py3/settrace.py line</span></span><br><span class="line"><span class="comment"># 14 /Users/ficapy/Dropbox/source_read/py3/settrace.py line</span></span><br><span class="line"><span class="comment"># 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py line</span></span><br><span class="line"><span class="comment"># 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py return</span></span><br><span class="line"><span class="comment"># True</span></span><br></pre></td></tr></table></figure><br>有几点需要注意的:</p>
+<ol>
+<li>trace函数最后记得返回自身</li>
+<li>不需要考虑多线程问题，因为sys.settrace只对主线程有效(多线程是threading.settrace，多进程没试过)</li>
+<li>还是要废话一句，发生return的时候frame一定是最后一个call的frame。这也是pycallgraph的运行的基本条件。</li>
+<li>虽然trace有7个事件。可是对于我们绘制调用图call、return就够了.</li>
+</ol>
+<h3 id="pycallgraph原理版本"><a href="#pycallgraph原理版本" class="headerlink" title="pycallgraph原理版本"></a>pycallgraph原理版本</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="keyword">from</span> collections <span class="keyword">import</span> defaultdict</span><br><span class="line"><span class="keyword">from</span> pprint <span class="keyword">import</span> pprint</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"></span><br><span class="line">call_dict = defaultdict(<span class="keyword">lambda</span>: defaultdict(int))</span><br><span class="line">frame_stack = []</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">trace</span><span class="params">(frame, event, args)</span>:</span></span><br><span class="line">    <span class="keyword">if</span> event == <span class="string">'call'</span>:</span><br><span class="line">        frame_stack.append(frame)</span><br><span class="line">        call_dict[frame.f_back][frame] += <span class="number">1</span></span><br><span class="line">    <span class="keyword">if</span> event == <span class="string">'return'</span>:</span><br><span class="line">        <span class="keyword">if</span> frame <span class="keyword">is</span> frame_stack[-<span class="number">1</span>]:</span><br><span class="line">            frame_stack.pop()</span><br><span class="line">    <span class="keyword">return</span> trace</span><br><span class="line"></span><br><span class="line">sys.settrace(trace)</span><br><span class="line">requests.get(<span class="string">'http://www.z.cn'</span>)</span><br><span class="line">sys.settrace(<span class="keyword">None</span>)</span><br><span class="line">pprint(call_dict)</span><br><span class="line"></span><br><span class="line"><span class="comment"># defaultdict(&lt;function &lt;lambda&gt; at 0x10f282950&gt;,</span></span><br><span class="line"><span class="comment">#             &#123;&lt;frame object at 0x10f199448&gt;: defaultdict(&lt;class 'int'&gt;,</span></span><br><span class="line"><span class="comment">#                                                         &#123;&lt;frame object at 0x10f303848&gt;: 1,</span></span><br><span class="line"><span class="comment">#                                                          &lt;frame object at 0x10f4f93d8&gt;: 1,</span></span><br><span class="line"><span class="comment">#                                                          &lt;frame object at 0x10f985980&gt;: 1&#125;),</span></span><br><span class="line"><span class="comment">#                                                         :</span></span><br><span class="line"><span class="comment">#                                                         :</span></span><br><span class="line"><span class="comment">#                                                         :</span></span><br><span class="line"><span class="comment">#              &lt;frame object at 0x7fa6630a2018&gt;: defaultdict(&lt;class 'int'&gt;,</span></span><br><span class="line"><span class="comment">#                                                            &#123;&lt;frame object at 0x10fd1b8b8&gt;: 1,</span></span><br><span class="line"><span class="comment">#                                                             &lt;frame object at 0x10fd2a9d0&gt;: 1,</span></span><br><span class="line"><span class="comment">#                                                             &lt;frame object at 0x10fd2f908&gt;: 1,</span></span><br><span class="line"><span class="comment">#                                                             &lt;frame object at 0x10fd32570&gt;: 1,</span></span><br><span class="line"><span class="comment">#                                                             &lt;frame object at 0x10fd3fac8&gt;: 1,</span></span><br><span class="line"><span class="comment">#                                                             &lt;frame object at 0x7fa662093cc8&gt;: 1,</span></span><br><span class="line"><span class="comment">#                                                             &lt;frame object at 0x7fa6621ddc98&gt;: 1,</span></span><br><span class="line"><span class="comment">#                                                             &lt;frame object at 0x7fa6621e0468&gt;: 1&#125;)&#125;)</span></span><br></pre></td></tr></table></figure>
+<p>在每个函数调用的时候，将当前栈和上一个栈关联起来。所有的数据汇总就得到了requests.get的调用关系图。然后就可以兴奋的去用graphviz生成图片~(≧▽≦)/~啦啦啦，直接这样大概就生成了类似下面的图片<br><img src="https://ws2.sinaimg.cn/large/a25f7e36gw1f62u6liqvqj21kw0awdjr.jpg" alt="confusion_requests"><br>看起来很炫酷，其实嘛用没有，几百个元素线条一大堆，根本突出不了重点。<strong><code>所以收集数据是很容易的，最重要的是过滤数据，重点突出自己需要的数据</code></strong>这部分应该也是pycallgraph的重点要处理的部分(处理的并不好)。</p>
+<h3 id="过滤不需要关注的函数"><a href="#过滤不需要关注的函数" class="headerlink" title="过滤不需要关注的函数"></a>过滤不需要关注的函数</h3><p>比如一个函数我们不需要关注。那么当call事件的时候我们只需要不把它加入到call_dict中。同时将当前栈长度设置为最大。那么该函数和被该函数调用的函数都不会被我们记录。pycallgraph的做法是:不加入到call_dict，只是对frame_stack列表加入一个空值。return事件也只是简单的pop移出(这样造成的结果就是该函数不被记录，可是该被该函数调用的其他函数只要不被规则过滤就会被记录)<br>通常过滤的条件会有:</p>
+<ol>
+<li>内置模块</li>
+<li>私有函数</li>
+<li>比如一些库有compat.py、datastructers.py、exceptions.py、utils.py这些模块常会被引用。可是对了解整个过程并没有什么帮助。反而会导致生成的图很混乱</li>
+<li>某些库虽然被引用太多次也该被删除<br>总之就是根据需要关注的地方写过滤规则，生成合适的图~~<br>比如这样。。。。requests.get的<br><img src="https://ficapy.b0.upaiyun.com/blogimg/requests_get.png" alt="requests_get"><br>注意到这里有组(根据单个模块分)，实现的方式也很简单。可以查看我写的精简版的pycallgraph.<a href="https://gist.github.com/Ficapy/a2601d44b1492c228732178e1bb3eb5e">https://gist.github.com/Ficapy/a2601d44b1492c228732178e1bb3eb5e</a></li>
+</ol>
+<h3 id="多线程版"><a href="#多线程版" class="headerlink" title="多线程版"></a>多线程版</h3><p>因为目前没有用来分析多线程程序，所以只是大概了解了一下。<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">trace</span><span class="params">(frame, event, args,record=[])</span>:</span></span><br><span class="line">    <span class="keyword">if</span> event == <span class="string">'call'</span>:</span><br><span class="line">        record.append(frame)</span><br><span class="line">    <span class="keyword">elif</span> event == <span class="string">'return'</span>:</span><br><span class="line">        pre_frame = record.pop()</span><br><span class="line">        print(pre_frame <span class="keyword">is</span> frame)</span><br><span class="line">    <span class="keyword">return</span> trace</span><br><span class="line">threading.settrace(trace)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    time.sleep(random.random())</span><br><span class="line">    <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">5</span>):</span><br><span class="line">    threading.Thread(target=main).start()</span><br><span class="line"></span><br><span class="line"><span class="comment"># False</span></span><br><span class="line"><span class="comment"># False</span></span><br><span class="line"><span class="comment"># False</span></span><br><span class="line"><span class="comment"># False</span></span><br><span class="line"><span class="comment"># True</span></span><br><span class="line"><span class="comment"># True</span></span><br><span class="line"><span class="comment"># True</span></span><br><span class="line"><span class="comment"># False</span></span><br><span class="line"><span class="comment"># False</span></span><br><span class="line"><span class="comment"># False</span></span><br><span class="line"><span class="comment"># False</span></span><br></pre></td></tr></table></figure><br>可以看到稍有区别，因为它有多个栈，所以无法像单个那样用一个列表就添加、取出就能搞定。可能以后有需要我会添加上线程支持</p>
+<h3 id="pycallgraph缺陷"><a href="#pycallgraph缺陷" class="headerlink" title="pycallgraph缺陷"></a>pycallgraph缺陷</h3><ol>
+<li>更新缓慢，master版本是3年前的！文档也是</li>
+<li>设置项有threaded.搞的是线程安全！sys.settrace在主线程是没有线程问题。我都没有想明白写线程这段是干啥子用的</li>
+<li>没有突出过滤的重要性</li>
+</ol>
+<h3 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h3><p><a href="https://docs.python.org/3/library/sys.html#sys.settrace">官网sys.settrace</a><br><a href="http://tech.uc.cn/?p=1932">python程序的执行原理</a><br><a href="https://www.youtube.com/watch?v=YIhGbFW985c">PYCON-Dmitry Trofimov - Python Debugger Uncovered</a><br><a href="http://stackoverflow.com/questions/1156023/print-current-call-stack-from-a-method-in-python-code">Print current call stack from a method in Python code</a><br><a href="https://segmentfault.com/a/1190000000356018">常用的python调试工具</a><br><a href="http://www.jianshu.com/p/e44885a777f0">graphviz dot语言学习笔记</a><br><a href="https://github.com/ionelmc/python-hunter">Github_python-hunter</a><br><a href="https://github.com/alonho/pytrace">Github_pytrace</a></p>
+
+            
+                
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/python/">python</a>
+
+            </div>
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/15/pyenv_use_mirror/" data-tooltip="pyenv使用镜像加速">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/22/pycallgraph_note/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/22/pycallgraph_note/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/22/pycallgraph_note/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2016 Ficapy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="3">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/15/pyenv_use_mirror/" data-tooltip="pyenv使用镜像加速">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/22/pycallgraph_note/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/22/pycallgraph_note/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/22/pycallgraph_note/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="3">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/22/pycallgraph_note/">
+                <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/22/pycallgraph_note/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/22/pycallgraph_note/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+            <h4 id="about-card-name">Ficapy</h4>
+        
+            <h5 id="about-card-bio"><p>author.bio</p>
+</h5>
+        
+        
+            <h5 id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </h5>
+        
+        
+            <h5 id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                浙江杭州
+            </h5>
+        
+    </div>
+</div>
+
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+    </body>
+    <!--SCRIPTS-->
+<script src="/assets/js/scrip-gfmrkxcl0qohe3cfdgxhzvc0yrceqta8i4iix0txvn8q4o2adlqd5n0jmkvt.min.js" type="text/javascript"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'http://ficapy.com/2016/07/22/pycallgraph_note/';
+                 
+                    this.page.identifier = '2016/07/22/pycallgraph_note/';
+                                  
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'ficapy';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+    <script type="text/javascript">
+        (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+                (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+            e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+        })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+        _st('install','YXTzZ4TmBqx4iuAdsTbH','2.0.0');
+    </script>
+
+
+</html>

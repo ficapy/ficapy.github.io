@@ -2,9 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://ficapy.com/2016/07/22/pycallgraph_note/</loc>
+    
+    <lastmod>2016-07-22T13:17:44.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://ficapy.com/2016/07/15/pyenv_use_mirror/</loc>
     
-    <lastmod>2016-07-15T01:33:30.000Z</lastmod>
+    <lastmod>2016-07-15T01:42:56.000Z</lastmod>
     
   </url>
   
