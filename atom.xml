@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-07-22T13:41:06.000Z</updated>
+  <updated>2016-07-23T03:16:30.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -14,6 +14,35 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>osx airdrop无法使用修复</title>
+    <link href="http://ficapy.com/2016/07/23/fix_osx_airdrop_not_working/"/>
+    <id>http://ficapy.com/2016/07/23/fix_osx_airdrop_not_working/</id>
+    <published>2016-07-23T02:53:25.000Z</published>
+    <updated>2016-07-23T03:16:30.000Z</updated>
+    
+    <content type="html">&lt;p&gt;前些天用的好好的airdrop居然无法使用了。具体情况是：我有iphone、ipad、mac。iphone和ipad能够互相发现。mac对它们2个发现不了。妈蛋正要传资料可急死我了。网上一搜这种情况还不在少数。&lt;/p&gt;
+&lt;p&gt;遇到这种情况。可以打开about this mac→→system report查看Network(wifi)可以看到Country Code:是不是CN(我电脑有问题的时候是X3)。如果不是，那么无法使用airdrop就和它有关。至于如何修复这个问题我没有找到确切的办法.有一个原因可能是由于路由器造成的。这个可以打开系统自带的无线检测工具Wireless Diagnostics(Windows→→scan)查看是不是由于国家码冲突造成的(详情看第一个参考资料)。如果这里没有问题(我的不是这个问题)。。。。。那么请尝试执行以下操作&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;将操作系统的语言改成中文&lt;/li&gt;
+&lt;li&gt;在系统设置页退出icloud账号&lt;/li&gt;
+&lt;li&gt;重启系统&lt;br&gt;：&lt;br&gt;：&lt;br&gt;尼玛，有可能就暂时能正常使用了ヾ(｡｀Д´｡)&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&quot;参考资料&quot;&gt;&lt;a href=&quot;#参考资料&quot; class=&quot;headerlink&quot; title=&quot;参考资料&quot;&gt;&lt;/a&gt;参考资料&lt;/h3&gt;&lt;p&gt;&lt;a href=&quot;http://www.howtogeek.com/211993/how-to-fix-conflicting-country-codes-and-improve-your-macs-wi-fi/&quot;&gt;how-to-fix-conflicting-country-codes-and-improve-your-macs-wi-fi&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://km.nicetypo.com/doc/7090786787135be8d32fa6624b892309&quot;&gt;解決無法從 iPhone AirDrop 到 Mac 的方法&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;前些天用的好好的airdrop居然无法使用了。具体情况是：我有iphone、ipad、mac。iphone和ipad能够互相发现。mac对它们2个发现不了。妈蛋正要传资料可急死我了。网上一搜这种情况还不在少数。&lt;/p&gt;
+&lt;p&gt;遇到这种情况。可以打开about this ma
+    
+    </summary>
+    
+    
+      <category term="随笔" scheme="http://ficapy.com/tags/%E9%9A%8F%E7%AC%94/"/>
+    
+  </entry>
   
   <entry>
     <title>pycallgraph源码分析</title>
@@ -751,49 +780,6 @@ style=&quot;color: #ff0000; text-decoration: underline;&quot;&gt;基于默认设
       <category term="javascript" scheme="http://ficapy.com/tags/javascript/"/>
     
       <category term="签到" scheme="http://ficapy.com/tags/%E7%AD%BE%E5%88%B0/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>利用selenium抓取OA数据生成综合图表</title>
-    <link href="http://ficapy.com/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/"/>
-    <id>http://ficapy.com/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/</id>
-    <published>2014-06-09T14:21:00.000Z</published>
-    <updated>2016-06-29T03:48:41.000Z</updated>
-    
-    <content type="html">&lt;p&gt;最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。&lt;br&gt;总结一下该OA系统的特征：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。&lt;/li&gt;
-&lt;li&gt;需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。&lt;/li&gt;
-&lt;li&gt;系统性能不佳，反应巨慢，异常返回情况比较多。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
-&lt;p&gt;最后选择了使用python+selenium+IEdriver控制IE浏览器登陆系统抓取OA数据，不得不说这是一个痛苦的过程selenium对IE的支持异常差，支持最好的firefox以及速度最快的chrome都无法在该例中使用。这直接造成了几乎每一步模拟操作都要加一句time.sleep(3)进行等待操作，以免返回异常或者没有抓取到数据。最开始的时候我直接全模拟手工操作一步步进入需要抓取的页面（OA是frame里面套frame），结果浏览器经常运行不久就报告崩溃。山穷水尽疑无路，柳暗花明又一村，最终发现登陆后直接打开要抓取frame页面的地址就可以了，这一步让整个抓取数据的工作以及稳定性提高的不少&lt;br&gt;整个流程比较简单。模拟登陆→抓取数据→把数据存储到数据库（sqlite）→利用matplotlib把数据库的内容生成图表&lt;br&gt;在登录OA的时候会要求填入验证码，虽然目测该系统验证码比较弱智，但是俺目前的水平还是破不了。so。本着力求无人操作全自动的原则使用了在线打码服务。不得不吐槽一下，试了2家，联系了客服，第一家流程复杂的不得了，和技术人员折腾半天最后还是不了了之，俺的要求多简单啊，结果一定要搞啥开发者分成路线。另外一家流程倒是简单了很多，结果网站给的示例教程还是前一个网站没更新无法使用，找客服要了一个新的示例文件，根本无法运行。问客服，得到的答复是技术人员测试使用完全没问题,WQNMLGB。示例是用urllib写的上传文件操作。潇潇洒洒上百行。没办法自己用requests重新写了下20行搞定，嗯，感叹下http&lt;br&gt;for humans的称号果然不是白喊的&amp;gt;_&amp;lt;&lt;br&gt;最后抓取到数据就是可视化的过程啦，以前只听过matplotlib库生成牛X的图表。试过之后还不错，还好比较知名案例比较多，否则真不知道要折腾多久才能搞出来，借鉴了stackoverflow上面的一个回答看了下官网的一些文档东拼西凑生成了个看的过去的图表，如下图（嗯，打了点薄码）&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/2014-06-05.png&quot; alt=&quot;2014-06-05&quot;&gt;&lt;br&gt;以下是录制的视频，上传到youku就成渣画质了，想看的还是忍忍吧（注：由于录屏操作导致selenium无法正常截取验证码，最后用手工输入）密码:zoulei&lt;/p&gt;
-&lt;embed width=&quot;480&quot; height=&quot;400&quot; type=&quot;application/x-shockwave-flash&quot; src=&quot;http://player.youku.com/player.php/sid/XNzIzNTMxOTA4/v.swf&quot; allowfullscreen=&quot;allowfullscreen&quot; quality=&quot;high&quot; align=&quot;middle&quot; allowscriptaccess=&quot;always&quot;&gt;&lt;/embed&gt;
-
-&lt;p&gt;以下是github地址 &lt;a href=&quot;https://github.com/aec4d/OA_Fetch&quot;&gt;https://github.com/aec4d/OA_Fetch&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;p.s由于暂时还不会打包，尝试使用pyinstall打包成exe文件失败。so如果想直接双击使用还是需要很费功夫的，需要安装&lt;br&gt;&lt;a href=&quot;http://www.lfd.uci.edu/~gohlke/pythonlibs/#matplotlib&quot;&gt;matplotlib&lt;/a&gt;，&lt;a href=&quot;http://docs.seleniumhq.org/&quot;&gt;selenium&lt;/a&gt;（IEdriver）&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。&lt;br&gt;总结一下该OA系统的特征：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。&lt;/li&gt;
-&lt;li&gt;需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。&lt;/li&gt;
-&lt;li&gt;系统性能不佳，反应巨慢，异常返回情况比较多。&lt;/li&gt;
-&lt;/ul&gt;
-    
-    </summary>
-    
-      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
-    
-    
-      <category term="matplotlib" scheme="http://ficapy.com/tags/matplotlib/"/>
-    
-      <category term="python" scheme="http://ficapy.com/tags/python/"/>
-    
-      <category term="selenium" scheme="http://ficapy.com/tags/selenium/"/>
     
   </entry>
   
