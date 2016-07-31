@@ -1,0 +1,522 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>list和dict的线程安全 - 邹雷</title>
+    <meta name="author" content="Ficapy">
+    <script type="text/javascript">
+    var url = window.location.href;
+    if (url.indexOf("https") < 0 && url.indexOf("0.0.0.0")<0) {
+    url = url.replace("http:", "https:");
+    window.location.replace(url);
+    }
+    </script>
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="list和dict的线程安全">
+<meta property="og:url" content="http://ficapy.com/2016/07/31/list_dict_threading_safe/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点。">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/array_vs_list.png">
+<meta property="og:updated_time" content="2016-07-31T00:58:37.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="list和dict的线程安全">
+<meta name="twitter:description" content="刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点。">
+<meta name="twitter:creator" content="@aec4d">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-ejlztp1tasruqfvoz6xmgqng0anzae8ox7cqjj5yibieqgcmhe9fwxfae6zj.min.css" type="text/css">
+    <!--STYLES END-->
+    
+    
+    <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?a6ac3798de98c504fa2cbff2cc8bd755";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+    </script>
+
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="3">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <h1 class="header-title">
+        <a class="header-title-link" href="/ ">邹雷</a>
+    </h1>
+    
+        
+            <a  class="header-right-picture "
+                href="/#about">
+        
+        
+            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="3">
+    
+        <div class="sidebar-profile">
+            <a href="/#about">
+                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+            </a>
+            <span class="sidebar-profile-name">Ficapy</span>
+        </div>
+    
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/ "
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                    <span class="sidebar-button-desc">首页</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-categories"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                    <span class="sidebar-button-desc">分类</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-tags"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                    <span class="sidebar-button-desc">标签</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/all-archives"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                    <span class="sidebar-button-desc">归档</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link st-search-show-outputs"
+                         href="/#search"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                    <span class="sidebar-button-desc">搜索</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/#about"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                    <span class="sidebar-button-desc">关于</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://github.com/Ficapy" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                    <span class="sidebar-button-desc">GitHub</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                    <span class="sidebar-button-desc">Twitter</span>
+                </a>
+        </li>
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                    <span class="sidebar-button-desc">邮箱</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+        <ul class="sidebar-buttons">
+        
+            <li class="sidebar-button">
+                
+                    <a  class="sidebar-button-link "
+                         href="/atom.xml"
+                        
+                    >
+                
+                    <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                    <span class="sidebar-button-desc">RSS</span>
+                </a>
+        </li>
+        
+    </ul>
+    
+</nav>
+
+            
+            <div id="main" data-behavior="3"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            list和dict的线程安全
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" content="Sun Jul 31 2016 07:47:09 GMT+0800">
+	
+		    7月 31, 2016
+    	
+    </time>
+    
+</div>
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点。</p>
+<a id="more"></a>
+<h3 id="官方文档"><a href="#官方文档" class="headerlink" title="官方文档"></a><a href="https://docs.python.org/2/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe">官方文档</a></h3><p>可以看到大概有这么个概念<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">L,L1,L2-&#62;list&#10;D,D1,D2-&#62;dict&#10;x,y-&#62;object&#10;i,j-&#62;int&#10;&#10;&#32447;&#31243;&#23433;&#20840;&#10;L.append(x)&#10;L1.append(L2)&#10;x=L[i]&#10;y=L.pop()&#10;L1[i,j]=L2&#10;L.sort()&#10;x=y&#10;x.field=y&#10;D[x]=y&#10;D1.update(D2)&#10;D.keys()&#10;&#10;&#10;&#20197;&#19979;&#26159;&#38750;&#32447;&#31243;&#23433;&#20840;&#10;i=i+1&#10;L.append(L[-1])&#10;L[i]=L[j]&#10;D[x]=D[x]+1</span><br></pre></td></tr></table></figure><br>可以看到list的append啥的其实是线程安全的。我们看到的举非线程安全的例子基本都是i+=1这种，最后得到的结果小于相加次数。然后最后说一句多线程对同一资源进行操作的时候要加锁哇。。。。。这话直接说的好像比较不负责任。让我这样的初学者风声鹤唳草木皆兵</p>
+<h3 id="一点小解释"><a href="#一点小解释" class="headerlink" title="一点小解释"></a>一点小解释</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> dis</span><br><span class="line"></span><br><span class="line">i = <span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">global</span> i</span><br><span class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> range(<span class="number">3000000</span>):</span><br><span class="line">        i += <span class="number">1</span></span><br><span class="line"></span><br><span class="line">th = [threading.Thread(target=main), threading.Thread(target=main)]</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> t <span class="keyword">in</span> th:</span><br><span class="line">    t.start()</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> t <span class="keyword">in</span> th:</span><br><span class="line">    t.join()</span><br><span class="line">print(i)</span><br><span class="line"></span><br><span class="line">dis.dis(main)</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> dis</span><br><span class="line"></span><br><span class="line">i = <span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">global</span> i</span><br><span class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> range(<span class="number">3000000</span>):</span><br><span class="line">        i += <span class="number">1</span></span><br><span class="line"></span><br><span class="line">th = [threading.Thread(target=main), threading.Thread(target=main)]</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> t <span class="keyword">in</span> th:</span><br><span class="line">    t.start()</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> t <span class="keyword">in</span> th:</span><br><span class="line">    t.join()</span><br><span class="line">print(i)</span><br><span class="line"></span><br><span class="line">dis.dis(main)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4372439</span></span><br><span class="line"><span class="comment">#   8           0 SETUP_LOOP              30 (to 33)</span></span><br><span class="line"><span class="comment">#               3 LOAD_GLOBAL              0 (range)</span></span><br><span class="line"><span class="comment">#               6 LOAD_CONST               1 (3000000)</span></span><br><span class="line"><span class="comment">#               9 CALL_FUNCTION            1</span></span><br><span class="line"><span class="comment">#              12 GET_ITER            </span></span><br><span class="line"><span class="comment">#         &gt;&gt;   13 FOR_ITER                16 (to 32)</span></span><br><span class="line"><span class="comment">#              16 STORE_FAST               0 (_)</span></span><br><span class="line"><span class="comment"># </span></span><br><span class="line"><span class="comment">#   9          19 LOAD_GLOBAL              1 (i)</span></span><br><span class="line"><span class="comment">#              22 LOAD_CONST               2 (1)</span></span><br><span class="line"><span class="comment">#              25 INPLACE_ADD         </span></span><br><span class="line"><span class="comment">#              26 STORE_GLOBAL             1 (i)</span></span><br><span class="line"><span class="comment">#              29 JUMP_ABSOLUTE           13</span></span><br><span class="line"><span class="comment">#         &gt;&gt;   32 POP_BLOCK           </span></span><br><span class="line"><span class="comment">#         &gt;&gt;   33 LOAD_CONST               0 (None)</span></span><br><span class="line"><span class="comment">#              36 RETURN_VALUE</span></span><br></pre></td></tr></table></figure>
+<p>我们知道python代码经过编译成字节码指令，然后python虚拟机按照指令进行执行，这里每一条指令都是原子操作不会被中断，可以看到<code>i+=1</code>这条语句被划分为4条指令被执行。取出i变量的值入栈→→将被加数1入栈→→取出2个数相加结果再入栈→→结果出栈。因为是要累加。我们当然需要累加的第一步加入的值是上一个累加的结果。可是在多线程不加锁的情况下每一条指令被执行完毕后都有可能去执行另外一个线程的指令。这就会造成第一步加入的值有可能和另外一个线程是一样的，于是悲剧发生了O_o</p>
+<p>再想一想append<br><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">8          19 LOAD_GLOBAL              1 (i)&#10;           22 LOAD_ATTR                2 (append)&#10;           25 LOAD_CONST               2 (1)&#10;           28 CALL_FUNCTION            1&#10;           31 POP_TOP</span><br></pre></td></tr></table></figure><br> <a href="http://jakevdp.github.io/images/array_vs_list.png">图片引用自</a><br> <img src="https://ficapy.b0.upaiyun.com/blogimg/array_vs_list.png" alt="array_vs_list"><br>可以看出list就是一个容器.append就相当与在最后面加了一个引用。虽然它也是由几条指定组成。也会发生交错执行的情况。这种交错造成的结果无非就是我本来是先执行的却在了一个的后面执行了插入，造成的结果就是<code>顺序错乱了</code>。😄可是特喵本来就是多线程程序，谁特喵会去关心顺序呢。所以就说线程安全了。<br>可以看出，append和<code>i+=1</code>最大的区别就是是否对自身进行了修改。dict同理~~</p>
+<p>另外加锁的时间开销其实还是挺大的。上例，我用3个线程(结果是9000000)，不加锁1.38秒，加锁执行39.16秒(python2.7.11)。不加锁1.06秒，加锁3.94秒(python3.5.1)。→_→当然你可以把i+=1改成i.apped(1)这样不用锁结果也能对了，只不过内存消耗感人</p>
+<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="http://qingyunha.github.io/taotao/">A Python Interpreter Written in Python</a></p>
+
+            
+                
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/python/">python</a>
+
+            </div>
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/25/werkzeug_note_requests_response_auto_realod/" data-tooltip="werkzeug源码分析(Request/Response和热重启)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/31/list_dict_threading_safe/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/31/list_dict_threading_safe/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/31/list_dict_threading_safe/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2016 Ficapy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="3">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/25/werkzeug_note_requests_response_auto_realod/" data-tooltip="werkzeug源码分析(Request/Response和热重启)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/31/list_dict_threading_safe/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/31/list_dict_threading_safe/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/31/list_dict_threading_safe/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="3">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/07/31/list_dict_threading_safe/">
+                <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/07/31/list_dict_threading_safe/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/07/31/list_dict_threading_safe/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+        
+            <h4 id="about-card-name">Ficapy</h4>
+        
+            <h5 id="about-card-bio"><p>author.bio</p>
+</h5>
+        
+        
+            <h5 id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </h5>
+        
+        
+            <h5 id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                浙江杭州
+            </h5>
+        
+    </div>
+</div>
+
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+    </body>
+    <!--SCRIPTS-->
+<script src="/assets/js/scrip-gfmrkxcl0qohe3cfdgxhzvc0yrceqta8i4iix0txvn8q4o2adlqd5n0jmkvt.min.js" type="text/javascript"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'http://ficapy.com/2016/07/31/list_dict_threading_safe/';
+                 
+                    this.page.identifier = '2016/07/31/list_dict_threading_safe/';
+                                  
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'ficapy';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+    <script type="text/javascript">
+        (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+                (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+            e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+        })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+        _st('install','YXTzZ4TmBqx4iuAdsTbH','2.0.0');
+    </script>
+
+
+</html>

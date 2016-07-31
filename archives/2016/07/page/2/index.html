@@ -238,6 +238,70 @@
 <section class="postShorten-group main-content-wrap">
     
     
+    <article class="postShorten postShorten--thumbnailimg-bottom" itemscope itemType="http://schema.org/BlogPosting">
+        <div class="postShorten-wrap">
+            <div class="postShorten-header">
+                <h1 class="postShorten-title" itemprop="headline">
+                    
+                        <a class="link-unstyled" href="/2016/07/04/2016-07-04/">
+                            wsgiref源码阅读
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time itemprop="datePublished" content="Mon Jul 04 2016 17:32:07 GMT+0800">
+	
+		    7月 04, 2016
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/源码解析/">源码解析</a>
+
+
+    
+</div>
+            </div>
+            
+            
+                <div class="postShorten-content" itemprop="articleBody">
+                    <pre><code> _ _ _ ____ ____ _ ____ ____ ____    _ _  _ _  _ ____ ____ _ ___
+ | | | [__  | __ | |__/ |___ |___    | |\ | |__| |___ |__/ |  |
+ |_|_| ___] |__] | |  \ |___ |       | | \| |  | |___ |  \ |  |
++--------------------------+     +---------------------------------+
+|    wsgiref.WSGIServer    |     |   wsgiref.WSGIRequestHandler    |
++--------------------------+     +---------------------------------+
+              |
++-------------v------------+    +------------------------------------+
+|  http.server.HTTPServer  |    | http.server.BaseHTTPRequestHandler |
++--------------------------+    +------------------------------------+
+
++--------------------------+    +------------------------------------+
+|  socketserver.TCPServer  |    | socketserver.StreamRequestHandler  |
++--------------------------+    +------------------------------------+
+                                        overload handle logic
+
+Created with Monodraw
+</code></pre><h2 id="dd"><a href="#dd" class="headerlink" title="dd"></a>dd</h2>
+                    
+                        
+
+                    
+                    
+                        <p>
+                            <a href="/2016/07/04/2016-07-04/#post-footer" class="postShorten-excerpt_link link">
+                                注释和共享
+                            </a>
+                        </p>
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
     <article class="postShorten postShorten--thumbnailimg-right" itemscope itemType="http://schema.org/BlogPosting">
         <div class="postShorten-wrap">
             <div class="postShorten-header">
