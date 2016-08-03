@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://ficapy.com/2016/08/03/werkzeug_local_note/</loc>
+    
+    <lastmod>2016-08-03T08:18:14.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://ficapy.com/2016/07/31/list_dict_threading_safe/</loc>
     
     <lastmod>2016-08-02T03:56:03.000Z</lastmod>
