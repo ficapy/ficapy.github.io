@@ -20,20 +20,20 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPoll以及如何实现的线程、进程安全。">
+    <meta name="description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="redis-py源码分析">
 <meta property="og:url" content="http://ficapy.com/2016/08/06/redis_py_note/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPoll以及如何实现的线程、进程安全。">
+<meta property="og:description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/redis_py_arch.png">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/redis_old_version.png">
 <meta property="og:image" content="http://ficapy.b0.upaiyun.com/blogimg/redis_pool.png">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/redis_sentinel.png">
-<meta property="og:updated_time" content="2016-08-06T22:52:03.000Z">
+<meta property="og:updated_time" content="2016-08-06T23:04:33.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="redis-py源码分析">
-<meta name="twitter:description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPoll以及如何实现的线程、进程安全。">
+<meta name="twitter:description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -265,7 +265,7 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPoll以及如何实现的线程、进程安全。</p>
+            <p>本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。</p>
 <a id="more"></a>
 <h3 id="文件结构"><a href="#文件结构" class="headerlink" title="文件结构"></a>文件结构</h3><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.&#10;&#9500;&#9472;&#9472; __init__.py&#10;&#9500;&#9472;&#9472; _compat.py          &#20860;&#23481;&#24615;&#10;&#9500;&#9472;&#9472; client.py           &#23454;&#29616;&#23458;&#25143;&#31471;,&#35843;&#29992;connectionpool&#10;&#9500;&#9472;&#9472; connection.py       &#23454;&#29616;&#36830;&#25509;&#27744;&#65292;&#36830;&#25509;&#65292;&#35299;&#26512;&#22120;&#10;&#9500;&#9472;&#9472; exceptions.py       &#24322;&#24120;&#31867;&#10;&#9500;&#9472;&#9472; lock.py             &#23454;&#29616;&#20998;&#24067;&#24335;&#38145;&#10;&#9500;&#9472;&#9472; sentinel.py         &#37197;&#21512;redis sentinel&#26426;&#21046;&#23454;&#29616;&#39640;&#21487;&#29992;&#23458;&#25143;&#31471;&#10;&#9492;&#9472;&#9472; utils.py            &#36741;&#21161;&#31867;</span><br></pre></td></tr></table></figure>
 <h3 id="实现逻辑"><a href="#实现逻辑" class="headerlink" title="实现逻辑"></a>实现逻辑</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> redis</span><br><span class="line">r = redis.Redis()</span><br><span class="line">r.set(<span class="string">'foob'</span>, <span class="string">'bar'</span>)</span><br></pre></td></tr></table></figure>
