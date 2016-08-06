@@ -23,14 +23,14 @@
     <meta name="description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPoll以及如何实现的线程、进程安全。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="redis-py源码分析">
-<meta property="og:url" content="http://ficapy.com/2016/08/06/2016-08-05/index.html">
+<meta property="og:url" content="http://ficapy.com/2016/08/06/redis_py_note/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPoll以及如何实现的线程、进程安全。">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/redis_py_arch.png">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/redis_old_version.png">
 <meta property="og:image" content="http://ficapy.b0.upaiyun.com/blogimg/redis_pool.png">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/redis_sentinel.png">
-<meta property="og:updated_time" content="2016-08-06T15:26:07.000Z">
+<meta property="og:updated_time" content="2016-08-06T15:27:17.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="redis-py源码分析">
 <meta name="twitter:description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPoll以及如何实现的线程、进程安全。">
@@ -323,17 +323,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/08/06/2016-08-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/08/06/redis_py_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/08/06/2016-08-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/08/06/redis_py_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/08/06/2016-08-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/08/06/redis_py_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -404,17 +404,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/08/06/2016-08-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/08/06/redis_py_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/08/06/2016-08-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/08/06/redis_py_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/08/06/2016-08-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/08/06/redis_py_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -440,17 +440,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="3">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/08/06/2016-08-05/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/08/06/redis_py_note/">
                 <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/08/06/2016-08-05/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/08/06/redis_py_note/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/08/06/2016-08-05/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/08/06/redis_py_note/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -507,9 +507,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'http://ficapy.com/2016/08/06/2016-08-05/';
+                 this.page.url = 'http://ficapy.com/2016/08/06/redis_py_note/';
                  
-                    this.page.identifier = '2016/08/06/2016-08-05/';
+                    this.page.identifier = '2016/08/06/redis_py_note/';
                                   
              };
             (function() {
