@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://ficapy.com/"/>
-  <updated>2016-08-03T08:28:41.000Z</updated>
+  <updated>2016-08-06T15:26:07.000Z</updated>
   <id>http://ficapy.com/</id>
   
   <author>
@@ -16,11 +16,47 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>redis-py源码分析</title>
+    <link href="http://ficapy.com/2016/08/06/2016-08-05/"/>
+    <id>http://ficapy.com/2016/08/06/2016-08-05/</id>
+    <published>2016-08-06T11:39:07.000Z</published>
+    <updated>2016-08-06T15:26:07.000Z</updated>
+    
+    <content type="html">&lt;p&gt;本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPoll以及如何实现的线程、进程安全。&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;h3 id=&quot;文件结构&quot;&gt;&lt;a href=&quot;#文件结构&quot; class=&quot;headerlink&quot; title=&quot;文件结构&quot;&gt;&lt;/a&gt;文件结构&lt;/h3&gt;&lt;figure class=&quot;highlight&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;.&amp;#10;&amp;#9500;&amp;#9472;&amp;#9472; __init__.py&amp;#10;&amp;#9500;&amp;#9472;&amp;#9472; _compat.py          &amp;#20860;&amp;#23481;&amp;#24615;&amp;#10;&amp;#9500;&amp;#9472;&amp;#9472; client.py           &amp;#23454;&amp;#29616;&amp;#23458;&amp;#25143;&amp;#31471;,&amp;#35843;&amp;#29992;connectionpool&amp;#10;&amp;#9500;&amp;#9472;&amp;#9472; connection.py       &amp;#23454;&amp;#29616;&amp;#36830;&amp;#25509;&amp;#27744;&amp;#65292;&amp;#36830;&amp;#25509;&amp;#65292;&amp;#35299;&amp;#26512;&amp;#22120;&amp;#10;&amp;#9500;&amp;#9472;&amp;#9472; exceptions.py       &amp;#24322;&amp;#24120;&amp;#31867;&amp;#10;&amp;#9500;&amp;#9472;&amp;#9472; lock.py             &amp;#23454;&amp;#29616;&amp;#20998;&amp;#24067;&amp;#24335;&amp;#38145;&amp;#10;&amp;#9500;&amp;#9472;&amp;#9472; sentinel.py         &amp;#37197;&amp;#21512;redis sentinel&amp;#26426;&amp;#21046;&amp;#23454;&amp;#29616;&amp;#39640;&amp;#21487;&amp;#29992;&amp;#23458;&amp;#25143;&amp;#31471;&amp;#10;&amp;#9492;&amp;#9472;&amp;#9472; utils.py            &amp;#36741;&amp;#21161;&amp;#31867;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;h3 id=&quot;实现逻辑&quot;&gt;&lt;a href=&quot;#实现逻辑&quot; class=&quot;headerlink&quot; title=&quot;实现逻辑&quot;&gt;&lt;/a&gt;实现逻辑&lt;/h3&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; redis&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;r = redis.Redis()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;r.set(&lt;span class=&quot;string&quot;&gt;&#39;foob&#39;&lt;/span&gt;, &lt;span class=&quot;string&quot;&gt;&#39;bar&#39;&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;看架构图&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/redis_py_arch.png&quot; alt=&quot;redis_client_arch&quot;&gt;&lt;br&gt;看调用图(以下为5年前的&lt;a href=&quot;https://github.com/andymccurdy/redis-py/tree/2.4&quot;&gt;2.4版本&lt;/a&gt;)&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/redis_old_version.png&quot; alt=&quot;redis_old_version&quot;&gt;&lt;br&gt;第一步执行&lt;code&gt;r=redis.Redis()&lt;/code&gt;没进行什么操作，同时隐式的初始化了ConnectionPool。&lt;br&gt;等到执行set操作的时候。就是执行了execute_command，此时分为了几个步骤。看第5个函数调用，从连接池里面get_connection。如果没有可能的，那么则新建(redis.connection.Connection.&lt;strong&gt;init&lt;/strong&gt;),此时并没有创建socket连接。第8个函数调用send_command,命令打包然后创建连接发送。该版本使用connection._sock.makefile(‘r’)便于读取。&lt;br&gt;再到了第21个函数调用Connection.read_response.使用解析器从socket读取数据并转换成便于python使用的数据结构&lt;br&gt;最后finally将该连接释放到线程池&lt;/p&gt;
+&lt;p&gt;现在可以看到有这样一条关系，每一个redis.Redis()实例都有一个ConnectionPool对象,一个连接池至少含有一条连接&lt;/p&gt;
+&lt;h3 id=&quot;多线程&quot;&gt;&lt;a href=&quot;#多线程&quot; class=&quot;headerlink&quot; title=&quot;多线程&quot;&gt;&lt;/a&gt;多线程&lt;/h3&gt;&lt;p&gt;如果你的程序是单线程的。那么没什么好说的，一个Redis实例，一个连接池，一个socket连接。&lt;br&gt;多线程那我们主要考虑的是线程安全问题。对于redis客户端就是socket连接绝对要线程间隔离，否则一个线程解析了另外一个socket的返回内容，那么多线程也就没意义了。测试一下&lt;br&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; time&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; threading&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; redis&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;r = redis.Redis()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;()&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    r.setex(threading.get_ident(), threading.get_ident(), &lt;span class=&quot;number&quot;&gt;2&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;1&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        time.sleep(&lt;span class=&quot;number&quot;&gt;0.1&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;assert&lt;/span&gt; r.get(threading.get_ident()) &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt; [str(threading.get_ident()).encode(), &lt;span class=&quot;keyword&quot;&gt;None&lt;/span&gt;]&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;for&lt;/span&gt; i &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt; range(&lt;span class=&quot;number&quot;&gt;50&lt;/span&gt;):&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    threading.Thread(target=main).start()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# watch -n 1 &quot;redis-cli INFO clients&quot;    &lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# Every 1.0s: redis-cli INFO clients                                           Sat Aug  6 21:34:31 2016&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# &lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# #Clients&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# connected_clients:26&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# client_longest_output_list:0&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# client_biggest_input_buf:0&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# blocked_clients:0&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;br&gt;可以看到结果并没有错误，而且创建的连接数和创建的线程数并不是一致的&lt;/p&gt;
+&lt;p&gt;试想一下，每次执行一次类似set的指令。都会从连接池(List结构)取出(pop)一个连接。而list.pop是线程安全的。执行完毕命令后又会使用append加入到连接池，list.append也是线程安全的。所以针对socket的操作是线程隔离的。这一切好像和_in_use_connections并没有什么关系。对于一个简单的连接池。从连接池取出，用完加入到连接池。而_in_use_connections记录的是使用中的线程。啥子用呢。它用于一个接口(关闭连接池中的所有连接)。注意关闭连接并不会将_available_connections和_in_use_connections清空。它只会讲connection对象中的_sock设置为None，而每次执行命令的时候connection都是会检查_sock是否为空，如果为空则会重新建立连接,如下示例&lt;br&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; redis&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;r = redis.Redis()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;r.setex(&lt;span class=&quot;string&quot;&gt;&#39;key&#39;&lt;/span&gt;, &lt;span class=&quot;string&quot;&gt;&#39;value&#39;&lt;/span&gt;, &lt;span class=&quot;number&quot;&gt;20&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;print(r.connection_pool._available_connections[&lt;span class=&quot;number&quot;&gt;0&lt;/span&gt;]._sock)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;r.connection_pool.disconnect()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;print(r.connection_pool._available_connections[&lt;span class=&quot;number&quot;&gt;0&lt;/span&gt;]._sock)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;r.setex(&lt;span class=&quot;string&quot;&gt;&#39;key&#39;&lt;/span&gt;,&lt;span class=&quot;string&quot;&gt;&#39;value&#39;&lt;/span&gt;,&lt;span class=&quot;number&quot;&gt;20&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;print(r.connection_pool._available_connections[&lt;span class=&quot;number&quot;&gt;0&lt;/span&gt;]._sock)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# &amp;lt;socket.socket fd=5, family=AddressFamily.AF_INET6, type=SocketKind.SOCK_STREAM, proto=6, laddr=(&#39;::1&#39;, 62900, 0, 0), raddr=(&#39;::1&#39;, 6379, 0, 0)&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# None&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# &amp;lt;socket.socket fd=5, family=AddressFamily.AF_INET6, type=SocketKind.SOCK_STREAM, proto=6, laddr=(&#39;::1&#39;, 62901, 0, 0), raddr=(&#39;::1&#39;, 6379, 0, 0)&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;br&gt;因为它关闭连接的时候并没有将对应的connection对象从连接池中删除。那么会造成一个问题。如果你创建过100个连接，那么连接池将会一直复用这些对象。如果你高峰期创建过多的连接，而后又只需要几个连接就够了(虽然这样的问题估计极少会遇到)。你可以显式的pop出_available_connections并关闭。&lt;br&gt;其实有一个地方是非线程安全的。在创建连接的时候有self._created_connections += 1,如果你访问这个值得到创建的连接数是不可靠的。不过这都无关紧要，因为你不可能在极短的时间内创建许多连接。即使这里不准。统计误差也不会有2个。&lt;/p&gt;
+&lt;p&gt;为了避免无端创建出N多连接。该客户端后期加入了BlockingConnectionPool类。使用LifoQueue创建出连接队列，如果该队列被使用完，那么后续请求将会阻塞一段时间，过长则引发异常。&lt;/p&gt;
+&lt;h3 id=&quot;多进程安全&quot;&gt;&lt;a href=&quot;#多进程安全&quot; class=&quot;headerlink&quot; title=&quot;多进程安全&quot;&gt;&lt;/a&gt;多进程安全&lt;/h3&gt;&lt;p&gt;redis-py在2.4.12加入了多线程安全&lt;a href=&quot;https://github.com/andymccurdy/redis-py/issues/234&quot;&gt;见issues&lt;/a&gt;。&lt;br&gt;可以看到实现原理也是很简单的。fork进程的时候socket一样使用的。为了分开，使用了os.getpid()区分。如果进程号变了，则关闭所有的连接，重新连接后自然就分开了。同时为了防止一个进程有多个线程这种情况。一个线程关闭后，另外一个线程也可能执行关闭操作。所以此处使用了锁&lt;br&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;_checkpid&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(self)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; self.pid != os.getpid():&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;with&lt;/span&gt; self._check_lock:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;            &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; self.pid == os.getpid():&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                &lt;span class=&quot;comment&quot;&gt;# another thread already did the work while we waited&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                &lt;span class=&quot;comment&quot;&gt;# on the lock.&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;                &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;            self.disconnect()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;            self.reset()&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;插播一下当前2.10.5版本的调用图&lt;br&gt;&lt;img src=&quot;http://ficapy.b0.upaiyun.com/blogimg/redis_pool.png&quot; alt=&quot;new_redis_pool&quot;&gt;&lt;br&gt;可以看到和最上面的调用图出入很小，仅仅加入了进程安全,将socket.makefile变成了SocketBuffer.&lt;/p&gt;
+&lt;h3 id=&quot;分布式锁&quot;&gt;&lt;a href=&quot;#分布式锁&quot; class=&quot;headerlink&quot; title=&quot;分布式锁&quot;&gt;&lt;/a&gt;分布式锁&lt;/h3&gt;&lt;p&gt;线程锁就是多线程间有线程间共享变量。进程锁就是多进程间有进程间共享变量。此处的共享变量就是将变量存储到redis数据库。实现也比较简单。截取一段acquire看看&lt;br&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;do_acquire&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(self, token)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; self.redis.setnx(self.name, token):&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; self.timeout:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;            &lt;span class=&quot;comment&quot;&gt;# convert to milliseconds&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;            timeout = int(self.timeout * &lt;span class=&quot;number&quot;&gt;1000&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;            self.redis.pexpire(self.name, timeout)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;True&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;False&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;br&gt;另外它实现的只是最简单的锁。比如可重入锁啥的都是没有实现的。如果你想配合sentinel进行高可用。往下看…..&lt;/p&gt;
+&lt;h3 id=&quot;Sentinel&quot;&gt;&lt;a href=&quot;#Sentinel&quot; class=&quot;headerlink&quot; title=&quot;Sentinel&quot;&gt;&lt;/a&gt;Sentinel&lt;/h3&gt;&lt;p&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/redis_sentinel.png&quot; alt=&quot;redis_sentinel&quot;&gt;&lt;br&gt;得益于redis-py的松耦合，连接池、连接、解析器基本都很独立。&lt;br&gt;客户端和监视器组创建一个上面说的Redis正常连接。它主要提供接口返回master的地址和返回salve的地址。&lt;br&gt;然后我们使用master_for返回的也是一个Redis连接&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;return redis_class(connection_pool=connection_pool_class(&amp;#10;            service_name, self, **connection_kwargs))&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;不过它进行对连接池和连接对象都进行了一些修改。可以看到它将self传递给了底层连接池。而连接池也使用&lt;code&gt;self.connection_kwargs[&amp;#39;connection_pool&amp;#39;] = weakref.proxy(self)&lt;/code&gt;将自己传递给了底层Connection，就这样它实现了高可用客户端，在底层连接的时候使用高层提供的函数提供正确的地址~~&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPoll以及如何实现的线程、进程安全。&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+    
+    
+      <category term="python" scheme="http://ficapy.com/tags/python/"/>
+    
+  </entry>
+  
+  <entry>
     <title>werkzeug源码分析(local.py)</title>
     <link href="http://ficapy.com/2016/08/03/werkzeug_local_note/"/>
     <id>http://ficapy.com/2016/08/03/werkzeug_local_note/</id>
     <published>2016-08-03T00:58:00.000Z</published>
-    <updated>2016-08-03T08:28:41.000Z</updated>
+    <updated>2016-08-04T22:48:22.000Z</updated>
     
     <content type="html">&lt;p&gt;有人说flask的上下文机制是整个框架的精华部分，有人说它神奇的g让人费解。werkzeug的local.py就是它的具体实现。这个看似神奇的机制背后加上应用代码也不过两三百行。不过好像坑还是&lt;code&gt;比较深&lt;/code&gt;的。另外flask的0.1版本才200多行代码。值得瞅一下&lt;/p&gt;
 &lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
@@ -57,8 +93,10 @@
     
     </summary>
     
+      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
-      <category term="python" scheme="http://ficapy.com/tags/python/"/>
+    
+      <category term="Flask" scheme="http://ficapy.com/tags/Flask/"/>
     
   </entry>
   
@@ -95,7 +133,7 @@
     <link href="http://ficapy.com/2016/07/25/werkzeug_note_requests_response_auto_realod/"/>
     <id>http://ficapy.com/2016/07/25/werkzeug_note_requests_response_auto_realod/</id>
     <published>2016-07-25T13:48:17.000Z</published>
-    <updated>2016-07-25T14:42:34.000Z</updated>
+    <updated>2016-08-04T22:48:16.000Z</updated>
     
     <content type="html">&lt;p&gt;Flask这个人人称赞的微框架就是构建在werkzeug之上，werkzeug给自己的定位就是工具集合。它实现了wsgi server、Requests/Response封装、DEBUG、热重启、路由控制以及其他的一些辅助功能。接下来的几篇文章会从一些大的方面去分析它。本篇如标题:D&lt;/p&gt;
 &lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
@@ -116,8 +154,10 @@
     
     </summary>
     
+      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
-      <category term="python" scheme="http://ficapy.com/tags/python/"/>
+    
+      <category term="Flask" scheme="http://ficapy.com/tags/Flask/"/>
     
   </entry>
   
@@ -155,7 +195,7 @@
     <link href="http://ficapy.com/2016/07/22/pycallgraph_note/"/>
     <id>http://ficapy.com/2016/07/22/pycallgraph_note/</id>
     <published>2016-07-22T07:13:05.000Z</published>
-    <updated>2016-07-22T13:41:06.000Z</updated>
+    <updated>2016-08-04T22:48:10.000Z</updated>
     
     <content type="html">&lt;p&gt;用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。&lt;/p&gt;
 &lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
@@ -191,6 +231,8 @@
       &lt;p&gt;用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。&lt;/p&gt;
     
     </summary>
+    
+      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
     
       <category term="python" scheme="http://ficapy.com/tags/python/"/>
@@ -708,43 +750,6 @@ Created with Monodraw
       &lt;h4 id=&quot;我的影评我做主-想怎么写就怎么写-就是这么任性&quot;&gt;&lt;a href=&quot;#我的影评我做主-想怎么写就怎么写-就是这么任性&quot; class=&quot;headerlink&quot; title=&quot;我的影评我做主,想怎么写就怎么写,就是这么任性~~~~&quot;&gt;&lt;/a&gt;我的影评我做主,想怎么写就怎么写,就是这么任性~~~~&lt;/h4&gt;&lt;h4 id=&quot;《12公民》-15-5-23&quot;&gt;&lt;a href=&quot;#《12公民》-15-5-23&quot; class=&quot;headerlink&quot; title=&quot;《12公民》-15.5.23&quot;&gt;&lt;/a&gt;《12公民》-15.5.23&lt;/h4&gt;&lt;p&gt;据说是根据&lt;strong&gt;《12罗汉》改编&lt;/strong&gt;，没看过12罗汉，看过之后感觉这部电影还挺好。小成本的人文片故事讲的好也挺值得回味的。&lt;/p&gt;
 &lt;p&gt;电影讲述的是一个牛逼检察官通过他理性的分析一步步还原了“富二代手刃生父”案件的真相。&lt;/p&gt;
 &lt;p&gt;以下12个男主角(突然想到为嘛没女的呢，终于想到这么多年我好像第一次看到没有男女猪脚fall&lt;br&gt;in love的片子)：&lt;br&gt;
-    
-    </summary>
-    
-      <category term="随笔" scheme="http://ficapy.com/categories/%E9%9A%8F%E7%AC%94/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>将pycharm的运行配置脚本路径修改为当前选中文件</title>
-    <link href="http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/"/>
-    <id>http://ficapy.com/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/</id>
-    <published>2015-03-17T16:47:00.000Z</published>
-    <updated>2016-03-03T09:13:17.000Z</updated>
-    
-    <content type="html">&lt;p&gt;这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~&lt;/p&gt;
-&lt;p&gt;使用pycharm的时候每次运行脚本都会有一个&lt;strong&gt;&lt;span
-style=&quot;text-decoration: underline;&quot;&gt;&lt;em&gt;&lt;span
-style=&quot;color: #ff0000; text-decoration: underline;&quot;&gt;基于默认设置的python运行环境设置&lt;/span&gt;&lt;/em&gt;&lt;/span&gt;&lt;/strong&gt;，如下图所示&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/865uap38l.png&quot; alt=&quot;&quot;&gt;&lt;br&gt;哈哈哈哈哈哈~~~~~~~~对着这张图看了好久&lt;br&gt;突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣&lt;br&gt;还是记录下来吧 临时发现这个也算是福气哇~~&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;p&gt;每次右键点击再执行文件的时候都会生成一个python运行配置，这一步骤只是运行配置中的script项有所改变。假如你有很多个文件。那么执行多个文件后就将有多个运行配置了，看着真是相当不爽，如果你知道pycharm的external&lt;br&gt;tool，里面有insert&lt;br&gt;macros，其中\$FilePath\$就代表当前选择的文件绝对路径。可惜该参数无法填入script项，否则就能减少非常多python运行配置，大部分项目仅一个就可以了。&lt;/p&gt;
-&lt;p&gt;如果项目使用的是本地python解释器&amp;amp;没有复杂的配置，那么直接右键点击再执行会自动生成一个python运行配置可以正常执行，也就不会有俺最开始的苦恼了。我使用的是vagrant开发环境，代码是从本机映射到虚拟机上，所以直接执行会显示路径错误~~~我的处理流程是这样的&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;最开始选择照旧执行，报错后进入运行设置添加路径映射&lt;/li&gt;
-&lt;li&gt;可是特喵每次都添加映射好烦啊，映射路径好长的好咩，反正其他的不变，仅仅是运行文件改变了，于是乎选择要运行的时候就将一个好的运行设置修改文件路径为当前就好了&lt;/li&gt;
-&lt;li&gt;就是现在了，觉得2也好烦。。。。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;以上烦恼就是因为忘记了针对每一个项目都有默认的环境设置，其实将默认的环境设置设置好以后自动继承就ok了&amp;gt;_&amp;lt;当想到3的时候总体方针就是自动修改script参数为当前文件路径。最开始是想写脚本找出该项目下所有py文件中最后修改的那个，然后就想可能pycharm对于每个项目都有一个配置文件，修改配置文件中script的地址就好了~~~可是最后没找到。最后就想到了模拟点击到设置页面修改了。然后就试了以下几个sikulix、aauto(快手)、按键精灵、Automa。第一四个一看便可上手，就和上手python的库那么简单，就几个特好理解的函数，二看了一下虽有auto但不适合做模拟点击，而且想立马使用也是没多大可能的，按键精灵我咋看着想吐呢，宁可去背几个函数也不想插入插入插入。。。。&lt;/p&gt;
-&lt;p&gt;最后还是亮上用sikulix和automa写的代码吧，炒鸡简单&lt;a href=&quot;https://github.com/aec4d/ScriptLet/tree/master/pycharm\_script\_path\_autochange&quot;&gt;https://github.com/aec4d/ScriptLet/tree/master/pycharm\_script\_path\_autochange&lt;/a&gt;&lt;br&gt;需要注意的是需按照官网提示配置好环境。2个都是使用绝对坐标定位然后点击，屏幕分辨率1366*768，pycharm版本4.0.5&lt;/p&gt;
-&lt;p&gt;bingo~~~~~~~~~~~~`&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~&lt;/p&gt;
-&lt;p&gt;使用pycharm的时候每次运行脚本都会有一个&lt;strong&gt;&lt;span
-style=&quot;text-decoration: underline;&quot;&gt;&lt;em&gt;&lt;span
-style=&quot;color: #ff0000; text-decoration: underline;&quot;&gt;基于默认设置的python运行环境设置&lt;/span&gt;&lt;/em&gt;&lt;/span&gt;&lt;/strong&gt;，如下图所示&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/865uap38l.png&quot; alt=&quot;&quot;&gt;&lt;br&gt;哈哈哈哈哈哈~~~~~~~~对着这张图看了好久&lt;br&gt;突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣&lt;br&gt;还是记录下来吧 临时发现这个也算是福气哇~~&lt;br&gt;
     
     </summary>
     
