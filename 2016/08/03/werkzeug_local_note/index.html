@@ -23,7 +23,7 @@
     <meta name="description" content="有人说flask的上下文机制是整个框架的精华部分，有人说它神奇的g让人费解。werkzeug的local.py就是它的具体实现。这个看似神奇的机制背后加上应用代码也不过两三百行。不过好像坑还是比较深的。另外flask的0.1版本才200多行代码。值得瞅一下">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="werkzeug源码分析(local.py)">
-<meta property="og:url" content="http://ficapy.com/2016/08/03/werkzeug_local_note/index.html">
+<meta property="og:url" content="https://www.zoulei.net/2016/08/03/werkzeug_local_note/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="有人说flask的上下文机制是整个框架的精华部分，有人说它神奇的g让人费解。werkzeug的local.py就是它的具体实现。这个看似神奇的机制背后加上应用代码也不过两三百行。不过好像坑还是比较深的。另外flask的0.1版本才200多行代码。值得瞅一下">
 <meta property="og:image" content="http://ficapy.b0.upaiyun.com/blogimg/werkzeug_localproxy.png">
@@ -333,17 +333,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/08/03/werkzeug_local_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/03/werkzeug_local_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/08/03/werkzeug_local_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/03/werkzeug_local_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/08/03/werkzeug_local_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/03/werkzeug_local_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -414,17 +414,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/08/03/werkzeug_local_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/03/werkzeug_local_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/08/03/werkzeug_local_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/03/werkzeug_local_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/08/03/werkzeug_local_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/03/werkzeug_local_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -450,17 +450,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="3">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=http://ficapy.com/2016/08/03/werkzeug_local_note/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/03/werkzeug_local_note/">
                 <i class="fa fa-google-plus"></i><span class="">分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=http://ficapy.com/2016/08/03/werkzeug_local_note/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/03/werkzeug_local_note/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=http://ficapy.com/2016/08/03/werkzeug_local_note/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/03/werkzeug_local_note/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -517,7 +517,7 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'http://ficapy.com/2016/08/03/werkzeug_local_note/';
+                 this.page.url = 'https://www.zoulei.net/2016/08/03/werkzeug_local_note/';
                  
                     this.page.identifier = '2016/08/03/werkzeug_local_note/';
                                   

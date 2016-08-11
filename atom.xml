@@ -4,9 +4,9 @@
   <subtitle>刨过的坑,自己慢慢来填</subtitle>
   <link href="/atom.xml" rel="self"/>
   
-  <link href="http://ficapy.com/"/>
-  <updated>2016-08-06T23:04:33.000Z</updated>
-  <id>http://ficapy.com/</id>
+  <link href="https://www.zoulei.net/"/>
+  <updated>2016-08-10T07:36:06.000Z</updated>
+  <id>https://www.zoulei.net/</id>
   
   <author>
     <name>Ficapy</name>
@@ -16,9 +16,55 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>werkzeug源码分析(Debug模块)</title>
+    <link href="https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"/>
+    <id>https://www.zoulei.net/2016/08/07/werkzeug_debug_note/</id>
+    <published>2016-08-07T00:43:31.000Z</published>
+    <updated>2016-08-10T07:36:06.000Z</updated>
+    
+    <content type="html">&lt;p&gt;flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;h3 id=&quot;基本概念&quot;&gt;&lt;a href=&quot;#基本概念&quot; class=&quot;headerlink&quot; title=&quot;基本概念&quot;&gt;&lt;/a&gt;基本概念&lt;/h3&gt;&lt;p&gt;python的运行是讲源码进行编译，之后虚拟机执行。这2个步骤python都提供了接口,compile和exec。exec的执行会调用compile,我们一般不会主动去调用compile。compile这个函数有三个模式&lt;a href=&quot;https://docs.python.org/3/library/functions.html#compile&quot;&gt;官方文档&lt;/a&gt; &lt;a href=&quot;http://stackoverflow.com/questions/2220699/whats-the-difference-between-eval-exec-and-compile-in-python&quot;&gt;stackoverflow&lt;/a&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;exec:一系列声明&lt;/li&gt;
+&lt;li&gt;eval:单条表达式&lt;/li&gt;
+&lt;li&gt;single:单条声明,和exec不同的是当返回不为None的时候执行的时候会打印。这一想都知道专门是为交互式环境准备的&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;编译之后不用说。使用内建函数exec执行就好啦。它带有2个可选参数,全局空间变量及局部空间变量。看一个例子&lt;br&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;local = &amp;#123;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;code = compile(&lt;span class=&quot;string&quot;&gt;&#39;a=1&#39;&lt;/span&gt;, filename=&lt;span class=&quot;string&quot;&gt;&#39;&amp;lt;string&amp;gt;&#39;&lt;/span&gt;, mode=&lt;span class=&quot;string&quot;&gt;&#39;single&#39;&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;print(code)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;exec(code,local)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;code = compile(&lt;span class=&quot;string&quot;&gt;&#39;a+=1&#39;&lt;/span&gt;, filename=&lt;span class=&quot;string&quot;&gt;&#39;&amp;lt;string&amp;gt;&#39;&lt;/span&gt;, mode=&lt;span class=&quot;string&quot;&gt;&#39;single&#39;&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;try&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    exec(code)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;except&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    print(&lt;span class=&quot;string&quot;&gt;&#39;Error&#39;&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;exec(code,local)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;print(local.get(&lt;span class=&quot;string&quot;&gt;&#39;a&#39;&lt;/span&gt;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;code = compile(&lt;span class=&quot;string&quot;&gt;&#39;x+=1&#39;&lt;/span&gt;,filename=&lt;span class=&quot;string&quot;&gt;&#39;&amp;lt;string&amp;gt;&#39;&lt;/span&gt;,mode=&lt;span class=&quot;string&quot;&gt;&#39;single&#39;&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;print(code)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# &amp;lt;code object &amp;lt;module&amp;gt; at 0x10fd9dc90, file &quot;&amp;lt;string&amp;gt;&quot;, line 1&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# Error&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# 2&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# &amp;lt;code object &amp;lt;module&amp;gt; at 0x105c25c90, file &quot;&amp;lt;string&amp;gt;&quot;, line 1&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;编译的时候只要语法没有问题就可以通过，看x+=1,即使全局变量不存在x也能够编译通过&lt;/li&gt;
+&lt;li&gt;使用exec的时候，可以引入一个字典，否则会自动使用默认的global,有了这个字典我们就可以连接上下文，想一想。要是我们执行a=1，如果没有记录。那么后面执行a+=1就会报错了，这肯定不是我们所希望的&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3 id=&quot;自带REPL&quot;&gt;&lt;a href=&quot;#自带REPL&quot; class=&quot;headerlink&quot; title=&quot;自带REPL&quot;&gt;&lt;/a&gt;自带REPL&lt;/h3&gt;&lt;p&gt;要实现一个类似的IDLE环境2条语句就够了&lt;br&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; code&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;code.interact()&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;br&gt;看调用图&lt;br&gt;&lt;img src=&quot;http://ficapy.b0.upaiyun.com/blogimg/code_interactiveconsole.png&quot; alt=&quot;code_interactiveconsole&quot;&gt;&lt;br&gt;会涉及到2个模块，code和codeop，这2个模块可以都说是为生成交互式解释器服务的。code模块作用是接收请求然后解析再执行(exec)。解析部分就是由codeop提供的。设想一下为什么有了compile还需要一个单独的codeop模块。&lt;br&gt;我们使用交互式解释器的时候并不是所有的命令都是一行输入完成的。比如输入一个函数，那就需要多行。将我们输入的多行编译一次。这是我们的需求。codeop就是为这个而存在的。比如你执行codeop.compile_command(‘math(‘)会返回None。这就代表你下一行继续输入，直到你连续输入了2个空行。好了，它知道你输入完成了。核心代码如下&lt;br&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;runsource&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(self, source, filename=&lt;span class=&quot;string&quot;&gt;&quot;&amp;lt;input&amp;gt;&quot;&lt;/span&gt;, symbol=&lt;span class=&quot;string&quot;&gt;&quot;single&quot;&lt;/span&gt;)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;try&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        code = self.compile(source, filename, symbol)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;except&lt;/span&gt; (OverflowError, SyntaxError, ValueError):&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;comment&quot;&gt;# Case 1&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        self.showsyntaxerror(filename)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;False&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; code &lt;span class=&quot;keyword&quot;&gt;is&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;None&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;comment&quot;&gt;# Case 2&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;True&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;comment&quot;&gt;# Case 3&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    self.runcode(code)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;False&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;br&gt;逻辑还是比较好理解的。&lt;/p&gt;
+&lt;h3 id=&quot;Exception-traceback-frame联系&quot;&gt;&lt;a href=&quot;#Exception-traceback-frame联系&quot; class=&quot;headerlink&quot; title=&quot;Exception,traceback,frame联系&quot;&gt;&lt;/a&gt;Exception,traceback,frame联系&lt;/h3&gt;&lt;p&gt;上个例子&lt;br&gt;&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;22&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;23&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;24&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;25&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;26&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;27&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;28&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;29&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;30&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;31&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;32&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;33&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;34&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;35&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;36&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;37&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; sys&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;class&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;CustomeExcept&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(Exception)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;__init__&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(self, desc)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        super(CustomeExcept, self).__init__()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        self.desc = desc&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;__repr__&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(self)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; self.desc&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    __str__ = __repr__&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;()&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;raise&lt;/span&gt; CustomeExcept(&lt;span class=&quot;string&quot;&gt;&#39;l&#39;&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;app&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;()&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    a = &lt;span class=&quot;number&quot;&gt;1&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    t()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;try&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    app()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;except&lt;/span&gt; Exception &lt;span class=&quot;keyword&quot;&gt;as&lt;/span&gt; e:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;comment&quot;&gt;# traceback.print_exc(file=sys.stdout)&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    exc_type, exc_value, exc_tb = sys.exc_info()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    print(exc_tb.tb_frame.f_lineno)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    print(exc_type)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    print(exc_value &lt;span class=&quot;keyword&quot;&gt;is&lt;/span&gt; e)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    print(exc_value)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    print([i &lt;span class=&quot;keyword&quot;&gt;for&lt;/span&gt; i &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt; dir(exc_tb) &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;not&lt;/span&gt; i.startswith(&lt;span class=&quot;string&quot;&gt;&#39;_&#39;&lt;/span&gt;)])&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    print(exc_tb.tb_frame, exc_tb.tb_lineno, exc_tb.tb_next.tb_lineno, exc_tb.tb_next.tb_next.tb_lineno,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;          exc_tb.tb_next.tb_next.tb_next, sys._getframe(&lt;span class=&quot;number&quot;&gt;0&lt;/span&gt;), exc_tb.tb_frame.f_back)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    print(exc_tb.tb_next.tb_frame.f_locals)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# 23&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# &amp;lt;class &#39;__main__.CustomeExcept&#39;&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# True&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# l&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# [&#39;tb_frame&#39;, &#39;tb_lasti&#39;, &#39;tb_lineno&#39;, &#39;tb_next&#39;]&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# &amp;lt;frame object at 0x7f90b5813958&amp;gt; 19 17 13 None &amp;lt;frame object at 0x7f90b5813958&amp;gt; None&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# &amp;#123;&#39;a&#39;: 1&amp;#125;&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Exception配合raise使用,使用except捕获异常的时候返回它的实例&lt;/li&gt;
+&lt;li&gt;返回的实例是和帧栈Frame是没有关系的&lt;/li&gt;
+&lt;li&gt;sys.exc_info返回了异常类，异常实例,traceback实例&lt;/li&gt;
+&lt;li&gt;traceback对象记录的帧不是当前帧,而是从发起异常的那个函数开始记录帧栈,因此比当前帧栈更长,traceback的中文意思是回溯,它的tb_next可以想象一下,实际上更可以说是读取上一个帧(因为引发异常的那个帧实际上在最上面)&lt;/li&gt;
+&lt;li&gt;traceback模块提供了一些接口(比如traceback.print_exc)从帧中提取出信息然后格式化打印&lt;br&gt;偷一张图(引用自&lt;a href=&quot;http://busuncle.github.io/python-vm-and-bytecode.html&quot;&gt;http://busuncle.github.io/python-vm-and-bytecode.html&lt;/a&gt;)&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/pyframeobject_busuncle.github.io.jpg&quot; alt=&quot;pyframeobject&quot;&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3 id=&quot;werkzeug实现&quot;&gt;&lt;a href=&quot;#werkzeug实现&quot; class=&quot;headerlink&quot; title=&quot;werkzeug实现&quot;&gt;&lt;/a&gt;werkzeug实现&lt;/h3&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;__debugger__:yes&amp;#10;cmd:a = 1+1&amp;#10;frm:0&amp;#10;s:3WcibzVj8YXQDR0Na4bv&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;h3 id=&quot;参考资料&quot;&gt;&lt;a href=&quot;#参考资料&quot; class=&quot;headerlink&quot; title=&quot;参考资料&quot;&gt;&lt;/a&gt;参考资料&lt;/h3&gt;&lt;p&gt;&lt;a href=&quot;http://busuncle.github.io/python-vm-and-bytecode.html&quot;&gt;Python虚拟机与字节码&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+    
+    
+      <category term="Flask" scheme="https://www.zoulei.net/tags/Flask/"/>
+    
+  </entry>
+  
+  <entry>
     <title>redis-py源码分析</title>
-    <link href="http://ficapy.com/2016/08/06/redis_py_note/"/>
-    <id>http://ficapy.com/2016/08/06/redis_py_note/</id>
+    <link href="https://www.zoulei.net/2016/08/06/redis_py_note/"/>
+    <id>https://www.zoulei.net/2016/08/06/redis_py_note/</id>
     <published>2016-08-06T11:39:07.000Z</published>
     <updated>2016-08-06T23:04:33.000Z</updated>
     
@@ -44,17 +90,17 @@
     
     </summary>
     
-      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+      <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
     
-      <category term="python" scheme="http://ficapy.com/tags/python/"/>
+      <category term="python" scheme="https://www.zoulei.net/tags/python/"/>
     
   </entry>
   
   <entry>
     <title>werkzeug源码分析(local.py)</title>
-    <link href="http://ficapy.com/2016/08/03/werkzeug_local_note/"/>
-    <id>http://ficapy.com/2016/08/03/werkzeug_local_note/</id>
+    <link href="https://www.zoulei.net/2016/08/03/werkzeug_local_note/"/>
+    <id>https://www.zoulei.net/2016/08/03/werkzeug_local_note/</id>
     <published>2016-08-03T00:58:00.000Z</published>
     <updated>2016-08-06T22:59:00.000Z</updated>
     
@@ -93,17 +139,17 @@
     
     </summary>
     
-      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+      <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
     
-      <category term="Flask" scheme="http://ficapy.com/tags/Flask/"/>
+      <category term="Flask" scheme="https://www.zoulei.net/tags/Flask/"/>
     
   </entry>
   
   <entry>
     <title>list和dict的线程安全</title>
-    <link href="http://ficapy.com/2016/07/31/list_dict_threading_safe/"/>
-    <id>http://ficapy.com/2016/07/31/list_dict_threading_safe/</id>
+    <link href="https://www.zoulei.net/2016/07/31/list_dict_threading_safe/"/>
+    <id>https://www.zoulei.net/2016/07/31/list_dict_threading_safe/</id>
     <published>2016-07-30T23:47:09.000Z</published>
     <updated>2016-08-02T03:56:03.000Z</updated>
     
@@ -124,14 +170,14 @@
     </summary>
     
     
-      <category term="python" scheme="http://ficapy.com/tags/python/"/>
+      <category term="python" scheme="https://www.zoulei.net/tags/python/"/>
     
   </entry>
   
   <entry>
     <title>werkzeug源码分析(Request/Response和热重启)</title>
-    <link href="http://ficapy.com/2016/07/25/werkzeug_note_requests_response_auto_realod/"/>
-    <id>http://ficapy.com/2016/07/25/werkzeug_note_requests_response_auto_realod/</id>
+    <link href="https://www.zoulei.net/2016/07/25/werkzeug_note_requests_response_auto_realod/"/>
+    <id>https://www.zoulei.net/2016/07/25/werkzeug_note_requests_response_auto_realod/</id>
     <published>2016-07-25T13:48:17.000Z</published>
     <updated>2016-08-04T22:48:16.000Z</updated>
     
@@ -154,17 +200,17 @@
     
     </summary>
     
-      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+      <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
     
-      <category term="Flask" scheme="http://ficapy.com/tags/Flask/"/>
+      <category term="Flask" scheme="https://www.zoulei.net/tags/Flask/"/>
     
   </entry>
   
   <entry>
     <title>osx airdrop无法使用修复</title>
-    <link href="http://ficapy.com/2016/07/23/fix_osx_airdrop_not_working/"/>
-    <id>http://ficapy.com/2016/07/23/fix_osx_airdrop_not_working/</id>
+    <link href="https://www.zoulei.net/2016/07/23/fix_osx_airdrop_not_working/"/>
+    <id>https://www.zoulei.net/2016/07/23/fix_osx_airdrop_not_working/</id>
     <published>2016-07-23T02:53:25.000Z</published>
     <updated>2016-07-24T08:27:21.000Z</updated>
     
@@ -186,14 +232,14 @@
     </summary>
     
     
-      <category term="随笔" scheme="http://ficapy.com/tags/%E9%9A%8F%E7%AC%94/"/>
+      <category term="随笔" scheme="https://www.zoulei.net/tags/%E9%9A%8F%E7%AC%94/"/>
     
   </entry>
   
   <entry>
     <title>pycallgraph源码分析</title>
-    <link href="http://ficapy.com/2016/07/22/pycallgraph_note/"/>
-    <id>http://ficapy.com/2016/07/22/pycallgraph_note/</id>
+    <link href="https://www.zoulei.net/2016/07/22/pycallgraph_note/"/>
+    <id>https://www.zoulei.net/2016/07/22/pycallgraph_note/</id>
     <published>2016-07-22T07:13:05.000Z</published>
     <updated>2016-08-04T22:48:10.000Z</updated>
     
@@ -232,17 +278,17 @@
     
     </summary>
     
-      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+      <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
     
-      <category term="python" scheme="http://ficapy.com/tags/python/"/>
+      <category term="python" scheme="https://www.zoulei.net/tags/python/"/>
     
   </entry>
   
   <entry>
     <title>pyenv使用镜像加速</title>
-    <link href="http://ficapy.com/2016/07/15/pyenv_use_mirror/"/>
-    <id>http://ficapy.com/2016/07/15/pyenv_use_mirror/</id>
+    <link href="https://www.zoulei.net/2016/07/15/pyenv_use_mirror/"/>
+    <id>https://www.zoulei.net/2016/07/15/pyenv_use_mirror/</id>
     <published>2016-07-15T00:57:02.000Z</published>
     <updated>2016-07-15T01:42:56.000Z</updated>
     
@@ -260,14 +306,14 @@
     </summary>
     
     
-      <category term="python" scheme="http://ficapy.com/tags/python/"/>
+      <category term="python" scheme="https://www.zoulei.net/tags/python/"/>
     
   </entry>
   
   <entry>
     <title>python描述符应用</title>
-    <link href="http://ficapy.com/2016/07/10/python_descriptor/"/>
-    <id>http://ficapy.com/2016/07/10/python_descriptor/</id>
+    <link href="https://www.zoulei.net/2016/07/10/python_descriptor/"/>
+    <id>https://www.zoulei.net/2016/07/10/python_descriptor/</id>
     <published>2016-07-10T09:13:43.000Z</published>
     <updated>2016-08-02T03:40:42.000Z</updated>
     
@@ -291,14 +337,14 @@
     </summary>
     
     
-      <category term="python" scheme="http://ficapy.com/tags/python/"/>
+      <category term="python" scheme="https://www.zoulei.net/tags/python/"/>
     
   </entry>
   
   <entry>
     <title>wsgiref源码阅读</title>
-    <link href="http://ficapy.com/2016/07/04/2016-07-04/"/>
-    <id>http://ficapy.com/2016/07/04/2016-07-04/</id>
+    <link href="https://www.zoulei.net/2016/07/04/2016-07-04/"/>
+    <id>https://www.zoulei.net/2016/07/04/2016-07-04/</id>
     <published>2016-07-04T09:32:07.000Z</published>
     <updated>2016-07-04T09:38:55.000Z</updated>
     
@@ -329,15 +375,15 @@ Created with Monodraw
     
     </summary>
     
-      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+      <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
     
   </entry>
   
   <entry>
     <title>http.server源码阅读</title>
-    <link href="http://ficapy.com/2016/07/02/http_server_note/"/>
-    <id>http://ficapy.com/2016/07/02/http_server_note/</id>
+    <link href="https://www.zoulei.net/2016/07/02/http_server_note/"/>
+    <id>https://www.zoulei.net/2016/07/02/http_server_note/</id>
     <published>2016-07-02T09:07:20.000Z</published>
     <updated>2016-07-02T10:19:40.000Z</updated>
     
@@ -364,15 +410,15 @@ Created with Monodraw
     
     </summary>
     
-      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+      <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
     
   </entry>
   
   <entry>
     <title>SocketServer源码阅读</title>
-    <link href="http://ficapy.com/2016/06/29/socketserver_note/"/>
-    <id>http://ficapy.com/2016/06/29/socketserver_note/</id>
+    <link href="https://www.zoulei.net/2016/06/29/socketserver_note/"/>
+    <id>https://www.zoulei.net/2016/06/29/socketserver_note/</id>
     <published>2016-06-29T03:53:14.000Z</published>
     <updated>2016-07-02T10:24:36.000Z</updated>
     
@@ -401,15 +447,15 @@ Created with Monodraw
     
     </summary>
     
-      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+      <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
     
   </entry>
   
   <entry>
     <title>asyncore源码阅读</title>
-    <link href="http://ficapy.com/2016/06/29/asyncore_note/"/>
-    <id>http://ficapy.com/2016/06/29/asyncore_note/</id>
+    <link href="https://www.zoulei.net/2016/06/29/asyncore_note/"/>
+    <id>https://www.zoulei.net/2016/06/29/asyncore_note/</id>
     <published>2016-06-29T03:24:21.000Z</published>
     <updated>2016-07-02T10:24:51.000Z</updated>
     
@@ -446,15 +492,15 @@ Created with Monodraw
     
     </summary>
     
-      <category term="源码解析" scheme="http://ficapy.com/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
+      <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
     
     
   </entry>
   
   <entry>
     <title>socket.recv</title>
-    <link href="http://ficapy.com/2016/06/17/socket_recv/"/>
-    <id>http://ficapy.com/2016/06/17/socket_recv/</id>
+    <link href="https://www.zoulei.net/2016/06/17/socket_recv/"/>
+    <id>https://www.zoulei.net/2016/06/17/socket_recv/</id>
     <published>2016-06-17T08:06:14.000Z</published>
     <updated>2016-06-17T10:29:45.000Z</updated>
     
@@ -478,15 +524,15 @@ Created with Monodraw
     
     </summary>
     
-      <category term="network" scheme="http://ficapy.com/categories/network/"/>
+      <category term="network" scheme="https://www.zoulei.net/categories/network/"/>
     
     
   </entry>
   
   <entry>
     <title>https笔记</title>
-    <link href="http://ficapy.com/2016/06/01/https_note/"/>
-    <id>http://ficapy.com/2016/06/01/https_note/</id>
+    <link href="https://www.zoulei.net/2016/06/01/https_note/"/>
+    <id>https://www.zoulei.net/2016/06/01/https_note/</id>
     <published>2016-06-01T13:54:21.000Z</published>
     <updated>2016-06-01T16:51:42.000Z</updated>
     
@@ -516,15 +562,15 @@ Created with Monodraw
     
     </summary>
     
-      <category term="network" scheme="http://ficapy.com/categories/network/"/>
+      <category term="network" scheme="https://www.zoulei.net/categories/network/"/>
     
     
   </entry>
   
   <entry>
     <title>Gmail设置自动删除推广邮件</title>
-    <link href="http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/"/>
-    <id>http://ficapy.com/2016/05/25/gmail_auto_delete_promotions_email/</id>
+    <link href="https://www.zoulei.net/2016/05/25/gmail_auto_delete_promotions_email/"/>
+    <id>https://www.zoulei.net/2016/05/25/gmail_auto_delete_promotions_email/</id>
     <published>2016-05-25T09:40:01.000Z</published>
     <updated>2016-05-25T10:34:51.000Z</updated>
     
@@ -542,15 +588,15 @@ Created with Monodraw
     
     </summary>
     
-      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
+      <category term="伪技术" scheme="https://www.zoulei.net/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
     
     
   </entry>
   
   <entry>
     <title>我的网络学习工具</title>
-    <link href="http://ficapy.com/2016/05/24/my_network_learn_tools/"/>
-    <id>http://ficapy.com/2016/05/24/my_network_learn_tools/</id>
+    <link href="https://www.zoulei.net/2016/05/24/my_network_learn_tools/"/>
+    <id>https://www.zoulei.net/2016/05/24/my_network_learn_tools/</id>
     <published>2016-05-24T13:26:52.000Z</published>
     <updated>2016-05-25T10:25:52.000Z</updated>
     
@@ -592,15 +638,15 @@ Created with Monodraw
     
     </summary>
     
-      <category term="network" scheme="http://ficapy.com/categories/network/"/>
+      <category term="network" scheme="https://www.zoulei.net/categories/network/"/>
     
     
   </entry>
   
   <entry>
     <title>openwrt刷机常识</title>
-    <link href="http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/"/>
-    <id>http://ficapy.com/2016/05/05/openwrt_recovery_you_need_to_know/</id>
+    <link href="https://www.zoulei.net/2016/05/05/openwrt_recovery_you_need_to_know/"/>
+    <id>https://www.zoulei.net/2016/05/05/openwrt_recovery_you_need_to_know/</id>
     <published>2016-05-05T12:59:17.000Z</published>
     <updated>2016-06-06T14:19:58.000Z</updated>
     
@@ -629,15 +675,15 @@ Created with Monodraw
     
     </summary>
     
-      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
+      <category term="伪技术" scheme="https://www.zoulei.net/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
     
     
   </entry>
   
   <entry>
     <title>阿里云OSS绑定letsencrypt证书</title>
-    <link href="http://ficapy.com/2016/03/11/letsencrypt_aliyun_oss/"/>
-    <id>http://ficapy.com/2016/03/11/letsencrypt_aliyun_oss/</id>
+    <link href="https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/"/>
+    <id>https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/</id>
     <published>2016-03-11T10:28:34.000Z</published>
     <updated>2016-05-30T10:41:42.000Z</updated>
     
@@ -662,15 +708,15 @@ Created with Monodraw
     
     </summary>
     
-      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
+      <category term="伪技术" scheme="https://www.zoulei.net/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
     
     
   </entry>
   
   <entry>
     <title>将hexo部署到阿里云OSS</title>
-    <link href="http://ficapy.com/2016/03/06/install_hexo_to_aliyun_oss/"/>
-    <id>http://ficapy.com/2016/03/06/install_hexo_to_aliyun_oss/</id>
+    <link href="https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/"/>
+    <id>https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/</id>
     <published>2016-03-06T14:34:00.000Z</published>
     <updated>2016-03-07T03:04:49.000Z</updated>
     
@@ -696,64 +742,7 @@ Created with Monodraw
     
     </summary>
     
-      <category term="伪技术" scheme="http://ficapy.com/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>观影感</title>
-    <link href="http://ficapy.com/2015/05/26/film_reviews/"/>
-    <id>http://ficapy.com/2015/05/26/film_reviews/</id>
-    <published>2015-05-26T13:41:00.000Z</published>
-    <updated>2016-03-03T09:13:24.000Z</updated>
-    
-    <content type="html">&lt;h4 id=&quot;我的影评我做主-想怎么写就怎么写-就是这么任性&quot;&gt;&lt;a href=&quot;#我的影评我做主-想怎么写就怎么写-就是这么任性&quot; class=&quot;headerlink&quot; title=&quot;我的影评我做主,想怎么写就怎么写,就是这么任性~~~~&quot;&gt;&lt;/a&gt;我的影评我做主,想怎么写就怎么写,就是这么任性~~~~&lt;/h4&gt;&lt;h4 id=&quot;《12公民》-15-5-23&quot;&gt;&lt;a href=&quot;#《12公民》-15-5-23&quot; class=&quot;headerlink&quot; title=&quot;《12公民》-15.5.23&quot;&gt;&lt;/a&gt;《12公民》-15.5.23&lt;/h4&gt;&lt;p&gt;据说是根据&lt;strong&gt;《12罗汉》改编&lt;/strong&gt;，没看过12罗汉，看过之后感觉这部电影还挺好。小成本的人文片故事讲的好也挺值得回味的。&lt;/p&gt;
-&lt;p&gt;电影讲述的是一个牛逼检察官通过他理性的分析一步步还原了“富二代手刃生父”案件的真相。&lt;/p&gt;
-&lt;p&gt;以下12个男主角(突然想到为嘛没女的呢，终于想到这么多年我好像第一次看到没有男女猪脚fall&lt;br&gt;in love的片子)：&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;1号:团长,好像就做了记录工作，宣布投票，记得的镜头就是几次被别人搞的不赖烦。冒出了you&lt;br&gt;can you&lt;br&gt;up。生气之后被8号的义正言辞所打动,给了个把椅子摆正的镜头。然后，阿勒。每个人被策反之前都有那么写内心深处的独白。为毛你啥都没有呢~&lt;/li&gt;
-&lt;li&gt;2号:工程师,绝佳的头脑，加减乘除不在话下，作为第一个发言的，其实他啥也没说，除了呵呵没什么太深刻的印象&lt;/li&gt;
-&lt;li&gt;3号:司机。暴脾气,最固执的一个人了，反正父母啥时候都是对的。就好像以前某人会说我自己认为是好的不要认为别人也喜欢。&lt;/li&gt;
-&lt;li&gt;4号:房地产开发商,作为一个成功人士还是挺有思想的，其认为明确有罪的理由大概有①小孩回家后直接会房并没有人看到他②死者身上的刀小孩有一把并且不见了③下层老爷爷的口述④对面妇女的口述.坚持自己的看法直至每个看法都被合理的质疑。只是为什么有那么几个镜头感觉看8号的镜头有那么点不对呢，不是Gay？&lt;/li&gt;
-&lt;li&gt;5号:黑社会,从识别匕首来看还是有两把刷子。有些冷酷？因为这个身份被贴上不良分子的TAG咯？从TAG这个角度来看他和富二代是最为相似的。给人的感觉就是没有良好的品行，不怀疑你怀疑谁~~~算是TAG上的悲哀吧，只是没多大明白小伙子穿一件单衬衫为什么会流汗漏出了后背的纹身&lt;/li&gt;
-&lt;li&gt;6号:北京人,记得看过他演的《正阳门下》，剧中情节差不多都忘记咯~&lt;/li&gt;
-&lt;li&gt;7号:小贩,社会底层人民的声音有谁会在意，谁会去倾听。&lt;/li&gt;
-&lt;li&gt;8号:检察官，猪脚光环咯，柯南附体咯，你丫有备而来，现场还频频灵光闪现。好像在影视作品中也经常见到他当正派官方角色。应该是一位智者吧。&lt;/li&gt;
-&lt;li&gt;9号:文革老人，姜还是老的辣，能发现别人所发现不了的微小细节。我当时就想，莫非大爷年轻的时候也犯过不少错？&lt;/li&gt;
-&lt;li&gt;10号:老北京？我也不知道咋称呼好。这货极度排外啊，一上来就是河南人咋地，外地人咋地。经常打断别人的话，不占据理就拍桌子~~想起了那句话，事实有利就讲事实，法律有利就讲法律，两都没利就拍桌子把水搅浑。已经占据了良好的资源却仍不知足。房子租给外地人却嫌弃外地人压榨了北京人的生活环境，说自己儿子学习到凌晨3点被外地人竞争的一个好的大学都上不了。我们都是过来人，如若真的如此努力会酱紫？笑cry~~从另外一个方面来说，这位是过度考虑自己的孩子的未来么。&lt;/li&gt;
-&lt;li&gt;11号:保安，这个角色让人伤感啊。是一个立志成为公检人员的好保安？因为工作关系知道地铁的长度，知道速度，咋就t=s/v都不造呢&lt;/li&gt;
-&lt;li&gt;12号：墙头草？从这个角色来看投票制度发现设置中立选项很有必要。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;因为故事讲的好，反映的问题非常多。每个人看过之后应该都有那么几个侧重点。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;教育：教育的结果就是一张毕业证。没有这个证就不好找工作。十二位也是为了这个被迫参加讨论，话说让家长在那么个破废弃仓库研讨有点脱离实际了。12比0正好促进了情节的发展。&lt;/li&gt;
-&lt;li&gt;标签：了解一件事情很难，更何况仅凭一面之词，想想我们在网上看到的一些网文便迅速给出回复。谁写的煽情，谁文笔好，谁给出对自己有利的证据舆论往往会偏向某一方。黑社会和富二代这些标签都会蒙蔽了我们的思考。苏轼说横看成岭侧成峰，远近高低各不同，不识庐山真面目，只缘身在此山中。可惜咯，往往事实呈现在我们面前的只是冰山一角。当事人的感受我们是没法体会的。so,我应该远离那些无意义的争论。变得更加理性一些&lt;/li&gt;
-&lt;li&gt;话语：最开始大家都不愿意讨论，有什么可讨论的，讨论又没有用~~。最典型的是小贩。一个苹果换一个苹果最后还是一个苹果，一个想法换另外一个想法最后是两个想法。当大家都不愿意相信自己的话语能够改变什么就变得不愿去交换自己真实的想法，因为没什么卵用。可是坚持正确的发声总是好的，合理表达出自己的观点。最后小贩得到了保安的尊重，检察官的儿子也买了好多冰棍，大家对待事物都有了更好的看法。&lt;/li&gt;
-&lt;li&gt;尊重：好吧,我也对这方面知之甚少&lt;/li&gt;
-&lt;li&gt;事业：正如房地产开发商所说（这货还真发表了好多有意思的看法呢），不要看到富人就觉得别人背地里干了见不得人的勾当，自己穷应该反思自己没本事。然后是干女儿：咱两是奔着结婚去的&amp;amp;&amp;amp;看见好女孩从好车上下来就管人家叫傍大款，你那是嫉妒！那是对中国优秀女青年的侮辱~~，其实里面经典台词还是挺多的&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;总结来说这是一部我能看2遍的电影，能看2遍的电影对我来说都是挺有意思的电影&lt;/p&gt;
-&lt;h3 id=&quot;《哆啦A梦·伴我同行》-15-5-30&quot;&gt;&lt;a href=&quot;#《哆啦A梦·伴我同行》-15-5-30&quot; class=&quot;headerlink&quot; title=&quot;《哆啦A梦·伴我同行》-15.5.30&quot;&gt;&lt;/a&gt;《哆啦A梦·伴我同行》-15.5.30&lt;/h3&gt;&lt;p&gt;本以为会有很多小孩子的，结果怎么没几个啊喂~~或许是因为我动漫看的不多的缘故，非常喜欢这种简洁清爽的CG画风，感觉很舒服,也很细致。还是非常小的时候看过一些机器猫。&lt;/p&gt;
-&lt;p&gt;我脑海中记得的景象居然是大雄每次考试考0分，怎么没有受到爸爸妈妈的男女混合双打啊，一家人还其乐融融。不过在救静香的时候能想到让自己的记忆穿越时空传递&lt;br&gt;给未来的自己智商还是很高的好么~~小孩子真的特别天真改变自己也很快哈。奋起学习是分分钟的事情(还真不是三分钟热度)。面对失败(努力学数学结果语文考试得0分)也可以分分钟放弃，在困难的时候机器猫点醒了大雄是多么的重要。前面的时候大雄依靠种种外力结果原来越远，关键的时候还是得靠自己是不。&lt;/p&gt;
-&lt;p&gt;最后静香他爸是这样评价大雄的，因为别人开心而开心，因为别人的幸福而幸福，他一定会给你幸福的。成年的大雄依然保持着这样善良的心。我已&lt;em&gt;无语凝噎。故事里大雄和静香幸福的生活在了一起。&lt;/em&gt;&lt;/p&gt;
-&lt;h3 id=&quot;《末日崩塌》-2015-6-6&quot;&gt;&lt;a href=&quot;#《末日崩塌》-2015-6-6&quot; class=&quot;headerlink&quot; title=&quot;《末日崩塌》-2015.6.6&quot;&gt;&lt;/a&gt;《末日崩塌》-2015.6.6&lt;/h3&gt;&lt;p&gt;哇哦，写这篇影评都是两周后了，真是懒散啊~~，这篇电影给我的感觉就是不太值得一看&amp;gt;&lt;em&gt;&amp;lt;。以前想着要是地震的时候在天上开飞机会是咋样的呢，没有飞机跳到河里去会是咋样的呢。卧槽，结果地震的时候男主还真的是在开飞机，搞的我都以为全片会一直开飞机开到结束的Orz~~整片就是看特效的。大楼抖动，大楼出现裂纹。大楼倾斜。可能是大地断裂啥的特效表现效果不是太好做，所以地点选在了旧金山。嗯&lt;br&gt;之后就是水特效啦。当然特效效果真的还是挺不错的。再说这是一部主角光环爆满的电影。发生地震的时候男主有飞机，飞机没油了男主到了非地震区有汽车，明显如果一直开汽车对这种长距离时间是完全不够用的，于是乎男主又开上了飞机(可是为啥最后在大桥那里有看到了那对年老的爷爷奶奶)。最后降落在足球场时展开双臂是不是有些模仿了《泰坦尼克号》的Jake和Rose呢（→&lt;/em&gt;→经典已成一代人的回忆无法超越，不过模仿的还挺不错）。迫降之后男主在一个帅气的&lt;code&gt;生命三角&lt;/code&gt;拯救了好多人性命之后奇迹般的搞了一条快艇。在轮船翻的时候从螺旋桨下面擦头而过(螺旋桨真的没有气流吗，在那么大一艘船沉没的时候没有漩涡吗)，诸如此类，主角光环还是需要有的。可是无时无刻使用就没多大意思了。如果游戏当中能连续不停的暴击那么谁会和你玩耍呢~~~可能有时候就会想，这真的不是天佑男主么Orz&lt;/p&gt;
-&lt;p&gt;其次，男主的身材真是好！在一个侧面的镜头的时候男主的手握住女主的双肩。在3D的效果下就赶脚男主体形完全是女主2倍有余嘛，简直宽厚伟岸！！保家卫国。看~~家是在前面的。连自己的亲人都保护不了当什么键盘党去操中南海的心嘞。细想一下这要是我党的电影可能就是这个样子鸟。当时发生地震了，男主同时接到了战友和女主的电话。男主果断说了阿门然后投入到了英勇的救灾工作中。片尾女主和女儿出现一家团聚~~。美剧虽然都是个人英雄主义，用在保家这方面还真是激动人心呢~~&lt;/p&gt;
-&lt;p&gt;另外,查了下男主引以为傲的’生命三角’网上指出瞎扯。宣扬错误的灾难预防理念真是心塞。还有使用手摇电话那一节。手摇电话用的是固化网络，固化网络不依赖城市电网啥的。只是大地震的时候它真的不会断掉么。面对地震的时候觉得不是可靠的，顶多也就比手机靠谱一点而已。对于灾难，剧中大家表现的相对镇定。发生二次伤害的情况不多。不知道真正面对这种重大灾难，随时可能性命不保会是什么样子T_T，哦&lt;br&gt;还有一点，是不是对于教授这个角色，总是适合大腹便便有着络腮胡的人来演呢&amp;gt;_&amp;lt;看起来比较有学识咩&lt;/p&gt;
-&lt;p&gt;最后总结一下。这是一部以小爱胜于大爱为主题，以地震为背景毫无血腥也不紧张的特效电影~&lt;/p&gt;
-&lt;h3 id=&quot;《侏罗纪世界》-2015-6-13&quot;&gt;&lt;a href=&quot;#《侏罗纪世界》-2015-6-13&quot; class=&quot;headerlink&quot; title=&quot;《侏罗纪世界》-2015.6.13&quot;&gt;&lt;/a&gt;《侏罗纪世界》-2015.6.13&lt;/h3&gt;&lt;p&gt;以前看过这个系列的某些电影。已经没什么印象了，真是一点印象都没有~~可能因为不是在电影院看的？话说可能是斯蒂芬·斯皮尔伯格这快金字招牌？电影给人的感觉非常棒，想到恐龙会不会让人觉得这是一部恐怖片呢。我想真的很容易拍成恐怖片。可是这部电影给人的感觉丝毫不恐怖~~音乐拿捏的恰到好处，紧张刺激不恐怖~~。&lt;/p&gt;
-&lt;p&gt;问我别的？别的？卧槽&lt;br&gt;我就感觉好看了。但是哪里好看我还真想不起来，想不起来，想不起来&amp;gt;_&amp;lt;&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;h4 id=&quot;我的影评我做主-想怎么写就怎么写-就是这么任性&quot;&gt;&lt;a href=&quot;#我的影评我做主-想怎么写就怎么写-就是这么任性&quot; class=&quot;headerlink&quot; title=&quot;我的影评我做主,想怎么写就怎么写,就是这么任性~~~~&quot;&gt;&lt;/a&gt;我的影评我做主,想怎么写就怎么写,就是这么任性~~~~&lt;/h4&gt;&lt;h4 id=&quot;《12公民》-15-5-23&quot;&gt;&lt;a href=&quot;#《12公民》-15-5-23&quot; class=&quot;headerlink&quot; title=&quot;《12公民》-15.5.23&quot;&gt;&lt;/a&gt;《12公民》-15.5.23&lt;/h4&gt;&lt;p&gt;据说是根据&lt;strong&gt;《12罗汉》改编&lt;/strong&gt;，没看过12罗汉，看过之后感觉这部电影还挺好。小成本的人文片故事讲的好也挺值得回味的。&lt;/p&gt;
-&lt;p&gt;电影讲述的是一个牛逼检察官通过他理性的分析一步步还原了“富二代手刃生父”案件的真相。&lt;/p&gt;
-&lt;p&gt;以下12个男主角(突然想到为嘛没女的呢，终于想到这么多年我好像第一次看到没有男女猪脚fall&lt;br&gt;in love的片子)：&lt;br&gt;
-    
-    </summary>
-    
-      <category term="随笔" scheme="http://ficapy.com/categories/%E9%9A%8F%E7%AC%94/"/>
+      <category term="伪技术" scheme="https://www.zoulei.net/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
     
     
   </entry>
