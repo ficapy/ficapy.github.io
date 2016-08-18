@@ -28,7 +28,7 @@
 <meta property="og:description" content="flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现">
 <meta property="og:image" content="http://ficapy.b0.upaiyun.com/blogimg/code_interactiveconsole.png">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/pyframeobject_busuncle.github.io.jpg">
-<meta property="og:updated_time" content="2016-08-10T07:36:06.000Z">
+<meta property="og:updated_time" content="2016-08-11T09:21:29.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="werkzeug源码分析(Debug模块)">
 <meta name="twitter:description" content="flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现">
@@ -283,6 +283,7 @@
 <li>返回的实例是和帧栈Frame是没有关系的</li>
 <li>sys.exc_info返回了异常类，异常实例,traceback实例</li>
 <li>traceback对象记录的帧不是当前帧,而是从发起异常的那个函数开始记录帧栈,因此比当前帧栈更长,traceback的中文意思是回溯,它的tb_next可以想象一下,实际上更可以说是读取上一个帧(因为引发异常的那个帧实际上在最上面)</li>
+<li>tb_next返回的还是一个traceback对象</li>
 <li>traceback模块提供了一些接口(比如traceback.print_exc)从帧中提取出信息然后格式化打印<br>偷一张图(引用自<a href="http://busuncle.github.io/python-vm-and-bytecode.html">http://busuncle.github.io/python-vm-and-bytecode.html</a>)<br><img src="https://ficapy.b0.upaiyun.com/blogimg/pyframeobject_busuncle.github.io.jpg" alt="pyframeobject"></li>
 </ul>
 <h3 id="werkzeug实现"><a href="#werkzeug实现" class="headerlink" title="werkzeug实现"></a>werkzeug实现</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">__debugger__:yes&#10;cmd:a = 1+1&#10;frm:0&#10;s:3WcibzVj8YXQDR0Na4bv</span><br></pre></td></tr></table></figure>
