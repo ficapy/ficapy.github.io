@@ -26,7 +26,7 @@
 <meta property="og:url" content="https://www.zoulei.net/2016/08/21/docker_static_blog/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的">
-<meta property="og:updated_time" content="2016-08-21T02:07:46.000Z">
+<meta property="og:updated_time" content="2016-08-21T04:07:06.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="使用Docker配置静态博客">
 <meta name="twitter:description" content="首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的">
@@ -272,7 +272,7 @@
 <p>解释一下:</p>
 <ul>
 <li>d参数表示以detach,以后台进程形式一直运行</li>
-<li><code>--restart=always</code>当容易异常退出甚至被reboot重启操作后无限自动重启</li>
+<li><code>--restart=always</code>当容器因为异常退出甚至被reboot重启操作后无限自动重启</li>
 <li>p参数，用过vagrant的比较好理解，虚拟机都有这么个玩意儿。端口映射</li>
 <li>v参数。vagrant也有这个概念。文件夹共享</li>
 <li>至于共享的目录,那是因为容器内nginx默认的配置既如此。默认文件位置为/usr/share/nginx/html。这个地方前后的地址必须都是绝对地址。感觉要是能用相对就好了</li>
