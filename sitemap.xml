@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.zoulei.net/2016/08/21/docker_static_blog/</loc>
+    
+    <lastmod>2016-08-21T02:03:02.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
