@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2016-08-21T04:07:06.000Z</updated>
+  <updated>2016-08-29T03:49:10.000Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,34 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>使用shell修改osx的CapsLock映射</title>
+    <link href="https://www.zoulei.net/2016/08/29/use_shell_modifier_capslock_map_on_osx/"/>
+    <id>https://www.zoulei.net/2016/08/29/use_shell_modifier_capslock_map_on_osx/</id>
+    <published>2016-08-29T03:24:33.000Z</published>
+    <updated>2016-08-29T03:49:10.000Z</updated>
+    
+    <content type="html">&lt;p&gt;对于命令行爱好者,很多人会选择将黄金键盘位置CapsLock替换成Ctrl,有些人选择仅仅是和默认的Ctrl进行替换，有些人更极端，相当于去掉CapsLock键增加一个Ctrl位置。我选择后者。有时候会想。假如需要输入大段文字的时候一直按住Shift岂不是蛋疼。搜索了下，网上真有这个问题。而且有人还给出了答案。我就转发一下好了-_-&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;首先你要知道在你的&lt;code&gt;system preferences→keyboard→modifiers keys&lt;/code&gt;是可以修改CapsLock映射&lt;br&gt;到Ctrl的&lt;/li&gt;
+&lt;li&gt;其次使用applescript可以编辑脚本对GUI界面进行操作(系统还自带一个Script Editor,不得不吐槽一下,脚本真不美观)&lt;/li&gt;
+&lt;li&gt;脚本编写后执行需要到安全设置里面添加许可权限(&lt;code&gt;system preferences→security&amp;amp;privacy→accessibility&lt;/code&gt;,由于我使用的是iTerm,将它加入就好了)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;最后奉上脚本(添加至~/.zshrc,!!!!仅对英文系统有效,中文估计改一下也能用)&lt;br&gt;&lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;caps () &amp;#123;&amp;#10;&amp;#9;osascript &amp;#62; /dev/null &amp;#60;&amp;#60;EOF&amp;#10;    tell application &amp;#34;System Preferences&amp;#34;&amp;#10;        reveal anchor &amp;#34;keyboardTab&amp;#34; of pane &amp;#34;com.apple.preference.keyboard&amp;#34;&amp;#10;    end tell&amp;#10;    tell application &amp;#34;System Events&amp;#34; to tell window 1 of process &amp;#34;System Preferences&amp;#34;&amp;#10;        click button 1 of tab group 1&amp;#10;        tell sheet 1&amp;#10;            tell pop up button 4&amp;#10;                click&amp;#10;                delay 0.1&amp;#10;                if value is &amp;#34;&amp;#8682; Caps Lock&amp;#34; then&amp;#10;                    click menu item 2 of menu 1&amp;#10;                    log &amp;#34;Change Caps Lock&amp;#34;&amp;#10;                else&amp;#10;                    click menu item 1 of menu 1&amp;#10;                    log &amp;#34;Restore Caps Lock&amp;#34;&amp;#10;                end if&amp;#10;            end tell&amp;#10;            click button &amp;#34;OK&amp;#34;&amp;#10;        end tell&amp;#10;    end tell&amp;#10;    quit application &amp;#34;System Preferences&amp;#34;&amp;#10;EOF&amp;#10;&amp;#125;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;h2 id=&quot;参考&quot;&gt;&lt;a href=&quot;#参考&quot; class=&quot;headerlink&quot; title=&quot;参考&quot;&gt;&lt;/a&gt;参考&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;http://superuser.com/questions/495956/controlling-modifier-key-behavior-via-the-terminal-on-mac&quot;&gt;Controlling modifier key behavior via the terminal on mac&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://apple.stackexchange.com/questions/103621/run-applescript-from-bash-script&quot;&gt;Run AppleScript from bash script&lt;/a&gt;&lt;/p&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;对于命令行爱好者,很多人会选择将黄金键盘位置CapsLock替换成Ctrl,有些人选择仅仅是和默认的Ctrl进行替换，有些人更极端，相当于去掉CapsLock键增加一个Ctrl位置。我选择后者。有时候会想。假如需要输入大段文字的时候一直按住Shift岂不是蛋疼。搜索了下，网
+    
+    </summary>
+    
+      <category term="伪技术" scheme="https://www.zoulei.net/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>使用Docker配置静态博客</title>
@@ -719,39 +747,6 @@ Created with Monodraw
     <summary type="html">
     
       &lt;p&gt;openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="伪技术" scheme="https://www.zoulei.net/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>阿里云OSS绑定letsencrypt证书</title>
-    <link href="https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/"/>
-    <id>https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/</id>
-    <published>2016-03-11T10:28:34.000Z</published>
-    <updated>2016-08-18T10:01:11.000Z</updated>
-    
-    <content type="html">&lt;p&gt;继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;/p&gt;
-&lt;h2 id=&quot;关于RSA的那些事儿&quot;&gt;&lt;a href=&quot;#关于RSA的那些事儿&quot; class=&quot;headerlink&quot; title=&quot;关于RSA的那些事儿&quot;&gt;&lt;/a&gt;关于RSA的那些事儿&lt;/h2&gt;&lt;p&gt;web安全离不开RSA非对称加密算法，说真的数学原理我没看明白。仅仅知道最后生成的公钥和私钥其实都是一对数字。可是我们经常看到生成的公私钥是字符串。其实它只是经过了一些编码(下见参考)。然后一个密钥用来加密一个密钥用来解密（意味着公私钥都能加密）。其次是签名，签名就是将需要签名的信息使用信息摘要算法（比如sha256）获取摘要。然后使用私钥进行加密，对方使用相同的步骤算出摘要，然后使用公钥对你加密的信息进行解密。如果解密的信息和算出摘要的信息相同则证明该信息完整且为对方发出。其实和HMAC相当的相似，只不过HMAC使用对称密钥。再其实。签名算法都差不多这样OVER&lt;/p&gt;
-&lt;h2 id=&quot;关于letsencrypt的内部流程&quot;&gt;&lt;a href=&quot;#关于letsencrypt的内部流程&quot; class=&quot;headerlink&quot; title=&quot;关于letsencrypt的内部流程&quot;&gt;&lt;/a&gt;关于letsencrypt的内部流程&lt;/h2&gt;&lt;p&gt;本节参考&lt;a href=&quot;https://github.com/diafygi/acme-tiny/blob/master/acme_tiny.py&quot;&gt;acme-tiny脚本&lt;/a&gt;。过程中最重要的为用户认证流程。普遍的用户认证流程为获取token，即用户登录获取token，后续的API请求和该token关联。然而letsencrypt的流程非常不同(主要因为它不需要去letsencrypt网站进行注册)。一个独立的账户依靠本地生成证书来认证&lt;code&gt;openssl genrsa 4096 &amp;gt; account.key&lt;/code&gt;，该证书为PEM证书。即文件中含有公钥和私钥。对于所有的API请求都会要求签名。&lt;br&gt;签名代码如下：&lt;/p&gt;
-&lt;figure class=&quot;highlight python&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;def&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;_send_signed_request&lt;/span&gt;&lt;span class=&quot;params&quot;&gt;(url, payload)&lt;/span&gt;:&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    payload64 = _b64(json.dumps(payload).encode(&lt;span class=&quot;string&quot;&gt;&#39;utf8&#39;&lt;/span&gt;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    protected = copy.deepcopy(header)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    protected[&lt;span class=&quot;string&quot;&gt;&quot;nonce&quot;&lt;/span&gt;] = urlopen(CA + &lt;span class=&quot;string&quot;&gt;&quot;/directory&quot;&lt;/span&gt;).headers[&lt;span class=&quot;string&quot;&gt;&#39;Replay-Nonce&#39;&lt;/span&gt;]&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    protected64 = _b64(json.dumps(protected).encode(&lt;span class=&quot;string&quot;&gt;&#39;utf8&#39;&lt;/span&gt;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    proc = subprocess.Popen([&lt;span class=&quot;string&quot;&gt;&quot;openssl&quot;&lt;/span&gt;, &lt;span class=&quot;string&quot;&gt;&quot;dgst&quot;&lt;/span&gt;, &lt;span class=&quot;string&quot;&gt;&quot;-sha256&quot;&lt;/span&gt;, &lt;span class=&quot;string&quot;&gt;&quot;-sign&quot;&lt;/span&gt;, account_key],&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    out, err = proc.communicate(&lt;span class=&quot;string&quot;&gt;&quot;&amp;#123;0&amp;#125;.&amp;#123;1&amp;#125;&quot;&lt;/span&gt;.format(protected64, payload64).encode(&lt;span class=&quot;string&quot;&gt;&#39;utf8&#39;&lt;/span&gt;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; proc.returncode != &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;raise&lt;/span&gt; IOError(&lt;span class=&quot;string&quot;&gt;&quot;OpenSSL Error: &amp;#123;0&amp;#125;&quot;&lt;/span&gt;.format(err))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    data = json.dumps(&amp;#123;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;string&quot;&gt;&quot;header&quot;&lt;/span&gt;: header, &lt;span class=&quot;string&quot;&gt;&quot;protected&quot;&lt;/span&gt;: protected64,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;string&quot;&gt;&quot;payload&quot;&lt;/span&gt;: payload64, &lt;span class=&quot;string&quot;&gt;&quot;signature&quot;&lt;/span&gt;: _b64(out),&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &amp;#125;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;try&lt;/span&gt;:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        resp = urlopen(url, data.encode(&lt;span class=&quot;string&quot;&gt;&#39;utf8&#39;&lt;/span&gt;))&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; resp.getcode(), resp.read()&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;    &lt;span class=&quot;keyword&quot;&gt;except&lt;/span&gt; IOError &lt;span class=&quot;keyword&quot;&gt;as&lt;/span&gt; e:&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;        &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; getattr(e, &lt;span class=&quot;string&quot;&gt;&quot;code&quot;&lt;/span&gt;, &lt;span class=&quot;keyword&quot;&gt;None&lt;/span&gt;), getattr(e, &lt;span class=&quot;string&quot;&gt;&quot;read&quot;&lt;/span&gt;, e.__str__)()&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
-&lt;p&gt;可以看出从证书中取出公钥。然后依照&lt;code&gt;公钥+(公钥+服务器随机数+信息)+第二部分的签名&lt;/code&gt;证明自己的身份。即：一个公钥对应一个身份。&lt;br&gt;后续的流程就是：①身份注册→→→→②获取域名列表→→→→(③发送http挑战请求→→→→④根据返回内容建立文件→→→→⑤自身测试下载→→→→⑥发送挑战测试请求)→→→→⑦提交csr文件返回签名证书&lt;/p&gt;
-&lt;h2 id=&quot;移植到OSS上&quot;&gt;&lt;a href=&quot;#移植到OSS上&quot; class=&quot;headerlink&quot; title=&quot;移植到OSS上&quot;&gt;&lt;/a&gt;移植到OSS上&lt;/h2&gt;&lt;p&gt;网上大多数教程都是部署到服务器。和部署到OSS最大的差别在于上面的划括号的部分。部署在服务器上是在服务器生成文件，如果部署到阿里云OSS，则应该上传文件到阿里云。没有别的区别。另外还可以使用DNS挑战。如果你使用cloudxns作DNS解析。也可以使用它，从而通过验证，另外一点。生成的证书文件需要在阿里云CDN设置页面设置。&lt;code&gt;然而！！！阿里云并没有提供API接口！！！&lt;/code&gt;，意味着需要手工操作。然而至少每3个月更新一次还是很频繁的。。。。。。所以，要真用在上面还得三思&lt;br&gt;&lt;a href=&quot;https://gist.github.com/ficapy/2cef398fc4ee18013836&quot;&gt;这是我参照acme-tiny改写的证书脚本&lt;/a&gt;&lt;/p&gt;
-&lt;h2 id=&quot;hexo使用的一些建议&quot;&gt;&lt;a href=&quot;#hexo使用的一些建议&quot; class=&quot;headerlink&quot; title=&quot;hexo使用的一些建议&quot;&gt;&lt;/a&gt;hexo使用的一些建议&lt;/h2&gt;&lt;ol&gt;
-&lt;li&gt;将图片文件进行压缩放到CDN上面。压缩工具灰常之多。笔者就不例举了&lt;/li&gt;
-&lt;li&gt;引用的国外JS文件能换成国内镜像源的全部替换&lt;/li&gt;
-&lt;li&gt;上传图片不如试试我写的脚本&lt;a href=&quot;https://gist.github.com/ficapy/8c57998d14c434ab5df3&quot;&gt;https://gist.github.com/ficapy/8c57998d14c434ab5df3&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;swiftype加载真的好慢好慢。如果为了加载速度绝对要替换掉&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h2 id=&quot;参考&quot;&gt;&lt;a href=&quot;#参考&quot; class=&quot;headerlink&quot; title=&quot;参考&quot;&gt;&lt;/a&gt;参考&lt;/h2&gt;&lt;p&gt;&lt;a href=&quot;http://www.ruanyifeng.com/blog/2013/06/rsa_algorithm_part_one.html&quot;&gt;RSA算法原理&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://zh.wikipedia.org/wiki/%E9%87%91%E9%91%B0%E9%9B%9C%E6%B9%8A%E8%A8%8A%E6%81%AF%E9%91%91%E5%88%A5%E7%A2%BC&quot;&gt;HMAC中文维基&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;http://blog.sina.com.cn/s/blog_4fcd1ea30100yh4s.html&quot;&gt;pem格式&lt;/a&gt;&lt;br&gt;&lt;a href=&quot;https://imququ.com/post/letsencrypt-certificate.html&quot;&gt;letsencrypt部署&lt;/a&gt;&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。&lt;br&gt;
     
     </summary>
     
