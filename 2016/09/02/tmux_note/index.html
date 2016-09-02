@@ -22,7 +22,7 @@
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/gotbletu_tmux.png">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/iterm_access_clipboard.png">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/tmux_statusbar.png">
-<meta property="og:updated_time" content="2016-09-02T13:39:39.000Z">
+<meta property="og:updated_time" content="2016-09-02T14:23:16.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="tmux">
 <meta name="twitter:description" content="自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.">
@@ -282,6 +282,7 @@
 <h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p>我们设置好了之后可能需要在打开iterm之后就直接进入tmux,否则岂不是白忙活~(≧▽≦)/~啦啦啦，很简单,在iterm的设置页profiles→General→Send text at start中填入<code>tmux attach -t init || tmux new -s init</code>,更有用的是在我们远程到vps上的时候直接进入到tmux,设置一个别名如下<code>alias hg=&quot;ssh -t hg \&quot;bash -c &#39;tmux a -t init || tmux new -s init&#39;\&quot;&quot;</code>这样我们执行hg的时候就新建一个session或者连接到新建的session</p>
 <p>如果我们本地开一个tmux，然后远程连接vps，vps再运行tmux，这会造成嵌套使用。特别是当你的prefix key还是一样的时候。。。悲催了，你所输入的快捷键只会被本地的tmux处理而不会被远程的tmux响应，要处理这个问题可以将2者的prefix key设置成不一样,比如一个为a另外一个为s。或者使用iterm单独开一个窗口，我更推荐后者,因为设置成不同的prefix key输入快了可能就输入混淆啦。</p>
 <p>另外,使用了tmux显著增加了iterm2的耗电量,估计是我设置的那个状态栏显示上传下载流量导致的，每几秒刷新执行一次shell或许挺耗电.</p>
+<p><a href="https://github.com/ficapy/dotfiles/blob/master/.tmux.conf">我的tmux配置</a></p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://danielmiessler.com/study/tmux/">A tmux Primer</a><br><a href="https://www.youtube.com/playlist?list=PL5BE1545D8486D66D">gotbletu youtube playlist</a><br><a href="https://evertpot.com/osx-tmux-vim-copy-paste-clipboard/">Making the clipboard work between iTerm2, tmux, vim and OS X.</a><br><a href="http://superuser.com/questions/285381/how-does-the-tmux-color-palette-work">How does the tmux color palette work?</a></p>
 
             
