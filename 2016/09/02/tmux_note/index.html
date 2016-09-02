@@ -6,24 +6,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>python安装exe包到虚拟环境 - 邹雷</title>
+    <title>tmux - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="明天都儿童节了，要和五月份说再见了。这个月居然一篇博文都没有写，甚是惭愧&amp;gt;_&amp;lt;赶紧写一篇补上python通常使用pip安装第三方库，如果你安装的库比较多总会遇到一些恼人的安装问题（如果安装了VC2008或许会好很多），所以像我等小白安装一些比较复杂的库的时候甚是喜欢用exe包进行安装~~~~~~谁让从小就习惯了windows的下一步这种操作呢附上大名鼎鼎的python第三方哭二进制包下">
+    <meta name="description" content="自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="python安装exe包到虚拟环境">
-<meta property="og:url" content="https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/index.html">
+<meta property="og:title" content="tmux">
+<meta property="og:url" content="https://www.zoulei.net/2016/09/02/tmux_note/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="明天都儿童节了，要和五月份说再见了。这个月居然一篇博文都没有写，甚是惭愧&amp;gt;_&amp;lt;赶紧写一篇补上python通常使用pip安装第三方库，如果你安装的库比较多总会遇到一些恼人的安装问题（如果安装了VC2008或许会好很多），所以像我等小白安装一些比较复杂的库的时候甚是喜欢用exe包进行安装~~~~~~谁让从小就习惯了windows的下一步这种操作呢附上大名鼎鼎的python第三方哭二进制包下">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/virtualenv.jpg">
-<meta property="og:updated_time" content="2016-06-29T03:48:34.000Z">
+<meta property="og:description" content="自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/gotbletu_tmux.png">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/iterm_access_clipboard.png">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/tmux_statusbar.png">
+<meta property="og:updated_time" content="2016-09-02T13:39:39.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="python安装exe包到虚拟环境">
-<meta name="twitter:description" content="明天都儿童节了，要和五月份说再见了。这个月居然一篇博文都没有写，甚是惭愧&amp;gt;_&amp;lt;赶紧写一篇补上python通常使用pip安装第三方库，如果你安装的库比较多总会遇到一些恼人的安装问题（如果安装了VC2008或许会好很多），所以像我等小白安装一些比较复杂的库的时候甚是喜欢用exe包进行安装~~~~~~谁让从小就习惯了windows的下一步这种操作呢附上大名鼎鼎的python第三方哭二进制包下">
+<meta name="twitter:title" content="tmux">
+<meta name="twitter:description" content="自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -230,19 +232,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            python安装exe包到虚拟环境
+            tmux
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2014-05-31T23:40:00+08:00">
+    <time itemprop="datePublished" datetime="2016-09-02T15:43:22+08:00">
 	
-		    5月 31, 2014
+		    9月 02, 2016
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+    <a class="category-link" href="/categories/linux/">linux</a>
 
 
     
@@ -252,36 +254,47 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>明天都儿童节了，要和五月份说再见了。这个月居然一篇博文都没有写，甚是惭愧&gt;_&lt;赶紧写一篇补上<br>python通常使用pip安装第三方库，如果你安装的库比较多总会遇到一些恼人的安装问题（如果安装了VC2008或许会好很多），所以像我等小白安装一些比较复杂的库的时候甚是喜欢用exe包进行安装~~~~~~谁让从小就习惯了windows的下一步这种操作呢<br>附上大名鼎鼎的python第三方哭二进制包下载地址：<a href="www.lfd.uci.edu/~gohlke/pythonlibs/">www.lfd.uci.edu/~gohlke/pythonlibs/</a><br>当项目越来越多的时候，我们一定会使用虚拟环境virtualenv来管理我们的包（可以见<a href="http://www.reddit.com/r/Python/comments/26t245/how_do_you_python/http://">reddit上的讨论</a>），让各项目间的第三方库不至于混乱发生不兼容之类的悲剧</p>
-<p>但是当你想将打包好的二进制exe包安装到你的虚拟环境的时候可能你会遇到问题了，因为它不提供安装到哪个虚拟环境，只会安装到你的主环境中~~~~~~~好吧，这也算是一种悲剧，方便的exe打包文件居然无法配合virtualenv使用，难道只能在我大中华局域网使用蛋疼的pip。不知道是否火星了没，下面就是答案→_→<br>照搬别人的</p>
+            <p>自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)<br><img src="https://ficapy.b0.upaiyun.com/blogimg/gotbletu_tmux.png" alt="gotbletu_tmux"><br>我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.</p>
 <a id="more"></a>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/virtualenv.jpg" alt="">使用winrar打开下载的exe文件会发现有2个文件夹PLATLIB和SCRIPTS</p>
-<p>将PLATLIB文件夹里面的内容全部复制到虚拟环境XXXX\Lib\site-packages中，将SCRIPTS文件夹的全部内容复制到XXXX<span
-id="crayon-5389f59639b1c172241163"
-class="crayon-syntax crayon-syntax-inline crayon-theme-tomorrow crayon-theme-tomorrow-inline crayon-font-droid-sans-mono"
-style="font-size: 15px !important; line-height: 17px !important;"><span
-class="crayon-pre crayon-code"
-style="font-size: 15px !important; line-height: 17px !important;">\Scripts</span></span>文件夹下，最后试试导入库看是否成功~bingo<br>就是这么简单</p>
-<p>参考：<a href="http://www.laurivan.com/install-numpy-in-a-virtual-environment-on-windows/">http://www.laurivan.com/install-numpy-in-a-virtual-environment-on-windows/</a></p>
+<h2 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h2><ul>
+<li>tmux分客户端和服务端，这个docker这种是很相似的，我们操作的只是针对客户端，服务端以守护进程运行，这样实现了我们退出后下次再进入依旧保持了运行状态</li>
+<li>session:比如你在公司有个工作环境，在家里又是另外一个工作环境。这2个环境差别非常大。那么就使用2个不同的session</li>
+<li>window:你在工作环境中要打开多个软件，聊天的、BT下载的、听歌的etc</li>
+<li>pane:一个软件要分成多个区域输出</li>
+<li>当然一般来说越少是越方便切换的。就个人来说一个session就够了,主要切换来自于window和pane</li>
+<li>tmux主要来说最重要的就是对各个窗口的切换排列管理，各种键位绑定也是用于对窗口的切换</li>
+</ul>
+<h2 id="windows-pane基本设置"><a href="#windows-pane基本设置" class="headerlink" title="windows,pane基本设置"></a>windows,pane基本设置</h2><p>和vim一样tmux也是使用一个主要的prefix key，先输入prefix key之后再输入绑定的字母执行操作.下面就将我从多个地方copy来的配置解释一番-_-</p>
+<p>设置成C-a,同时解绑原来的C-b,最后的bind a的作用就是:C-a本来是回到行首的快捷键，被tmux使用之后使用此设定变成了C-a-a到行首</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set -g prefix ^a&#10;unbind ^b&#10;bind a send-prefix</span><br></pre></td></tr></table></figure>
+<p>之后就是对window和pane的快捷键设定，本人使用vim相似的快捷键设定。这个好像没啥好说的，比如hjkl在pane中移动,s、v分屏，使用&lt;、&gt;、+、_对pane进行大小的改变，使用C-u、C-d进行交换，使用q、C-q进行关闭pane和window，举个例子</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bind k selectp -U&#10;bind -r &#60; resize-pane -L 10&#10;bind ^u swapp -U&#10;bind q killp</span><br></pre></td></tr></table></figure>
+<p>使用-r(recursion)就能够输入一次&lt;之后马上多次输入&lt;、&gt;有效,这对于调整大小时是非常有用的。。。,没有被重写的配置基本都是非常好记的单词,c、n、w、d记这些都是毫不费力的</p>
+<h2 id="鼠标、复制及清屏设置"><a href="#鼠标、复制及清屏设置" class="headerlink" title="鼠标、复制及清屏设置"></a>鼠标、复制及清屏设置</h2><p>如果你不进行其他设置可能用几下动一下鼠标上下翻一下，就会高呼WTF。毕竟完全不动鼠标的大神小，我还是打开鼠标设置吧,这样也能同时使用鼠标进行上下滑动了，其次复制也和以前不一样了，特别是如果你分了2个竖向的pane,这样和以前一样用鼠标复制就出问题了，当然你可以用z(zoom)全屏当前的pane，然后用鼠标复制。然而一个vim党是不会这样做的T_T。下面是设置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setw -g mouse on&#10;#set vi mode for copy mode&#10;setw -g mode-keys vi&#10;&#10;# more settings to make copy-mode more vim-like&#10;unbind [&#10;bind Escape copy-mode&#10;unbind p&#10;bind p paste-buffer&#10;bind -t vi-copy &#39;v&#39; begin-selection&#10;bind -t vi-copy &#39;y&#39; copy-selection&#10;&#10;# Buffers to/from Mac clipboard, yay tmux book from pragprog&#10;bind C-c run &#34;tmux save-buffer - | reattach-to-user-namespace pbcopy&#34;&#10;bind C-v run &#34;tmux set-buffer $(reattach-to-user-namespace pbpaste); tmux paste-buffer&#34;</span><br></pre></td></tr></table></figure>
+<p>这样复制好像变得复杂了。。。需要先进入选择模式C-a-ESC-v选择需要复制的内容后再执行y复制到tmux的缓冲区，另外像tmux和vim这种的粘贴板是独立的,和osx系统的粘贴板不共通,如果要再复制到系统粘贴板，此时再使用C-a-C-c,好像是比较复杂啊。。你可以安装option再用鼠标选择也是直接复制到系统粘贴板，要让vim和tmux和系统粘贴板通用，你需要<code>brew install reattach-to-user-namespace</code>安装。另外iterm2其实是可以让他们共用的，下图选中Applications in terminal may access clipboard也能达到同样的效果，不过下面的参考有说有缺点-_-我就听了他的了<br><img src="https://ficapy.b0.upaiyun.com/blogimg/iterm_access_clipboard.png" alt="iterm_access_clipboard"></p>
+<p>再就是配置重载和清屏</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">#bind -n C-l send-keys &#39;C-l&#39;&#10;bind -n C-k send-keys -R \; send-keys C-l \; clear-history&#10;# reload config (prefix r)&#10;bind r source ~/.tmux.conf \; display &#34;Configuration reloaded!&#34;</span><br></pre></td></tr></table></figure>
+<p>就好像command+k完全清屏，tmux也可以，不过需要配置(这个完美清屏命令找了很久),另外不要将C-l设置为清屏,会让TAB补全失效</p>
+<h2 id="状态栏"><a href="#状态栏" class="headerlink" title="状态栏"></a>状态栏</h2><p>配置一个好看的状态栏好像还是比较困难的,我比较偷懒就直接使用了<a href="https://github.com/erikw/tmux-powerline">tmux-powerline</a>和<a href="https://github.com/seebi/tmux-colors-solarized/blob/master/tmuxcolors-256.conf">tmux-colors-solarized</a>,下面是效果<br><img src="https://ficapy.b0.upaiyun.com/blogimg/tmux_statusbar.png" alt="tmux_statusbar"><br>注意配置powerline的时候可能需要在~/.zshrc中加入<code>PS1=&quot;$PS1&quot;&#39;$([ -n &quot;$TMUX&quot; ] &amp;&amp; tmux setenv TMUXPWD_$(tmux display -p &quot;#D&quot; | tr -d %) &quot;$PWD&quot;)&#39;</code>有的时候修改配置可能需要tmux kill-server后重新进入才能看到效果</p>
+<p>在状体栏的配置会看到这种<code>set-option -g status-bg colour235</code>,colour235是什么鬼颜色。真是不好想啊，可以单独开一个pane打印输出所有256种颜色，自己对比修改成喜欢的颜色</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">for i in &#123;0..255&#125; ; do&#10;    printf &#34;\x1b[38;5;$&#123;i&#125;mcolour$&#123;i&#125;\n&#34;&#10;done</span><br></pre></td></tr></table></figure>
+<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p>我们设置好了之后可能需要在打开iterm之后就直接进入tmux,否则岂不是白忙活~(≧▽≦)/~啦啦啦，很简单,在iterm的设置页profiles→General→Send text at start中填入<code>tmux attach -t init || tmux new -s init</code>,更有用的是在我们远程到vps上的时候直接进入到tmux,设置一个别名如下<code>alias hg=&quot;ssh -t hg \&quot;bash -c &#39;tmux a -t init || tmux new -s init&#39;\&quot;&quot;</code>这样我们执行hg的时候就新建一个session或者连接到新建的session</p>
+<p>如果我们本地开一个tmux，然后远程连接vps，vps再运行tmux，这会造成嵌套使用。特别是当你的prefix key还是一样的时候。。。悲催了，你所输入的快捷键只会被本地的tmux处理而不会被远程的tmux响应，要处理这个问题可以将2者的prefix key设置成不一样,比如一个为a另外一个为s。或者使用iterm单独开一个窗口，我更推荐后者,因为设置成不同的prefix key输入快了可能就输入混淆啦。</p>
+<p>另外,使用了tmux显著增加了iterm2的耗电量,估计是我设置的那个状态栏显示上传下载流量导致的，每几秒刷新执行一次shell或许挺耗电.</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://danielmiessler.com/study/tmux/">A tmux Primer</a><br><a href="https://www.youtube.com/playlist?list=PL5BE1545D8486D66D">gotbletu youtube playlist</a><br><a href="https://evertpot.com/osx-tmux-vim-copy-paste-clipboard/">Making the clipboard work between iTerm2, tmux, vim and OS X.</a><br><a href="http://superuser.com/questions/285381/how-does-the-tmux-color-palette-work">How does the tmux color palette work?</a></p>
 
             
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-            <div class="post-footer-tags">
-                <span class="text-color-light text-small">标签</span><br/>
-                
-    <a class="tag tag--primary tag--small t-link" href="/tags/exe/">exe</a> <a class="tag tag--primary tag--small t-link" href="/tags/python/">python</a> <a class="tag tag--primary tag--small t-link" href="/tags/virtualenv/">virtualenv</a> <a class="tag tag--primary tag--small t-link" href="/tags/虚拟环境/">虚拟环境</a>
-
-            </div>
-        
         <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/"  data-tooltip="利用selenium抓取OA数据生成综合图表">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -289,7 +302,7 @@ style="font-size: 15px !important; line-height: 17px !important;">\Scripts</span
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/04/21/python_implement_login_and_check_in/" data-tooltip="python简单实现网站打卡签到">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/29/fasd&fzf/" data-tooltip="fasd和fzf">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -304,17 +317,17 @@ style="font-size: 15px !important; line-height: 17px !important;">\Scripts</span
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/02/tmux_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/02/tmux_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/02/tmux_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -362,7 +375,7 @@ style="font-size: 15px !important; line-height: 17px !important;">\Scripts</span
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/"  data-tooltip="利用selenium抓取OA数据生成综合图表">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -370,7 +383,7 @@ style="font-size: 15px !important; line-height: 17px !important;">\Scripts</span
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/04/21/python_implement_login_and_check_in/" data-tooltip="python简单实现网站打卡签到">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/29/fasd&fzf/" data-tooltip="fasd和fzf">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -385,17 +398,17 @@ style="font-size: 15px !important; line-height: 17px !important;">\Scripts</span
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/02/tmux_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/02/tmux_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/02/tmux_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -421,17 +434,17 @@ style="font-size: 15px !important; line-height: 17px !important;">\Scripts</span
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/02/tmux_note/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/02/tmux_note/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/02/tmux_note/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -644,9 +657,9 @@ style="font-size: 15px !important; line-height: 17px !important;">\Scripts</span
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/';
+                 this.page.url = 'https://www.zoulei.net/2016/09/02/tmux_note/';
                  
-                    this.page.identifier = '2014/05/31/python_install_exe_package_to_virtualenv/';
+                    this.page.identifier = '2016/09/02/tmux_note/';
                  
              };
             (function() {
