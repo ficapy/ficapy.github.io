@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2016-09-02T14:23:16.000Z</updated>
+  <updated>2016-09-02T14:27:02.000Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="https://www.zoulei.net/2016/09/02/tmux_note/"/>
     <id>https://www.zoulei.net/2016/09/02/tmux_note/</id>
     <published>2016-09-02T07:43:22.000Z</published>
-    <updated>2016-09-02T14:23:16.000Z</updated>
+    <updated>2016-09-02T14:27:02.000Z</updated>
     
     <content type="html"><![CDATA[<p>自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)<br><img src="https://ficapy.b0.upaiyun.com/blogimg/gotbletu_tmux.png" alt="gotbletu_tmux"><br>我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.</p>
 <a id="more"></a>
@@ -38,7 +38,7 @@
 <p>之后就是对window和pane的快捷键设定，本人使用vim相似的快捷键设定。这个好像没啥好说的，比如hjkl在pane中移动,s、v分屏，使用&lt;、&gt;、+、_对pane进行大小的改变，使用C-u、C-d进行交换，使用q、C-q进行关闭pane和window，举个例子</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bind k selectp -U&#10;bind -r &#60; resize-pane -L 10&#10;bind ^u swapp -U&#10;bind q killp</span><br></pre></td></tr></table></figure>
 <p>使用-r(recursion)就能够输入一次&lt;之后马上多次输入&lt;、&gt;有效,这对于调整大小时是非常有用的。。。,没有被重写的配置基本都是非常好记的单词,c、n、w、d记这些都是毫不费力的</p>
-<h2 id="鼠标、复制及清屏设置"><a href="#鼠标、复制及清屏设置" class="headerlink" title="鼠标、复制及清屏设置"></a>鼠标、复制及清屏设置</h2><p>如果你不进行其他设置可能用几下动一下鼠标上下翻一下，就会高呼WTF。毕竟完全不动鼠标的大神小，我还是打开鼠标设置吧,这样也能同时使用鼠标进行上下滑动了，其次复制也和以前不一样了，特别是如果你分了2个竖向的pane,这样和以前一样用鼠标复制就出问题了，当然你可以用z(zoom)全屏当前的pane，然后用鼠标复制。然而一个vim党是不会这样做的T_T。下面是设置</p>
+<h2 id="鼠标、复制及清屏设置"><a href="#鼠标、复制及清屏设置" class="headerlink" title="鼠标、复制及清屏设置"></a>鼠标、复制及清屏设置</h2><p>如果你不进行其他设置可能用几下动一下鼠标上下翻一下，就会高呼WTF。毕竟完全不动鼠标的大神不多，我还是打开鼠标设置吧,这样也能同时使用鼠标进行上下滑动了，其次复制也和以前不一样了，特别是如果你分了2个竖向的pane,这样和以前一样用鼠标复制就出问题了，当然你可以用z(zoom)全屏当前的pane，然后用鼠标复制。然而一个vim党是不会这样做的T_T。下面是设置</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">setw -g mouse on&#10;#set vi mode for copy mode&#10;setw -g mode-keys vi&#10;&#10;# more settings to make copy-mode more vim-like&#10;unbind [&#10;bind Escape copy-mode&#10;unbind p&#10;bind p paste-buffer&#10;bind -t vi-copy &#39;v&#39; begin-selection&#10;bind -t vi-copy &#39;y&#39; copy-selection&#10;&#10;# Buffers to/from Mac clipboard, yay tmux book from pragprog&#10;bind C-c run &#34;tmux save-buffer - | reattach-to-user-namespace pbcopy&#34;&#10;bind C-v run &#34;tmux set-buffer $(reattach-to-user-namespace pbpaste); tmux paste-buffer&#34;</span><br></pre></td></tr></table></figure>
 <p>这样复制好像变得复杂了。。。需要先进入选择模式C-a-ESC-v选择需要复制的内容后再执行y复制到tmux的缓冲区，另外像tmux和vim这种的粘贴板是独立的,和osx系统的粘贴板不共通,如果要再复制到系统粘贴板，此时再使用C-a-C-c,好像是比较复杂啊。。你可以安装option再用鼠标选择也是直接复制到系统粘贴板，要让vim和tmux和系统粘贴板通用，你需要<code>brew install reattach-to-user-namespace</code>安装。另外iterm2其实是可以让他们共用的，下图选中Applications in terminal may access clipboard也能达到同样的效果，不过下面的参考有说有缺点-_-我就听了他的了<br><img src="https://ficapy.b0.upaiyun.com/blogimg/iterm_access_clipboard.png" alt="iterm_access_clipboard"></p>
 <p>再就是配置重载和清屏</p>
