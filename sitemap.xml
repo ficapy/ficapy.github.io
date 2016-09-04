@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/</loc>
+    
+    <lastmod>2016-09-04T09:08:01.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.zoulei.net/2016/07/25/werkzeug_note_requests_response_auto_realod/</loc>
     
     <lastmod>2016-09-04T08:46:30.000Z</lastmod>
@@ -65,14 +72,14 @@
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2016/07/22/pycallgraph_note/</loc>
+    <loc>https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/</loc>
+    <loc>https://www.zoulei.net/2016/07/22/pycallgraph_note/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     
@@ -208,13 +215,6 @@
     <loc>https://www.zoulei.net/2014/08/02/v2ex_signin/</loc>
     
     <lastmod>2016-06-29T03:48:48.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/</loc>
-    
-    <lastmod>2016-06-29T03:48:41.000Z</lastmod>
     
   </url>
   
