@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.zoulei.net/2016/07/25/werkzeug_note_requests_response_auto_realod/</loc>
+    
+    <lastmod>2016-09-04T08:46:30.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.zoulei.net/2016/08/03/werkzeug_local_note/</loc>
     
     <lastmod>2016-09-04T08:14:45.000Z</lastmod>
@@ -19,13 +26,6 @@
     <loc>https://www.zoulei.net/2016/08/07/werkzeug_debug_note/</loc>
     
     <lastmod>2016-09-04T07:32:59.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>https://www.zoulei.net/2016/07/25/werkzeug_note_requests_response_auto_realod/</loc>
-    
-    <lastmod>2016-09-04T07:32:40.000Z</lastmod>
     
   </url>
   
