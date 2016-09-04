@@ -21,7 +21,7 @@
 <meta property="og:description" content="虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/packetfilter.png">
 <meta property="og:image" content="http://ficapy.b0.upaiyun.com/blogimg/TrafficFlow.png">
-<meta property="og:updated_time" content="2016-05-25T10:25:52.000Z">
+<meta property="og:updated_time" content="2016-09-04T09:31:26.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="我的网络学习工具">
 <meta name="twitter:description" content="虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工">
@@ -279,6 +279,10 @@
 <p> 该软件不属于该类别，可是命令行对于刚接触的新手是不那么有好的。比如tcp -h得到</p>
  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    tcpdump version 4.7.3 -- Apple version 67&#10;libpcap version 1.5.3 - Apple version 54&#10;Usage: tcpdump [-aAbdDefhHIJKlLnNOpqRStuUvxX#] [ -B size ] [ -c count ]&#10;&#9;&#9;[ -C file_size ] [ -E algo:secret ] [ -F file ] [ -G seconds ]&#10;&#9;&#9;[ -i interface ] [ -j tstamptype ] [ -M secret ]&#10;&#9;&#9;[ -Q metadata-filter-expression ]&#10;&#9;&#9;[ -r file ] [ -s snaplen ] [ -T type ] [ --version ] [ -V file ]&#10;&#9;&#9;[ -w file ] [ -W filecount ] [ -y datalinktype ] [ -z command ]&#10;&#9;&#9;[ -Z user ] [ expression ]</span><br></pre></td></tr></table></figure>
 <p> 也是灰常容易让人摸不着头脑,<code>tldr tcpdump</code>可以给出常用的最基本的用法。对于初学者非常友好，能够最开始就体验到神器的强大，这样至少兴趣是产生了吧~~~</p>
+</li>
+<li><p>iperf3</p>
+<p> 使用简单(<code>iperf3 --help</code>)，测量tcp/udp传输数据丢包率等，牛X的是即使没有公网ip也能打洞进行测试,甚至于官网还提供了一些<a href="https://iperf.fr/iperf-servers.php">公共服务器</a>让你进行学习测试。初略解释下，分别需要在服务端和客户端运行。大概参数如下</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#26381;&#21153;&#31471;:iperf3 -s -i1 -f M&#10;iperf3 -c ip_address -t 10 -i 1 -u -b 20M -l 1K -R&#10;c/s&#25351;&#23450;&#26159;&#26381;&#21153;&#31471;&#36824;&#26159;&#23458;&#25143;&#31471;&#10;t(time&#27979;&#35797;&#24635;&#26102;&#38388;)&#65292;i(interval&#25253;&#21578;&#38388;&#38548;&#26102;&#38388;),u(udp&#27169;&#24335;),b(bandwidth&#24102;&#23485;),l(len&#21333;&#20010;&#21253;&#30340;&#33655;&#36733;)&#65292;f(format&#25253;&#21578;&#26684;&#24335;),R(reverse&#36827;&#34892;&#21453;&#21521;&#27979;&#35797;)</span><br></pre></td></tr></table></figure>
 </li>
 </ol>
 <h2 id="资源"><a href="#资源" class="headerlink" title="资源"></a>资源</h2><p><a href="http://packetlife.net/library/cheat-sheets/">抓包专业资料较多,cheat-sheet值得一看。另外此博客友链也可以看看</a><br><a href="http://coolshell.cn/articles/11564.html">酷 壳–TCP 的那些事儿</a></p>
