@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2016-09-04T07:33:07.000Z</updated>
+  <updated>2016-09-05T09:18:48.000Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,40 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Flask插件原理</title>
+    <link href="https://www.zoulei.net/2016/09/05/2016-09-05/"/>
+    <id>https://www.zoulei.net/2016/09/05/2016-09-05/</id>
+    <published>2016-09-04T23:38:32.000Z</published>
+    <updated>2016-09-05T09:18:48.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。<a href="https://github.com/pallets/flask/issues/1135">在2016年4月13号正式被移出支持了</a>，已经直接发出不建议使用的警告。本文还是来炒一下现饭，看看它背后的逻辑</p>
+<a id="more"></a>
+<p>比如flask-sqlalchemy原本是使用from flask_sqlalchemy import [anything]使用的，被变成了from flask.ext.sqlalchemy import [anything]。这是一种对于import的hook。我们知道要导入一个模块，不使用import声明也是可以的，可以使用__import__函数，返回得到的也是一个模块对象</p>
+<h2 id="import-hook"><a href="#import-hook" class="headerlink" title="import hook"></a>import hook</h2><p>下文简述，如果需要了解比较详细的资料可以查看后文给出的参考链接(python2和3的import机制是略有区别的)<br>import声明主要做了2件事情，查找模块，加载模块。我们说的hook发生在第一步查找模块。查找模块的步骤是</p>
+<ol>
+<li>查找sys.modules缓存</li>
+<li>在sys.meta_path中依次执行finder对象,找到就返回自身,所有的都没有找到则会报错<br>注意:sys.path_hooks中的finder会被sys.meta_path调用执行(sys.meta_path和sys.path_hook都可以参与import hooks步骤)</li>
+</ol>
+<h2 id="精简版本实现"><a href="#精简版本实现" class="headerlink" title="精简版本实现"></a>精简版本实现</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ExtensionImporter</span><span class="params">(object)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">install</span><span class="params">(self)</span>:</span></span><br><span class="line">        sys.meta_path[:] = [x <span class="keyword">for</span> x <span class="keyword">in</span> sys.meta_path <span class="keyword">if</span> self != x] + [self]</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">find_module</span><span class="params">(self, fullname, path=None)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> fullname.startswith(<span class="string">'flask.ext.'</span>):</span><br><span class="line">            <span class="keyword">return</span> self</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">load_module</span><span class="params">(self, fullname)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> fullname <span class="keyword">in</span> sys.modules:</span><br><span class="line">            <span class="keyword">return</span> sys.modules[fullname]</span><br><span class="line"></span><br><span class="line">        modname = fullname.split(<span class="string">'.'</span>)[-<span class="number">1</span>]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        realname = <span class="string">'flask_'</span> +  modname</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            __import__(realname)</span><br><span class="line">        <span class="keyword">except</span> ImportError:</span><br><span class="line">            <span class="keyword">raise</span> ImportError(<span class="string">'No module named %s'</span> % fullname)</span><br><span class="line"></span><br><span class="line">        module = sys.modules[fullname] = sys.modules[realname]</span><br><span class="line">        <span class="keyword">if</span> <span class="string">'.'</span> <span class="keyword">not</span> <span class="keyword">in</span> modname:</span><br><span class="line">            setattr(sys.modules[<span class="string">'flask.ext'</span>], modname, module)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> module</span><br></pre></td></tr></table></figure>
+<p>ExtensionImporter是一个finder对象,当执行import flask.ext时会把它加入到sys.meta_path列表，后续的import都会先执行它，判断满足要求后就会使用__import__导入然后加入到sys.modules，这样就实现了flask.ext.sqlalchemy导入</p>
+<p>为什么会被废除呢。下面是我猜测的。首先本来这个东西没有实质的作用，就是看着炫酷而已。我们可以认为所有的扩展导入都会使用flask.ext.xxx，但是这对第三方扩展库是有要求的，那就是包名必须为flask_xxx才行，我猜测有的第三方库未必遵守这个规则(否则exthook.py中也不会出现['flask_%s', 'flaskext.%s'flaskext.另外一种形式)，这就说明了有的作者使用了flaskextxxx这种包名。出现了第二种难免就会出现另外的。当使用者发现并非所有的第三方扩展都使用flask.ext导入的时候。社区也觉得没必要维持了，毕竟第一个写这个代码的人是不是因为刚刚了解了import机制，觉得很炫酷写上去的呢-_-,so，最后还是回到了原来的位置，直接使用import flask_sqlalchemy导入吧</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://docs.python.org/3/reference/import.html#import-hooks">官方import hook文档</a><br><a href="https://github.com/Liuchang0812/slides/tree/master/pycon2015cn">pycon2015 import演讲</a><br><a href="https://github.com/mitsuhiko/flask-sqlalchemy">flask-sqlalchemy</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。&lt;a href=&quot;https://github.com/pallets/flask/issues/1135&quot;&gt;在2016年4月13号正式被移出支持了&lt;/a&gt;，已经直接发出不建议使用的警告。本文还是来炒一下现饭，看看它背后的逻辑&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="Flask" scheme="https://www.zoulei.net/categories/Flask/"/>
+    
+    
+      <category term="Flask" scheme="https://www.zoulei.net/tags/Flask/"/>
+    
+  </entry>
   
   <entry>
     <title>tmux</title>
@@ -732,32 +766,6 @@ Created with Monodraw
     </summary>
     
       <category term="network" scheme="https://www.zoulei.net/categories/network/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>Gmail设置自动删除推广邮件</title>
-    <link href="https://www.zoulei.net/2016/05/25/gmail_auto_delete_promotions_email/"/>
-    <id>https://www.zoulei.net/2016/05/25/gmail_auto_delete_promotions_email/</id>
-    <published>2016-05-25T09:40:01.000Z</published>
-    <updated>2016-05-25T10:34:51.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>一直以来我都是多个邮箱混合使用，对Gmail邮箱也不是特别感冒(主力邮箱是outlook(因为没有被墙))。或许是几天没有打开foxmail，刚打开就有那么几十封各种垃圾推广邮件。或许是心情不大好我去搜了下如何过滤掉这些邮件，让他们不会被foxmail客户端接收。于是感受到了outlook和gmail的明显差距，忍不住发篇博文展示下。</p>
-<a id="more"></a>
-<p>本文是基于一个理念，<strong>被归类为垃圾邮件就没必要展示给用户了</strong>，设想一下服务商邮件系统已经识别出了某邮件是垃圾邮件，客户端还会依旧下载并显示有多少封垃圾邮件，对于用户看到这样的提示总会忍不住去打开垃圾箱扫几眼。至少对于我来说从没在垃圾箱遇到有用的邮件(有些激活码之类的邮件会手动去检查除外)，这样我们完全可以<strong>把被系统判定为我们不需要的邮件直接删除掉</strong>，这样就不会由邮件客户端展示在我们面前了，当然以上出自一个前提，应该是比较不重要的邮箱(比如鄙人的个人邮箱)。假如某封对你灰常重要的邮件被自动加到了删除邮件组，30天后就再也看不到了。</p>
-<p>实际上这是一个选择邮件的问题，我们找出邮件然后设定操作。省去对outlook弱鸡流程的吐槽，最坑爹的是它创建规则后不能对历史邮件进行使用。Gmail使用专门的搜索语法，outlook使用选择选择输入文本(看起来对小白友好，效率辣鸡)。归功于Gmail强大的归类。对于自动删除收到的推广邮件在Has the words栏目填写<strong><span class="highlight-text red">category:promotions OR category:social</span></strong>（貌似全篇有用的也就这段语法了，更强大的搜索功能请查看最后给出的相关资料）,至于outlook→→这货不仅没有给邮件默认分类为推广之类的，而且！！垃圾邮件分类都不让你作为规则选择</p>
-<p>再说一下本人对于邮件处理的碎碎念<br>理念就是使用多个邮箱<br>工作邮箱(当然公司都会提供的,这个没什么好处理的，绝逼是不会收到垃圾邮件的，而且邮件也不会删除)<br>个人邮箱(outlook用来注册各种网站，gmail用来邮件交流)<br>QQ邮箱(有些人比较喜欢QQ邮箱，给他们发文件)<br>163邮箱(订阅各种周报weekly使用)<br>另外一个Gmail邮箱(专门订阅邮件组)<br>这样使用foxmail的时候也能比较明确的知道哪些邮件大概是啥类型的XD</p>
-<h2 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h2><p><a href="http://duntuk.com/how-create-gmail-filter-automatically-delete-emails-older-x-amount-days">本文搜索资料</a><br><a href="https://support.google.com/mail/answer/7190?hl=en">gmail高级搜索语法(过滤器通用)</a><br><a href="http://www.iplaysoft.com/shou-fa-gmail.html">国内如何接收Gmail(如果你不会过墙的话)</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;一直以来我都是多个邮箱混合使用，对Gmail邮箱也不是特别感冒(主力邮箱是outlook(因为没有被墙))。或许是几天没有打开foxmail，刚打开就有那么几十封各种垃圾推广邮件。或许是心情不大好我去搜了下如何过滤掉这些邮件，让他们不会被foxmail客户端接收。于是感受到了outlook和gmail的明显差距，忍不住发篇博文展示下。&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="伪技术" scheme="https://www.zoulei.net/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
     
     
   </entry>
