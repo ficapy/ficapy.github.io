@@ -6,23 +6,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>阿里云OSS绑定letsencrypt证书 - 邹雷</title>
+    <title>Flask路由机制 - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。">
+    <meta name="description" content="Flask帅气的Hello World示例让人印象深刻。其中使用装饰器的路由写法功不可没，甚至以前看过一个系列没那么神奇，讲了app.route。是的，它好像并没有那么神奇，我也来解析一下😆">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="阿里云OSS绑定letsencrypt证书">
-<meta property="og:url" content="https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/index.html">
+<meta property="og:title" content="Flask路由机制">
+<meta property="og:url" content="https://www.zoulei.net/2016/09/11/flask_routing_note/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。">
-<meta property="og:updated_time" content="2016-08-29T08:09:25.000Z">
+<meta property="og:description" content="Flask帅气的Hello World示例让人印象深刻。其中使用装饰器的路由写法功不可没，甚至以前看过一个系列没那么神奇，讲了app.route。是的，它好像并没有那么神奇，我也来解析一下😆">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/werkzeug_rule_re.png">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/werkzeug_converter_args_re.png">
+<meta property="og:updated_time" content="2016-09-11T14:11:49.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="阿里云OSS绑定letsencrypt证书">
-<meta name="twitter:description" content="继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。">
+<meta name="twitter:title" content="Flask路由机制">
+<meta name="twitter:description" content="Flask帅气的Hello World示例让人印象深刻。其中使用装饰器的路由写法功不可没，甚至以前看过一个系列没那么神奇，讲了app.route。是的，它好像并没有那么神奇，我也来解析一下😆">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -229,19 +231,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            阿里云OSS绑定letsencrypt证书
+            Flask路由机制
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2016-03-11T18:28:34+08:00">
+    <time itemprop="datePublished" datetime="2016-09-11T22:06:12+08:00">
 	
-		    3月 11, 2016
+		    9月 11, 2016
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+    <a class="category-link" href="/categories/Flask/">Flask</a>
 
 
     
@@ -251,31 +253,44 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。<br><a id="more"></a></p>
-<h2 id="关于RSA的那些事儿"><a href="#关于RSA的那些事儿" class="headerlink" title="关于RSA的那些事儿"></a>关于RSA的那些事儿</h2><p>web安全离不开RSA非对称加密算法，说真的数学原理我没看明白。仅仅知道最后生成的公钥和私钥其实都是一对数字。可是我们经常看到生成的公私钥是字符串。其实它只是经过了一些编码(下见参考)。然后一个密钥用来加密一个密钥用来解密（意味着公私钥都能加密）。其次是签名，签名就是将需要签名的信息使用信息摘要算法（比如sha256）获取摘要。然后使用私钥进行加密，对方使用相同的步骤算出摘要，然后使用公钥对你加密的信息进行解密。如果解密的信息和算出摘要的信息相同则证明该信息完整且为对方发出。其实和HMAC相当的相似，只不过HMAC使用对称密钥。再其实。签名算法都差不多这样OVER</p>
-<h2 id="关于letsencrypt的内部流程"><a href="#关于letsencrypt的内部流程" class="headerlink" title="关于letsencrypt的内部流程"></a>关于letsencrypt的内部流程</h2><p>本节参考<a href="https://github.com/diafygi/acme-tiny/blob/master/acme_tiny.py">acme-tiny脚本</a>。过程中最重要的为用户认证流程。普遍的用户认证流程为获取token，即用户登录获取token，后续的API请求和该token关联。然而letsencrypt的流程非常不同(主要因为它不需要去letsencrypt网站进行注册)。一个独立的账户依靠本地生成证书来认证<code>openssl genrsa 4096 &gt; account.key</code>，该证书为PEM证书。即文件中含有公钥和私钥。对于所有的API请求都会要求签名。<br>签名代码如下：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">_send_signed_request</span><span class="params">(url, payload)</span>:</span></span><br><span class="line">    payload64 = _b64(json.dumps(payload).encode(<span class="string">'utf8'</span>))</span><br><span class="line">    protected = copy.deepcopy(header)</span><br><span class="line">    protected[<span class="string">"nonce"</span>] = urlopen(CA + <span class="string">"/directory"</span>).headers[<span class="string">'Replay-Nonce'</span>]</span><br><span class="line">    protected64 = _b64(json.dumps(protected).encode(<span class="string">'utf8'</span>))</span><br><span class="line">    proc = subprocess.Popen([<span class="string">"openssl"</span>, <span class="string">"dgst"</span>, <span class="string">"-sha256"</span>, <span class="string">"-sign"</span>, account_key],</span><br><span class="line">        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)</span><br><span class="line">    out, err = proc.communicate(<span class="string">"&#123;0&#125;.&#123;1&#125;"</span>.format(protected64, payload64).encode(<span class="string">'utf8'</span>))</span><br><span class="line">    <span class="keyword">if</span> proc.returncode != <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">raise</span> IOError(<span class="string">"OpenSSL Error: &#123;0&#125;"</span>.format(err))</span><br><span class="line">    data = json.dumps(&#123;</span><br><span class="line">        <span class="string">"header"</span>: header, <span class="string">"protected"</span>: protected64,</span><br><span class="line">        <span class="string">"payload"</span>: payload64, <span class="string">"signature"</span>: _b64(out),</span><br><span class="line">    &#125;)</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        resp = urlopen(url, data.encode(<span class="string">'utf8'</span>))</span><br><span class="line">        <span class="keyword">return</span> resp.getcode(), resp.read()</span><br><span class="line">    <span class="keyword">except</span> IOError <span class="keyword">as</span> e:</span><br><span class="line">        <span class="keyword">return</span> getattr(e, <span class="string">"code"</span>, <span class="keyword">None</span>), getattr(e, <span class="string">"read"</span>, e.__str__)()</span><br></pre></td></tr></table></figure>
-<p>可以看出从证书中取出公钥。然后依照<code>公钥+(公钥+服务器随机数+信息)+第二部分的签名</code>证明自己的身份。即：一个公钥对应一个身份。<br>后续的流程就是：①身份注册→→→→②获取域名列表→→→→(③发送http挑战请求→→→→④根据返回内容建立文件→→→→⑤自身测试下载→→→→⑥发送挑战测试请求)→→→→⑦提交csr文件返回签名证书</p>
-<h2 id="移植到OSS上"><a href="#移植到OSS上" class="headerlink" title="移植到OSS上"></a>移植到OSS上</h2><p>网上大多数教程都是部署到服务器。和部署到OSS最大的差别在于上面的划括号的部分。部署在服务器上是在服务器生成文件，如果部署到阿里云OSS，则应该上传文件到阿里云。没有别的区别。另外还可以使用DNS挑战。如果你使用cloudxns作DNS解析。也可以使用它，从而通过验证，另外一点。生成的证书文件需要在阿里云CDN设置页面设置。<code>然而！！！阿里云并没有提供API接口！！！</code>，意味着需要手工操作。然而至少每3个月更新一次还是很频繁的。。。。。。所以，要真用在上面还得三思<br><a href="https://gist.github.com/ficapy/2cef398fc4ee18013836">这是我参照acme-tiny改写的证书脚本</a></p>
-<h2 id="hexo使用的一些建议"><a href="#hexo使用的一些建议" class="headerlink" title="hexo使用的一些建议"></a>hexo使用的一些建议</h2><ol>
-<li>将图片文件进行压缩放到CDN上面。压缩工具灰常之多。笔者就不例举了</li>
-<li>引用的国外JS文件能换成国内镜像源的全部替换(先查看有浏览器端有什么请求然后，比如这个模板会使用谷歌字体,直接使用<code>sed -i -- &#39;s/fonts.gstatic.com/fonts-gstatic.lug.ustc.edu.cn/g&#39; **/*(D.)</code>替换成中科大的,zsh专用)</li>
-<li>上传图片不如试试我写的脚本<a href="https://gist.github.com/ficapy/8c57998d14c434ab5df3">https://gist.github.com/ficapy/8c57998d14c434ab5df3</a></li>
-<li>swiftype加载真的好慢好慢。如果为了加载速度绝对要替换掉(😄，现在不免费了留你何用，替换成algolia了)</li>
+            <p>Flask帅气的Hello World示例让人印象深刻。其中使用装饰器的路由写法功不可没，甚至以前看过一个系列<a href="http://ains.co/blog/things-which-arent-magic-flask-part-1.html">没那么神奇</a>，讲了app.route。是的，它好像并没有那么神奇，我也来解析一下😆</p>
+<a id="more"></a>
+<p>Flask的路由是对werkzeug进行了简单的包装，做成了app.route装饰器和blueprint。其实werkzeug中有一段docstring就能反映出flask的路由机制(MapAdapter.dispatch)<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> werkzeug.wrappers <span class="keyword">import</span> Request, Response</span><br><span class="line"><span class="keyword">from</span> werkzeug.wsgi <span class="keyword">import</span> responder</span><br><span class="line"><span class="keyword">from</span> werkzeug.routing <span class="keyword">import</span> Map, Rule</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">on_index</span><span class="params">(request)</span>:</span></span><br><span class="line">    <span class="keyword">return</span> Response(<span class="string">'Hello from the index'</span>)</span><br><span class="line"></span><br><span class="line">url_map = Map([Rule(<span class="string">'/'</span>, endpoint=<span class="string">'index'</span>)])</span><br><span class="line">views = &#123;<span class="string">'index'</span>: on_index&#125;</span><br><span class="line"></span><br><span class="line"><span class="decorator">@responder</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">application</span><span class="params">(environ, start_response)</span>:</span></span><br><span class="line">    request = Request(environ)</span><br><span class="line">    urls = url_map.bind_to_environ(environ)</span><br><span class="line">    <span class="keyword">return</span> urls.dispatch(<span class="keyword">lambda</span> e, v: views[e](request, **v),</span><br><span class="line">                         catch_http_exceptions=<span class="keyword">True</span>)</span><br></pre></td></tr></table></figure></p>
+<p>werkzeug路由的全部实现都在routing.py文件当中，看它就够了。路由的基本功能可以说是</p>
+<ol>
+<li>给出一个URL，匹配到它对应的处理函数，</li>
+<li>给出函数能反推构造出URL</li>
 </ol>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://www.ruanyifeng.com/blog/2013/06/rsa_algorithm_part_one.html">RSA算法原理</a><br><a href="https://zh.wikipedia.org/wiki/%E9%87%91%E9%91%B0%E9%9B%9C%E6%B9%8A%E8%A8%8A%E6%81%AF%E9%91%91%E5%88%A5%E7%A2%BC">HMAC中文维基</a><br><a href="http://blog.sina.com.cn/s/blog_4fcd1ea30100yh4s.html">pem格式</a><br><a href="https://imququ.com/post/letsencrypt-certificate.html">letsencrypt部署</a><br><a href="http://unix.stackexchange.com/questions/112023/how-can-i-replace-a-string-in-a-files">How can I replace a string in a file(s)?</a></p>
+<h2 id="Rule"><a href="#Rule" class="headerlink" title="Rule"></a>Rule</h2><p>一个Rule就是一条URL匹配规则,它的模式如下<code>&lt;converter(arguments):name&gt;</code>,使用正则匹配找出我们需要的信息<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">_rule_re = re.compile(r&#39;&#39;&#39;&#10;    (?P&#60;static&#62;[^&#60;]*)                           # static rule data&#10;    &#60;&#10;    (?:&#10;        (?P&#60;converter&#62;[a-zA-Z_][a-zA-Z0-9_]*)   # converter name&#10;        (?:\((?P&#60;args&#62;.*?)\))?                  # converter arguments&#10;        \:                                      # variable delimiter&#10;    )?&#10;    (?P&#60;variable&#62;[a-zA-Z_][a-zA-Z0-9_]*)        # variable name&#10;    &#62;&#10;&#39;&#39;&#39;, re.VERBOSE)</span><br></pre></td></tr></table></figure></p>
+<p>大概是这么个样子rule匹配<br><img src="https://ficapy.b0.upaiyun.com/blogimg/werkzeug_rule_re.png" alt="werkzeug_rule_re"><br>convert规则匹配<br><img src="https://ficapy.b0.upaiyun.com/blogimg/werkzeug_converter_args_re.png" alt="werkzeug_converter_args_re"><br>很容易想到使用这2个正则能够匹配一个URL，一看他是否匹配某个rule，其次如果匹配那么提取出rule中的参数和值,比如<code>/&lt;int:id&gt;</code>就能匹配<code>/16</code>这个url且得到id=16。这2个函数就是match和build了<br>仅仅有它们是不够的。我们需要的不仅仅是一条Rule，我们需要的是所有Rule的集合。当我们每创建一个Rule的时候将它加入到集合中。所以它提供了get_rules和bind方法</p>
+<p>Rule对象同时有2个非常重要的属性endpoint和_regex(编译后的正则).endpoint不用说匹配返回它，根据它返回构建好的URL，匹配功能则是由_regex对象提供的。另外有几个对象继承自Rule<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Subdomain           self.subdomain&#10;Submount            self.rule = self.path + self.rule&#10;EndpointPrefix      self.endpoint = self.prefix + self.endpoint</span><br></pre></td></tr></table></figure></p>
+<p>可以看出这三个对象都是对Rule的属性进行了小幅度修改,其中subdomain和submount修改的最终结果就是改变了_regex对象</p>
+<p>说一下Subdomain,子域名。这玩意儿好像并不常用，一般一个子域名就是单独一个项目了，不大会几个子域名混合在一个项目里面。如果要使用子域名需要设置SERVER_NAME。示例如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> Flask</span><br><span class="line">app = Flask(__name__)</span><br><span class="line">app.config[<span class="string">'SERVER_NAME'</span>] = <span class="string">'app.local:5000'</span></span><br><span class="line"><span class="decorator">@app.route('/',subdomain='blog')</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">index</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">return</span> <span class="string">'Hello'</span></span><br><span class="line">app.run(<span class="string">'app.local'</span>)</span><br></pre></td></tr></table></figure><br>然后就是在host里面添加就可以正常调试子域名了<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1 app.local&#10;127.0.0.1 blog.app.local</span><br></pre></td></tr></table></figure></p>
+<h2 id="Map"><a href="#Map" class="headerlink" title="Map"></a>Map</h2><p>Map的作用就是将所有的Rule组合在一起,所以add函数是必须的,Rule对象中的match和build都只是针对自己的，Map中提供的match和build则是针对所有Rule的。比如在Flask中写app.route必然会调用add，将该Rule添加到Map中。代码如下(0.1版本)<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">add_url_rule</span><span class="params">(self, rule, endpoint, **options)</span>:</span></span><br><span class="line">    options[<span class="string">'endpoint'</span>] = endpoint</span><br><span class="line">    options.setdefault(<span class="string">'methods'</span>, (<span class="string">'GET'</span>,))</span><br><span class="line">    self.url_map.add(Rule(rule, **options))</span><br><span class="line">    </span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">route</span><span class="params">(self, rule, **options)</span>:</span></span><br><span class="line">  <span class="function"><span class="keyword">def</span> <span class="title">decorator</span><span class="params">(f)</span>:</span></span><br><span class="line">      self.add_url_rule(rule, f.__name__, **options)</span><br><span class="line">      self.view_functions[f.__name__] = f</span><br><span class="line">      <span class="keyword">return</span> f</span><br><span class="line">  <span class="keyword">return</span> decorator</span><br></pre></td></tr></table></figure><br>代码中self.url_map = Map(),可以看到app.route做了2件事情，加入到Map中，加入到了view_functions字典中(endpoint对应函数,这段代码和文章开头的代码是很相似的)</p>
+<p>Map对象中有2个属性也是比较重要的,_rules列表和_rules_by_endpoint字典。前者存放所有Rule对象，匹配的时候用来遍历，后者为endpoint到Rule的映射。用来build重组URL</p>
+<p>现在再来看看Flask中的dispatch分发逻辑<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">dispatch_request</span><span class="params">(self)</span>:</span></span><br><span class="line">    <span class="string">"""Does the request dispatching.  Matches the URL and returns the</span><br><span class="line">    return value of the view or error handler.  This does not have to</span><br><span class="line">    be a response object.  In order to convert the return value to a</span><br><span class="line">    proper response object, call :func:`make_response`.</span><br><span class="line">    """</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        endpoint, values = self.match_request()</span><br><span class="line">        <span class="keyword">return</span> self.view_functions[endpoint](**values)</span><br><span class="line">    <span class="keyword">except</span> HTTPException, e:</span><br><span class="line">        handler = self.error_handlers.get(e.code)</span><br><span class="line">        <span class="keyword">if</span> handler <span class="keyword">is</span> <span class="keyword">None</span>:</span><br><span class="line">            <span class="keyword">return</span> e</span><br><span class="line">        <span class="keyword">return</span> handler(e)</span><br><span class="line">    <span class="keyword">except</span> Exception, e:</span><br><span class="line">        handler = self.error_handlers.get(<span class="number">500</span>)</span><br><span class="line">        <span class="keyword">if</span> self.debug <span class="keyword">or</span> handler <span class="keyword">is</span> <span class="keyword">None</span>:</span><br><span class="line">            <span class="keyword">raise</span></span><br><span class="line">        <span class="keyword">return</span> handler(e)</span><br></pre></td></tr></table></figure><br>匹配请求得到endpoint再从view_function中得到对应的处理函数执行</p>
+<h2 id="Blueprint"><a href="#Blueprint" class="headerlink" title="Blueprint"></a>Blueprint</h2><p>@app.route虽然够炫酷，可是它绝不适应于大项目。因为注册的endpoint就是函数的名称，在大项目中绝对会存在重名函数的。Blueprint的解决办法就是<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">blueprint = Blueprint(&#39;public&#39;, __name__, static_folder=&#39;../static&#39;)&#10;@blueprint.route(&#39;/&#39;, methods=[&#39;GET&#39;, &#39;POST&#39;])&#10;def index()&#10;&#10;app.register_blueprint(blueprint)</span><br></pre></td></tr></table></figure></p>
+<p>这样它注册的endpoint就会变成public.index，解决了重名问题</p>
+<p>有人问为什么endpoint不直接使用对应的函数，而要使用字符串。我认为是使用url_for等构建URL函数的时候需要它是字符串，因为使用装饰器后func = deactor(func)，你使用@app.route之后注册的func和你现在的func不是同一个对象。构建函数将无法使用,这也告诉了我们,任何时候其他的装饰器都需要写在@app.route下面,因为如果写在上面，你注册的那个函数是不包含上面的装饰器的，注定了上面的装饰器无法执行</p>
 
             
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-link" href="/tags/Flask/">Flask</a>
+
+            </div>
+        
         <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/05/05/openwrt_recovery_you_need_to_know/"  data-tooltip="openwrt刷机常识">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -283,7 +298,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/03/06/install_hexo_to_aliyun_oss/" data-tooltip="将hexo部署到阿里云OSS">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/05/flask_plugin_note/" data-tooltip="Flask插件原理">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -298,17 +313,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/11/flask_routing_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/11/flask_routing_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/11/flask_routing_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -356,7 +371,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/05/05/openwrt_recovery_you_need_to_know/"  data-tooltip="openwrt刷机常识">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -364,7 +379,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/03/06/install_hexo_to_aliyun_oss/" data-tooltip="将hexo部署到阿里云OSS">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/05/flask_plugin_note/" data-tooltip="Flask插件原理">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -379,17 +394,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/11/flask_routing_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/11/flask_routing_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/11/flask_routing_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -415,17 +430,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/11/flask_routing_note/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/11/flask_routing_note/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/11/flask_routing_note/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -638,9 +653,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/';
+                 this.page.url = 'https://www.zoulei.net/2016/09/11/flask_routing_note/';
                  
-                    this.page.identifier = '2016/03/11/letsencrypt_aliyun_oss/';
+                    this.page.identifier = '2016/09/11/flask_routing_note/';
                  
              };
             (function() {

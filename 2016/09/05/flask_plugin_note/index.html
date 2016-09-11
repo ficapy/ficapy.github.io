@@ -16,10 +16,10 @@
     <meta name="description" content="Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月1">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Flask插件原理">
-<meta property="og:url" content="https://www.zoulei.net/2016/09/05/2016-09-05/index.html">
+<meta property="og:url" content="https://www.zoulei.net/2016/09/05/flask_plugin_note/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月1">
-<meta property="og:updated_time" content="2016-09-05T09:18:48.000Z">
+<meta property="og:updated_time" content="2016-09-11T14:08:21.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flask插件原理">
 <meta name="twitter:description" content="Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月1">
@@ -261,7 +261,7 @@
 </ol>
 <h2 id="精简版本实现"><a href="#精简版本实现" class="headerlink" title="精简版本实现"></a>精简版本实现</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ExtensionImporter</span><span class="params">(object)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">install</span><span class="params">(self)</span>:</span></span><br><span class="line">        sys.meta_path[:] = [x <span class="keyword">for</span> x <span class="keyword">in</span> sys.meta_path <span class="keyword">if</span> self != x] + [self]</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">find_module</span><span class="params">(self, fullname, path=None)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> fullname.startswith(<span class="string">'flask.ext.'</span>):</span><br><span class="line">            <span class="keyword">return</span> self</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">load_module</span><span class="params">(self, fullname)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> fullname <span class="keyword">in</span> sys.modules:</span><br><span class="line">            <span class="keyword">return</span> sys.modules[fullname]</span><br><span class="line"></span><br><span class="line">        modname = fullname.split(<span class="string">'.'</span>)[-<span class="number">1</span>]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        realname = <span class="string">'flask_'</span> +  modname</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            __import__(realname)</span><br><span class="line">        <span class="keyword">except</span> ImportError:</span><br><span class="line">            <span class="keyword">raise</span> ImportError(<span class="string">'No module named %s'</span> % fullname)</span><br><span class="line"></span><br><span class="line">        module = sys.modules[fullname] = sys.modules[realname]</span><br><span class="line">        <span class="keyword">if</span> <span class="string">'.'</span> <span class="keyword">not</span> <span class="keyword">in</span> modname:</span><br><span class="line">            setattr(sys.modules[<span class="string">'flask.ext'</span>], modname, module)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> module</span><br></pre></td></tr></table></figure>
 <p>ExtensionImporter是一个finder对象,当执行import flask.ext时会把它加入到sys.meta_path列表，后续的import都会先执行它，判断满足要求后就会使用__import__导入然后加入到sys.modules，这样就实现了flask.ext.sqlalchemy导入</p>
-<p>为什么会被废除呢。下面是我猜测的。首先本来这个东西没有实质的作用，就是看着炫酷而已。我们可以认为所有的扩展导入都会使用flask.ext.xxx，但是这对第三方扩展库是有要求的，那就是包名必须为flask_xxx才行，我猜测有的第三方库未必遵守这个规则(否则exthook.py中也不会出现['flask_%s', 'flaskext.%s'flaskext.另外一种形式)，这就说明了有的作者使用了flaskextxxx这种包名。出现了第二种难免就会出现另外的。当使用者发现并非所有的第三方扩展都使用flask.ext导入的时候。社区也觉得没必要维持了，毕竟第一个写这个代码的人是不是因为刚刚了解了import机制，觉得很炫酷写上去的呢-_-,so，最后还是回到了原来的位置，直接使用import flask_sqlalchemy导入吧</p>
+<p>为什么会被废除呢。下面是我猜测的。首先本来这个东西没有实质的作用，就是看着炫酷而已。我们可以认为所有的扩展导入都会使用flask.ext.xxx，但是这对第三方扩展库是有要求的，那就是包名必须为flask_xxx才行，我猜测有的第三方库未必遵守这个规则(否则exthook.py中也不会出现['flask_%s', 'flaskext.%s'flaskext.另外一种形式)，这就说明了有的作者使用了flaskextxxx这种包名。出现了第二种难免就会出现另外的。当使用者发现并非所有的第三方扩展都使用flask.ext导入的时候。社区也觉得没必要维持了，毕竟第一个写这个代码的人是不是因为刚刚了解了import机制，觉得很炫酷写上去的呢-_-,另外这种花哨的设计也可能对代码自动补全功能产生了负面影响。so，最后还是回到了原来的位置，直接使用import flask_sqlalchemy导入吧</p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://docs.python.org/3/reference/import.html#import-hooks">官方import hook文档</a><br><a href="https://github.com/Liuchang0812/slides/tree/master/pycon2015cn">pycon2015 import演讲</a><br><a href="https://github.com/mitsuhiko/flask-sqlalchemy">flask-sqlalchemy</a></p>
 
             
@@ -281,7 +281,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--disabled">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/11/flask_routing_note/"  data-tooltip="Flask路由机制">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -304,17 +304,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/05/2016-09-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/05/2016-09-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/05/2016-09-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -362,7 +362,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--disabled">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/11/flask_routing_note/"  data-tooltip="Flask路由机制">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -385,17 +385,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/05/2016-09-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/05/2016-09-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/05/2016-09-05/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -421,17 +421,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/05/2016-09-05/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/05/2016-09-05/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/05/2016-09-05/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -630,7 +630,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 45 篇文章
+                找到 46 篇文章
             </p>
         </div>
     </div>
@@ -644,9 +644,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2016/09/05/2016-09-05/';
+                 this.page.url = 'https://www.zoulei.net/2016/09/05/flask_plugin_note/';
                  
-                    this.page.identifier = '2016/09/05/2016-09-05/';
+                    this.page.identifier = '2016/09/05/flask_plugin_note/';
                  
              };
             (function() {
