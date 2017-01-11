@@ -25,7 +25,7 @@ Python 3 Wall的反派代表，一直不能使用python3安装
 
 Python 3 Wall的反派代表，一直不能使用python3安装
 对中文输出支持奇差，估计是使用python2造成的，举个例子，假如你要在python2里面print输出一个unicode中文字符。我试了各种办法，均无解(和supervisor使用子进程运行程序的策略有关),好在使用logging模块输出中文居然没啥问题-_-，正式运行环境也是">
-<meta property="og:updated_time" content="2016-12-25T12:26:09.000Z">
+<meta property="og:updated_time" content="2017-01-11T08:02:14.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="supervisor遇到的坑">
 <meta name="twitter:description" content="写几条自己用supervisor遇到的一些小坑
@@ -267,7 +267,9 @@ Python 3 Wall的反派代表，一直不能使用python3安装
 <li>即使用python3，输出中文也会遇到问题,需要在配置文件添加<code>environment=LANG=&quot;en_US.utf8&quot;, LC_ALL=&quot;en_US.UTF-8&quot;, LC_LANG=&quot;en_US.UTF-8&quot;</code>解决</li>
 <li>写配置文件的时候一个变量不能配置多行,我一开始因为environment太长。写了2行，导致后面的没生效，折腾好久</li>
 <li>修改supervisor配置文件后，如果配置文件错了，不会报错！而且supervisor没有工具能对配置文件的正确性进行检查，灰常操蛋啊！</li>
+<li>supervisor可以检查到异常自动重启并设置最大重启次数，可是有时候会造成无限重启这种情况。因为重启后立刻退出才会触发最大重启次数机制，假如程序一直是运行了十分钟自动退出。那么会造成无限重启，可以使用它的api写一个脚本监控这种情况，进行警告</li>
 </ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> xmlrpc.client</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">list_time</span><span class="params">(name: str, interval: int, times: int)</span>:</span></span><br><span class="line">    s = xmlrpc.client.ServerProxy(<span class="string">'http://localhost:9001'</span>)</span><br><span class="line">    <span class="keyword">if</span> s.supervisor.getProcessInfo(name).get(<span class="string">'statename'</span>) != <span class="string">'RUNNING'</span>:</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">False</span></span><br><span class="line">    context = s.supervisor.readLog(<span class="number">0</span>, <span class="number">10</span> * <span class="number">1024</span> * <span class="number">100</span>)</span><br><span class="line">    context = filter(<span class="keyword">lambda</span> x: name <span class="keyword">in</span> x <span class="keyword">and</span> <span class="string">'spawn'</span> <span class="keyword">in</span> x, context.splitlines())</span><br><span class="line">    context = map(<span class="keyword">lambda</span> x: datetime.strptime(x[:<span class="number">19</span>], <span class="string">'%Y-%m-%d %H:%M:%S'</span>), context)</span><br><span class="line">    context = list(filter(<span class="keyword">lambda</span> x: x + timedelta(minutes=interval) &gt; datetime.now(), context))</span><br><span class="line">    <span class="keyword">return</span> (len(context) &gt; times) <span class="keyword">and</span> len(context)</span><br></pre></td></tr></table></figure>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://in355hz.iteye.com/blog/1860787">也谈 Python 的中文编码处理</a></p>
 
             
@@ -349,7 +351,7 @@ Python 3 Wall的反派代表，一直不能使用python3安装
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2016 ficapy. All Rights Reserved.
+        Copyrights &copy; 2017 ficapy. All Rights Reserved.
     </span>
 </footer>
 
