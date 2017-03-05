@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-03-05T14:23:41.000Z</updated>
+  <updated>2017-03-05T14:23:56.000Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="https://www.zoulei.net/2017/03/05/acme.sh_quick_start/"/>
     <id>https://www.zoulei.net/2017/03/05/acme.sh_quick_start/</id>
     <published>2017-03-05T09:19:27.000Z</published>
-    <updated>2017-03-05T14:23:41.000Z</updated>
+    <updated>2017-03-05T14:23:56.000Z</updated>
     
     <content type="html"><![CDATA[<p>letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧</p>
 <a id="more"></a>
