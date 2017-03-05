@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-03-04T10:44:07.000Z</updated>
+  <updated>2017-03-05T14:23:41.000Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,74 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>使用acme.sh快速搭建https</title>
+    <link href="https://www.zoulei.net/2017/03/05/acme.sh_quick_start/"/>
+    <id>https://www.zoulei.net/2017/03/05/acme.sh_quick_start/</id>
+    <published>2017-03-05T09:19:27.000Z</published>
+    <updated>2017-03-05T14:23:41.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧</p>
+<a id="more"></a>
+<p>首先有2种认证方式，生成一个指定的文件让letsencrypt访问。或者生成一个DNS记录让letsencrypt访问。第一种方式有非常大的局限性。比如你的80端口正在被使用。那么你需要先设置DNS解析，再修改下nginx的配置让网址能够被正常访问到。这就显得很麻烦了。主流的DNS服务提供商都已经提供了API接口，使用DNS的优势就是：</p>
+<ol>
+<li>任何电脑都能直接生成证书文件，不需要依赖本机能够被外部访问</li>
+<li>不需要对nginx做任何设置</li>
+</ol>
+<p>以下记录下我使用一个临时的digitalocean机器从0开始部署https的步骤(假设测试url为ssl.ficapy.com,操作环境为osx)</p>
+<p>我还是要安利下，临时使用digitalocean测试使用命令行工具tugboat灰常好啊</p>
+<ol>
+<li><p>安装tugboat用命令行快速创建机器以及测试完成后删除</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gem install tugboat</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>将digitalocean的api写入让tugboat能够正常使用,并执行一些初始化设置</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat authorize</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>根据初始化默认设置创建一个vps</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat create temp</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>ssh登陆</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat ssh temp</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>安装acme.sh</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl https://get.acme.sh | sh</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>参照acme.sh文档将dns的api信息作为环境变量写入(记得执行source ~/.bashrc)</p>
+</li>
+<li><p>生成证书</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --issue --dns dns_cf -d ssl.ficapy.com --debug</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>将证书放置到位置并设置nginx重启命令</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --installcert -d ssl.ficapy.com \&#10;           --keypath       /etc/nginx/ssl/ssl.ficapy.com.key  \&#10;           --fullchainpath /etc/nginx/ssl/ssl.ficapy.com.pem \&#10;           --reloadcmd     &#34;service nginx force-reload&#34;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>强制测试续约(该操作会自动执行注册过的事件，一般就是重启nginx咯，续约key是不会变的，变的是fullchain.cer文件)</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --renew-all --force</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>生成dhparam文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>使用生成一个标准的nginx配置文件并放入/etc/nginx/site-enables目录，示例如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    server &#123;&#10;    listen 443 ssl;&#10;&#10;    server_name ssl.ficapy.com;&#10;    # certs sent to the client in SERVER HELLO are concatenated in ssl_certificate&#10;    ssl_certificate /etc/nginx/ssl/ssl.ficapy.com.pem;&#10;    ssl_certificate_key /etc/nginx/ssl/ssl.ficapy.com.key;&#10;    ssl_session_timeout 1d;&#10;    ssl_session_cache shared:SSL:50m;&#10;&#10;&#10;    # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits&#10;    ssl_dhparam /etc/nginx/ssl/dhparam.pem;&#10;&#10;    # intermediate configuration. tweak to your needs.&#10;    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;&#10;    ssl_ciphers &#39;ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS&#39;;&#10;    ssl_prefer_server_ciphers on;&#10;&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>最后就是浏览器访问以下测试完毕啦。如果出现错误可以查看nginx的日志/var/log/error.log，肯定是哪一步出问题啦，最后就是测试完毕后删除vps啦<code>tugboat destory temp</code></p>
+</li>
+</ol>
+<p>额外说一下其他的吧。最开始我试过阿里云dns的api，用的是子账号。结果子账号是无法包含(注意)dns的操作权限的，就总是失败。后来不用子账号，直接用原账号的api密匙就完全没问题啦~~~。另外各大云平台大多都有负载均衡器，然后可以填写https证书。这种就不太适合letsencrypt这种短期证书了。否则总上去换证书不被麻烦死。如果在这种负载均衡器上不设置https证书。那么就需要在负载均衡器每一台机器都设置上https证书，嗯想想也挺头大啊~~~，所以这种自动化方式只比较适合在一台机器上生成并维护证书</p>
+<p>再额外，哪个时候写个Ansible的playbook就好哒，可能会更加方便┑(￣Д ￣)┍</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://github.com/pearkes/tugboat">github tugboat</a><br><a href="https://mozilla.github.io/server-side-tls/ssl-config-generator/">mozilla ssl-config-generator</a><br><a href="https://ruby-china.org/topics/31983">使用 acme.sh 给 Nginx 安装 Let’ s Encrypt 提供的免费 SSL 证书</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="DevOps" scheme="https://www.zoulei.net/categories/DevOps/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>使用pre-commit改进代码风格</title>
@@ -712,41 +780,6 @@ Created with Monodraw
       &lt;pre&gt;&lt;code&gt; _ _ _ ____ ____ _ ____ ____ ____    _ _  _ _  _ ____ ____ _ ___
  | | | [__  | __ | |__/ |___ |___    | |\ | |__| |___ |__/ |  |
 
-    
-    </summary>
-    
-      <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>http.server源码阅读</title>
-    <link href="https://www.zoulei.net/2016/07/02/http_server_note/"/>
-    <id>https://www.zoulei.net/2016/07/02/http_server_note/</id>
-    <published>2016-07-02T09:07:20.000Z</published>
-    <updated>2016-07-02T10:19:40.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)</p>
-<a id="more"></a>
-<p>先上图为敬:D<br><img src="https://ficapy.b0.upaiyun.com/blogimg/httpserver_note.png" alt=""><br>这个模块只需要关心BaseHTTPRequestHandler类，其实里面还有个CGI处理类，不过这玩意儿估计也是上古神兽了。没关注的必要。</p>
-<h3 id="代码解读"><a href="#代码解读" class="headerlink" title="代码解读"></a>代码解读</h3><ol>
-<li>支持http版本0.9、1.0、1.1，区别就是0.9版本只有body。1.1版本显式支持keep-alive。为了支持keep-alive，代码中有多处处理逻辑</li>
-<li>对于内容的解析主要是使用parse_request方法。该方法逻辑主要解析第一行request line。如果出错就直接调用send_error返回错误内容。header部分主要引入了email.parser.Parser进行解析</li>
-<li>parser_request对<code>Except:100-continue</code>进行了特殊处理，见附录</li>
-<li>返回status line和header是先使用send_response_only创建一个列表，然后调用send_header依次在列表中添加数据，最后调用end_headers发送数据</li>
-<li><code>send_error函数就是一个回复的典范</code></li>
-<li>剩下就是日志函数和几个辅助函数了</li>
-</ol>
-<h3 id="示例"><a href="#示例" class="headerlink" title="示例"></a>示例</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> http.server <span class="keyword">import</span> BaseHTTPRequestHandler</span><br><span class="line"><span class="keyword">from</span> socketserver <span class="keyword">import</span> ThreadingTCPServer</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Handle</span><span class="params">(BaseHTTPRequestHandler)</span>:</span></span><br><span class="line">    protocol_version = <span class="string">"HTTP/1.1"</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">do_GET</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.send_error(<span class="number">500</span>)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">do_POST</span><span class="params">(self)</span>:</span></span><br><span class="line">        len = self.headers.get(<span class="string">'Content-Length'</span>)</span><br><span class="line">        data = self.rfile.read(int(len))</span><br><span class="line"></span><br><span class="line">        self.send_response(<span class="number">200</span>)</span><br><span class="line">        self.send_header(<span class="string">'Content-Length'</span>, len)</span><br><span class="line">        self.end_headers()</span><br><span class="line">        self.wfile.write(data)</span><br><span class="line"></span><br><span class="line">ThreadingTCPServer((<span class="string">''</span>, <span class="number">9999</span>), Handle).serve_forever()</span><br></pre></td></tr></table></figure>
-<p>这是一个最简的http server。do_GET函数表面send_error就能够响应一个请求。do_POST函数参照send_error的逻辑只不过读取了客户端发送的body字段</p>
-<h3 id="小知识"><a href="#小知识" class="headerlink" title="小知识"></a>小知识</h3><h6 id="类变量和实例变量"><a href="#类变量和实例变量" class="headerlink" title="类变量和实例变量"></a>类变量和实例变量</h6><p>这2个非常相近，具体区别我就不概述了。在写代码的时候很多人无脑self.xxx = xxx就搞了一个实例变量。大多数时候用实例变量都能够替代类变量的功能。这很容易让人忽略类变量的优点。①含义明确：这是这个类的所有实例共用的。②不需要重载<strong>init</strong>，这在继承的时候是很有用哒~~~，so，不要有事没事无脑在<strong>init</strong>里面self.xxx = xxx啦</p>
-<h3 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h3><p><a href="http://www.laruence.com/2011/01/20/1840.html">Expect:100-continue</a><br><a href="https://docs.python.org/3.6/library/http.server.html?highlight=http.server#http.server.BaseHTTPRequestHandler">官方文档</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)&lt;/p&gt;
     
     </summary>
     
