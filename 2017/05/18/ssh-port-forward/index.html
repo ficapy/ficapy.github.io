@@ -6,23 +6,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>tornado表单验证 - 邹雷</title>
+    <title>ssh端口映射 - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。">
+    <meta name="description" content="开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="tornado表单验证">
-<meta property="og:url" content="https://www.zoulei.net/2017/03/23/tornado_wtforms/index.html">
+<meta property="og:title" content="ssh端口映射">
+<meta property="og:url" content="https://www.zoulei.net/2017/05/18/ssh-port-forward/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。">
-<meta property="og:updated_time" content="2017-03-23T12:41:08.000Z">
+<meta property="og:description" content="开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下">
+<meta property="og:updated_time" content="2017-03-12T04:34:53.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="tornado表单验证">
-<meta name="twitter:description" content="工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。">
+<meta name="twitter:title" content="ssh端口映射">
+<meta name="twitter:description" content="开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -229,19 +229,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            tornado表单验证
+            ssh端口映射
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2017-03-23T20:41:08+08:00">
+    <time itemprop="datePublished" datetime="2017-05-18T09:34:34+08:00">
 	
-		    3月 23, 2017
+		    5月 18, 2017
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/python/">python</a>
+    <a class="category-link" href="/categories/DevOps/">DevOps</a>
 
 
     
@@ -251,17 +251,36 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。</p>
+            <p>开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下</p>
 <a id="more"></a>
-<p>首先是将wtforms嵌入tornado。做法可以参考<a href="https://github.com/truemped/tornadotools/blob/master/tornadotools/forms.py">https://github.com/truemped/tornadotools/blob/master/tornadotools/forms.py</a>，我的做法类似，可以看最下面的代码。这样继承一下就能够使用wtforms的表单验证了。能够使用的结果是很多人写这样的代码</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">self.xx1 = self.form.xx1.data&#10;self.xx2 = self.form.xx2.data&#10;self.xx3 = self.form.xx3.data&#10;:&#10;&#16;:</span><br></pre></td></tr></table></figure>
-<p>然后这样写了20行(不黑，项目里真有这样的)。写的人也确实是很认真啊！，改进的方法很简单。调用self.xx1的时候自动取值self.form.xx1.data。能做成这样的方法挺多。很多时候会导致self.xxx使用IDE无法补全。我个人认为好的代码肯定能够方便的补全和提示，毕竟这样能实打实的提升码代码的心情，试想一下你要输入20个单词，很可能一不小心就输入错误了。改进的方法就是使用<code>__getattribute__</code>,配合类继承，兼顾自动补全也不用跑去写self.form.xxx.data了</p>
 <ol>
-<li><code>__getattr__</code>，当属性不存在的时候会调用</li>
-<li><code>__getattribute__</code>,无论属性是否存在都会被调用</li>
+<li><p>-D参数，提供一个socket5级别的代理。</p>
+<p> 这个在很多年以前翻墙的时候还是很好用的。不过都已经成为了历史。有代理使用经验的开发者都能很快理解这个玩意</p>
+</li>
+<li><p>-L(local forward)本地转发</p>
+<p> 比如你现在需要连接到正式环境的数据库,那么你不需要先ssh到正式环境再输入数据库命令。我的做法是选择用图形界面查看数据库。命令是这样的 </p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh -L  6789:192.168.10.10:5432 prod</span><br></pre></td></tr></table></figure>
+<p> 含义就是将本地6789端口接受到的请求转发到生产环境prod上面的192.168.10.10:5432，这样本地GUI数据库管理程序就能够直接连接本地6789端口显示线上数据了。可以看出它的作用就是将本地端口的请求转发的服务器上面</p>
+</li>
+<li><p>-R(Remote forward)远程转发</p>
+<p> 这个就是和本地转发相反。在连接的服务器上打开一个端口，映射到自己的端口。此时数据流是服务器端口接收到的数据传到了本地。比如你需要一个公网ip(显然我们的办公环境都是没有公网ip的)来调试你的web应用，比如你本地写了个web程序监听8989端口，你远程服务器上有公网ip。你需要把web程序临时分享到公网给别人尝试使用。执行以下命令</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh -R 4321:127.0.0.1:8989 prod</span><br></pre></td></tr></table></figure>
+<p> 这样别人访问prod_ip:4321就会映射到你本地的8989端口上。</p>
+</li>
+<li><p>助记</p>
+<p> 刚开始可能觉得端口比较容易混淆。只需要记住xx:xx，前面是入口，后面是出口。本地转发的时候数据是从本地发到远程。所以6789是本地端口。远程转发的时候数据是从远程发到本地。所以8989是本地端口</p>
+</li>
+<li><p>辅助参数及工具</p>
+<p> 假如你只需要端口映射不需要进入终端执行命令。可以增加-Nf参数，-N为不进入交互式终端。f为后台执行。假如你需要长期使用，那就使用autossh，和ssh一个套路。就不举例了</p>
+</li>
 </ol>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">import tornado.ioloop&#10;import tornado.web&#10;&#10;from wtforms import validators, fields&#10;from wtforms import Form&#10;from wtforms.fields.core import UnboundField&#10;&#10;&#10;class MultiDict(dict):&#10;    def getlist(self, key):&#10;        return self[key]&#10;&#10;    def setlist(self, key, value):&#10;        self[key] = value&#10;&#10;&#10;class BaseForm(Form):&#10;    def __init__(self, handler=None, obj=None, prefix=&#39;&#39;, **kwargs):&#10;        if handler is None:&#10;            return&#10;        formdata = MultiDict()&#10;        if handler.request.method == &#39;POST&#39;:&#10;            for name in handler.request.arguments.keys():&#10;                formdata.setlist(name, handler.get_arguments(name))&#10;        else:&#10;            for name in handler.request.query_arguments.keys():&#10;                formdata.setlist(name, handler.request.query_arguments[name])&#10;        Form.__init__(self, formdata, obj=obj, prefix=prefix, **kwargs)&#10;&#10;&#10;class LoginForm(BaseForm):&#10;    email = fields.StringField(&#10;        validators=[validators.Email(), validators.required(), validators.length(min=5, max=64)])&#10;    password = fields.PasswordField(validators=[validators.required()])&#10;&#10;&#10;class MainHandler(tornado.web.RequestHandler, LoginForm):&#10;    def __getattribute__(self, item):&#10;        ret = object.__getattribute__(self, item)&#10;        if isinstance(ret, UnboundField):&#10;            form = object.__getattribute__(self, &#39;form&#39;)&#10;            return getattr(form, item).data&#10;        return ret&#10;&#10;    def post(self):&#10;        self.form = LoginForm(self)&#10;        print(self.email)&#10;        self.write(&#34;Hello, world&#34;)&#10;&#10;&#10;def make_app():&#10;    return tornado.web.Application([&#10;        (r&#34;/&#34;, MainHandler),&#10;    ])&#10;&#10;&#10;if __name__ == &#34;__main__&#34;:&#10;    app = make_app()&#10;    app.listen(8888)&#10;    tornado.ioloop.IOLoop.current().start()</span><br></pre></td></tr></table></figure>
-<p>完美解决问题,心情瞬间舒畅了┑(￣Д ￣)┍</p>
+<h2 id="扩展"><a href="#扩展" class="headerlink" title="扩展"></a>扩展</h2><p>其实本地转发和远程转发已经形成了一个双向的数据流动。这样我们就能够实现一些看起来很高级的功能。比如访问内网机器(没有公网ip，不能够被直接访问到)。只要内网机器能够使用ssh访问到外部机器，而这台外部机器我们能够进行访问。那么此时就是搭配本地转发和远程转发的时候了。(注意，如果外部机器能够和内部机器双向访问那么会更简单)</p>
+<p>思路就是使用内网机器访问外部机器，使用远程端口映射，将本机的22端口映射到外部机器的任一端口上。之后在外部机器就能够使用ssh localhost -p xx访问到内网机器了。然而这需要我们先登录到外部机器再使用localhost登陆到内网。此时我们可以更简单的使用~/.ssh/config配置文件完成</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host demo&#10;    user    ficapy&#10;    HostName    localhost&#10;    ProxyCommand ssh prod -W %h:7890</span><br></pre></td></tr></table></figure>
+<p>ssh demo后会先连接外部机器prod,再将请求转发到localhost:7890上完成对内部机器的登陆。<br>假如内部机器和外部机器可以双向访问，那么就不需要远程端口转发，只需要这样</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host demo&#10;    User ficapy&#10;    HostName &#20869;&#32593;&#26426;&#22120;ip&#10;    ProxyCommand ssh prod -W %h:%p</span><br></pre></td></tr></table></figure>
+<h3 id="更坑爹的情况"><a href="#更坑爹的情况" class="headerlink" title="更坑爹的情况"></a>更坑爹的情况</h3><p>在严格的环境下，假如禁用了ssh协议。不允许从内部ssh到外部。只允许对外发送http、https请求。此时ssh、ngrok1.7版本、frp这种是无法使用的。推荐使用pagekite自建，亦或者使用速度暴慢的ngrok付费版</p>
+<h3 id="收集的ssh配置文件（更好的连接到远端服务器）"><a href="#收集的ssh配置文件（更好的连接到远端服务器）" class="headerlink" title="收集的ssh配置文件（更好的连接到远端服务器）"></a>收集的ssh配置文件（更好的连接到远端服务器）</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host&#9;   *&#10;&#9;Port          &#9;&#9; 22&#10;    User          &#9;&#9; root&#10;    IdentityFile  &#9;&#9; ~/.ssh/id_rsa&#10;    ConnectTimeout &#9;&#9;15&#10;    ConnectionAttempts &#9;3&#10;    ServerAliveInterval &#9;20&#10;    ServerAliveCountMax &#9;5&#9;&#9;&#10;    # &#22810;&#26465;&#36830;&#25509;&#20849;&#20139;&#10;    ControlMaster   &#9;auto&#10;    ControlPath     &#9;/tmp/ssh_mux_%h_%p_%r&#10;    # &#38271;&#36830;&#25509;(&#36864;&#20986;&#26381;&#21153;&#22120;&#21518;&#36830;&#25509;&#20381;&#28982;&#21487;&#37325;&#29992;)&#10;    ControlPersist  &#9;4h&#10;    # &#20943;&#23569;&#24310;&#36831;&#10;    GSSAPIAuthentication &#9;no</span><br></pre></td></tr></table></figure>
 
             
         </div>
@@ -273,7 +292,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--disabled">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/05/31/python_metaclass/"  data-tooltip="理解metaclass">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -281,7 +300,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/18/ssh-port-forward/" data-tooltip="ssh端口映射">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/05/18/tornado_wtforms/" data-tooltip="tornado表单验证">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -296,17 +315,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/03/23/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/05/18/ssh-port-forward/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/03/23/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/05/18/ssh-port-forward/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/03/23/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/05/18/ssh-port-forward/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -354,7 +373,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--disabled">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/05/31/python_metaclass/"  data-tooltip="理解metaclass">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -362,7 +381,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/18/ssh-port-forward/" data-tooltip="ssh端口映射">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/05/18/tornado_wtforms/" data-tooltip="tornado表单验证">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -377,17 +396,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/03/23/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/05/18/ssh-port-forward/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/03/23/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/05/18/ssh-port-forward/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/03/23/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/05/18/ssh-port-forward/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -413,17 +432,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/03/23/tornado_wtforms/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/05/18/ssh-port-forward/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/03/23/tornado_wtforms/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/05/18/ssh-port-forward/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/03/23/tornado_wtforms/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/05/18/ssh-port-forward/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -622,7 +641,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 52 篇文章
+                找到 53 篇文章
             </p>
         </div>
     </div>
@@ -636,9 +655,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2017/03/23/tornado_wtforms/';
+                 this.page.url = 'https://www.zoulei.net/2017/05/18/ssh-port-forward/';
                  
-                    this.page.identifier = '2017/03/23/tornado_wtforms/';
+                    this.page.identifier = '2017/05/18/ssh-port-forward/';
                  
              };
             (function() {

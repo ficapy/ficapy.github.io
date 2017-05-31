@@ -6,23 +6,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>ssh端口映射 - 邹雷</title>
+    <title>理解metaclass - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下">
+    <meta name="description" content="metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="ssh端口映射">
-<meta property="og:url" content="https://www.zoulei.net/2017/03/18/ssh-port-forward/index.html">
+<meta property="og:title" content="理解metaclass">
+<meta property="og:url" content="https://www.zoulei.net/2017/05/31/python_metaclass/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下">
-<meta property="og:updated_time" content="2017-03-12T04:34:53.000Z">
+<meta property="og:description" content="metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5">
+<meta property="og:updated_time" content="2017-05-31T04:14:23.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="ssh端口映射">
-<meta name="twitter:description" content="开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下">
+<meta name="twitter:title" content="理解metaclass">
+<meta name="twitter:description" content="metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -229,19 +229,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            ssh端口映射
+            理解metaclass
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2017-03-18T13:17:19+08:00">
+    <time itemprop="datePublished" datetime="2017-05-31T12:14:23+08:00">
 	
-		    3月 18, 2017
+		    5月 31, 2017
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/DevOps/">DevOps</a>
+    <a class="category-link" href="/categories/python/">python</a>
 
 
     
@@ -251,36 +251,20 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下</p>
+            <p>metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5</p>
 <a id="more"></a>
+<p>你只需要理解以下2点</p>
 <ol>
-<li><p>-D参数，提供一个socket5级别的代理。</p>
-<p> 这个在很多年以前翻墙的时候还是很好用的。不过都已经成为了历史。有代理使用经验的开发者都能很快理解这个玩意</p>
-</li>
-<li><p>-L(local forward)本地转发</p>
-<p> 比如你现在需要连接到正式环境的数据库,那么你不需要先ssh到正式环境再输入数据库命令。我的做法是选择用图形界面查看数据库。命令是这样的 </p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh -L  6789:192.168.10.10:5432 prod</span><br></pre></td></tr></table></figure>
-<p> 含义就是将本地6789端口接受到的请求转发到生产环境prod上面的192.168.10.10:5432，这样本地GUI数据库管理程序就能够直接连接本地6789端口显示线上数据了。可以看出它的作用就是将本地端口的请求转发的服务器上面</p>
-</li>
-<li><p>-R(Remote forward)远程转发</p>
-<p> 这个就是和本地转发相反。在连接的服务器上打开一个端口，映射到自己的端口。此时数据流是服务器端口接收到的数据传到了本地。比如你需要一个公网ip(显然我们的办公环境都是没有公网ip的)来调试你的web应用，比如你本地写了个web程序监听8989端口，你远程服务器上有公网ip。你需要把web程序临时分享到公网给别人尝试使用。执行以下命令</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh -R 4321:127.0.0.1:8989 prod</span><br></pre></td></tr></table></figure>
-<p> 这样别人访问prod_ip:4321就会映射到你本地的8989端口上。</p>
-</li>
-<li><p>助记</p>
-<p> 刚开始可能觉得端口比较容易混淆。只需要记住xx:xx，前面是入口，后面是出口。本地转发的时候数据是从本地发到远程。所以6789是本地端口。远程转发的时候数据是从远程发到本地。所以8989是本地端口</p>
-</li>
-<li><p>辅助参数及工具</p>
-<p> 假如你只需要端口映射不需要进入终端执行命令。可以增加-Nf参数，-N为不进入交互式终端。f为后台执行。假如你需要长期使用，那就使用autossh，和ssh一个套路。就不举例了</p>
-</li>
+<li>metaclass和<code>__new__</code>、<code>__init__</code>并没有非常非常深的关系</li>
+<li>type(name, bases, dict)生成了一个object类，了解三个参数分别指代了什么</li>
 </ol>
-<h2 id="扩展"><a href="#扩展" class="headerlink" title="扩展"></a>扩展</h2><p>其实本地转发和远程转发已经形成了一个双向的数据流动。这样我们就能够实现一些看起来很高级的功能。比如访问内网机器(没有公网ip，不能够被直接访问到)。只要内网机器能够使用ssh访问到外部机器，而这台外部机器我们能够进行访问。那么此时就是搭配本地转发和远程转发的时候了。(注意，如果外部机器能够和内部机器双向访问那么会更简单)</p>
-<p>思路就是使用内网机器访问外部机器，使用远程端口映射，将本机的22端口映射到外部机器的任一端口上。之后在外部机器就能够使用ssh localhost -p xx访问到内网机器了。然而这需要我们先登录到外部机器再使用localhost登陆到内网。此时我们可以更简单的使用~/.ssh/config配置文件完成</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host demo&#10;    user    ficapy&#10;    HostName    localhost&#10;    ProxyCommand ssh prod -W %h:7890</span><br></pre></td></tr></table></figure>
-<p>ssh demo后会先连接外部机器prod,再将请求转发到localhost:7890上完成对内部机器的登陆。<br>假如内部机器和外部机器可以双向访问，那么就不需要远程端口转发，只需要这样</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host demo&#10;    User ficapy&#10;    HostName &#20869;&#32593;&#26426;&#22120;ip&#10;    ProxyCommand ssh prod -W %h:%p</span><br></pre></td></tr></table></figure>
-<h3 id="更坑爹的情况"><a href="#更坑爹的情况" class="headerlink" title="更坑爹的情况"></a>更坑爹的情况</h3><p>在严格的环境下，假如禁用了ssh协议。不允许从内部ssh到外部。只允许对外发送http、https请求。此时ssh、ngrok1.7版本、frp这种是无法使用的。推荐使用pagekite自建，亦或者使用速度暴慢的ngrok付费版</p>
-<h3 id="收集的ssh配置文件（更好的连接到远端服务器）"><a href="#收集的ssh配置文件（更好的连接到远端服务器）" class="headerlink" title="收集的ssh配置文件（更好的连接到远端服务器）"></a>收集的ssh配置文件（更好的连接到远端服务器）</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host&#9;   *&#10;&#9;Port          &#9;&#9; 22&#10;    User          &#9;&#9; root&#10;    IdentityFile  &#9;&#9; ~/.ssh/id_rsa&#10;    ConnectTimeout &#9;&#9;15&#10;    ConnectionAttempts &#9;3&#10;    ServerAliveInterval &#9;20&#10;    ServerAliveCountMax &#9;5&#9;&#9;&#10;    # &#22810;&#26465;&#36830;&#25509;&#20849;&#20139;&#10;    ControlMaster   &#9;auto&#10;    ControlPath     &#9;/tmp/ssh_mux_%h_%p_%r&#10;    # &#38271;&#36830;&#25509;(&#36864;&#20986;&#26381;&#21153;&#22120;&#21518;&#36830;&#25509;&#20381;&#28982;&#21487;&#37325;&#29992;)&#10;    ControlPersist  &#9;4h&#10;    # &#20943;&#23569;&#24310;&#36831;&#10;    GSSAPIAuthentication &#9;no</span><br></pre></td></tr></table></figure>
+<p>了解python中有这样一条关系链type-&gt;object-&gt;instance,通常我们写类默认会继承自object。从关系链就能知道type能够生成object。代码如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span><span class="params">(type)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__new__</span><span class="params">(cls, name, bases, attrs)</span>:</span></span><br><span class="line">        attrs.pop(<span class="string">'e'</span>)</span><br><span class="line">        print(<span class="string">'1'</span>, cls, name, bases, attrs)</span><br><span class="line">        cls.a = <span class="number">1</span></span><br><span class="line">        <span class="keyword">return</span> super().__new__(cls, name, bases, attrs)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># def __call__(self, *args, **kwargs):</span></span><br><span class="line">    <span class="comment">#     print('3')</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, name, bases, attrs)</span>:</span></span><br><span class="line">        self.b = <span class="number">2</span></span><br><span class="line">        print(<span class="string">'2'</span>, self, name, bases, attrs)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">B</span><span class="params">(metaclass=A)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__new__</span><span class="params">(cls, *args, **kwargs)</span>:</span></span><br><span class="line">        print(<span class="string">'4'</span>, args, kwargs)</span><br><span class="line">        cls.c = <span class="number">4</span></span><br><span class="line">        <span class="keyword">return</span> super().__new__(cls)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">e</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">pass</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, *args, **kwargs)</span>:</span></span><br><span class="line">        print(<span class="string">'5'</span>)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, d)</span>:</span></span><br><span class="line">        self.d = d</span><br><span class="line">        print(<span class="string">'6'</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">b = B(<span class="number">6</span>)</span><br><span class="line">print(hasattr(b, <span class="string">'a'</span>))</span><br><span class="line">print(b.b)</span><br><span class="line">print(b.c)</span><br><span class="line">print(b.d)</span><br><span class="line">print(hasattr(b, <span class="string">'e'</span>))</span><br></pre></td></tr></table></figure>
+<p>可以尝试注释掉B(12)，A依旧会被打印，观察args和kwargs的输出。对比A和B的不同，你会发现metaclass的用处，<strong>使用metaclass的时候，B的所有属性会被当做参数传递给A</strong>，那么我们能够将这些传过来的参数预处理然后挂在到类的属性上面返回。以供后续B使用。目前在我遇到的web开发中体现的最常见的就是ORM和表单验证。</p>
+<p>我们知道<code>__new__</code>创建一个对象。<code>__init__</code>对创建后的对象进行赋值等初始化操作。他们的传参args和kwargs是没有区别的。但是在<code>__new__</code>阶段，能够对attrs进行修改从而hook对象的创建流程，除此之外感觉只能用new不能用init的场景是很少的。目前看到的例子记得的可能只有用new实现单例。对于内置不可变对象比如int用new变更初始化逻辑</p>
+<p>最后例举一个ORM的例子(见参考)<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Field</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, name, column_type)</span>:</span></span><br><span class="line">        self.name = name</span><br><span class="line">        self.column_type = column_type</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">StringField</span><span class="params">(Field)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, name)</span>:</span></span><br><span class="line">        super(StringField, self).__init__(name, <span class="string">'vachar(100)'</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ModelMetaclass</span><span class="params">(type)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__new__</span><span class="params">(cls, name, bases, attrs)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> name != <span class="string">'Model'</span>:</span><br><span class="line">            mappings = &#123;k: v.name <span class="keyword">for</span> k, v <span class="keyword">in</span> attrs.items() <span class="keyword">if</span> isinstance(v, Field)&#125;</span><br><span class="line">            <span class="keyword">for</span> k <span class="keyword">in</span> mappings.keys():</span><br><span class="line">                attrs.pop(k)</span><br><span class="line">            attrs[<span class="string">'__mappings__'</span>] = mappings</span><br><span class="line">            attrs[<span class="string">'__table__'</span>] = name</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> type.__new__(cls, name, bases, attrs)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Model</span><span class="params">(dict, metaclass=ModelMetaclass)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, **kwargs)</span>:</span></span><br><span class="line">        super().__init__(**kwargs)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__getattr__</span><span class="params">(self, key)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="keyword">return</span> self[key]</span><br><span class="line">        <span class="keyword">except</span> KeyError:</span><br><span class="line">            <span class="keyword">raise</span> AttributeError(<span class="string">r"'Model' object has no attribute &#123;key&#125;"</span>.format(key=key))</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__setattr__</span><span class="params">(self, key, value)</span>:</span></span><br><span class="line">        self[key] = value</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">save</span><span class="params">(self)</span>:</span></span><br><span class="line">        fields, params, args = [], [], []</span><br><span class="line">        <span class="keyword">for</span> k, v <span class="keyword">in</span> self.__mappings__.items():</span><br><span class="line">            fields.append(v)</span><br><span class="line">            params.append(<span class="string">'?'</span>)</span><br><span class="line">            args.append(getattr(self, k, <span class="keyword">None</span>))</span><br><span class="line">        sql = <span class="string">'insert into &#123;table_name&#125; (&#123;fields&#125;) values (&#123;values&#125;)'</span>.format(table_name=self.__table__,</span><br><span class="line">                                                                             fields=<span class="string">','</span>.join(fields),</span><br><span class="line">                                                                             values=<span class="string">','</span>.join(params))</span><br><span class="line">        print(<span class="string">'SQL: &#123;sql&#125;'</span>.format(sql=sql))</span><br><span class="line">        print(<span class="string">'ARGS: &#123;args&#125;'</span>.format(args=args))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">UserModel</span><span class="params">(Model)</span>:</span></span><br><span class="line">    user_name = StringField(<span class="string">'username'</span>)</span><br><span class="line">    email = StringField(<span class="string">'email'</span>)</span><br><span class="line">    password = StringField(<span class="string">'password'</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    user = UserModel(user_id=<span class="number">123</span>, user_name=<span class="string">'hhh'</span>, email=<span class="string">'a@a.a'</span>, password=<span class="string">'asdfa'</span>, x=<span class="string">'y'</span>)</span><br><span class="line">    user.save()</span><br></pre></td></tr></table></figure>    </p>
+<p>下篇会分析metaclass在WTForms中的应用</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="">Understanding Python metaclasses 更详细的介绍</a><br><a href="http://www.jianshu.com/p/9dfa40bf2a62">python实现ORM</a></p>
 
             
         </div>
@@ -292,7 +276,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/23/tornado_wtforms/"  data-tooltip="tornado表单验证">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -300,7 +284,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/05/acme.sh_quick_start/" data-tooltip="使用acme.sh快速搭建https">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/05/18/ssh-port-forward/" data-tooltip="ssh端口映射">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -315,17 +299,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/03/18/ssh-port-forward/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/05/31/python_metaclass/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/03/18/ssh-port-forward/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/05/31/python_metaclass/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/03/18/ssh-port-forward/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/05/31/python_metaclass/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -373,7 +357,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/23/tornado_wtforms/"  data-tooltip="tornado表单验证">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -381,7 +365,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/05/acme.sh_quick_start/" data-tooltip="使用acme.sh快速搭建https">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/05/18/ssh-port-forward/" data-tooltip="ssh端口映射">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -396,17 +380,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/03/18/ssh-port-forward/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/05/31/python_metaclass/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/03/18/ssh-port-forward/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/05/31/python_metaclass/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/03/18/ssh-port-forward/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/05/31/python_metaclass/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -432,17 +416,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/03/18/ssh-port-forward/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/05/31/python_metaclass/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/03/18/ssh-port-forward/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/05/31/python_metaclass/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/03/18/ssh-port-forward/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/05/31/python_metaclass/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -641,7 +625,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 52 篇文章
+                找到 53 篇文章
             </p>
         </div>
     </div>
@@ -655,9 +639,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2017/03/18/ssh-port-forward/';
+                 this.page.url = 'https://www.zoulei.net/2017/05/31/python_metaclass/';
                  
-                    this.page.identifier = '2017/03/18/ssh-port-forward/';
+                    this.page.identifier = '2017/05/31/python_metaclass/';
                  
              };
             (function() {

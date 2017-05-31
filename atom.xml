@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-03-23T12:41:08.000Z</updated>
+  <updated>2017-05-31T04:14:23.000Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -16,28 +16,31 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>tornado表单验证</title>
-    <link href="https://www.zoulei.net/2017/03/23/tornado_wtforms/"/>
-    <id>https://www.zoulei.net/2017/03/23/tornado_wtforms/</id>
-    <published>2017-03-23T12:41:08.000Z</published>
-    <updated>2017-03-23T12:41:08.000Z</updated>
+    <title>理解metaclass</title>
+    <link href="https://www.zoulei.net/2017/05/31/python_metaclass/"/>
+    <id>https://www.zoulei.net/2017/05/31/python_metaclass/</id>
+    <published>2017-05-31T04:14:23.000Z</published>
+    <updated>2017-05-31T04:14:23.000Z</updated>
     
-    <content type="html"><![CDATA[<p>工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。</p>
+    <content type="html"><![CDATA[<p>metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5</p>
 <a id="more"></a>
-<p>首先是将wtforms嵌入tornado。做法可以参考<a href="https://github.com/truemped/tornadotools/blob/master/tornadotools/forms.py">https://github.com/truemped/tornadotools/blob/master/tornadotools/forms.py</a>，我的做法类似，可以看最下面的代码。这样继承一下就能够使用wtforms的表单验证了。能够使用的结果是很多人写这样的代码</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">self.xx1 = self.form.xx1.data&#10;self.xx2 = self.form.xx2.data&#10;self.xx3 = self.form.xx3.data&#10;:&#10;&#16;:</span><br></pre></td></tr></table></figure>
-<p>然后这样写了20行(不黑，项目里真有这样的)。写的人也确实是很认真啊！，改进的方法很简单。调用self.xx1的时候自动取值self.form.xx1.data。能做成这样的方法挺多。很多时候会导致self.xxx使用IDE无法补全。我个人认为好的代码肯定能够方便的补全和提示，毕竟这样能实打实的提升码代码的心情，试想一下你要输入20个单词，很可能一不小心就输入错误了。改进的方法就是使用<code>__getattribute__</code>,配合类继承，兼顾自动补全也不用跑去写self.form.xxx.data了</p>
+<p>你只需要理解以下2点</p>
 <ol>
-<li><code>__getattr__</code>，当属性不存在的时候会调用</li>
-<li><code>__getattribute__</code>,无论属性是否存在都会被调用</li>
+<li>metaclass和<code>__new__</code>、<code>__init__</code>并没有非常非常深的关系</li>
+<li>type(name, bases, dict)生成了一个object类，了解三个参数分别指代了什么</li>
 </ol>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">import tornado.ioloop&#10;import tornado.web&#10;&#10;from wtforms import validators, fields&#10;from wtforms import Form&#10;from wtforms.fields.core import UnboundField&#10;&#10;&#10;class MultiDict(dict):&#10;    def getlist(self, key):&#10;        return self[key]&#10;&#10;    def setlist(self, key, value):&#10;        self[key] = value&#10;&#10;&#10;class BaseForm(Form):&#10;    def __init__(self, handler=None, obj=None, prefix=&#39;&#39;, **kwargs):&#10;        if handler is None:&#10;            return&#10;        formdata = MultiDict()&#10;        if handler.request.method == &#39;POST&#39;:&#10;            for name in handler.request.arguments.keys():&#10;                formdata.setlist(name, handler.get_arguments(name))&#10;        else:&#10;            for name in handler.request.query_arguments.keys():&#10;                formdata.setlist(name, handler.request.query_arguments[name])&#10;        Form.__init__(self, formdata, obj=obj, prefix=prefix, **kwargs)&#10;&#10;&#10;class LoginForm(BaseForm):&#10;    email = fields.StringField(&#10;        validators=[validators.Email(), validators.required(), validators.length(min=5, max=64)])&#10;    password = fields.PasswordField(validators=[validators.required()])&#10;&#10;&#10;class MainHandler(tornado.web.RequestHandler, LoginForm):&#10;    def __getattribute__(self, item):&#10;        ret = object.__getattribute__(self, item)&#10;        if isinstance(ret, UnboundField):&#10;            form = object.__getattribute__(self, &#39;form&#39;)&#10;            return getattr(form, item).data&#10;        return ret&#10;&#10;    def post(self):&#10;        self.form = LoginForm(self)&#10;        print(self.email)&#10;        self.write(&#34;Hello, world&#34;)&#10;&#10;&#10;def make_app():&#10;    return tornado.web.Application([&#10;        (r&#34;/&#34;, MainHandler),&#10;    ])&#10;&#10;&#10;if __name__ == &#34;__main__&#34;:&#10;    app = make_app()&#10;    app.listen(8888)&#10;    tornado.ioloop.IOLoop.current().start()</span><br></pre></td></tr></table></figure>
-<p>完美解决问题,心情瞬间舒畅了┑(￣Д ￣)┍</p>
+<p>了解python中有这样一条关系链type-&gt;object-&gt;instance,通常我们写类默认会继承自object。从关系链就能知道type能够生成object。代码如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span><span class="params">(type)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__new__</span><span class="params">(cls, name, bases, attrs)</span>:</span></span><br><span class="line">        attrs.pop(<span class="string">'e'</span>)</span><br><span class="line">        print(<span class="string">'1'</span>, cls, name, bases, attrs)</span><br><span class="line">        cls.a = <span class="number">1</span></span><br><span class="line">        <span class="keyword">return</span> super().__new__(cls, name, bases, attrs)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># def __call__(self, *args, **kwargs):</span></span><br><span class="line">    <span class="comment">#     print('3')</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, name, bases, attrs)</span>:</span></span><br><span class="line">        self.b = <span class="number">2</span></span><br><span class="line">        print(<span class="string">'2'</span>, self, name, bases, attrs)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">B</span><span class="params">(metaclass=A)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__new__</span><span class="params">(cls, *args, **kwargs)</span>:</span></span><br><span class="line">        print(<span class="string">'4'</span>, args, kwargs)</span><br><span class="line">        cls.c = <span class="number">4</span></span><br><span class="line">        <span class="keyword">return</span> super().__new__(cls)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">e</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">pass</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, *args, **kwargs)</span>:</span></span><br><span class="line">        print(<span class="string">'5'</span>)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, d)</span>:</span></span><br><span class="line">        self.d = d</span><br><span class="line">        print(<span class="string">'6'</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">b = B(<span class="number">6</span>)</span><br><span class="line">print(hasattr(b, <span class="string">'a'</span>))</span><br><span class="line">print(b.b)</span><br><span class="line">print(b.c)</span><br><span class="line">print(b.d)</span><br><span class="line">print(hasattr(b, <span class="string">'e'</span>))</span><br></pre></td></tr></table></figure>
+<p>可以尝试注释掉B(12)，A依旧会被打印，观察args和kwargs的输出。对比A和B的不同，你会发现metaclass的用处，<strong>使用metaclass的时候，B的所有属性会被当做参数传递给A</strong>，那么我们能够将这些传过来的参数预处理然后挂在到类的属性上面返回。以供后续B使用。目前在我遇到的web开发中体现的最常见的就是ORM和表单验证。</p>
+<p>我们知道<code>__new__</code>创建一个对象。<code>__init__</code>对创建后的对象进行赋值等初始化操作。他们的传参args和kwargs是没有区别的。但是在<code>__new__</code>阶段，能够对attrs进行修改从而hook对象的创建流程，除此之外感觉只能用new不能用init的场景是很少的。目前看到的例子记得的可能只有用new实现单例。对于内置不可变对象比如int用new变更初始化逻辑</p>
+<p>最后例举一个ORM的例子(见参考)<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Field</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, name, column_type)</span>:</span></span><br><span class="line">        self.name = name</span><br><span class="line">        self.column_type = column_type</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">StringField</span><span class="params">(Field)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, name)</span>:</span></span><br><span class="line">        super(StringField, self).__init__(name, <span class="string">'vachar(100)'</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ModelMetaclass</span><span class="params">(type)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__new__</span><span class="params">(cls, name, bases, attrs)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> name != <span class="string">'Model'</span>:</span><br><span class="line">            mappings = &#123;k: v.name <span class="keyword">for</span> k, v <span class="keyword">in</span> attrs.items() <span class="keyword">if</span> isinstance(v, Field)&#125;</span><br><span class="line">            <span class="keyword">for</span> k <span class="keyword">in</span> mappings.keys():</span><br><span class="line">                attrs.pop(k)</span><br><span class="line">            attrs[<span class="string">'__mappings__'</span>] = mappings</span><br><span class="line">            attrs[<span class="string">'__table__'</span>] = name</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> type.__new__(cls, name, bases, attrs)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Model</span><span class="params">(dict, metaclass=ModelMetaclass)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, **kwargs)</span>:</span></span><br><span class="line">        super().__init__(**kwargs)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__getattr__</span><span class="params">(self, key)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="keyword">return</span> self[key]</span><br><span class="line">        <span class="keyword">except</span> KeyError:</span><br><span class="line">            <span class="keyword">raise</span> AttributeError(<span class="string">r"'Model' object has no attribute &#123;key&#125;"</span>.format(key=key))</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__setattr__</span><span class="params">(self, key, value)</span>:</span></span><br><span class="line">        self[key] = value</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">save</span><span class="params">(self)</span>:</span></span><br><span class="line">        fields, params, args = [], [], []</span><br><span class="line">        <span class="keyword">for</span> k, v <span class="keyword">in</span> self.__mappings__.items():</span><br><span class="line">            fields.append(v)</span><br><span class="line">            params.append(<span class="string">'?'</span>)</span><br><span class="line">            args.append(getattr(self, k, <span class="keyword">None</span>))</span><br><span class="line">        sql = <span class="string">'insert into &#123;table_name&#125; (&#123;fields&#125;) values (&#123;values&#125;)'</span>.format(table_name=self.__table__,</span><br><span class="line">                                                                             fields=<span class="string">','</span>.join(fields),</span><br><span class="line">                                                                             values=<span class="string">','</span>.join(params))</span><br><span class="line">        print(<span class="string">'SQL: &#123;sql&#125;'</span>.format(sql=sql))</span><br><span class="line">        print(<span class="string">'ARGS: &#123;args&#125;'</span>.format(args=args))</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">UserModel</span><span class="params">(Model)</span>:</span></span><br><span class="line">    user_name = StringField(<span class="string">'username'</span>)</span><br><span class="line">    email = StringField(<span class="string">'email'</span>)</span><br><span class="line">    password = StringField(<span class="string">'password'</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    user = UserModel(user_id=<span class="number">123</span>, user_name=<span class="string">'hhh'</span>, email=<span class="string">'a@a.a'</span>, password=<span class="string">'asdfa'</span>, x=<span class="string">'y'</span>)</span><br><span class="line">    user.save()</span><br></pre></td></tr></table></figure>    </p>
+<p>下篇会分析metaclass在WTForms中的应用</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="">Understanding Python metaclasses 更详细的介绍</a><br><a href="http://www.jianshu.com/p/9dfa40bf2a62">python实现ORM</a></p>
 ]]></content>
     
     <summary type="html">
     
-      &lt;p&gt;工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。&lt;/p&gt;
+      &lt;p&gt;metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5&lt;/p&gt;
     
     </summary>
     
@@ -48,9 +51,9 @@
   
   <entry>
     <title>ssh端口映射</title>
-    <link href="https://www.zoulei.net/2017/03/18/ssh-port-forward/"/>
-    <id>https://www.zoulei.net/2017/03/18/ssh-port-forward/</id>
-    <published>2017-03-18T05:17:19.000Z</published>
+    <link href="https://www.zoulei.net/2017/05/18/ssh-port-forward/"/>
+    <id>https://www.zoulei.net/2017/05/18/ssh-port-forward/</id>
+    <published>2017-05-18T01:34:34.000Z</published>
     <updated>2017-03-12T04:34:53.000Z</updated>
     
     <content type="html"><![CDATA[<p>开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下</p>
@@ -92,6 +95,37 @@
     </summary>
     
       <category term="DevOps" scheme="https://www.zoulei.net/categories/DevOps/"/>
+    
+    
+  </entry>
+  
+  <entry>
+    <title>tornado表单验证</title>
+    <link href="https://www.zoulei.net/2017/05/18/tornado_wtforms/"/>
+    <id>https://www.zoulei.net/2017/05/18/tornado_wtforms/</id>
+    <published>2017-05-18T01:34:34.000Z</published>
+    <updated>2017-03-23T12:41:33.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。</p>
+<a id="more"></a>
+<p>首先是将wtforms嵌入tornado。做法可以参考<a href="https://github.com/truemped/tornadotools/blob/master/tornadotools/forms.py">https://github.com/truemped/tornadotools/blob/master/tornadotools/forms.py</a>，我的做法类似，可以看最下面的代码。这样继承一下就能够使用wtforms的表单验证了。能够使用的结果是很多人写这样的代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">self.xx1 = self.form.xx1.data&#10;self.xx2 = self.form.xx2.data&#10;self.xx3 = self.form.xx3.data&#10;:&#10;&#16;:</span><br></pre></td></tr></table></figure>
+<p>然后这样写了20行(不黑，项目里真有这样的)。写的人也确实是很认真啊！，改进的方法很简单。调用self.xx1的时候自动取值self.form.xx1.data。能做成这样的方法挺多。很多时候会导致self.xxx使用IDE无法补全。我个人认为好的代码肯定能够方便的补全和提示，毕竟这样能实打实的提升码代码的心情，试想一下你要输入20个单词，很可能一不小心就输入错误了。改进的方法就是使用<code>__getattribute__</code>,配合类继承，兼顾自动补全也不用跑去写self.form.xxx.data了</p>
+<ol>
+<li><code>__getattr__</code>，当属性不存在的时候会调用</li>
+<li><code>__getattribute__</code>,无论属性是否存在都会被调用</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">import tornado.ioloop&#10;import tornado.web&#10;&#10;from wtforms import validators, fields&#10;from wtforms import Form&#10;from wtforms.fields.core import UnboundField&#10;&#10;&#10;class MultiDict(dict):&#10;    def getlist(self, key):&#10;        return self[key]&#10;&#10;    def setlist(self, key, value):&#10;        self[key] = value&#10;&#10;&#10;class BaseForm(Form):&#10;    def __init__(self, handler=None, obj=None, prefix=&#39;&#39;, **kwargs):&#10;        if handler is None:&#10;            return&#10;        formdata = MultiDict()&#10;        if handler.request.method == &#39;POST&#39;:&#10;            for name in handler.request.arguments.keys():&#10;                formdata.setlist(name, handler.get_arguments(name))&#10;        else:&#10;            for name in handler.request.query_arguments.keys():&#10;                formdata.setlist(name, handler.request.query_arguments[name])&#10;        Form.__init__(self, formdata, obj=obj, prefix=prefix, **kwargs)&#10;&#10;&#10;class LoginForm(BaseForm):&#10;    email = fields.StringField(&#10;        validators=[validators.Email(), validators.required(), validators.length(min=5, max=64)])&#10;    password = fields.PasswordField(validators=[validators.required()])&#10;&#10;&#10;class MainHandler(tornado.web.RequestHandler, LoginForm):&#10;    def __getattribute__(self, item):&#10;        ret = object.__getattribute__(self, item)&#10;        if isinstance(ret, UnboundField):&#10;            form = object.__getattribute__(self, &#39;form&#39;)&#10;            return getattr(form, item).data&#10;        return ret&#10;&#10;    def post(self):&#10;        self.form = LoginForm(self)&#10;        print(self.email)&#10;        self.write(&#34;Hello, world&#34;)&#10;&#10;&#10;def make_app():&#10;    return tornado.web.Application([&#10;        (r&#34;/&#34;, MainHandler),&#10;    ])&#10;&#10;&#10;if __name__ == &#34;__main__&#34;:&#10;    app = make_app()&#10;    app.listen(8888)&#10;    tornado.ioloop.IOLoop.current().start()</span><br></pre></td></tr></table></figure>
+<p>完美解决问题,心情瞬间舒畅了┑(￣Д ￣)┍</p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="python" scheme="https://www.zoulei.net/categories/python/"/>
     
     
   </entry>
@@ -768,31 +802,6 @@
     </summary>
     
       <category term="源码解析" scheme="https://www.zoulei.net/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"/>
-    
-    
-      <category term="python" scheme="https://www.zoulei.net/tags/python/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>pyenv使用镜像加速</title>
-    <link href="https://www.zoulei.net/2016/07/15/pyenv_use_mirror/"/>
-    <id>https://www.zoulei.net/2016/07/15/pyenv_use_mirror/</id>
-    <published>2016-07-15T00:57:02.000Z</published>
-    <updated>2016-07-15T01:42:56.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>使用<code>pyenv install 3.5.0</code>的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个<a href="https://github.com/yyuu/yyuu.github.com">pyenv镜像项目</a>的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理</p>
-<p>如果安装2.7.6你可以选择使用国内七牛的镜像。项目地址<a href="http://pyenv.qiniudn.com/pythons/">http://pyenv.qiniudn.com/pythons/</a>。执行<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">export PYTHON_BUILD_MIRROR_URL=&#34;http://pyenv.qiniudn.com/pythons/&#34;&#10;pyenv install 2.7.6</span><br></pre></td></tr></table></figure></p>
-<p>就会使用七牛镜像进行下载速度非常快。<br>缺点就是除了网页上的一些版本。其他的都不支持了。七牛没有对这个项目进行更新</p>
-<p>我们可以用迅雷或者其他可用的快速的方法把python源码下载到本地。自己开启一个镜像给自己用。这样就好了。比如执行<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ficapy@L ~&#62; pyenv install 3.5.0                                                                                                                                                                           &#10;Downloading Python-3.5.0.tgz...&#10;-&#62; https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tgz</span><br></pre></td></tr></table></figure></p>
-<p>然后把<code>https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tgz</code>下载到本地。<br>再设置镜像地址<code>export PYTHON_BUILD_MIRROR_URL=&quot;http://127.0.0.1:8000/&quot;</code><br>到下载地址执行<code>python3 -m http.server</code><br>再次执行<code>pyenv install 3.5.0</code>发现还是从官网下载。不过此时查看http.server上有一条HEAD请求日志。-_-发现不是直接请问的文件名，而是一个64位的字符。将下载的文件名修改成那64位字符。在执行就ok了~~</p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;使用&lt;code&gt;pyenv install 3.5.0&lt;/code&gt;的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个&lt;a href=&quot;https://github.com/yyuu/
-    
-    </summary>
     
     
       <category term="python" scheme="https://www.zoulei.net/tags/python/"/>
