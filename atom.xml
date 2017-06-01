@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-05-31T08:46:35.000Z</updated>
+  <updated>2017-06-01T07:30:20.000Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,56 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>ssh端口映射</title>
+    <link href="https://www.zoulei.net/2017/06/01/ssh-port-forward/"/>
+    <id>https://www.zoulei.net/2017/06/01/ssh-port-forward/</id>
+    <published>2017-06-01T07:30:20.000Z</published>
+    <updated>2017-06-01T07:30:20.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下</p>
+<a id="more"></a>
+<ol>
+<li><p>-D参数，提供一个socket5级别的代理。</p>
+<p> 这个在很多年以前翻墙的时候还是很好用的。不过都已经成为了历史。有代理使用经验的开发者都能很快理解这个玩意</p>
+</li>
+<li><p>-L(local forward)本地转发</p>
+<p> 比如你现在需要连接到正式环境的数据库,那么你不需要先ssh到正式环境再输入数据库命令。我的做法是选择用图形界面查看数据库。命令是这样的 </p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh -L  6789:192.168.10.10:5432 prod</span><br></pre></td></tr></table></figure>
+<p> 含义就是将本地6789端口接受到的请求转发到生产环境prod上面的192.168.10.10:5432，这样本地GUI数据库管理程序就能够直接连接本地6789端口显示线上数据了。可以看出它的作用就是将本地端口的请求转发的服务器上面</p>
+</li>
+<li><p>-R(Remote forward)远程转发</p>
+<p> 这个就是和本地转发相反。在连接的服务器上打开一个端口，映射到自己的端口。此时数据流是服务器端口接收到的数据传到了本地。比如你需要一个公网ip(显然我们的办公环境都是没有公网ip的)来调试你的web应用，比如你本地写了个web程序监听8989端口，你远程服务器上有公网ip。你需要把web程序临时分享到公网给别人尝试使用。执行以下命令</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh -R 4321:127.0.0.1:8989 prod</span><br></pre></td></tr></table></figure>
+<p> 这样别人访问prod_ip:4321就会映射到你本地的8989端口上。</p>
+</li>
+<li><p>助记</p>
+<p> 刚开始可能觉得端口比较容易混淆。只需要记住xx:xx，前面是入口，后面是出口。本地转发的时候数据是从本地发到远程。所以6789是本地端口。远程转发的时候数据是从远程发到本地。所以8989是本地端口</p>
+</li>
+<li><p>辅助参数及工具</p>
+<p> 假如你只需要端口映射不需要进入终端执行命令。可以增加-Nf参数，-N为不进入交互式终端。f为后台执行。假如你需要长期使用，那就使用autossh，和ssh一个套路。就不举例了</p>
+</li>
+</ol>
+<h2 id="扩展"><a href="#扩展" class="headerlink" title="扩展"></a>扩展</h2><p>其实本地转发和远程转发已经形成了一个双向的数据流动。这样我们就能够实现一些看起来很高级的功能。比如访问内网机器(没有公网ip，不能够被直接访问到)。只要内网机器能够使用ssh访问到外部机器，而这台外部机器我们能够进行访问。那么此时就是搭配本地转发和远程转发的时候了。(注意，如果外部机器能够和内部机器双向访问那么会更简单)</p>
+<p>思路就是使用内网机器访问外部机器，使用远程端口映射，将本机的22端口映射到外部机器的任一端口上。之后在外部机器就能够使用ssh localhost -p xx访问到内网机器了。然而这需要我们先登录到外部机器再使用localhost登陆到内网。此时我们可以更简单的使用~/.ssh/config配置文件完成</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host demo&#10;    user    ficapy&#10;    HostName    localhost&#10;    ProxyCommand ssh prod -W %h:7890</span><br></pre></td></tr></table></figure>
+<p>ssh demo后会先连接外部机器prod,再将请求转发到localhost:7890上完成对内部机器的登陆。<br>假如内部机器和外部机器可以双向访问，那么就不需要远程端口转发，只需要这样</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host demo&#10;    User ficapy&#10;    HostName &#20869;&#32593;&#26426;&#22120;ip&#10;    ProxyCommand ssh prod -W %h:%p</span><br></pre></td></tr></table></figure>
+<h3 id="更坑爹的情况"><a href="#更坑爹的情况" class="headerlink" title="更坑爹的情况"></a>更坑爹的情况</h3><p>在严格的环境下，假如禁用了ssh协议。不允许从内部ssh到外部。只允许对外发送http、https请求。此时ssh、ngrok1.7版本、frp这种是无法使用的。推荐使用pagekite自建，亦或者使用速度暴慢的ngrok付费版<br>遇到过一个问题。测试机上需要访问10.19.2.96的1234和5053端口。处理方案是将10.19.2.96此ip绑定到网卡上面配合ssh转发，<code>sudo ifconfig en0 10.19.15.34 netmask 255.255.255.0 up</code>。然后<code>ssh -NL 10.19.15.34:1234:10.19.15.34:1234 -L 10.19.15.34:5053:10.19.15.34:5053 dev</code>就可以了</p>
+<h3 id="收集的ssh配置文件（更好的连接到远端服务器）"><a href="#收集的ssh配置文件（更好的连接到远端服务器）" class="headerlink" title="收集的ssh配置文件（更好的连接到远端服务器）"></a>收集的ssh配置文件（更好的连接到远端服务器）</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host&#9;   *&#10;&#9;Port          &#9;&#9; 22&#10;    User          &#9;&#9; root&#10;    IdentityFile  &#9;&#9; ~/.ssh/id_rsa&#10;    ConnectTimeout &#9;&#9;15&#10;    ConnectionAttempts &#9;3&#10;    ServerAliveInterval &#9;20&#10;    ServerAliveCountMax &#9;5&#9;&#9;&#10;    # &#22810;&#26465;&#36830;&#25509;&#20849;&#20139;&#10;    ControlMaster   &#9;auto&#10;    ControlPath     &#9;/tmp/ssh_mux_%h_%p_%r&#10;    # &#38271;&#36830;&#25509;(&#36864;&#20986;&#26381;&#21153;&#22120;&#21518;&#36830;&#25509;&#20381;&#28982;&#21487;&#37325;&#29992;)&#10;    ControlPersist  &#9;4h&#10;    # &#20943;&#23569;&#24310;&#36831;&#10;    GSSAPIAuthentication &#9;no</span><br></pre></td></tr></table></figure>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="DevOps" scheme="https://www.zoulei.net/categories/DevOps/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>理解metaclass</title>
@@ -45,56 +95,6 @@
     </summary>
     
       <category term="python" scheme="https://www.zoulei.net/categories/python/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>ssh端口映射</title>
-    <link href="https://www.zoulei.net/2017/05/18/ssh-port-forward/"/>
-    <id>https://www.zoulei.net/2017/05/18/ssh-port-forward/</id>
-    <published>2017-05-18T01:34:34.000Z</published>
-    <updated>2017-03-12T04:34:53.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下</p>
-<a id="more"></a>
-<ol>
-<li><p>-D参数，提供一个socket5级别的代理。</p>
-<p> 这个在很多年以前翻墙的时候还是很好用的。不过都已经成为了历史。有代理使用经验的开发者都能很快理解这个玩意</p>
-</li>
-<li><p>-L(local forward)本地转发</p>
-<p> 比如你现在需要连接到正式环境的数据库,那么你不需要先ssh到正式环境再输入数据库命令。我的做法是选择用图形界面查看数据库。命令是这样的 </p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh -L  6789:192.168.10.10:5432 prod</span><br></pre></td></tr></table></figure>
-<p> 含义就是将本地6789端口接受到的请求转发到生产环境prod上面的192.168.10.10:5432，这样本地GUI数据库管理程序就能够直接连接本地6789端口显示线上数据了。可以看出它的作用就是将本地端口的请求转发的服务器上面</p>
-</li>
-<li><p>-R(Remote forward)远程转发</p>
-<p> 这个就是和本地转发相反。在连接的服务器上打开一个端口，映射到自己的端口。此时数据流是服务器端口接收到的数据传到了本地。比如你需要一个公网ip(显然我们的办公环境都是没有公网ip的)来调试你的web应用，比如你本地写了个web程序监听8989端口，你远程服务器上有公网ip。你需要把web程序临时分享到公网给别人尝试使用。执行以下命令</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh -R 4321:127.0.0.1:8989 prod</span><br></pre></td></tr></table></figure>
-<p> 这样别人访问prod_ip:4321就会映射到你本地的8989端口上。</p>
-</li>
-<li><p>助记</p>
-<p> 刚开始可能觉得端口比较容易混淆。只需要记住xx:xx，前面是入口，后面是出口。本地转发的时候数据是从本地发到远程。所以6789是本地端口。远程转发的时候数据是从远程发到本地。所以8989是本地端口</p>
-</li>
-<li><p>辅助参数及工具</p>
-<p> 假如你只需要端口映射不需要进入终端执行命令。可以增加-Nf参数，-N为不进入交互式终端。f为后台执行。假如你需要长期使用，那就使用autossh，和ssh一个套路。就不举例了</p>
-</li>
-</ol>
-<h2 id="扩展"><a href="#扩展" class="headerlink" title="扩展"></a>扩展</h2><p>其实本地转发和远程转发已经形成了一个双向的数据流动。这样我们就能够实现一些看起来很高级的功能。比如访问内网机器(没有公网ip，不能够被直接访问到)。只要内网机器能够使用ssh访问到外部机器，而这台外部机器我们能够进行访问。那么此时就是搭配本地转发和远程转发的时候了。(注意，如果外部机器能够和内部机器双向访问那么会更简单)</p>
-<p>思路就是使用内网机器访问外部机器，使用远程端口映射，将本机的22端口映射到外部机器的任一端口上。之后在外部机器就能够使用ssh localhost -p xx访问到内网机器了。然而这需要我们先登录到外部机器再使用localhost登陆到内网。此时我们可以更简单的使用~/.ssh/config配置文件完成</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host demo&#10;    user    ficapy&#10;    HostName    localhost&#10;    ProxyCommand ssh prod -W %h:7890</span><br></pre></td></tr></table></figure>
-<p>ssh demo后会先连接外部机器prod,再将请求转发到localhost:7890上完成对内部机器的登陆。<br>假如内部机器和外部机器可以双向访问，那么就不需要远程端口转发，只需要这样</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host demo&#10;    User ficapy&#10;    HostName &#20869;&#32593;&#26426;&#22120;ip&#10;    ProxyCommand ssh prod -W %h:%p</span><br></pre></td></tr></table></figure>
-<h3 id="更坑爹的情况"><a href="#更坑爹的情况" class="headerlink" title="更坑爹的情况"></a>更坑爹的情况</h3><p>在严格的环境下，假如禁用了ssh协议。不允许从内部ssh到外部。只允许对外发送http、https请求。此时ssh、ngrok1.7版本、frp这种是无法使用的。推荐使用pagekite自建，亦或者使用速度暴慢的ngrok付费版</p>
-<h3 id="收集的ssh配置文件（更好的连接到远端服务器）"><a href="#收集的ssh配置文件（更好的连接到远端服务器）" class="headerlink" title="收集的ssh配置文件（更好的连接到远端服务器）"></a>收集的ssh配置文件（更好的连接到远端服务器）</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Host&#9;   *&#10;&#9;Port          &#9;&#9; 22&#10;    User          &#9;&#9; root&#10;    IdentityFile  &#9;&#9; ~/.ssh/id_rsa&#10;    ConnectTimeout &#9;&#9;15&#10;    ConnectionAttempts &#9;3&#10;    ServerAliveInterval &#9;20&#10;    ServerAliveCountMax &#9;5&#9;&#9;&#10;    # &#22810;&#26465;&#36830;&#25509;&#20849;&#20139;&#10;    ControlMaster   &#9;auto&#10;    ControlPath     &#9;/tmp/ssh_mux_%h_%p_%r&#10;    # &#38271;&#36830;&#25509;(&#36864;&#20986;&#26381;&#21153;&#22120;&#21518;&#36830;&#25509;&#20381;&#28982;&#21487;&#37325;&#29992;)&#10;    ControlPersist  &#9;4h&#10;    # &#20943;&#23569;&#24310;&#36831;&#10;    GSSAPIAuthentication &#9;no</span><br></pre></td></tr></table></figure>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="DevOps" scheme="https://www.zoulei.net/categories/DevOps/"/>
     
     
   </entry>
