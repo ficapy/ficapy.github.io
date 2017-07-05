@@ -35,7 +35,7 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css" type="text/css">
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
     <!--STYLES END-->
     
     
@@ -60,7 +60,7 @@
     
         
             <a  class="header-right-picture "
-                href="/#about">
+                href="#about">
         
         
             <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
@@ -144,7 +144,7 @@
                 <li class="sidebar-button">
                     
                         <a  class="sidebar-button-link open-algolia-search"
-                             href="/#search"
+                             href="#search"
                             
                         >
                     
@@ -156,7 +156,7 @@
                 <li class="sidebar-button">
                     
                         <a  class="sidebar-button-link "
-                             href="/#about"
+                             href="#about"
                             
                         >
                     
@@ -262,36 +262,36 @@
 <p>我还是要安利下，临时使用digitalocean测试使用命令行工具tugboat灰常好啊</p>
 <ol>
 <li><p>安装tugboat用命令行快速创建机器以及测试完成后删除</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gem install tugboat</span><br></pre></td></tr></table></figure>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">gem install tugboat</div></pre></td></tr></table></figure>
 </li>
 <li><p>将digitalocean的api写入让tugboat能够正常使用,并执行一些初始化设置</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat authorize</span><br></pre></td></tr></table></figure>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">tugboat authorize</div></pre></td></tr></table></figure>
 </li>
 <li><p>根据初始化默认设置创建一个vps</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat create temp</span><br></pre></td></tr></table></figure>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">tugboat create temp</div></pre></td></tr></table></figure>
 </li>
 <li><p>ssh登陆</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat ssh temp</span><br></pre></td></tr></table></figure>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">tugboat ssh temp</div></pre></td></tr></table></figure>
 </li>
 <li><p>安装acme.sh</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl https://get.acme.sh | sh</span><br></pre></td></tr></table></figure>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">curl https://get.acme.sh | sh</div></pre></td></tr></table></figure>
 </li>
 <li><p>参照acme.sh文档将dns的api信息作为环境变量写入(记得执行source ~/.bashrc)</p>
 </li>
 <li><p>生成证书</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --issue --dns dns_cf -d ssl.ficapy.com --debug</span><br></pre></td></tr></table></figure>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">acme.sh --issue --dns dns_cf -d ssl.ficapy.com --debug</div></pre></td></tr></table></figure>
 </li>
 <li><p>将证书放置到位置并设置nginx重启命令</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --installcert -d ssl.ficapy.com \&#10;           --keypath       /etc/nginx/ssl/ssl.ficapy.com.key  \&#10;           --fullchainpath /etc/nginx/ssl/ssl.ficapy.com.pem \&#10;           --reloadcmd     &#34;service nginx force-reload&#34;</span><br></pre></td></tr></table></figure>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">acme.sh --installcert -d ssl.ficapy.com \</div><div class="line">           --keypath       /etc/nginx/ssl/ssl.ficapy.com.key  \</div><div class="line">           --fullchainpath /etc/nginx/ssl/ssl.ficapy.com.pem \</div><div class="line">           --reloadcmd     &quot;service nginx force-reload&quot;</div></pre></td></tr></table></figure>
 </li>
 <li><p>强制测试续约(该操作会自动执行注册过的事件，一般就是重启nginx咯，续约key是不会变的，变的是fullchain.cer文件)</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --renew-all --force</span><br></pre></td></tr></table></figure>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">acme.sh --renew-all --force</div></pre></td></tr></table></figure>
 </li>
 <li><p>生成dhparam文件</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048</div></pre></td></tr></table></figure>
 </li>
 <li><p>使用生成一个标准的nginx配置文件并放入/etc/nginx/site-enables目录，示例如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">    server &#123;&#10;    listen 443 ssl;&#10;&#10;    server_name ssl.ficapy.com;&#10;    # certs sent to the client in SERVER HELLO are concatenated in ssl_certificate&#10;    ssl_certificate /etc/nginx/ssl/ssl.ficapy.com.pem;&#10;    ssl_certificate_key /etc/nginx/ssl/ssl.ficapy.com.key;&#10;    ssl_session_timeout 1d;&#10;    ssl_session_cache shared:SSL:50m;&#10;&#10;&#10;    # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits&#10;    ssl_dhparam /etc/nginx/ssl/dhparam.pem;&#10;&#10;    # intermediate configuration. tweak to your needs.&#10;    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;&#10;    ssl_ciphers &#39;ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS&#39;;&#10;    ssl_prefer_server_ciphers on;&#10;&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">    server &#123;</div><div class="line">    listen 443 ssl;</div><div class="line"></div><div class="line">    server_name ssl.ficapy.com;</div><div class="line">    # certs sent to the client in SERVER HELLO are concatenated in ssl_certificate</div><div class="line">    ssl_certificate /etc/nginx/ssl/ssl.ficapy.com.pem;</div><div class="line">    ssl_certificate_key /etc/nginx/ssl/ssl.ficapy.com.key;</div><div class="line">    ssl_session_timeout 1d;</div><div class="line">    ssl_session_cache shared:SSL:50m;</div><div class="line"></div><div class="line"></div><div class="line">    # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits</div><div class="line">    ssl_dhparam /etc/nginx/ssl/dhparam.pem;</div><div class="line"></div><div class="line">    # intermediate configuration. tweak to your needs.</div><div class="line">    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;</div><div class="line">    ssl_ciphers &apos;ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS&apos;;</div><div class="line">    ssl_prefer_server_ciphers on;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
 </li>
 <li><p>最后就是浏览器访问以下测试完毕啦。如果出现错误可以查看nginx的日志/var/log/error.log，肯定是哪一步出问题啦，最后就是测试完毕后删除vps啦<code>tugboat destory temp</code></p>
 </li>
@@ -310,7 +310,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/05/18/tornado_wtforms/"  data-tooltip="tornado表单验证">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/12/ssh-port-forward/"  data-tooltip="ssh端口映射">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -391,7 +391,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/05/18/tornado_wtforms/"  data-tooltip="tornado表单验证">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/12/ssh-port-forward/"  data-tooltip="ssh端口映射">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -659,7 +659,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 53 篇文章
+                找到 54 篇文章
             </p>
         </div>
     </div>
@@ -667,7 +667,7 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js" type="text/javascript"></script>
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
 <!--SCRIPTS END-->
 
     

@@ -6,23 +6,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>tornado表单验证 - 邹雷</title>
+    <title>Docker CD初探-Drone - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。">
+    <meta name="description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="tornado表单验证">
-<meta property="og:url" content="https://www.zoulei.net/2017/05/18/tornado_wtforms/index.html">
+<meta property="og:title" content="Docker CD初探-Drone">
+<meta property="og:url" content="https://www.zoulei.net/2017/07/05/drone/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。">
-<meta property="og:updated_time" content="2017-03-23T12:41:33.000Z">
+<meta property="og:description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
+<meta property="og:updated_time" content="2017-07-05T15:33:53.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="tornado表单验证">
-<meta name="twitter:description" content="工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。">
+<meta name="twitter:title" content="Docker CD初探-Drone">
+<meta name="twitter:description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -35,7 +35,7 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css" type="text/css">
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
     <!--STYLES END-->
     
     
@@ -60,7 +60,7 @@
     
         
             <a  class="header-right-picture "
-                href="/#about">
+                href="#about">
         
         
             <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
@@ -144,7 +144,7 @@
                 <li class="sidebar-button">
                     
                         <a  class="sidebar-button-link open-algolia-search"
-                             href="/#search"
+                             href="#search"
                             
                         >
                     
@@ -156,7 +156,7 @@
                 <li class="sidebar-button">
                     
                         <a  class="sidebar-button-link "
-                             href="/#about"
+                             href="#about"
                             
                         >
                     
@@ -229,19 +229,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            tornado表单验证
+            Docker CD初探-Drone
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2017-05-18T09:34:34+08:00">
+    <time itemprop="datePublished" datetime="2017-07-05T21:51:26+08:00">
 	
-		    5月 18, 2017
+		    7月 05, 2017
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/python/">python</a>
+    <a class="category-link" href="/categories/Docker/">Docker</a>
 
 
     
@@ -251,17 +251,35 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。</p>
+            <p>最近有个小需求，我们公司写文档是通过<a href="https://github.com/lord/slate">slate</a>来的。每一次文档编写完成之后都需要执行<code>bundle exec middleman build --clean</code>生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。</p>
 <a id="more"></a>
-<p>首先是将wtforms嵌入tornado。做法可以参考<a href="https://github.com/truemped/tornadotools/blob/master/tornadotools/forms.py">https://github.com/truemped/tornadotools/blob/master/tornadotools/forms.py</a>，我的做法类似，可以看最下面的代码。这样继承一下就能够使用wtforms的表单验证了。能够使用的结果是很多人写这样的代码</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">self.xx1 = self.form.xx1.data&#10;self.xx2 = self.form.xx2.data&#10;self.xx3 = self.form.xx3.data&#10;:&#10;&#16;:</span><br></pre></td></tr></table></figure>
-<p>然后这样写了20行(不黑，项目里真有这样的)。写的人也确实是很认真啊！，改进的方法很简单。调用self.xx1的时候自动取值self.form.xx1.data。能做成这样的方法挺多。很多时候会导致self.xxx使用IDE无法补全。我个人认为好的代码肯定能够方便的补全和提示，毕竟这样能实打实的提升码代码的心情，试想一下你要输入20个单词，很可能一不小心就输入错误了。改进的方法就是使用<code>__getattribute__</code>,配合类继承，兼顾自动补全也不用跑去写self.form.xxx.data了</p>
-<ol>
-<li><code>__getattr__</code>，当属性不存在的时候会调用</li>
-<li><code>__getattribute__</code>,无论属性是否存在都会被调用</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">import tornado.ioloop&#10;import tornado.web&#10;&#10;from wtforms import validators, fields&#10;from wtforms import Form&#10;from wtforms.fields.core import UnboundField&#10;&#10;&#10;class MultiDict(dict):&#10;    def getlist(self, key):&#10;        return self[key]&#10;&#10;    def setlist(self, key, value):&#10;        self[key] = value&#10;&#10;&#10;class BaseForm(Form):&#10;    def __init__(self, handler=None, obj=None, prefix=&#39;&#39;, **kwargs):&#10;        if handler is None:&#10;            return&#10;        formdata = MultiDict()&#10;        if handler.request.method == &#39;POST&#39;:&#10;            for name in handler.request.arguments.keys():&#10;                formdata.setlist(name, handler.get_arguments(name))&#10;        else:&#10;            for name in handler.request.query_arguments.keys():&#10;                formdata.setlist(name, handler.request.query_arguments[name])&#10;        Form.__init__(self, formdata, obj=obj, prefix=prefix, **kwargs)&#10;&#10;&#10;class LoginForm(BaseForm):&#10;    email = fields.StringField(&#10;        validators=[validators.Email(), validators.required(), validators.length(min=5, max=64)])&#10;    password = fields.PasswordField(validators=[validators.required()])&#10;&#10;&#10;class MainHandler(tornado.web.RequestHandler, LoginForm):&#10;    def __getattribute__(self, item):&#10;        ret = object.__getattribute__(self, item)&#10;        if isinstance(ret, UnboundField):&#10;            form = object.__getattribute__(self, &#39;form&#39;)&#10;            return getattr(form, item).data&#10;        return ret&#10;&#10;    def post(self):&#10;        self.form = LoginForm(self)&#10;        print(self.email)&#10;        self.write(&#34;Hello, world&#34;)&#10;&#10;&#10;def make_app():&#10;    return tornado.web.Application([&#10;        (r&#34;/&#34;, MainHandler),&#10;    ])&#10;&#10;&#10;if __name__ == &#34;__main__&#34;:&#10;    app = make_app()&#10;    app.listen(8888)&#10;    tornado.ioloop.IOLoop.current().start()</span><br></pre></td></tr></table></figure>
-<p>完美解决问题,心情瞬间舒畅了┑(￣Д ￣)┍</p>
+<p>说一下第三种方案相对前两种方案的特点。</p>
+<ul>
+<li>集中化管理。第一二种方案都需要将脚本放在对应的应用机器上面。第三种不需要，它集中化了。所有的webhook都在可持续集成平台处理。由平台再来操控应用。而且每一次触发操作都有详尽的日志。集中在一起比较容易看出哪里出了什么问题</li>
+<li>不需要在每一台应用机处理webhook(处理意味着每个应用机都需要绑定一个域名)，可能和上面的集中化管理的优点是一个意思吧</li>
+<li>对于一个良好的架构。可持续集成平台比零散的脚本无疑更合适</li>
+<li>算是一个缺点。单独写脚本独立处理webhook相对可持续集成更容易</li>
+</ul>
+<h3 id="Drone配置"><a href="#Drone配置" class="headerlink" title="Drone配置"></a>Drone配置</h3><p>docker-compose我都不大用了，直接用docker stack deploy替代。后者相对前者实际没有什么区别。或者说前者是因为docker网络配置欠发达的产物。docker-compose适合单机部署，docker-swarm适合多主机。开启docker-swarm只需要docker swarm init大概就可以了，更详细的知识请查看官方文档</p>
+<p>drone.yml 文件大概如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">version: &apos;3&apos;</div><div class="line"></div><div class="line">services:</div><div class="line">  drone-server:</div><div class="line">    image: drone/drone:0.7</div><div class="line">    ports:</div><div class="line">      - 82:8000</div><div class="line">    volumes:</div><div class="line">      - /data/github_drone:/var/lib/drone/</div><div class="line">    environment:</div><div class="line">      - DRONE_OPEN=false</div><div class="line">      - DRONE_ADMIN=ficapy</div><div class="line">      - DRONE_GITLAB=true</div><div class="line">      - DRONE_GITHUB_CLIENT=xxxxxxxxx</div><div class="line">      - DRONE_GITHUB_SECRET=xxxxxxxxxx</div><div class="line">      - DRONE_SECRET=xxxpwdxxx</div><div class="line"></div><div class="line">  drone-agent:</div><div class="line">    image: drone/drone:0.7</div><div class="line">    command: agent</div><div class="line">    depends_on:</div><div class="line">      - drone-server</div><div class="line">    volumes:</div><div class="line">      - /var/run/docker.sock:/var/run/docker.sock</div><div class="line">    environment:</div><div class="line">      - DRONE_SERVER=ws://drone-server:8000/ws/broker</div><div class="line">      - DRONE_SECRET=xxxpwdxxx</div><div class="line"></div></pre></td></tr></table></figure></p>
+<p>然后执行<code>docker stack deploy --compose-file=drone.yml drone</code>，整个程序就运行起来了。此处是监听81端口。从配置文件中也可以猜一个大概。了解下drone的流程。service主要用来响应浏览器端的请求。接收到请求后使用websocket和agent通信用来下发任务获取结果。agent通过/var/run/docker.sock来和docker daemon进行通信。执行创建容器。执行命令等一系列过程。</p>
+<p>有几点需要注意的</p>
+<ul>
+<li>最好指定管理员用户DRONE_ADMIN，因为有些操作需要admin权限</li>
+<li>DRONE_OPEN设置为true的时候所有的用户都能授权后使用你的Drone进行集成测试。这往往是你不愿意的，个人的诉求往往是私有的</li>
+<li>github和gitlab在一个drone不能同时使用，所以我部署了两套，使用了不同的域名</li>
+<li>起码了解OAuth流程和webhook的过程，才能更好的理解整套流程</li>
+<li>其他事宜可以查看Drone的<a href="http://docs.drone.io/installation/">安装文档</a></li>
+</ul>
+<p>之所以监听81端口，是因为我使用的Caddy当做前置web服务器。配置如下Caddyfile</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">drone.ficapy.com &#123;</div><div class="line">    proxy / dockerhost:81 &#123;</div><div class="line">        websocket</div><div class="line">        transparent</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>对应的docker-compose文件如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">version: &quot;3&quot;</div><div class="line"></div><div class="line">services:</div><div class="line">  Caddy:</div><div class="line">    image: &quot;abiosoft/caddy&quot;</div><div class="line">    volumes:</div><div class="line">      - /root/caddy/Caddyfile:/etc/Caddyfile</div><div class="line">      - /root/.caddy:/root/.caddy</div><div class="line">    ports:</div><div class="line">      - &quot;80:80&quot;</div><div class="line">      - &quot;443:443&quot;</div><div class="line">    extra_hosts:</div><div class="line">      - &quot;dockerhost:$&#123;dockerhost&#125;&quot;</div></pre></td></tr></table></figure>
+<p>此处使用了环境变量dockerhost，我将它写入了zshrc配置文件中<code>export dockerhost=&quot;172.17.0.1&quot;</code>,不难看出只是为了转发请求, 和drone一样。执行<code>docker stack deploy --compose-file=caddy_compose.yml caddy</code>启动</p>
+<h3 id="持续集成部署"><a href="#持续集成部署" class="headerlink" title="持续集成部署"></a>持续集成部署</h3><p>当使用Drone，并授权之后。Drone会自动给你的项目加上webhook地址。我们在项目根目录放置.drone.yml文件后会使用docker自动构建</p>
+<p>实现本文开头说的需求.drone.yml文件如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">pipeline:</div><div class="line">  build:</div><div class="line">    image: ruby:2.3</div><div class="line">    commands:</div><div class="line">      - bundle config mirror.https://rubygems.org https://gems.ruby-china.org</div><div class="line">      - bundle install</div><div class="line">      - apt-get update &amp;&amp; apt-get install nodejs rsync -y &amp;&amp; bundle exec middleman build --clean</div><div class="line">      - rsync -r --rsh=&apos;ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /data/id_rsa -p 22&apos; build/* user@host:~/docs --progress --delete</div><div class="line">    volumes:</div><div class="line">      - /data:/data</div><div class="line">    when:</div><div class="line">      branch: master</div></pre></td></tr></table></figure></p>
+<p>在使用之前。我现在/data目录使用ssh-agent生成了密匙对。在目标主机上放上公钥，让我们能够ssh连接远端主机。然后容器创建的时候将密匙挂载到容器目录(此处需要管理员权限将项目设置为可信)。然后就顺理成章了。搭建环境，生成静态文件，rsync同步就完成了。</p>
+<p>再来看看我的博客也是使用这个方式部署的，相信你看配置文件就能够明白<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">pipeline:</div><div class="line">  build:</div><div class="line">    image: alpine</div><div class="line">    commands:</div><div class="line">      - rm -rf /root/blog &amp;&amp; cp -r * /var/blog</div><div class="line">    volumes:</div><div class="line">      - /root/blog:/var/blog</div><div class="line">    when:</div><div class="line">      branch: master</div></pre></td></tr></table></figure></p>
 
             
         </div>
@@ -273,7 +291,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/05/31/python_metaclass/"  data-tooltip="理解metaclass">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -281,7 +299,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/05/acme.sh_quick_start/" data-tooltip="使用acme.sh快速搭建https">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/24/python_metaclass/" data-tooltip="理解metaclass">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -296,17 +314,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/05/18/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/07/05/drone/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/05/18/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/07/05/drone/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/05/18/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/07/05/drone/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -354,7 +372,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/05/31/python_metaclass/"  data-tooltip="理解metaclass">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -362,7 +380,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/05/acme.sh_quick_start/" data-tooltip="使用acme.sh快速搭建https">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/24/python_metaclass/" data-tooltip="理解metaclass">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -377,17 +395,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/05/18/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/07/05/drone/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/05/18/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/07/05/drone/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/05/18/tornado_wtforms/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/07/05/drone/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -413,17 +431,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/05/18/tornado_wtforms/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/07/05/drone/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/05/18/tornado_wtforms/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/07/05/drone/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/05/18/tornado_wtforms/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/07/05/drone/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -622,7 +640,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 53 篇文章
+                找到 54 篇文章
             </p>
         </div>
     </div>
@@ -630,15 +648,15 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js" type="text/javascript"></script>
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
 <!--SCRIPTS END-->
 
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2017/05/18/tornado_wtforms/';
+                 this.page.url = 'https://www.zoulei.net/2017/07/05/drone/';
                  
-                    this.page.identifier = '2017/05/18/tornado_wtforms/';
+                    this.page.identifier = '2017/07/05/drone/';
                  
              };
             (function() {

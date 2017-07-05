@@ -13,38 +13,19 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：
-
-windows7 X64
-vagrant
-ubuntu14
-xshell
-cmder(可选)
-pycharm">
+    <meta name="description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：  windows7 X64 vagrant ubuntu14 xshell cmder(可选) pycharm">
+<meta name="keywords" content="Flask配置,pycharm,vagrant">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Flask项目初始配置">
 <meta property="og:url" content="https://www.zoulei.net/2014/10/29/flask_project_init/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：
-
-windows7 X64
-vagrant
-ubuntu14
-xshell
-cmder(可选)
-pycharm">
+<meta property="og:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：  windows7 X64 vagrant ubuntu14 xshell cmder(可选) pycharm">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/pycharm_remote_interoreters_config.png">
 <meta property="og:updated_time" content="2016-06-29T03:48:19.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flask项目初始配置">
-<meta name="twitter:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：
-
-windows7 X64
-vagrant
-ubuntu14
-xshell
-cmder(可选)
-pycharm">
+<meta name="twitter:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：  windows7 X64 vagrant ubuntu14 xshell cmder(可选) pycharm">
+<meta name="twitter:image" content="https://ficapy.b0.upaiyun.com/blogimg/pycharm_remote_interoreters_config.png">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -57,7 +38,7 @@ pycharm">
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css" type="text/css">
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
     <!--STYLES END-->
     
     
@@ -82,7 +63,7 @@ pycharm">
     
         
             <a  class="header-right-picture "
-                href="/#about">
+                href="#about">
         
         
             <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
@@ -166,7 +147,7 @@ pycharm">
                 <li class="sidebar-button">
                     
                         <a  class="sidebar-button-link open-algolia-search"
-                             href="/#search"
+                             href="#search"
                             
                         >
                     
@@ -178,7 +159,7 @@ pycharm">
                 <li class="sidebar-button">
                     
                         <a  class="sidebar-button-link "
-                             href="/#about"
+                             href="#about"
                             
                         >
                     
@@ -284,13 +265,13 @@ pycharm">
 </ul>
 <a id="more"></a>
 <p>准备步骤：</p>
-<h2 id="1-环境搭建"><a href="#1-环境搭建" class="headerlink" title="1.环境搭建"></a><strong>1.环境搭建</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">vagrant box add ubuntu14 URL(或者先下载box文件用文件名替代)  </span><br><span class="line">vagrant init ubuntu14  </span><br><span class="line">vagrant up  </span><br><span class="line">vagrant halt</span><br></pre></td></tr></table></figure>
+<h2 id="1-环境搭建"><a href="#1-环境搭建" class="headerlink" title="1.环境搭建"></a><strong>1.环境搭建</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">vagrant box add ubuntu14 URL(或者先下载box文件用文件名替代)  </div><div class="line">vagrant init ubuntu14  </div><div class="line">vagrant up  </div><div class="line">vagrant halt  </div></pre></td></tr></table></figure>
 <p><strong>NOTE.</strong><br>vagrant使用可谓相当简单了,使用单文件配置,整个周期分为add/init/up/reload/suspend/halt/destroy;</p>
 <p>另外推荐将22端口进行转发。默认转发到2222，但是当打开多个虚拟机的时候因为2222端口被占用所有会随机指定一个端口。So，固定一下对自己的设置是相当有利的。当然因为Flask默认使用5000端口进行测试，对它进行转发也是理所当然的;</p>
 <p>至于使用vagrant<br>ssh登陆,用系统自带的CMD那是相当难受滴,使用cmder全功能版不错。用过一段时间不得不说相对CMD真实赏心悦目,在我的使用中感觉确定有两个。毕竟不是专业的SSH客户端，对于中文文件名无能为力，或许是我不会设置，其二是无法设置代理而且连接到远程VPS时候输入卡顿严重。所以最后还是回归了Xshell。</p>
 <p>开机关机每次进入cmder cd c:\path 进入vagrant 在运行vagrant<br>up是相当厌烦的，用python脚本启动它是个不错的选择</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> os</span><br><span class="line"></span><br><span class="line">os.system(<span class="string">'cd "c:\\\\ficapy\\\\microblog" &amp;&amp; vagrant reload'</span>)  </span><br><span class="line"><span class="comment">#是不是异常简单呢 切换到目录执行reload操作→不一定要先启动再重载！  </span></span><br><span class="line"><span class="comment"># &amp;&amp;表示上个操作执行完毕后在执行下面的操作</span></span><br></pre></td></tr></table></figure>
-<h2 id="2-Linux配置"><a href="#2-Linux配置" class="headerlink" title="2.Linux配置"></a><strong>2.Linux配置</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get update upgrade \<span class="comment">#更新源&amp;升级系统  </span></span><br><span class="line">sudo apt-get install git git-core python python-dev python-setuptools  </span><br><span class="line">sudo easy\_install pip  </span><br><span class="line">sudo pip install virtualenv virtualenvwrapper  </span><br><span class="line">nano \~/.bashrc  </span><br><span class="line">添加下面两行配置后重新运行(<span class="built_in">source</span> \~/.bashrc)  </span><br><span class="line"><span class="built_in">export</span> WORKON\_HOME=\<span class="variable">$HOME</span>/.virtualenvs  </span><br><span class="line"><span class="built_in">source</span> /usr/<span class="built_in">local</span>/bin/virtualenvwrapper.sh</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> os</div><div class="line"></div><div class="line">os.system(<span class="string">'cd "c:\\\\ficapy\\\\microblog" &amp;&amp; vagrant reload'</span>)  </div><div class="line"><span class="comment">#是不是异常简单呢 切换到目录执行reload操作→不一定要先启动再重载！  </span></div><div class="line"><span class="comment"># &amp;&amp;表示上个操作执行完毕后在执行下面的操作  </span></div></pre></td></tr></table></figure>
+<h2 id="2-Linux配置"><a href="#2-Linux配置" class="headerlink" title="2.Linux配置"></a><strong>2.Linux配置</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"> </div><div class="line">sudo apt-get update upgrade \<span class="comment">#更新源&amp;升级系统  </span></div><div class="line">sudo apt-get install git git-core python python-dev python-setuptools  </div><div class="line">sudo easy\_install pip  </div><div class="line">sudo pip install virtualenv virtualenvwrapper  </div><div class="line">nano \~/.bashrc  </div><div class="line">添加下面两行配置后重新运行(<span class="built_in">source</span> \~/.bashrc)  </div><div class="line"><span class="built_in">export</span> WORKON\_HOME=\<span class="variable">$HOME</span>/.virtualenvs  </div><div class="line"><span class="built_in">source</span> /usr/<span class="built_in">local</span>/bin/virtualenvwrapper.sh  </div></pre></td></tr></table></figure>
 <p><strong>NOTE:</strong><br>virtualenvwarpper顾名思义是对virtualenv的二次包装,给我的赶脚就是环境不是在放在开发文件夹下面了，而且命令行直观友好容易记忆，还有TAB自动补全哟。常用的大致有mkvirtualenv/rmvirtualenv/lsvirtualenv/workon/deactive;</p>
 <p>另外使用pip安装第三方包的时候不要使用sudo pip<br>install,该操作会导致安装到全局，而不是安装到当前环境中.直接使用pip<br>install安装.Linux比较小白，暂时我也不知道为什么</p>
 <p>ubuntu14自带python2.7可以不用安装python。可是python-dev这个必装，否则pip安装一些需要编译安装的第三方包的时候会报一些莫名其妙的错误，比如pycurl等。同时直接使用二进制包python-pip安装pip有时候安装包会出错（一朝被蛇咬，十年怕井绳啊，所以我还是使用官方推荐的easy_install方式安装了，还有一种是下载get.py方式）</p>
@@ -668,7 +649,7 @@ pycharm">
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 53 篇文章
+                找到 54 篇文章
             </p>
         </div>
     </div>
@@ -676,7 +657,7 @@ pycharm">
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js" type="text/javascript"></script>
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
 <!--SCRIPTS END-->
 
     
