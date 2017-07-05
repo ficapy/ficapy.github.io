@@ -19,7 +19,7 @@
 <meta property="og:url" content="https://www.zoulei.net/2017/07/05/drone/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
-<meta property="og:updated_time" content="2017-07-05T15:33:53.000Z">
+<meta property="og:updated_time" content="2017-07-05T16:21:28.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Docker CD初探-Drone">
 <meta name="twitter:description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
@@ -279,7 +279,6 @@
 <h3 id="持续集成部署"><a href="#持续集成部署" class="headerlink" title="持续集成部署"></a>持续集成部署</h3><p>当使用Drone，并授权之后。Drone会自动给你的项目加上webhook地址。我们在项目根目录放置.drone.yml文件后会使用docker自动构建</p>
 <p>实现本文开头说的需求.drone.yml文件如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">pipeline:</div><div class="line">  build:</div><div class="line">    image: ruby:2.3</div><div class="line">    commands:</div><div class="line">      - bundle config mirror.https://rubygems.org https://gems.ruby-china.org</div><div class="line">      - bundle install</div><div class="line">      - apt-get update &amp;&amp; apt-get install nodejs rsync -y &amp;&amp; bundle exec middleman build --clean</div><div class="line">      - rsync -r --rsh=&apos;ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /data/id_rsa -p 22&apos; build/* user@host:~/docs --progress --delete</div><div class="line">    volumes:</div><div class="line">      - /data:/data</div><div class="line">    when:</div><div class="line">      branch: master</div></pre></td></tr></table></figure></p>
 <p>在使用之前。我现在/data目录使用ssh-agent生成了密匙对。在目标主机上放上公钥，让我们能够ssh连接远端主机。然后容器创建的时候将密匙挂载到容器目录(此处需要管理员权限将项目设置为可信)。然后就顺理成章了。搭建环境，生成静态文件，rsync同步就完成了。</p>
-<p>再来看看我的博客也是使用这个方式部署的，相信你看配置文件就能够明白<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">pipeline:</div><div class="line">  build:</div><div class="line">    image: alpine</div><div class="line">    commands:</div><div class="line">      - rm -rf /root/blog &amp;&amp; cp -r * /var/blog</div><div class="line">    volumes:</div><div class="line">      - /root/blog:/var/blog</div><div class="line">    when:</div><div class="line">      branch: master</div></pre></td></tr></table></figure></p>
 
             
         </div>
