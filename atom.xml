@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-07-05T16:21:28.000Z</updated>
+  <updated>2017-07-15T07:57:36.000Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,45 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>开发环境中数据库快速回滚</title>
+    <link href="https://www.zoulei.net/2017/07/15/develop_quick_restore_postgresql_database/"/>
+    <id>https://www.zoulei.net/2017/07/15/develop_quick_restore_postgresql_database/</id>
+    <published>2017-07-15T05:24:19.000Z</published>
+    <updated>2017-07-15T07:57:36.000Z</updated>
+    
+    <content type="html"><![CDATA[<p>开发中总会遇到一些测试需要回滚数据库。常规的单元测试的做法是在单个会话中不真正的写入到数据库。而是测试完成后进行数据库回滚。大多数情况下这样都是满足要求的。只是有的时候需要数据库真正的写入到数据库。此时rollback回滚就有些乏力了。此时给数据库做一个备份，测试完成后回滚是一种不错的主意。Postgresql数据库的常规备份我们会使用pg_dump和pg_restore进行导出和恢复。此时如何快速的进行这个操作是我们关注的话题</p>
+<p>很幸运。很顺利的搜到了答案。6年前有人在stackexchange上提问同样的问题。得到了一些有用的回复。大概有这些</p>
+<ul>
+<li>使用文件系统级快照LVM</li>
+<li>使用CREATE  DATABASE … TEMPLATE语法</li>
+<li>将数据库放在虚拟机里面。使用虚拟机快照</li>
+</ul>
+<p>其中最有效的方案是二。因为LVM在个人笔记本上难以实施。虚拟机恢复时间较慢。依据方案二于是乎有人写了一个工具 <a href="https://github.com/fastmonkeys/stellar">stellar</a>。粗略读了一下源码。其具体原理大概如下图<br><img src="https://ficapy.b0.upaiyun.com/blogimg/backup_and_restore_flow.jpg" alt="backup_and_restore_flow"></p>
+<p>备份的时候使用create database … template创建2个备份。恢复的时候删掉原有的数据库。将一个备份重命名为原有的名称。另外的一个备份再生成一个备份就完成了。另外删除新建数据库操作均会关闭所有已连接的数据库会话。</p>
+<p>因为类似文件系统级快照，所以方法极快。我本机2G的数据库文件，创建一个快照大概十秒钟左右，恢复就更快了。当然缺点也是有的，你每创建一个快照都会新增2个一样大小的副本，相当的占据硬盘空间，可是为了速度这点缺陷也就微不足道了┑(￣Д ￣)┍</p>
+<p>另外一个小缺点。因为它定位于测试环境下的数据库备份恢复。所以只连接一台机器。比如你一个数据库在机器A,一个数据库在机器B.赛高~~，那你只能在2个目录下使用2个配置文件来完成了。如果同一个机器上的多个数据库是可以直接备份的。再就是此工具比较专注于Postgresql。对于Mysql就不那么友好了。或许是Mysql的备份方案不一样</p>
+<h3 id="使用方法"><a href="#使用方法" class="headerlink" title="使用方法"></a>使用方法</h3><ol>
+<li><code>stellar init</code> 按照提示输入本机数据库访问路径生成配置文件</li>
+<li><code>stellar snapshot</code> 生成一个快照</li>
+<li><code>stellar restore &lt;snap1&gt;</code> 恢复</li>
+<li>其他请看 <code>stellar --help</code></li>
+</ol>
+<p>( ⊙ o ⊙ )啊！ 多么爽快，世界真美妙</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://dba.stackexchange.com/questions/3394/is-it-possible-to-quickly-create-restore-database-snapshots-with-postgresql">Is it possible to quickly create/restore database snapshots with PostgreSQL?</a><br><a href="https://github.com/fastmonkeys/stellar">github stellar</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;开发中总会遇到一些测试需要回滚数据库。常规的单元测试的做法是在单个会话中不真正的写入到数据库。而是测试完成后进行数据库回滚。大多数情况下这样都是满足要求的。只是有的时候需要数据库真正的写入到数据库。此时rollback回滚就有些乏力了。此时给数据库做一个备份，测试完成后回滚
+    
+    </summary>
+    
+      <category term="伪技术" scheme="https://www.zoulei.net/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>Docker CD初探-Drone</title>
@@ -775,35 +814,6 @@
     
     
       <category term="Flask" scheme="https://www.zoulei.net/tags/Flask/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>osx airdrop无法使用修复</title>
-    <link href="https://www.zoulei.net/2016/07/23/fix_osx_airdrop_not_working/"/>
-    <id>https://www.zoulei.net/2016/07/23/fix_osx_airdrop_not_working/</id>
-    <published>2016-07-23T02:53:25.000Z</published>
-    <updated>2016-07-24T08:27:21.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>前些天用的好好的airdrop居然无法使用了。具体情况是：我有iphone、ipad、mac。iphone和ipad能够互相发现。mac对它们2个发现不了。妈蛋正要传资料可急死我了。网上一搜这种情况还不在少数。</p>
-<p>遇到这种情况。可以打开about this mac→→system report查看Network(wifi)可以看到Country Code:是不是CN(我电脑有问题的时候是X3)。如果不是，那么无法使用airdrop就和它有关。至于如何修复这个问题我没有找到确切的办法.有一个原因可能是由于路由器造成的。这个可以打开系统自带的无线检测工具Wireless Diagnostics(Windows→→scan)查看是不是由于国家码冲突造成的(详情看第一个参考资料)。如果这里没有问题(我的不是这个问题)。。。。。那么请尝试执行以下操作</p>
-<ol>
-<li>将操作系统的语言改成中文</li>
-<li>在系统设置页退出icloud账号</li>
-<li>重启系统<br>：<br>：<br>尼玛，有可能就暂时能正常使用了ヾ(｡｀Д´｡)</li>
-</ol>
-<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="http://www.howtogeek.com/211993/how-to-fix-conflicting-country-codes-and-improve-your-macs-wi-fi/">how-to-fix-conflicting-country-codes-and-improve-your-macs-wi-fi</a><br><a href="http://km.nicetypo.com/doc/7090786787135be8d32fa6624b892309">解決無法從 iPhone AirDrop 到 Mac 的方法</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;前些天用的好好的airdrop居然无法使用了。具体情况是：我有iphone、ipad、mac。iphone和ipad能够互相发现。mac对它们2个发现不了。妈蛋正要传资料可急死我了。网上一搜这种情况还不在少数。&lt;/p&gt;
-&lt;p&gt;遇到这种情况。可以打开about this ma
-    
-    </summary>
-    
-    
-      <category term="随笔" scheme="https://www.zoulei.net/tags/%E9%9A%8F%E7%AC%94/"/>
     
   </entry>
   
