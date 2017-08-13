@@ -19,7 +19,7 @@
 <meta property="og:url" content="https://www.zoulei.net/2017/03/05/acme.sh_quick_start/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧">
-<meta property="og:updated_time" content="2017-03-05T14:23:56.000Z">
+<meta property="og:updated_time" content="2017-07-29T15:18:25.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="使用acme.sh快速搭建https">
 <meta name="twitter:description" content="letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧">
@@ -253,6 +253,7 @@
         <div class="main-content-wrap">
             <p>letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧</p>
 <a id="more"></a>
+<p><a href="media/README-1.md">README</a></p>
 <p>首先有2种认证方式，生成一个指定的文件让letsencrypt访问。或者生成一个DNS记录让letsencrypt访问。第一种方式有非常大的局限性。比如你的80端口正在被使用。那么你需要先设置DNS解析，再修改下nginx的配置让网址能够被正常访问到。这就显得很麻烦了。主流的DNS服务提供商都已经提供了API接口，使用DNS的优势就是：</p>
 <ol>
 <li>任何电脑都能直接生成证书文件，不需要依赖本机能够被外部访问</li>
@@ -659,7 +660,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 55 篇文章
+                找到 57 篇文章
             </p>
         </div>
     </div>

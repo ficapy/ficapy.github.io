@@ -2,6 +2,20 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/</loc>
+    
+    <lastmod>2017-08-13T09:46:27.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://www.zoulei.net/2017/03/05/acme.sh_quick_start/</loc>
+    
+    <lastmod>2017-07-29T15:18:25.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.zoulei.net/2017/07/15/develop_quick_restore_postgresql_database/</loc>
     
     <lastmod>2017-07-15T07:57:36.000Z</lastmod>
@@ -37,13 +51,6 @@
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2017/03/05/acme.sh_quick_start/</loc>
-    
-    <lastmod>2017-03-05T14:23:56.000Z</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>https://www.zoulei.net/2017/03/04/pre_commit/</loc>
     
     <lastmod>2017-03-04T10:44:07.000Z</lastmod>
@@ -61,6 +68,13 @@
     <loc>https://www.zoulei.net/2016/11/08/network_course_pass/</loc>
     
     <lastmod>2016-11-08T14:04:33.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://www.zoulei.net/2016/10/29/media/README/</loc>
+    
+    <lastmod>2016-10-28T22:08:58.000Z</lastmod>
     
   </url>
   
