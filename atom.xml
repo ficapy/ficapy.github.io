@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-08-13T09:46:27.000Z</updated>
+  <updated>2017-11-28T03:55:49.219Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,124 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>ansible笔记</title>
+    <link href="https://www.zoulei.net/2017/11/28/ansible-note/"/>
+    <id>https://www.zoulei.net/2017/11/28/ansible-note/</id>
+    <published>2017-11-28T03:28:42.000Z</published>
+    <updated>2017-11-28T03:55:49.219Z</updated>
+    
+    <content type="html"><![CDATA[<p>以下为观看<a href="https://www.youtube.com/playlist?list=PL7hgvWUGJtUsT74AXZgVhr37riphKjzkD">Ansible-Configuration Management</a>的笔记。不适合初学者查看。可以作为温习使用</p>
+<a id="more"></a>
+<h2 id="Ansible总结"><a href="#Ansible总结" class="headerlink" title="Ansible总结"></a>Ansible总结</h2><ol>
+<li>单个Module是基石，将机器分组，严重依靠变量</li>
+<li>task组成任务</li>
+<li>全部的task组成playbooks.将所有的机器定义到一个确定的状态</li>
+<li>使用role对playbooks进行拆分.role有约定好的目录结构</li>
+<li>ansible galaxy来分享role.使用时完全使用变量来覆盖原有变量,严重依赖社区水平(比如国情安装许多软件都需要使用镜像,而外国作者编写role并不会考虑这些)</li>
+</ol>
+<h2 id="特点"><a href="#特点" class="headerlink" title="特点"></a>特点</h2><ul>
+<li>change management(定义一个特定的系统状态，change_event用于回调)</li>
+<li>Provisioning(role。服务划分。比如一个webserver会依次执行某些步骤)</li>
+<li>Automation(playbook同时设置上千台)</li>
+<li>Orchestration(编排多个tasks让其协调coordinates执行。多个系统配置。解决task间的依赖性)</li>
+</ul>
+<h2 id="为什么使用它"><a href="#为什么使用它" class="headerlink" title="为什么使用它"></a>为什么使用它</h2><ul>
+<li>No agents</li>
+<li>No database</li>
+<li>No residual software</li>
+<li>No complex upgrades</li>
+<li>题外话。使用yaml文件描述而无法使用编程控制。我认为迟早药丸。只不过目前还没找到更好的替代品</li>
+<li>ssh/root/encrypted vault(共享到github仓库成标配了,几乎所有的软件都是这个套路)</li>
+<li>easy to extend:http call、shell commands(挺有用)、scripts(暂时不太懂，感觉是扩充model)、Ansible-Galaxy</li>
+</ul>
+<h2 id="Ansible-架构"><a href="#Ansible-架构" class="headerlink" title="Ansible 架构"></a>Ansible 架构</h2><p><img src="https://ficapy.b0.upaiyun.com/capture/ansible_arch.jpg" alt="Ansible 架构"></p>
+<p>Variables:</p>
+<ul>
+<li>Host Variables: 在资产中给host或者group设置的变量</li>
+<li>Facts: ansible进行的第一步就是setup。获取机器的基础信息。比如内网ip</li>
+<li>Dynamic Variables: 收集tasks数据或者运行时获取？比如将上一个task的结果作为参数</li>
+</ul>
+<p>执行过程中将model发送到远方机器临时目录执行。返回json结果。然后删除临时目录内容</p>
+<h2 id="学习环境搭建-视频19"><a href="#学习环境搭建-视频19" class="headerlink" title="学习环境搭建(视频19)"></a>学习环境搭建(视频19)</h2><ul>
+<li>Vagrant、Virtualbox、Ansible</li>
+<li>Remote、Local(基本不使用Local模式。仅有一次无法远程ssh我用过)</li>
+</ul>
+<h2 id="Inventory-Features"><a href="#Inventory-Features" class="headerlink" title="Inventory Features"></a>Inventory Features</h2><ul>
+<li>Behavioral Parameters</li>
+<li>Groups</li>
+<li>Groups of Groups</li>
+<li>Assign Variables</li>
+<li>Scaling out using multiple files</li>
+<li>Static/Dynamic<br>分组、组合、赋予变量(和python里面变量作用域LEGB差不多)</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">[db]</div><div class="line">db1.company.com ansible_ssh_user=aarom xx=xx</div><div class="line">db2.company.com</div><div class="line"></div><div class="line">[datacenter-west:children]</div><div class="line">db</div><div class="line"></div><div class="line">[datacenter-west:vars]</div><div class="line">ansible_ssh_user=ansible_user</div><div class="line">xx=xx</div></pre></td></tr></table></figure>
+<p>分组的套路(group_vars、host_vars下面的文件必须和inventory相对应)<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">├── group_vars   # 全局</div><div class="line">│   ├── all</div><div class="line">│   ├── db</div><div class="line">├── host_vars   # 单个host</div><div class="line">│   └── web1</div><div class="line">├── inventory_prod</div><div class="line">├── inventory_test</div></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"># variable file example</div><div class="line">---     # 标记</div><div class="line"># key-value pairs</div><div class="line">ntp:  ntp-west.company.com</div><div class="line">syslog: logger-west.company.com</div></pre></td></tr></table></figure>
+<h2 id="Ad-Hoc-临时使用"><a href="#Ad-Hoc-临时使用" class="headerlink" title="Ad-Hoc 临时使用"></a>Ad-Hoc 临时使用</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">ansible -m ping all</div><div class="line">ansible -m shell -a &quot;hostname&quot; all</div><div class="line">ansible -m shell -a &quot;getent passwd | grep deploy&quot; all</div><div class="line">ansible -b -K -m shell -a &quot;whoami&quot; all -vvv -T 30 -c paramiko</div></pre></td></tr></table></figure>
+<p>参数注解</p>
+<ul>
+<li>-b become变成某用户一般是root</li>
+<li>-K 配合-b输入密码</li>
+<li>-m 使用某个模块</li>
+<li>-vvv 和ssh -vvv一样查看详细日志</li>
+<li>-T timeout 设置超时</li>
+<li>-c 选择连接的模块. 3.5使用默认值搞sudo可能会有问题</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">使用变量(估计使用janja2模板引擎是会python的人使用ansible的唯一优势了-_-)</div><div class="line">ansible webservers -i inventory_prod -m user -a &quot;name=&#123;&#123;username&#125;&#125; password=1234 -b&quot;</div></pre></td></tr></table></figure>
+<p>ansible-doc可以查看文档  </p>
+<h2 id="Host-Group-Target-Patterns"><a href="#Host-Group-Target-Patterns" class="headerlink" title="Host/Group Target Patterns"></a>Host/Group Target Patterns</h2><ul>
+<li>OR (group1:group2)</li>
+<li>NOT (!group2)</li>
+<li>Wildcard (web*.ex.com)</li>
+<li>Regex (~web[0-9]+)</li>
+<li>Complex Patterns AND (group1:&amp;group2) # 求交集、中间出现一个:有点奇葩</li>
+</ul>
+<h2 id="Anaible-Playbooks"><a href="#Anaible-Playbooks" class="headerlink" title="Anaible Playbooks"></a>Anaible Playbooks</h2><ul>
+<li>组合ansible modules组成play,多个play组成playbooks</li>
+<li>logic controls &amp; error handle</li>
+<li>include 合并多个</li>
+<li>Grab output of task for another task(register)</li>
+<li>Debug Module(debug/msg or var)</li>
+<li>Promptins for input(类似与input,vars_prompt)</li>
+<li>Playbook Handlers(notify)<ol>
+<li>Tasks with asynchronous execution</li>
+<li>Only runs tasks when notified</li>
+<li>Tasks Only notify when state=changed</li>
+<li>Does not run until all playbook tasks have executed</li>
+<li>Most common for restarting services to load changes(if changes are made)</li>
+</ol>
+</li>
+<li>Contitional Clause(when: ansible_os_family == “Debian”,搭配register使用)</li>
+<li>Jinja2 Template Module(template)</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div></pre></td><td class="code"><pre><div class="line">---</div><div class="line">- hosts: webservres</div><div class="line">  sudo: yes</div><div class="line"></div><div class="line">  vars:</div><div class="line">    http_port: 80</div><div class="line">    doc_dir: /ansible/</div><div class="line">    doc_root: /var/www/html/ansible/</div><div class="line">    max_clients: 5</div><div class="line">  </div><div class="line">  vars_prompt:</div><div class="line">    - name: username</div><div class="line">      prompt: what is your name?</div><div class="line"></div><div class="line">  tasks:</div><div class="line">  - name: Ensure that Apache is installed</div><div class="line">    yum: name=httpd state=present</div><div class="line">    when: ansible_os_family == &quot;RedHat&quot;</div><div class="line"></div><div class="line">  - name: Start Apache Services</div><div class="line">    service: name=httpd enabled=yes state=started</div><div class="line"></div><div class="line">  - name: Deploy configuration File</div><div class="line">    template: src=templates/httpd.j2 dest=/etc/httpd/conf/httpd.conf</div><div class="line">    notify:</div><div class="line">      - Restart Apache</div><div class="line">    </div><div class="line">  - name: Copy Site Files</div><div class="line">      template: src=templates/index.j2 dest=&#123;&#123; doc_root &#125;&#125;/index.html</div><div class="line"></div><div class="line">  handlers:</div><div class="line">    - name: Restart Apache</div><div class="line">      service: name=httpd state=restarted</div><div class="line"></div><div class="line">- hosts: dbservers</div><div class="line">  sudo: yes</div><div class="line"></div><div class="line">  tasks:</div><div class="line">  - name: Ensure MySQL is installed</div><div class="line">    yum: name=mysql-server state=present</div><div class="line">  </div><div class="line">  - name: Start MySQL</div><div class="line">    service: name=mysqld state=started</div><div class="line"></div><div class="line">- hosts: webservers:dbservers</div><div class="line">  sudo: yes</div><div class="line"></div><div class="line">  tasks:</div><div class="line">  - name: Stop IPTABLES NOW!!!</div><div class="line">    service: name=iptables state=stopped</div></pre></td></tr></table></figure>
+<p>ansible-playbook -i inventory web_db.yaml</p>
+<h2 id="Roles"><a href="#Roles" class="headerlink" title="Roles"></a>Roles</h2><ul>
+<li>Predefined directory structure</li>
+<li>defaults、files、handlers、meta、tasks、templates、vars</li>
+<li>main.yml,使用include.vars除外</li>
+<li>use tags to define categories within your playbooks</li>
+<li><p>Adding Roles to Playbook</p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">    ---</div><div class="line">    - hosts: code-dev</div><div class="line">    roles:</div><div class="line">        - server-common</div><div class="line">        - builders</div><div class="line">    gather_facts: no</div><div class="line">    tasks:</div><div class="line">        # Build your extra tasks here like</div><div class="line">    ``` </div><div class="line">- Pre-tasks and Post-tasks(executes plays before or after roles)</div><div class="line">- ```ansible-playbook site.yml -tags &quot;web&quot; -limit atlanta</div></pre></td></tr></table></figure>
+</li>
+<li><p>ansible galaxy(ansible-galaxy install username.role)</p>
+</li>
+</ul>
+<h2 id="最佳实践"><a href="#最佳实践" class="headerlink" title="最佳实践"></a>最佳实践</h2><p><a href="https://github.com/enginyoyen/ansible-best-practises">ansible-best-practises</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;以下为观看&lt;a href=&quot;https://www.youtube.com/playlist?list=PL7hgvWUGJtUsT74AXZgVhr37riphKjzkD&quot;&gt;Ansible-Configuration Management&lt;/a&gt;的笔记。不适合初学者查看。可以作为温习使用&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="devops" scheme="https://www.zoulei.net/categories/devops/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>内网无网络环境初始化线上环境</title>
@@ -785,34 +903,6 @@
     
     
       <category term="Flask" scheme="https://www.zoulei.net/tags/Flask/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>list和dict的线程安全</title>
-    <link href="https://www.zoulei.net/2016/07/31/list_dict_threading_safe/"/>
-    <id>https://www.zoulei.net/2016/07/31/list_dict_threading_safe/</id>
-    <published>2016-07-30T23:47:09.000Z</published>
-    <updated>2016-08-02T03:56:03.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点，线程安全应该针对于具体的操作，而不是具体的对象，我们说Queue是线程安全的是因为针对它的所有操作都是线程安全的。</p>
-<a id="more"></a>
-<h3 id="官方文档"><a href="#官方文档" class="headerlink" title="官方文档"></a><a href="https://docs.python.org/2/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe">官方文档</a></h3><p>可以看到大概有这么个概念<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">L,L1,L2-&gt;list</div><div class="line">D,D1,D2-&gt;dict</div><div class="line">x,y-&gt;object</div><div class="line">i,j-&gt;int</div><div class="line"></div><div class="line">线程安全</div><div class="line">L.append(x)</div><div class="line">L1.append(L2)</div><div class="line">x=L[i]</div><div class="line">y=L.pop()</div><div class="line">L1[i,j]=L2</div><div class="line">L.sort()</div><div class="line">x=y</div><div class="line">x.field=y</div><div class="line">D[x]=y</div><div class="line">D1.update(D2)</div><div class="line">D.keys()</div><div class="line"></div><div class="line"></div><div class="line">以下是非线程安全</div><div class="line">i=i+1</div><div class="line">L.append(L[-1])</div><div class="line">L[i]=L[j]</div><div class="line">D[x]=D[x]+1</div></pre></td></tr></table></figure><br>可以看到list的append啥的其实是线程安全的。我们看到的举非线程安全的例子基本都是i+=1这种，最后得到的结果小于相加次数。然后最后说一句多线程对同一资源进行操作的时候要加锁哇。。。。。这话直接说的好像比较不负责任。让我这样的初学者风声鹤唳草木皆兵</p>
-<h3 id="一点小解释"><a href="#一点小解释" class="headerlink" title="一点小解释"></a>一点小解释</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> threading</div><div class="line"><span class="keyword">import</span> dis</div><div class="line"></div><div class="line">i = <span class="number">0</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">global</span> i</div><div class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> range(<span class="number">3000000</span>):</div><div class="line">        i += <span class="number">1</span></div><div class="line"></div><div class="line">th = [threading.Thread(target=main), threading.Thread(target=main)]</div><div class="line"></div><div class="line"><span class="keyword">for</span> t <span class="keyword">in</span> th:</div><div class="line">    t.start()</div><div class="line"></div><div class="line"><span class="keyword">for</span> t <span class="keyword">in</span> th:</div><div class="line">    t.join()</div><div class="line">print(i)</div><div class="line"></div><div class="line">dis.dis(main)</div><div class="line"></div><div class="line"><span class="comment"># 4372439</span></div><div class="line"><span class="comment">#   8           0 SETUP_LOOP              30 (to 33)</span></div><div class="line"><span class="comment">#               3 LOAD_GLOBAL              0 (range)</span></div><div class="line"><span class="comment">#               6 LOAD_CONST               1 (3000000)</span></div><div class="line"><span class="comment">#               9 CALL_FUNCTION            1</span></div><div class="line"><span class="comment">#              12 GET_ITER            </span></div><div class="line"><span class="comment">#         &gt;&gt;   13 FOR_ITER                16 (to 32)</span></div><div class="line"><span class="comment">#              16 STORE_FAST               0 (_)</span></div><div class="line"><span class="comment"># </span></div><div class="line"><span class="comment">#   9          19 LOAD_GLOBAL              1 (i)</span></div><div class="line"><span class="comment">#              22 LOAD_CONST               2 (1)</span></div><div class="line"><span class="comment">#              25 INPLACE_ADD         </span></div><div class="line"><span class="comment">#              26 STORE_GLOBAL             1 (i)</span></div><div class="line"><span class="comment">#              29 JUMP_ABSOLUTE           13</span></div><div class="line"><span class="comment">#         &gt;&gt;   32 POP_BLOCK           </span></div><div class="line"><span class="comment">#         &gt;&gt;   33 LOAD_CONST               0 (None)</span></div><div class="line"><span class="comment">#              36 RETURN_VALUE     </span></div></pre></td></tr></table></figure>
-<p>我们知道python代码经过编译成字节码指令，然后python虚拟机按照指令进行执行，这里每一条指令都是原子操作不会被中断，可以看到<code>i+=1</code>这条语句被划分为4条指令被执行。取出i变量的值入栈→→将被加数1入栈→→取出2个数相加结果再入栈→→结果出栈。因为是要累加。我们当然需要累加的第一步加入的值是上一个累加的结果。可是在多线程不加锁的情况下每一条指令被执行完毕后都有可能去执行另外一个线程的指令。这就会造成第一步加入的值有可能和另外一个线程是一样的，于是悲剧发生了O_o</p>
-<p>再想一想append<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">8          19 LOAD_GLOBAL              1 (i)</div><div class="line">           22 LOAD_ATTR                2 (append)</div><div class="line">           25 LOAD_CONST               2 (1)</div><div class="line">           28 CALL_FUNCTION            1</div><div class="line">           31 POP_TOP             </div></pre></td></tr></table></figure><br> <a href="http://jakevdp.github.io/images/array_vs_list.png">图片引用自</a><br> <img src="https://ficapy.b0.upaiyun.com/blogimg/array_vs_list.png" alt="array_vs_list"><br>可以看出list就是一个容器.append就相当与在最后面加了一个引用。虽然它也是由几条指定组成。也会发生交错执行的情况。这种交错造成的结果无非就是我本来是先执行的却在了一个的后面执行了插入，造成的结果就是<code>顺序错乱了</code>。😄可是特喵本来就是多线程程序，谁特喵会去关心顺序呢。所以就说线程安全了。<br>可以看出，append和<code>i+=1</code>最大的区别就是是否对自身进行了修改。dict同理~~</p>
-<p>另外加锁的时间开销其实还是挺大的。上例，我用3个线程(结果是9000000)，不加锁1.38秒，加锁执行39.16秒(python2.7.11)。不加锁1.06秒，加锁3.94秒(python3.5.1)。→_→当然你可以把i+=1改成i.apped(1)这样不用锁结果也能对了，只不过内存消耗感人</p>
-<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="http://qingyunha.github.io/taotao/">A Python Interpreter Written in Python</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点，线程安全应该针对于具体的操作，而不是具体的对象，我们说Queue是线程安全的是因为针对它的所有操作都是线程安全的。&lt;/p&gt;
-    
-    </summary>
-    
-    
-      <category term="python" scheme="https://www.zoulei.net/tags/python/"/>
     
   </entry>
   

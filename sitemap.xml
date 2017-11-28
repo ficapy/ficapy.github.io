@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.zoulei.net/2017/11/28/ansible-note/</loc>
+    
+    <lastmod>2017-11-28T03:55:49.219Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/</loc>
     
     <lastmod>2017-08-13T09:46:27.000Z</lastmod>
@@ -163,14 +170,14 @@
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2016/07/22/pycallgraph_note/</loc>
+    <loc>https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/</loc>
+    <loc>https://www.zoulei.net/2016/07/22/pycallgraph_note/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     
