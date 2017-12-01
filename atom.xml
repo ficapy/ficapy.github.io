@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-11-28T03:55:49.219Z</updated>
+  <updated>2017-12-01T14:39:02.534Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -16,11 +16,177 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>influxdb配置文件</title>
+    <link href="https://www.zoulei.net/2017/12/01/influxdb_config/"/>
+    <id>https://www.zoulei.net/2017/12/01/influxdb_config/</id>
+    <published>2017-12-01T14:38:46.000Z</published>
+    <updated>2017-12-01T14:39:02.534Z</updated>
+    
+    <content type="html"><![CDATA[<p>开始一个软件,从读懂它的配置文件开始。以下是读取<a href="https://docs.influxdata.com/influxdb/v1.3/administration/config/">3.1配置文档</a>的笔记<br>总结来说，influxdb的配置文件可配置的地方几乎没有。参数性能调优貌似不存在，其中是否开启，是否记录日志都占据了好多部分。额外需要关注的是data章节有一些关于fsync的设置默认是0，还有默认的max-series-per-database和max-value-per-tag默认都存在限制。暂时不太清楚原理是什么。当保存大量数据的时候肯定会报错,另外默认的慢查询日志是没有打开的。对于请求。默认没有限制最大的返回内容数。以及限制单个查询响应的时间</p>
+<a id="more"></a>
+<h1 id="使用配置文件"><a href="#使用配置文件" class="headerlink" title="使用配置文件"></a>使用配置文件</h1><ul>
+<li>使用<code>influxd config</code>查看默认的配置</li>
+<li>使用<code>influxd -config config_path</code>或者<code>INFLUXDB_CONFIG_PATH</code>启动</li>
+</ul>
+<h2 id="环境变量"><a href="#环境变量" class="headerlink" title="环境变量"></a>环境变量</h2><p>配置优先级为: 环境变量 &gt; 文件配置 &gt; 默认设置</p>
+<h2 id="全局选项"><a href="#全局选项" class="headerlink" title="全局选项"></a>全局选项</h2><ol>
+<li>reporting-disabled  发送数据统计给influxdb</li>
+<li>bind-address        绑定监听地址(RPC)</li>
+<li>GOMAXPROCS          最大进程数</li>
+</ol>
+<h2 id="meta"><a href="#meta" class="headerlink" title="[meta]"></a>[meta]</h2><ol>
+<li>dir   meta数据保存地址(一般设置一个base_dir)</li>
+<li>retention-autocreate 自动创建保留策略。默认永久保留</li>
+<li>logging-enabled  开启meta日志记录</li>
+</ol>
+<h2 id="data"><a href="#data" class="headerlink" title="[data]"></a>[data]</h2><ol>
+<li>dir  数据保存地址</li>
+<li>index-version 决定分片索引保存内存还是磁盘</li>
+<li>wal-dir  预写日志保存地址</li>
+<li>wal-fsync-delay  预写日志刷新延迟(非ssd磁盘建议0-100ms)</li>
+<li>trace-logging-enabled TSM引擎和WAL日志</li>
+<li>query-log-enabled   是否记录查询日志</li>
+<li>cache-max-memory-size    最大缓存容量,占满会拒绝写入</li>
+<li>cache-snapshot-memory-size 缓存快照大小。满后会将内存内容写入到TSM文件</li>
+<li>cache-snapshot-write-cold-duration 如果一个分片没有被写入或者删除会被写入到TSM文件的时间</li>
+<li>compact-full-write-cold-duration 同上，没有写入或者删除的压缩时间</li>
+<li>max-concurrent-compactions  并发压缩进程数</li>
+<li>max-series-per-database   每个数据库最大的series数量。超过会500错误。0表示无限制(为什么需要限制呢？)</li>
+<li>max-values-per-tag 每个tag索引的值个数(同疑问为什么限制为十万)</li>
+</ol>
+<h2 id="coordinator"><a href="#coordinator" class="headerlink" title="[coordinator]"></a>[coordinator]</h2><ol>
+<li>write-timeout    写入超时时间10秒</li>
+<li>max-concurrent-queries  最大并发查询数默认无限制</li>
+<li>query-timeout   查询超时时间默认无限制</li>
+<li>log-queries-after 慢查询检测。为慢查询则记录日志</li>
+<li>max-select-point 最大的points数量。默认无限制</li>
+<li>max-select-series  最大的series数量。默认无限制</li>
+<li>max-select-buckets   最大的GROUP BY time()数量。默认无限制</li>
+</ol>
+<h2 id="retention"><a href="#retention" class="headerlink" title="[retention]"></a>[retention]</h2><ol>
+<li>enable  设置为false则禁止删除数据</li>
+<li>check-interval  检查周期默认三十分钟</li>
+</ol>
+<h2 id="shard-precreation"><a href="#shard-precreation" class="headerlink" title="[shard-precreation]"></a>[shard-precreation]</h2><ol>
+<li>enable 开启数据到达前先创建shard</li>
+<li>check-interval  检查周期</li>
+<li>advance-period  预创建shard的最大时间</li>
+</ol>
+<h2 id="admin"><a href="#admin" class="headerlink" title="[admin]"></a>[admin]</h2><p>官方完全废弃，不可用。由xx替代(注:还是用grafana吧)</p>
+<h2 id="monitor"><a href="#monitor" class="headerlink" title="[monitor]"></a>[monitor]</h2><p>系统自身监控。默认数据会保存到_internal数据库</p>
+<ol>
+<li>store-enabled  是否存储监控信息</li>
+<li>store-database 保存数据库的名称</li>
+<li>store-interval  记录间隔。默认十秒</li>
+</ol>
+<h2 id="subscriber"><a href="#subscriber" class="headerlink" title="[subscriber]"></a>[subscriber]</h2><p>这个部分是控制Kapacitor如何接收数据。应该没什么用处</p>
+<ol>
+<li>enabled</li>
+<li>http-timeout</li>
+<li>insecure-skip-verify</li>
+<li>ca-certs</li>
+<li>write-concurrency</li>
+<li>write-buffer-size</li>
+</ol>
+<h2 id="http"><a href="#http" class="headerlink" title="[http]"></a>[http]</h2><p>除了RPC调用。就是RESTFUL方式的api读写了</p>
+<ol>
+<li>enable  是否打开</li>
+<li>bind-address 绑定地址</li>
+<li>auth-enabled 打开验证</li>
+<li>realm  JWT验证相关</li>
+<li>log-enabled 记录日志</li>
+<li>write-tracing 应该是调试使用。会记录写入的payload</li>
+<li>pprof-enabled 开启性能记录</li>
+<li>https-enabled  开启https</li>
+<li>https-certificate https证书</li>
+<li>https-private-key  https私钥</li>
+<li>shared-secret  用于JWT的签名。想想单机应该是用不到的</li>
+<li>max-row-limit  最大单次可以上传的point，默认无限制</li>
+<li>max-connection-limit 最大可连接数，默认无限制</li>
+<li>unix-socket-enabled  开启unix域连接</li>
+<li>bind-socket  绑定socket域</li>
+<li>max-body-size  最大body长度,默认25MB，超过大小返回http413请求实体过大错误</li>
+</ol>
+<h2 id="graphite"><a href="#graphite" class="headerlink" title="[[graphite]]"></a>[[graphite]]</h2><p>(service plugin)设置一个或多个graphite数据监听器</p>
+<ol>
+<li>enabled 启用graphite</li>
+<li>database   数据库名称</li>
+<li>retention-policy 保留策略</li>
+<li>bind-address  绑定地址</li>
+<li>protocol     协议tcp或udp</li>
+<li>consistency-level   一致性级别</li>
+<li>batch-size</li>
+<li>batch-pending</li>
+<li>batch-timeout</li>
+<li>udp-read-buffer</li>
+<li>separator</li>
+</ol>
+<h2 id="collectd"><a href="#collectd" class="headerlink" title="[[collectd]]"></a>[[collectd]]</h2><p>(service plugin)同上，设置监听collectd数据</p>
+<ol>
+<li>enabled</li>
+<li>bind-address</li>
+<li>database</li>
+<li>retention-policy</li>
+<li>typesdb</li>
+<li>security-level</li>
+<li>auth-file</li>
+<li>batch-size</li>
+<li>batch-pending</li>
+<li>batch-timeout</li>
+<li>read-buffer</li>
+</ol>
+<h2 id="opentsdb"><a href="#opentsdb" class="headerlink" title="[[opentsdb]]"></a>[[opentsdb]]</h2><p>(service plugin)同上，设置监听opentsdb数据</p>
+<ol>
+<li>enabled</li>
+<li>bind-address</li>
+<li>database</li>
+<li>retention-policy</li>
+<li>consistency-level</li>
+<li>tls-enabled</li>
+<li>certificate</li>
+<li>log-point-errors</li>
+<li>batch-size</li>
+<li>batch-pending</li>
+<li>batch-timeout</li>
+</ol>
+<h2 id="udp"><a href="#udp" class="headerlink" title="[[udp]]"></a>[[udp]]</h2><p>(service plugin)除了RPC、HTTP、附带UDP</p>
+<ol>
+<li>enabled</li>
+<li>bind-address</li>
+<li>database</li>
+<li>retention-policy</li>
+<li>batch-size</li>
+<li>batch-pending</li>
+<li>batch-timeout</li>
+<li>read-buffer</li>
+<li>precision</li>
+</ol>
+<h1 id="continuous-queries"><a href="#continuous-queries" class="headerlink" title="[continuous_queries]"></a>[continuous_queries]</h1><p>持续查询</p>
+<ol>
+<li>enabled  开启</li>
+<li>query-stats-enabled  默认关闭，将执行统计写入到默认的监控数据库  </li>
+<li>log-enabled  记录日志</li>
+<li>run-interval  查找执行间隔</li>
+</ol>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;开始一个软件,从读懂它的配置文件开始。以下是读取&lt;a href=&quot;https://docs.influxdata.com/influxdb/v1.3/administration/config/&quot;&gt;3.1配置文档&lt;/a&gt;的笔记&lt;br&gt;总结来说，influxdb的配置文件可配置的地方几乎没有。参数性能调优貌似不存在，其中是否开启，是否记录日志都占据了好多部分。额外需要关注的是data章节有一些关于fsync的设置默认是0，还有默认的max-series-per-database和max-value-per-tag默认都存在限制。暂时不太清楚原理是什么。当保存大量数据的时候肯定会报错,另外默认的慢查询日志是没有打开的。对于请求。默认没有限制最大的返回内容数。以及限制单个查询响应的时间&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="database" scheme="https://www.zoulei.net/categories/database/"/>
+    
+    
+  </entry>
+  
+  <entry>
     <title>ansible笔记</title>
     <link href="https://www.zoulei.net/2017/11/28/ansible-note/"/>
     <id>https://www.zoulei.net/2017/11/28/ansible-note/</id>
     <published>2017-11-28T03:28:42.000Z</published>
-    <updated>2017-11-28T03:55:49.219Z</updated>
+    <updated>2017-11-28T03:57:18.299Z</updated>
     
     <content type="html"><![CDATA[<p>以下为观看<a href="https://www.youtube.com/playlist?list=PL7hgvWUGJtUsT74AXZgVhr37riphKjzkD">Ansible-Configuration Management</a>的笔记。不适合初学者查看。可以作为温习使用</p>
 <a id="more"></a>
@@ -854,55 +1020,6 @@
     
     
       <category term="python" scheme="https://www.zoulei.net/tags/python/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>werkzeug源码分析(local.py)</title>
-    <link href="https://www.zoulei.net/2016/08/03/werkzeug_local_note/"/>
-    <id>https://www.zoulei.net/2016/08/03/werkzeug_local_note/</id>
-    <published>2016-08-03T00:58:00.000Z</published>
-    <updated>2016-09-04T08:14:45.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>有人说flask的上下文机制是整个框架的精华部分，有人说它神奇的g让人费解。werkzeug的local.py就是它的具体实现。这个看似神奇的机制背后加上应用代码也不过两三百行。不过好像坑还是<code>比较深</code>的。另外flask的0.1版本才200多行代码。值得瞅一下</p>
-<a id="more"></a>
-<h3 id="直观感受上下文"><a href="#直观感受上下文" class="headerlink" title="直观感受上下文"></a>直观感受上下文</h3><p>使用wrk进行压测<code>wrk -t300 -c300 -d10s http://127.0.0.1:5000</code><br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> time</div><div class="line"><span class="keyword">import</span> random</div><div class="line"><span class="keyword">from</span> pprint <span class="keyword">import</span> pprint</div><div class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> Flask</div><div class="line"><span class="keyword">from</span> flask.globals <span class="keyword">import</span> _request_ctx_stack,_app_ctx_stack</div><div class="line"></div><div class="line">app = Flask(__name__)</div><div class="line"><span class="meta">@app.route('/')</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">index</span><span class="params">()</span>:</span></div><div class="line">    time.sleep(random.random())</div><div class="line">    pprint(_request_ctx_stack._local.__storage__)</div><div class="line">    pprint(_app_ctx_stack._local.__storage__)</div><div class="line">    <span class="keyword">return</span> <span class="string">''</span></div><div class="line"></div><div class="line">app.run(threaded=<span class="keyword">True</span>)</div><div class="line"></div><div class="line"><span class="comment"># 某一时刻状态</span></div><div class="line"><span class="comment"># &#123;123145360109568: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145391640576: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145407406080: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145417916416: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145428426752: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145459957760: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145480978432: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145496743936: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145512509440: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145538785280: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145549295616: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145601847296: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145638633472: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145680674816: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145743736832: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145764757504: &#123;'stack': [&lt;RequestContext 'http://127.0.0.1:5000/' [GET] of temp&gt;]&#125;&#125;</span></div><div class="line"><span class="comment"># &#123;123145360109568: &#123;'stack': [&lt;flask.ctx.AppContext object at 0x103f90f60&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145391640576: &#123;'stack': [&lt;flask.ctx.AppContext object at 0x103fcdc50&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145407406080: &#123;'stack': [&lt;flask.ctx.AppContext object at 0x10402c080&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145417916416: &#123;'stack': [&lt;flask.ctx.AppContext object at 0x103fa0668&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145428426752: &#123;'stack': [&lt;flask.ctx.AppContext object at 0x104058828&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145459957760: &#123;'stack': [&lt;flask.ctx.AppContext object at 0x103fd8470&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145480978432: &#123;'stack': [&lt;flask.ctx.AppContext object at 0x1040859e8&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145496743936: &#123;'stack': [&lt;flask.ctx.AppContext object at 0x104078cf8&gt;]&#125;,</span></div><div class="line"><span class="comment">#  123145512509440: &#123;'stack': [&lt;flask.ctx.AppContext object at 0x104036c88&gt;]&#125;,</span></div></pre></td></tr></table></figure></p>
-<h3 id="为什么会有Local"><a href="#为什么会有Local" class="headerlink" title="为什么会有Local"></a>为什么会有Local</h3><p>比较抽象的解释叫它<code>线程内共享变量</code>，下面来个例子<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> threading</div><div class="line"></div><div class="line">l = threading.local()</div><div class="line">l.a = <span class="number">1</span></div><div class="line">threading.Thread(target=<span class="keyword">lambda</span>: setattr(l, <span class="string">'a'</span>, <span class="number">2</span>) <span class="keyword">or</span> print(l.a, threading.current_thread())).start()</div><div class="line">print(l.a)</div><div class="line"><span class="comment"># 2 &lt;Thread(Thread-1, started 123145307557888)&gt;</span></div><div class="line"><span class="comment"># 1</span></div></pre></td></tr></table></figure><br>可以看出就是一全局对象对它设置的属性在线程间是隔离的。可是这又有什么用。我们作为框架使用者逻辑一般都是写在一起的，没有人会故意去像这样写<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">l = threading.local()</div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></div><div class="line">    l.a = <span class="number">1</span></div><div class="line">    l.a  <span class="comment">##进行引用</span></div></pre></td></tr></table></figure><br>可是我们使用的是框架！线程的调起不是我们主动去操作的。框架会有一些第三方扩展。它们依靠此机制给我们提供接口，比如来个<a href="http://flask.pocoo.org/docs/0.11/appcontext/#context-usage">官方示例</a><br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> sqlite3</div><div class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> g</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_db</span><span class="params">()</span>:</span></div><div class="line">    db = getattr(g, <span class="string">'_database'</span>, <span class="keyword">None</span>)</div><div class="line">    <span class="keyword">if</span> db <span class="keyword">is</span> <span class="keyword">None</span>:</div><div class="line">        db = g._database = connect_to_database()</div><div class="line">    <span class="keyword">return</span> db</div><div class="line"><span class="comment">#=========================</span></div><div class="line"><span class="keyword">from</span> werkzeug.local <span class="keyword">import</span> LocalProxy</div><div class="line">db = LocalProxy(get_db)    </div></pre></td></tr></table></figure></p>
-<p>Local的实现原理很简单，这里不详述了。就是前一篇博文说的字典的<code>dict[key] = value</code>是线程安全的。其实threading.local也是一样的作用，那么为什么不用它。</p>
-<ul>
-<li>支持了greenlet(本博文只会涉及到多线程情况)</li>
-<li>自带的写法太特么恶心了，那个源码我都快看吐了，不如自己写一个(我都没看透自带的为什么要那么写,如果你能轻松看明白，那么你肯定是看魔术方法的大神)<br>简述下自带的逻辑，主要是这几句<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"># python2.7.11代码</div><div class="line">dict = object.__getattribute__(self, &apos;__dict__&apos;)</div><div class="line">current_thread().__dict__[key] = dict</div><div class="line"></div><div class="line">key = object.__getattribute__(self, &apos;_local__key&apos;)</div><div class="line">d = current_thread().__dict__.get(key)</div><div class="line"># import threading</div><div class="line"># l = threading.current_thread()</div><div class="line"># print(l is threading.current_thread())</div><div class="line"># threading.Thread(target=lambda :print(threading.current_thread() is l)).start()</div><div class="line"># True</div><div class="line"># False</div></pre></td></tr></table></figure>
-</li>
-</ul>
-<p>在同一线程内threading.current_thread()是同一对象，有一个_patch函数，该函数在local属性被调用前提前调用，将current_thread().__dict__相关的内容绑定在local.__dict__上。</p>
-<h3 id="为什么会有LocalStack"><a href="#为什么会有LocalStack" class="headerlink" title="为什么会有LocalStack"></a>为什么会有LocalStack</h3><p>它主要将上面的Local由<code>l.key = value</code>变成了<code>l.push(value)</code>。变成了栈结构。可是从上面的直观感受上下文部分可以看到在多线程环境下任一时刻栈里面都仅有一个内容。那么还为什么要使用栈呢，往下看。</p>
-<h3 id="为什么会有LocalProxy"><a href="#为什么会有LocalProxy" class="headerlink" title="为什么会有LocalProxy"></a>为什么会有LocalProxy</h3><p>从名字就可以看出来是代理模式。可以看看github上的<a href="https://github.com/faif/python-patterns/blob/master/proxy.py">设计模式</a>，同样是讲的代理模式，flask的实际应用就比这个例子要高明的多</p>
-<p>我们使用代理是为了绕过防火墙访问外面的世界，那么LocalProxy这个代理是干啥子的呢。设想一下。我们使用了l = Local()并且在上面给一个属性赋值了l.key = value。那么当你要调用的时候就使用l.key就好啦。现在我们没有直接用Local用的是l = LocalStack(),l.push(RequestContext()),request这个属性又在<br>RequestContext()这个对象上。那么我们要访问request怎么办！此时你就要执行l.top.request进行访问。可是优雅呢！优雅呢！优雅呢！优雅哪里去了。我们很懒，我们想执行一个request就能代替l.top.request(有人会问为什么不直接写死reques = l.top.request，那是因为它是死！！！的,而l.top.request是随着线程进入退出一直出入栈动态变化的，我们只能在每次使用的时候执行l.top.request得到正确的结果)。→_→这就是这个代理能为我们做的<br>执行repr(current_app)的调用图，请无视pycall那一块<br><img src="http://ficapy.b0.upaiyun.com/blogimg/werkzeug_localproxy.png" alt="werkzeug_localproxy"><br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">_find_app</span><span class="params">()</span>:</span></div><div class="line">    top = _app_ctx_stack.top</div><div class="line">    <span class="keyword">if</span> top <span class="keyword">is</span> <span class="keyword">None</span>:</div><div class="line">        <span class="keyword">raise</span> RuntimeError(_app_ctx_err_msg)</div><div class="line">    <span class="keyword">return</span> top.app</div><div class="line"></div><div class="line">_app_ctx_stack = LocalStack()</div><div class="line">current_app = LocalProxy(_find_app)</div></pre></td></tr></table></figure><br>在LocalProxy里面我们写了一个回调函数，当对LocalProxy属性进行访问的时候，它永远都是先执行_get_current_object,该函数就是执行我们写入的回调函数得到访问对象,比如current_app就是得到_app_ctx_stack.top.app对象。最后再对得到的对象进行属性访问</p>
-<p>对LocalProxy讲3个小细节</p>
-<ol>
-<li><p>__init__中有<code>object.__setattr__(self, &#39;_LocalProxy__local&#39;, local)</code>。如果你要确保对一个对象的<code>__dict__</code>中加入内容，需要使用object.__setattr__，使用self.x、setattr(self,’x’)、self.__dict__[x]都是不确定的，因为它self这个对象可能会重写自身的__setattr__,其次对于私有变量。执行__setattr__的时候需要变换</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">class Foo():</div><div class="line">    def __init__(self):</div><div class="line">        self.__a = 1</div><div class="line">print(Foo().__dict__)</div><div class="line"># &#123;&apos;_Foo__a&apos;: 1&#125;</div></pre></td></tr></table></figure>
-</li>
-<li><p>最下面同时也对所有可列举的魔术方法进行了代理<code>__str__ = lambda x:    str(x._get_current_object())</code></p>
-</li>
-<li>由于代理的存在原始对象的访问需要通过_get_current_object(其实对于看过代码的这应该是废话O_o)<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">from flask import Flask,current_app</div><div class="line">from flask.globals import _app_ctx_stack</div><div class="line">with Flask(__name__).app_context():</div><div class="line">    print(current_app is _app_ctx_stack.top.app)</div><div class="line">    print(current_app._get_current_object() is _app_ctx_stack.top.app)</div><div class="line"># False</div><div class="line"># True</div></pre></td></tr></table></figure>
-</li>
-</ol>
-<h3 id="request、session和g"><a href="#request、session和g" class="headerlink" title="request、session和g"></a>request、session和g</h3><p>这几个和上下文息息相关,比如离开了对应的上下文它们完全无法使用<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> request, session, g</div><div class="line"></div><div class="line"><span class="keyword">for</span> i <span class="keyword">in</span> [request, session, g]:</div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        i.x = <span class="number">1</span></div><div class="line">    <span class="keyword">except</span> RuntimeError:</div><div class="line">        print(<span class="string">'boom! '</span>, end=<span class="string">''</span>)</div><div class="line"><span class="comment"># boom! boom! boom! </span></div></pre></td></tr></table></figure><br>flask的0.1版本是只有RequestContext请求上下文，没有应用上下文的。<a href="https://github.com/pallets/flask/commit/47288231fe8f9c6b2c413d50160c32c3884d5785">直到0.9版本才用二三十行代码加上AppContext应用上下文</a><br>为什么要加上应用上下文呢。官方文档我没有找到很详尽的解释，<a href="http://flask.pocoo.org/docs/0.11/appcontext/#purpose-of-the-application-context">只有一段简要的描述</a>，同时参考了下别人的博客。我个人理解是为了处理单独使用应用上下文不使用请求上下文的情况。另外文档有<code>creating such a request context is an unnecessarily expensive operation</code>在某些情况使用请求上下文是昂贵的没有必要的操作。参考下面的代码<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> flask <span class="keyword">import</span> Flask,current_app</div><div class="line"><span class="keyword">from</span> flask.globals <span class="keyword">import</span> _app_ctx_stack, _request_ctx_stack</div><div class="line"></div><div class="line">app1 = Flask(<span class="string">'a'</span>)</div><div class="line">app2 = Flask(<span class="string">'b'</span>)</div><div class="line"></div><div class="line"><span class="keyword">with</span> app1.app_context():</div><div class="line">    <span class="keyword">with</span> app2.app_context():</div><div class="line">        print(_request_ctx_stack._local.__storage__)</div><div class="line">        print(_app_ctx_stack._local.__storage__)</div><div class="line"></div><div class="line"><span class="comment"># &#123;&#125;</span></div><div class="line"><span class="comment"># &#123;140735191154688: &#123;'stack': [&lt;flask.ctx.AppContext object at 0x1096c1f60&gt;, &lt;flask.ctx.AppContext object at 0x1096cd048&gt;]&#125;&#125;</span></div><div class="line"></div><div class="line"><span class="keyword">with</span> app1.test_client() <span class="keyword">as</span> client1:</div><div class="line">    <span class="keyword">with</span> app2.test_client() <span class="keyword">as</span> client2:</div><div class="line">        print(_request_ctx_stack._local.__storage__)</div><div class="line">        print(_app_ctx_stack._local.__storage__)</div><div class="line">        client2.get(<span class="string">'/b'</span>)</div><div class="line">        print(current_app)</div><div class="line">        print(_request_ctx_stack._local.__storage__)</div><div class="line">        client1.get(<span class="string">'/a'</span>)</div><div class="line">        print(current_app)</div><div class="line">        print(_request_ctx_stack._local.__storage__)</div><div class="line">    resp = client1.get(<span class="string">'/a'</span>)</div><div class="line">    print(_request_ctx_stack._local.__storage__)</div><div class="line">    print(current_app)</div><div class="line"><span class="comment"># &#123;&#125;</span></div><div class="line"><span class="comment"># &#123;&#125;</span></div><div class="line"><span class="comment"># &lt;Flask 'b'&gt;</span></div><div class="line"><span class="comment"># &#123;140735191154688: &#123;'stack': [&lt;RequestContext 'http://localhost/b' [GET] of b&gt;]&#125;&#125;</span></div><div class="line"><span class="comment"># &lt;Flask 'a'&gt;</span></div><div class="line"><span class="comment"># &#123;140735191154688: &#123;'stack': [&lt;RequestContext 'http://localhost/a' [GET] of a&gt;]&#125;&#125;</span></div><div class="line"><span class="comment"># &#123;140735191154688: &#123;'stack': [&lt;RequestContext 'http://localhost/a' [GET] of a&gt;]&#125;&#125;</span></div></pre></td></tr></table></figure><br>首先可以看到执行app_context()的时候有了应用上下文，和请求上下文一毛钱关系都没有。看下代码就是return AppContext(self),它自己有个<strong>enter</strong>函数执行了push。这有什么用呢。比如你要在命令行调用下你写的数据库函数。很明显它需要数据库的配置app.config。如果没有应用上下文，那么你需要先创建请求上下文。现在你只需要创建应用上下文了(比请求上下文更轻量)。再者当我们一次性进入了多个应用上下文的时候此时栈里面就不止一个元素了。所以。。。。这也是上面问的为什么要用栈</p>
-<p>第二个例子只有当请求发送后应用上下文和请求上下文才会同时入栈。且同时出栈，所以网上有博客写一个应用上下文会包含多个请求上下文这是不对的。并且绝对不能理解为应用上下文的生存周期是一个app从启动到关闭这个过程</p>
-<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="https://blog.tonyseek.com/post/the-context-mechanism-of-flask/">Flask 的 Context 机制</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;有人说flask的上下文机制是整个框架的精华部分，有人说它神奇的g让人费解。werkzeug的local.py就是它的具体实现。这个看似神奇的机制背后加上应用代码也不过两三百行。不过好像坑还是&lt;code&gt;比较深&lt;/code&gt;的。另外flask的0.1版本才200多行代码。值得瞅一下&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="Flask" scheme="https://www.zoulei.net/categories/Flask/"/>
-    
-    
-      <category term="Flask" scheme="https://www.zoulei.net/tags/Flask/"/>
     
   </entry>
   
