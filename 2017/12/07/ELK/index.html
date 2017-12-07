@@ -6,24 +6,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>Flask插件原理 - 邹雷</title>
+    <title>Elasticsearch笔记 - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月1">
-<meta name="keywords" content="Flask">
+    <meta name="description" content="以下是看udemy的Elasticsearch入门教程做的简短笔记">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="Flask插件原理">
-<meta property="og:url" content="https://www.zoulei.net/2016/09/05/flask_plugin_note/index.html">
+<meta property="og:title" content="Elasticsearch笔记">
+<meta property="og:url" content="https://www.zoulei.net/2017/12/07/ELK/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月1">
-<meta property="og:updated_time" content="2016-09-11T14:08:21.000Z">
+<meta property="og:description" content="以下是看udemy的Elasticsearch入门教程做的简短笔记">
+<meta property="og:image" content="https://ficapy.b0.upaiyun.com/capture/elasticsearch_analyzer.jpeg">
+<meta property="og:updated_time" content="2017-12-07T01:34:28.783Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Flask插件原理">
-<meta name="twitter:description" content="Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月1">
+<meta name="twitter:title" content="Elasticsearch笔记">
+<meta name="twitter:description" content="以下是看udemy的Elasticsearch入门教程做的简短笔记">
+<meta name="twitter:image" content="https://ficapy.b0.upaiyun.com/capture/elasticsearch_analyzer.jpeg">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -230,19 +231,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            Flask插件原理
+            Elasticsearch笔记
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2016-09-05T07:38:32+08:00">
+    <time itemprop="datePublished" datetime="2017-12-07T09:18:08+08:00">
 	
-		    9月 05, 2016
+		    12月 07, 2017
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/Flask/">Flask</a>
+    <a class="category-link" href="/categories/database/">database</a>
 
 
     
@@ -252,37 +253,107 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。<a href="https://github.com/pallets/flask/issues/1135">在2016年4月13号正式被移出支持了</a>，已经直接发出不建议使用的警告。本文还是来炒一下现饭，看看它背后的逻辑</p>
+            <p>以下是看<a href="https://www.udemy.com/complete-elasticsearch-masterclass-with-kibana-and-logstash/">udemy的Elasticsearch入门教程</a>做的简短笔记</p>
 <a id="more"></a>
-<p>比如flask-sqlalchemy原本是使用from flask_sqlalchemy import [anything]使用的，被变成了from flask.ext.sqlalchemy import [anything]。这是一种对于import的hook。我们知道要导入一个模块，不使用import声明也是可以的，可以使用__import__函数，返回得到的也是一个模块对象</p>
-<h2 id="import-hook"><a href="#import-hook" class="headerlink" title="import hook"></a>import hook</h2><p>下文简述，如果需要了解比较详细的资料可以查看后文给出的参考链接(python2和3的import机制是略有区别的)<br>import声明主要做了2件事情，查找模块，加载模块。我们说的hook发生在第一步查找模块。查找模块的步骤是</p>
 <ol>
-<li>查找sys.modules缓存</li>
-<li>在sys.meta_path中依次执行finder对象,找到就返回自身,所有的都没有找到则会报错<br>注意:sys.path_hooks中的finder会被sys.meta_path调用执行(sys.meta_path和sys.path_hook都可以参与import hooks步骤)</li>
+<li><p>基础知识、下载、配置(1-3)</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">brew cask install java</div><div class="line">下载elasticsearch、kibana</div><div class="line">config/kibana 配置文件</div><div class="line">bin/elasticsearch   (9200)</div><div class="line">bin/kibana  启动(5601端口)</div></pre></td></tr></table></figure>
+<p> Elasticsearch is Document Oriented</p>
+<ul>
+<li>insert Documents</li>
+<li>Delete Documents</li>
+<li>Retrieve Documents</li>
+<li>Analyze Documents</li>
+<li><p>Search Documents</p>
+<h4 id="inverted-index"><a href="#inverted-index" class="headerlink" title="inverted index"></a>inverted index</h4><h4 id="JSON对象-经典数据库的Table模型转变为JSON模型"><a href="#JSON对象-经典数据库的Table模型转变为JSON模型" class="headerlink" title="JSON对象(经典数据库的Table模型转变为JSON模型)"></a>JSON对象(经典数据库的Table模型转变为JSON模型)</h4><p>ElasticSearch | Relational DB<br>— | —<br>Field   | Column<br>Document    | Row<br>Type    |   Table<br>Index   |   Database</p>
+</li>
+</ul>
+</li>
+<li><p>数据存储引擎、分布式工作引擎集群，shard(4-7)</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">PUT /&#123;index&#125;/&#123;type&#125;/&#123;id&#125;</div><div class="line">&#123;</div><div class="line">    &quot;field1&quot;: &quot;value1&quot;,</div><div class="line">    &quot;field2&quot;: &quot;value2&quot;</div><div class="line">    ...</div><div class="line">&#125;</div><div class="line">相同的id插入会生成不同的版本号</div><div class="line">更新数据的原理是读取数据合并再put.只支持row级别，不支持字段级别</div><div class="line">DELETE /vehicles/car/123</div><div class="line">&#123;</div><div class="line">    &quot;_index&quot;: &quot;vehicles&quot;,</div><div class="line">    &quot;_type&quot;: &quot;car&quot;,</div><div class="line">    &quot;_id&quot;: &quot;123&quot;,</div><div class="line">    &quot;_version&quot;: 13,</div><div class="line">    &quot;result&quot;: &quot;deleted&quot;,</div><div class="line">    &quot;_shards&quot;: &#123;</div><div class="line">        &quot;total&quot;: 2,</div><div class="line">        &quot;successful&quot;: 1,</div><div class="line">        &quot;failed&quot;: 0</div><div class="line">    &#125;,</div><div class="line">    &quot;_seq_no&quot;: 12,</div><div class="line">    &quot;_primary_term&quot;: 1</div><div class="line">&#125;</div><div class="line">即使删除同样也不会真的删除数据只会进行标记。磁盘空间不会立即释放</div></pre></td></tr></table></figure>
+<p> mappings and settings.mappings类似与数据库中的schema</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">&quot;settings&quot;: &#123;</div><div class="line">  &quot;index&quot;: &#123;</div><div class="line">    &quot;creation_date&quot;: &quot;1512370059209&quot;,</div><div class="line">    &quot;number_of_shards&quot;: &quot;5&quot;,</div><div class="line">    &quot;number_of_replicas&quot;: &quot;1&quot;,</div><div class="line">    &quot;uuid&quot;: &quot;Obppoj9yT4eQg5oq6Zv5IA&quot;,</div><div class="line">    &quot;version&quot;: &#123;</div><div class="line">      &quot;created&quot;: &quot;6000099&quot;</div><div class="line">    &#125;,</div><div class="line">    &quot;provided_name&quot;: &quot;vehicles&quot;</div><div class="line">  &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p> <code>GET business/_search</code></p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">GET business/building/_search</div><div class="line">&#123;</div><div class="line">    &quot;query&quot;:&#123;</div><div class="line">        &quot;term&quot;:&#123;&quot;address&quot;:&quot;pen&quot;&#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line">PUT数据后经过分析进行分词写入内存。到达一定数量后持久化写入磁盘。组成segment。且不可变</div><div class="line">tokenization -&gt; filter</div><div class="line">1. Remove Stop Words</div><div class="line">2. Lowercasing</div><div class="line">3. Stemming</div><div class="line">4. Synonyms</div></pre></td></tr></table></figure>
+<p> Token | Exists in<br> — | —<br> token   |   1</p>
+<p> <img src="https://ficapy.b0.upaiyun.com/capture/elasticsearch_analyzer.jpeg" alt="elasticsearch_analyzer"></p>
+</li>
 </ol>
-<h2 id="精简版本实现"><a href="#精简版本实现" class="headerlink" title="精简版本实现"></a>精简版本实现</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> sys</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">ExtensionImporter</span><span class="params">(object)</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">install</span><span class="params">(self)</span>:</span></div><div class="line">        sys.meta_path[:] = [x <span class="keyword">for</span> x <span class="keyword">in</span> sys.meta_path <span class="keyword">if</span> self != x] + [self]</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">find_module</span><span class="params">(self, fullname, path=None)</span>:</span></div><div class="line">        <span class="keyword">if</span> fullname.startswith(<span class="string">'flask.ext.'</span>):</div><div class="line">            <span class="keyword">return</span> self</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">load_module</span><span class="params">(self, fullname)</span>:</span></div><div class="line">        <span class="keyword">if</span> fullname <span class="keyword">in</span> sys.modules:</div><div class="line">            <span class="keyword">return</span> sys.modules[fullname]</div><div class="line"></div><div class="line">        modname = fullname.split(<span class="string">'.'</span>)[<span class="number">-1</span>]</div><div class="line"></div><div class="line"></div><div class="line">        realname = <span class="string">'flask_'</span> +  modname</div><div class="line">        <span class="keyword">try</span>:</div><div class="line">            __import__(realname)</div><div class="line">        <span class="keyword">except</span> ImportError:</div><div class="line">            <span class="keyword">raise</span> ImportError(<span class="string">'No module named %s'</span> % fullname)</div><div class="line"></div><div class="line">        module = sys.modules[fullname] = sys.modules[realname]</div><div class="line">        <span class="keyword">if</span> <span class="string">'.'</span> <span class="keyword">not</span> <span class="keyword">in</span> modname:</div><div class="line">            setattr(sys.modules[<span class="string">'flask.ext'</span>], modname, module)</div><div class="line"></div><div class="line">        <span class="keyword">return</span> module</div></pre></td></tr></table></figure>
-<p>ExtensionImporter是一个finder对象,当执行import flask.ext时会把它加入到sys.meta_path列表，后续的import都会先执行它，判断满足要求后就会使用__import__导入然后加入到sys.modules，这样就实现了flask.ext.sqlalchemy导入</p>
-<p>为什么会被废除呢。下面是我猜测的。首先本来这个东西没有实质的作用，就是看着炫酷而已。我们可以认为所有的扩展导入都会使用flask.ext.xxx，但是这对第三方扩展库是有要求的，那就是包名必须为flask_xxx才行，我猜测有的第三方库未必遵守这个规则(否则exthook.py中也不会出现['flask_%s', 'flaskext.%s'flaskext.另外一种形式)，这就说明了有的作者使用了flaskextxxx这种包名。出现了第二种难免就会出现另外的。当使用者发现并非所有的第三方扩展都使用flask.ext导入的时候。社区也觉得没必要维持了，毕竟第一个写这个代码的人是不是因为刚刚了解了import机制，觉得很炫酷写上去的呢-_-,另外这种花哨的设计也可能对代码自动补全功能产生了负面影响。so，最后还是回到了原来的位置，直接使用import flask_sqlalchemy导入吧</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://docs.python.org/3/reference/import.html#import-hooks">官方import hook文档</a><br><a href="https://github.com/Liuchang0812/slides/tree/master/pycon2015cn">pycon2015 import演讲</a><br><a href="https://github.com/mitsuhiko/flask-sqlalchemy">flask-sqlalchemy</a></p>
+<ol>
+<li><p>inverted index(8-9)</p>
+<p> Data Types for Document Fields</p>
+<p> String Fields: text,keyword<br> Numeric Fields: long,integer,short,byte,double,float<br> Date Fields: text,keyword<br> True/False Fields: boolean<br> Binary Fields: binary</p>
+<p> - 注意。和教程不一致了。教程使用的5版本，新版本6进行了破坏性升级。以前index/type/documents的概念后续会去掉type。在6里面单个index里面无法存储多个type。故也无法设置多个mapping</p>
+<ul>
+<li>关闭写入内容时自动生成mappings(dynamic:false/strict)</li>
+<li><p><a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/analysis-analyzers.html">各种analyzer测试</a></p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">POST _analyze</div><div class="line">&#123;</div><div class="line">&quot;analyzer&quot;: &quot;simple&quot;,</div><div class="line">&quot;text&quot;: &quot;The 2 QUICK Brown-Foxes jumped over the lazy dog&apos;s bone.&quot;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+</ul>
+</li>
+</ol>
+<ol>
+<li><p>search DSL (10-14)</p>
+<ul>
+<li>Domain Specific Language</li>
+<li><p>Query Context &amp; Filter Context</p>
+<ol>
+<li><p>Query</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">match_all</div><div class="line">&quot;match&quot;: &#123;&quot;name&quot;: &quot;computer&quot;&#125; </div><div class="line">这查询语法简直让人有种生不如死的感觉</div><div class="line">GET /courses/_search</div><div class="line">&#123;</div><div class="line">&quot;query&quot;: &#123;</div><div class="line">    &quot;bool&quot;: &#123;</div><div class="line">    &quot;must&quot;: [&#123;&quot;match&quot;: &#123;&quot;room&quot;: &quot;c8&quot;&#125;&#125;,</div><div class="line">        &#123;&quot;match&quot;: &#123;&quot;name&quot;: &quot;computer&quot;&#125;&#125;]</div><div class="line">    &#125;</div><div class="line">&#125;</div><div class="line">&#125;</div><div class="line">must/must_not/should/minimun_should_match</div><div class="line">multi_match/match_phrase /match_phrase_prefix</div><div class="line">range</div></pre></td></tr></table></figure>
+</li>
+<li><p>Filter</p>
+<ul>
+<li>不能单独使用</li>
+<li>不进行评分</li>
+<li>ElasticSearch会对结果进行缓存</li>
+<li>可以先常规查询得到评分。再使用filter对结果过滤</li>
+</ul>
+</li>
+<li><p>Aggregation</p>
+<ul>
+<li>endpoint-&gt;_search/_count</li>
+<li>bulk indexing</li>
+<li>terms:field类似与group、aggs来聚合、avg、max、min函数(如果需要根据聚合的结果来排序怎么办)</li>
+<li>先执行query。后面根据结果进行聚合</li>
+<li>stats(min、max、avg、sum)</li>
+<li>bucket和metric的概念。range  <ul>
+<li>对于group by得到的结果再次使用range(from、to)进行二次分组。分组后可以嵌套使用agg聚合</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+</li>
+</ul>
+</li>
+<li><p>logstash and kibana (15-17)</p>
+<ol>
+<li><p>logstash</p>
+<ul>
+<li>input、filter、output(ruby语法)</li>
+</ul>
+</li>
+<li><p>Kibana</p>
+<ul>
+<li>kibana需要先设置默认index</li>
+<li>Visualize新建单个视图、Dashboard组合它们</li>
+</ul>
+</li>
+</ol>
+</li>
+</ol>
 
             
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-            <div class="post-footer-tags">
-                <span class="text-color-light text-small">标签</span><br/>
-                
-    <a class="tag tag--primary tag--small t-link" href="/tags/Flask/">Flask</a>
-
-            </div>
-        
         <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/11/flask_routing_note/"  data-tooltip="Flask路由机制">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -290,7 +361,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/02/tmux_note/" data-tooltip="tmux">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/12/01/influxdb_config/" data-tooltip="influxdb配置文件">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -305,17 +376,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/12/07/ELK/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/12/07/ELK/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/12/07/ELK/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -363,7 +434,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/11/flask_routing_note/"  data-tooltip="Flask路由机制">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -371,7 +442,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/02/tmux_note/" data-tooltip="tmux">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/12/01/influxdb_config/" data-tooltip="influxdb配置文件">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -386,17 +457,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/12/07/ELK/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/12/07/ELK/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/12/07/ELK/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -422,17 +493,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/12/07/ELK/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/12/07/ELK/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/05/flask_plugin_note/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/12/07/ELK/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -645,9 +716,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2016/09/05/flask_plugin_note/';
+                 this.page.url = 'https://www.zoulei.net/2017/12/07/ELK/';
                  
-                    this.page.identifier = '2016/09/05/flask_plugin_note/';
+                    this.page.identifier = '2017/12/07/ELK/';
                  
              };
             (function() {
