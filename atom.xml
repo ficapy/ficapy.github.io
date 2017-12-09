@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-12-07T01:34:28.783Z</updated>
+  <updated>2017-12-09T00:04:25.920Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,128 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>influxdb 专业术语</title>
+    <link href="https://www.zoulei.net/2017/12/09/influxdb_glossary/"/>
+    <id>https://www.zoulei.net/2017/12/09/influxdb_glossary/</id>
+    <published>2017-12-09T00:02:41.000Z</published>
+    <updated>2017-12-09T00:04:25.920Z</updated>
+    
+    <content type="html"><![CDATA[<p>以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张图开始<br><img src="https://ficapy.b0.upaiyun.com/capture/influxdb_glossary.jpg" alt="influxdb_glossary"><br><a id="more"></a></p>
+<h3 id="aggregation-聚合"><a href="#aggregation-聚合" class="headerlink" title="aggregation 聚合"></a>aggregation 聚合</h3><p>使用聚合函数对points中的set返回聚合结果</p>
+<ul>
+<li>count 返回非null的field values个数</li>
+<li>distinct  返回唯一field values列表</li>
+<li>integral 由过滤条件组成的积分</li>
+<li>mean  返回field values的算术平均值</li>
+<li>median 返回field values排序后的中位数</li>
+<li>mode  从field values列表中返回最常用的值</li>
+<li>spread 最大减去最小</li>
+<li>stddev 标准差</li>
+<li>sum 求和</li>
+</ul>
+<h3 id="batch-批量"><a href="#batch-批量" class="headerlink" title="batch 批量"></a>batch 批量</h3><p>为了减少influxdb的负载，建议对point的集合进行上传。使用\n做分割。建议每批包含五千到一万个point</p>
+<h3 id="continuous-query-CQ-持续查询"><a href="#continuous-query-CQ-持续查询" class="headerlink" title="continuous query(CQ) 持续查询"></a>continuous query(CQ) 持续查询</h3><p>定期执行自动查询并将结果持久化到数据库</p>
+<h3 id="database-数据库"><a href="#database-数据库" class="headerlink" title="database 数据库"></a>database 数据库</h3><p>和关系型数据库差不多吧。</p>
+<table>
+<thead>
+<tr>
+<th>关系型数据库</th>
+<th>influxdb</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>database</td>
+<td>database</td>
+</tr>
+<tr>
+<td>table</td>
+<td>measurement</td>
+</tr>
+<tr>
+<td>row</td>
+<td>point</td>
+</tr>
+</tbody>
+</table>
+<p>特别点的就是。influxdb有保留策略</p>
+<h3 id="duration-持续时间"><a href="#duration-持续时间" class="headerlink" title="duration 持续时间"></a>duration 持续时间</h3><p>保留策略的一个属性表示数据会保存多久。数据过期会被执行自动删除</p>
+<h3 id="field-字段"><a href="#field-字段" class="headerlink" title="field 字段"></a>field 字段</h3><p>对比tag来说field没有被索引。在一段时间范围内查询field的值需要扫描所有的point得到结果。性能没有tag好</p>
+<h3 id="field-key-字段的key"><a href="#field-key-字段的key" class="headerlink" title="field key 字段的key"></a>field key 字段的key</h3><p>在key-value对中表示field字段的key.只能是string类型。存储到metadata中</p>
+<h3 id="field-set-字段的集合"><a href="#field-set-字段的集合" class="headerlink" title="field set 字段的集合"></a>field set 字段的集合</h3><p>所有field key的集合</p>
+<h3 id="field-value-字段的值"><a href="#field-value-字段的值" class="headerlink" title="field value 字段的值"></a>field value 字段的值</h3><p>field的value。类型可以是strings、float、integers、booleans。field的值始终与时间戳相关</p>
+<h3 id="function-函数"><a href="#function-函数" class="headerlink" title="function 函数"></a>function 函数</h3><p>分三类，聚合、选择、转换</p>
+<h3 id="identifier-标识"><a href="#identifier-标识" class="headerlink" title="identifier 标识"></a>identifier 标识</h3><p>emmm…持续查询名称、数据库名称、field字段、度量名称、保留策略名称、订阅名称、标签名称、用户名</p>
+<h3 id="line-protocol-行协议"><a href="#line-protocol-行协议" class="headerlink" title="line protocol 行协议"></a>line protocol 行协议</h3><p>基于文本格式写入到influxdb</p>
+<h3 id="measurement-度量"><a href="#measurement-度量" class="headerlink" title="measurement 度量"></a>measurement 度量</h3><p>emmm…可以类比到关系型数据库的table</p>
+<h3 id="metastore-元数据存储"><a href="#metastore-元数据存储" class="headerlink" title="metastore  元数据存储"></a>metastore  元数据存储</h3><p>包含内部系统的状态信息。元素据存储包含了用户信息、数据库信息、保留侧列、分片元数据、持续查询和订阅</p>
+<h3 id="node-节点"><a href="#node-节点" class="headerlink" title="node 节点"></a>node 节点</h3><p>一个独立的influxd进程</p>
+<h3 id="now"><a href="#now" class="headerlink" title="now()"></a>now()</h3><p>本地的纳秒时间戳</p>
+<h3 id="point-点"><a href="#point-点" class="headerlink" title="point 点"></a>point 点</h3><ul>
+<li>在serises中由fields组成的单个数据。<code>每个point由它的series和时间戳组成唯一标识</code>(重点)</li>
+<li>对于一个相同的时间戳和相同的series只能保存一个point.如果相同则新的field set覆盖掉旧的</li>
+</ul>
+<h3 id="query-查询"><a href="#query-查询" class="headerlink" title="query 查询"></a>query 查询</h3><p>从influxdb中查询到相关数据的操作</p>
+<h3 id="replication-factor-复制因子"><a href="#replication-factor-复制因子" class="headerlink" title="replication factor 复制因子"></a>replication factor 复制因子</h3><p>对集群有用。O__O “…可是集群并不是免费功能,将一份数据保留到集群上多份</p>
+<h3 id="retention-policy-RP-保留策略"><a href="#retention-policy-RP-保留策略" class="headerlink" title="retention policy(RP) 保留策略"></a>retention policy(RP) 保留策略</h3><p>以数据库作为单位，分三个方面。保留时长，数据多久进行一次分片操作。数据设置多少个副本。默认autogen表示永不删除、一个副本集(表示没副本)、七天进行一次分片</p>
+<h3 id="schema-模式"><a href="#schema-模式" class="headerlink" title="schema 模式"></a>schema 模式</h3><p>如何组织数据到influxdb。包含databases、retention policies、series、measurements、tag keys、tag values、field keys</p>
+<h3 id="selector-选择器"><a href="#selector-选择器" class="headerlink" title="selector 选择器"></a>selector 选择器</h3><p>一个函数，从特定范围的point中返回单个</p>
+<ul>
+<li>bottom 返回N个最小的field value</li>
+<li>first  返回最开始时间的field value</li>
+<li>last  返回最近时间的field value</li>
+<li>max  返回最大的field value</li>
+<li>min  返回最小的field value</li>
+<li>percentile 根据百分比返回</li>
+<li>sample  随机返回</li>
+<li>top  返回最大的N个field value</li>
+</ul>
+<h3 id="series-序列"><a href="#series-序列" class="headerlink" title="series 序列"></a>series 序列</h3><p>由measurement、tag set、retention policy组成(<code>注意:field set不在里面</code>)</p>
+<h3 id="series-cardinality-序列基数"><a href="#series-cardinality-序列基数" class="headerlink" title="series cardinality 序列基数"></a>series cardinality 序列基数</h3><p>唯一的series数，如果一个measurement有2个tag key。1个有三个唯一的值。另一个有两个。那么序列基数为6.因为tag集合是保存在内存中的。在配置里面也有默认的数量限制</p>
+<h3 id="server-服务器"><a href="#server-服务器" class="headerlink" title="server 服务器"></a>server 服务器</h3><p>运行influxdb的环境。应该一台服务器只运行一个influxdb进程</p>
+<h3 id="shard-分片"><a href="#shard-分片" class="headerlink" title="shard 分片"></a>shard 分片</h3><p>包含编码和压缩数据，作为TSM文件保存到磁盘。每个分片属于唯一的一个shard group。每个分片包含了特定的series</p>
+<h3 id="shard-duration-分片持续时间"><a href="#shard-duration-分片持续时间" class="headerlink" title="shard duration 分片持续时间"></a>shard duration 分片持续时间</h3><p>由保留策略中的shard duration决定。</p>
+<h3 id="shard-group-分片组"><a href="#shard-group-分片组" class="headerlink" title="shard group 分片组"></a>shard group 分片组</h3><p>分片组(保留策略)-&gt;shard-&gt;data.为了自动删除搞出了这么多概念┑(￣Д ￣)┍</p>
+<h3 id="subscription-订阅"><a href="#subscription-订阅" class="headerlink" title="subscription 订阅"></a>subscription 订阅</h3><p>O__O “… 好像并没有什么用。搭配kapactior使用。订阅它的数据进行存储</p>
+<h3 id="tag"><a href="#tag" class="headerlink" title="tag"></a>tag</h3><p>对比field。tag是有索引的</p>
+<h3 id="tag-key"><a href="#tag-key" class="headerlink" title="tag key"></a>tag key</h3><p>略</p>
+<h3 id="tag-set"><a href="#tag-set" class="headerlink" title="tag set"></a>tag set</h3><p>略</p>
+<h3 id="tag-value"><a href="#tag-value" class="headerlink" title="tag value"></a>tag value</h3><p>只能为数字。存储到metadata</p>
+<h3 id="timestamp-时间戳"><a href="#timestamp-时间戳" class="headerlink" title="timestamp 时间戳"></a>timestamp 时间戳</h3><p>和point关联的时间戳，可以有多种时间格式存储和查询</p>
+<h3 id="transformation-变换"><a href="#transformation-变换" class="headerlink" title="transformation 变换"></a>transformation 变换</h3><p>特定的点返回值和集合，得到的结果不能用来再次聚合</p>
+<ul>
+<li>ceiling 目前还不支持(ceil,floor)</li>
+<li>cumulative_sum 将列表变成累加和列表(原有1,1,2,2变成1,2,4,6)  </li>
+<li>derivative 导数</li>
+<li>difference 和第一个结果相减得到不同</li>
+<li>elapsed  得到时间戳的不同</li>
+<li>floor  目前还不支持</li>
+<li>histogram 目前还不支持</li>
+<li>moving_average 滚动平均值(原有1,2,3得到1.5,2.5)</li>
+<li>non_negative_derivative 非负导数</li>
+<li>non_negative_difference 非负不同</li>
+</ul>
+<h3 id="tsm-Time-Structured-Merge-tree"><a href="#tsm-Time-Structured-Merge-tree" class="headerlink" title="tsm(Time Structured Merge tree)"></a>tsm(Time Structured Merge tree)</h3><p>influxdb的专用存储格式。允许高压缩和高速写入读取速度要高于已存在的B+树或者LSM树</p>
+<h3 id="user"><a href="#user" class="headerlink" title="user"></a>user</h3><ul>
+<li>admin用户具有读写所有数据库的权限并且可以管理用户</li>
+<li>非admin有每个数据库的读写权限(被admin分配)</li>
+</ul>
+<h3 id="value-per-second"><a href="#value-per-second" class="headerlink" title="value per second"></a>value per second</h3><p>度量写入速度,比如每个point有四个field,每批有5000个point.写入速度为每秒10个。那么values per second速率为<code>4*5000*10</code></p>
+<h3 id="WAL-write-ahead-log-预写日志"><a href="#WAL-write-ahead-log-预写日志" class="headerlink" title="WAL(write ahead log) 预写日志"></a>WAL(write ahead log) 预写日志</h3><p>略</p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张图开始&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/capture/influxdb_glossary.jpg&quot; alt=&quot;influxdb_glossary&quot;&gt;&lt;br&gt;
+    
+    </summary>
+    
+      <category term="database" scheme="https://www.zoulei.net/categories/database/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>Elasticsearch笔记</title>
@@ -1046,53 +1168,6 @@
     
     
       <category term="docker" scheme="https://www.zoulei.net/tags/docker/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>werkzeug源码分析(Debug模块)</title>
-    <link href="https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"/>
-    <id>https://www.zoulei.net/2016/08/07/werkzeug_debug_note/</id>
-    <published>2016-08-07T00:43:31.000Z</published>
-    <updated>2016-09-04T07:32:59.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现</p>
-<a id="more"></a>
-<h3 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h3><p>python的运行是讲源码进行编译，之后虚拟机执行。这2个步骤python都提供了接口,compile和exec。exec的执行会调用compile,我们一般不会主动去调用compile。compile这个函数有三个模式<a href="https://docs.python.org/3/library/functions.html#compile">官方文档</a> <a href="http://stackoverflow.com/questions/2220699/whats-the-difference-between-eval-exec-and-compile-in-python">stackoverflow</a></p>
-<ul>
-<li>exec:一系列声明</li>
-<li>eval:单条表达式</li>
-<li>single:单条声明,和exec不同的是当返回不为None的时候执行的时候会打印。这一想都知道专门是为交互式环境准备的</li>
-</ul>
-<p>编译之后不用说。使用内建函数exec执行就好啦。它带有2个可选参数,全局空间变量及局部空间变量。看一个例子<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">local = &#123;&#125;</div><div class="line">code = compile(<span class="string">'a=1'</span>, filename=<span class="string">'&lt;string&gt;'</span>, mode=<span class="string">'single'</span>)</div><div class="line">print(code)</div><div class="line">exec(code,local)</div><div class="line">code = compile(<span class="string">'a+=1'</span>, filename=<span class="string">'&lt;string&gt;'</span>, mode=<span class="string">'single'</span>)</div><div class="line"><span class="keyword">try</span>:</div><div class="line">    exec(code)</div><div class="line"><span class="keyword">except</span>:</div><div class="line">    print(<span class="string">'Error'</span>)</div><div class="line">exec(code,local)</div><div class="line">print(local.get(<span class="string">'a'</span>))</div><div class="line">code = compile(<span class="string">'x+=1'</span>,filename=<span class="string">'&lt;string&gt;'</span>,mode=<span class="string">'single'</span>)</div><div class="line">print(code)</div><div class="line"><span class="comment"># &lt;code object &lt;module&gt; at 0x10fd9dc90, file "&lt;string&gt;", line 1&gt;</span></div><div class="line"><span class="comment"># Error</span></div><div class="line"><span class="comment"># 2</span></div><div class="line"><span class="comment"># &lt;code object &lt;module&gt; at 0x105c25c90, file "&lt;string&gt;", line 1&gt;</span></div></pre></td></tr></table></figure></p>
-<ol>
-<li>编译的时候只要语法没有问题就可以通过，看x+=1,即使全局变量不存在x也能够编译通过</li>
-<li>使用exec的时候，可以引入一个字典，否则会自动使用默认的global,有了这个字典我们就可以连接上下文，想一想。要是我们执行a=1，如果没有记录。那么后面执行a+=1就会报错了，这肯定不是我们所希望的</li>
-</ol>
-<h3 id="自带REPL"><a href="#自带REPL" class="headerlink" title="自带REPL"></a>自带REPL</h3><p>要实现一个类似的IDLE环境2条语句就够了<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> code</div><div class="line">code.interact()</div></pre></td></tr></table></figure><br>看调用图<br><img src="http://ficapy.b0.upaiyun.com/blogimg/code_interactiveconsole.png" alt="code_interactiveconsole"><br>会涉及到2个模块，code和codeop，这2个模块可以都说是为生成交互式解释器服务的。code模块作用是接收请求然后解析再执行(exec)。解析部分就是由codeop提供的。设想一下为什么有了compile还需要一个单独的codeop模块。<br>我们使用交互式解释器的时候并不是所有的命令都是一行输入完成的。比如输入一个函数，那就需要多行。将我们输入的多行编译一次。这是我们的需求。codeop就是为这个而存在的。比如你执行codeop.compile_command(‘math(‘)会返回None。这就代表你下一行继续输入，直到你连续输入了2个空行。好了，它知道你输入完成了。核心代码如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">runsource</span><span class="params">(self, source, filename=<span class="string">"&lt;input&gt;"</span>, symbol=<span class="string">"single"</span>)</span>:</span></div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        code = self.compile(source, filename, symbol)</div><div class="line">    <span class="keyword">except</span> (OverflowError, SyntaxError, ValueError):</div><div class="line">        <span class="comment"># Case 1</span></div><div class="line">        self.showsyntaxerror(filename)</div><div class="line">        <span class="keyword">return</span> <span class="keyword">False</span></div><div class="line"></div><div class="line">    <span class="keyword">if</span> code <span class="keyword">is</span> <span class="keyword">None</span>:</div><div class="line">        <span class="comment"># Case 2</span></div><div class="line">        <span class="keyword">return</span> <span class="keyword">True</span></div><div class="line"></div><div class="line">    <span class="comment"># Case 3</span></div><div class="line">    self.runcode(code)</div><div class="line">    <span class="keyword">return</span> <span class="keyword">False</span></div></pre></td></tr></table></figure><br>逻辑还是比较好理解的。</p>
-<h3 id="Exception-traceback-frame联系"><a href="#Exception-traceback-frame联系" class="headerlink" title="Exception,traceback,frame联系"></a>Exception,traceback,frame联系</h3><p>上个例子<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> sys</div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">CustomeExcept</span><span class="params">(Exception)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, desc)</span>:</span></div><div class="line">        super(CustomeExcept, self).__init__()</div><div class="line">        self.desc = desc</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__repr__</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self.desc</div><div class="line"></div><div class="line">    __str__ = __repr__</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">t</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">raise</span> CustomeExcept(<span class="string">'l'</span>)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">app</span><span class="params">()</span>:</span></div><div class="line">    a = <span class="number">1</span></div><div class="line">    t()</div><div class="line"><span class="keyword">try</span>:</div><div class="line">    app()</div><div class="line"><span class="keyword">except</span> Exception <span class="keyword">as</span> e:</div><div class="line">    <span class="comment"># traceback.print_exc(file=sys.stdout)</span></div><div class="line">    exc_type, exc_value, exc_tb = sys.exc_info()</div><div class="line">    print(exc_tb.tb_frame.f_lineno)</div><div class="line">    print(exc_type)</div><div class="line">    print(exc_value <span class="keyword">is</span> e)</div><div class="line">    print(exc_value)</div><div class="line">    print([i <span class="keyword">for</span> i <span class="keyword">in</span> dir(exc_tb) <span class="keyword">if</span> <span class="keyword">not</span> i.startswith(<span class="string">'_'</span>)])</div><div class="line">    print(exc_tb.tb_frame, exc_tb.tb_lineno, exc_tb.tb_next.tb_lineno, exc_tb.tb_next.tb_next.tb_lineno,</div><div class="line">          exc_tb.tb_next.tb_next.tb_next, sys._getframe(<span class="number">0</span>), exc_tb.tb_frame.f_back)</div><div class="line">    print(exc_tb.tb_next.tb_frame.f_locals)</div><div class="line"><span class="comment"># 23</span></div><div class="line"><span class="comment"># &lt;class '__main__.CustomeExcept'&gt;</span></div><div class="line"><span class="comment"># True</span></div><div class="line"><span class="comment"># l</span></div><div class="line"><span class="comment"># ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next']</span></div><div class="line"><span class="comment"># &lt;frame object at 0x7f90b5813958&gt; 19 17 13 None &lt;frame object at 0x7f90b5813958&gt; None</span></div><div class="line"><span class="comment"># &#123;'a': 1&#125;</span></div></pre></td></tr></table></figure></p>
-<ul>
-<li>Exception配合raise使用,使用except捕获异常的时候返回它的实例</li>
-<li>返回的实例是和帧栈Frame是没有关系的</li>
-<li>sys.exc_info返回了异常类，异常实例,traceback实例</li>
-<li>traceback对象记录的帧不是当前帧,而是从发起异常的那个函数开始记录帧栈,因此比当前帧栈更长,traceback的中文意思是回溯,它的tb_next可以想象一下,实际上更可以说是读取上一个帧(因为引发异常的那个帧实际上在最上面)</li>
-<li>tb_next返回的还是一个traceback对象</li>
-<li>traceback模块提供了一些接口(比如traceback.print_exc)从帧中提取出信息然后格式化打印<br>偷一张图(引用自<a href="http://busuncle.github.io/python-vm-and-bytecode.html">http://busuncle.github.io/python-vm-and-bytecode.html</a>)<br><img src="https://ficapy.b0.upaiyun.com/blogimg/pyframeobject_busuncle.github.io.jpg" alt="pyframeobject"></li>
-</ul>
-<h3 id="werkzeug实现"><a href="#werkzeug实现" class="headerlink" title="werkzeug实现"></a>werkzeug实现</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">__debugger__:yes</div><div class="line">cmd:a = 1+1</div><div class="line">frm:0</div><div class="line">s:3WcibzVj8YXQDR0Na4bv</div></pre></td></tr></table></figure>
-<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="http://busuncle.github.io/python-vm-and-bytecode.html">Python虚拟机与字节码</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="Flask" scheme="https://www.zoulei.net/categories/Flask/"/>
-    
-    
-      <category term="Flask" scheme="https://www.zoulei.net/tags/Flask/"/>
     
   </entry>
   
