@@ -294,7 +294,7 @@
             </div>
             
                 <div class="postShorten-excerpt" itemprop="articleBody">
-                    <p>开始一个软件,从读懂它的配置文件开始。以下是读取<a href="https://docs.influxdata.com/influxdb/v1.3/administration/config/">3.1配置文档</a>的笔记<br>总结来说，influxdb的配置文件可配置的地方几乎没有。参数性能调优貌似不存在，其中是否开启，是否记录日志都占据了好多部分。额外需要关注的是data章节有一些关于fsync的设置默认是0，还有默认的max-series-per-database和max-value-per-tag默认都存在限制。暂时不太清楚原理是什么。当保存大量数据的时候肯定会报错,另外默认的慢查询日志是没有打开的。对于请求。默认没有限制最大的返回内容数。以及限制单个查询响应的时间</p>
+                    <p>开始一个软件,从读懂它的配置文件开始。以下是读取<a href="https://docs.influxdata.com/influxdb/v1.3/administration/config/">3.1配置文档</a>的笔记<br>总结来说，influxdb的配置文件可配置的地方几乎没有。参数性能调优貌似不存在，其中是否开启，是否记录日志都占据了好多部分。额外需要关注的是data章节有一些关于fsync的设置默认是0，还有默认的max-series-per-database和max-value-per-tag默认都存在限制。暂时不太清楚原理是什么(更新:因为influxdb最大的软肋就在series的数量上。tag的数据都保存在内存。所以有极大的限制。可以看到<a href="https://docs.influxdata.com/influxdb/v1.3/guides/hardware_sizing/#general-hardware-guidelines-for-a-cluster">官方硬件要求</a>,100万的series需要4-6核心CPU,8-32GB内存，iops要求1000+。对比一下influxdb提供的<a href="https://cloud.influxdata.com/plan-picker">云服务</a>，100万的series需要每月1500刀!!!)。当保存大量数据的时候肯定会报错,另外默认的慢查询日志是没有打开的。对于请求。默认没有限制最大的返回内容数。以及限制单个查询响应的时间</p>
                     
                         <a href="/2017/12/01/influxdb_config/" class="postShorten-excerpt_link link">
                             阅读全文
