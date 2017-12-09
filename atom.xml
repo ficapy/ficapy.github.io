@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-12-09T00:04:25.920Z</updated>
+  <updated>2017-12-09T08:52:51.153Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,9 +20,9 @@
     <link href="https://www.zoulei.net/2017/12/09/influxdb_glossary/"/>
     <id>https://www.zoulei.net/2017/12/09/influxdb_glossary/</id>
     <published>2017-12-09T00:02:41.000Z</published>
-    <updated>2017-12-09T00:04:25.920Z</updated>
+    <updated>2017-12-09T08:52:51.153Z</updated>
     
-    <content type="html"><![CDATA[<p>以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张图开始<br><img src="https://ficapy.b0.upaiyun.com/capture/influxdb_glossary.jpg" alt="influxdb_glossary"><br><a id="more"></a></p>
+    <content type="html"><![CDATA[<p>以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张两张图开始<br><img src="https://ficapy.b0.upaiyun.com/capture/influxdb_glossary.jpg" alt="influxdb_glossary"><br><img src="https://ficapy.b0.upaiyun.com/capture/influxdb_field.jpg" alt="influxdb"><br><a id="more"></a></p>
 <h3 id="aggregation-聚合"><a href="#aggregation-聚合" class="headerlink" title="aggregation 聚合"></a>aggregation 聚合</h3><p>使用聚合函数对points中的set返回聚合结果</p>
 <ul>
 <li>count 返回非null的field values个数</li>
@@ -128,7 +128,7 @@
     
     <summary type="html">
     
-      &lt;p&gt;以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张图开始&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/capture/influxdb_glossary.jpg&quot; alt=&quot;influxdb_glossary&quot;&gt;&lt;br&gt;
+      &lt;p&gt;以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张两张图开始&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/capture/influxdb_glossary.jpg&quot; alt=&quot;influxdb_glossary&quot;&gt;&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/capture/influxdb_field.jpg&quot; alt=&quot;influxdb&quot;&gt;&lt;br&gt;
     
     </summary>
     
