@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-12-25T04:35:06.086Z</updated>
+  <updated>2017-12-25T06:10:56.899Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="https://www.zoulei.net/2017/12/25/gitlabciyml_note/"/>
     <id>https://www.zoulei.net/2017/12/25/gitlabciyml_note/</id>
     <published>2017-12-25T04:17:56.000Z</published>
-    <updated>2017-12-25T04:35:06.086Z</updated>
+    <updated>2017-12-25T06:10:56.899Z</updated>
     
     <content type="html"><![CDATA[<p>以下内容来自GitlabCI官方文档</p>
 <h2 id="最基础的"><a href="#最基础的" class="headerlink" title="最基础的"></a>最基础的</h2><ul>
@@ -139,11 +139,10 @@
 <li>artifacts和cache的区别.<ul>
 <li>cache可以在全局使用也可以在job内部使用.但是artifacts只能在job内部使用</li>
 <li><span style="color:red"><strong>特别注意</strong></span> cache跨越该项目的整个生命周期。跨越不同的pipeline.job开始之前会先解压已有的cache.而artifacts只会再单个pipeline周期。且某个stage创建之后。在后续的stage中才能够使用。artifacts会同时上传文件到gitlab(上传步骤还是必须的)。</li>
-<li><h2 id="YAML特殊语法"><a href="#YAML特殊语法" class="headerlink" title="YAML特殊语法"></a>YAML特殊语法</h2></li>
 </ul>
 </li>
 </ol>
-<ul>
+<h2 id="YAML特殊语法"><a href="#YAML特殊语法" class="headerlink" title="YAML特殊语法"></a>YAML特殊语法</h2><ul>
 <li><p>用anchors(&amp;)、aliases(*)、merging(&lt;&lt;) 来简化编写(大多数情况下应该没啥用)</p>
   <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">.job_template: &amp;job_definition  # Hidden key that defines an anchor named &apos;job_definition&apos;</div><div class="line">image: ruby:2.1</div><div class="line">services:</div><div class="line">    - postgres</div><div class="line">    - redis</div><div class="line"></div><div class="line">test1:</div><div class="line">&lt;&lt;: *job_definition           # Merge the contents of the &apos;job_definition&apos; alias</div><div class="line">script:</div><div class="line">    - test1 project</div><div class="line"></div><div class="line">test2:</div><div class="line">&lt;&lt;: *job_definition           # Merge the contents of the &apos;job_definition&apos; alias</div><div class="line">script:</div><div class="line">    - test2 project</div></pre></td></tr></table></figure>
 </li>
