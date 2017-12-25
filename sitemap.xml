@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.zoulei.net/2017/12/25/GitLabCICD_quickstart/</loc>
+    
+    <lastmod>2017-12-25T12:40:40.772Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.zoulei.net/2017/12/25/gitlabciyml_note/</loc>
     
     <lastmod>2017-12-25T06:10:56.899Z</lastmod>
@@ -191,14 +198,14 @@
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/</loc>
+    <loc>https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/</loc>
+    <loc>https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     
