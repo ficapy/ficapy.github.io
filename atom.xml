@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-12-25T12:40:40.772Z</updated>
+  <updated>2017-12-25T12:53:57.311Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -16,11 +16,11 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>开始gitlab CI/CD</title>
+    <title>开始GitLab CI/CD</title>
     <link href="https://www.zoulei.net/2017/12/25/GitLabCICD_quickstart/"/>
     <id>https://www.zoulei.net/2017/12/25/GitLabCICD_quickstart/</id>
     <published>2017-12-25T12:38:35.000Z</published>
-    <updated>2017-12-25T12:40:40.772Z</updated>
+    <updated>2017-12-25T12:53:57.311Z</updated>
     
     <content type="html"><![CDATA[<h3 id="GitLabCI-CD流程"><a href="#GitLabCI-CD流程" class="headerlink" title="GitLabCI/CD流程"></a>GitLabCI/CD流程</h3><p>gitlab如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比其他产品Gogs、github等它还算可堪一用。上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下如何从零在Gitlab上完成简单的CI/CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取重启容器<br><img src="https://ficapy.b0.upaiyun.com/blogimg/GitlabCI.jpg" alt="GitlabCI"><br><a id="more"></a></p>
 <h3 id="1-安装Docker"><a href="#1-安装Docker" class="headerlink" title="1. 安装Docker"></a>1. 安装Docker</h3><p>这个没什么好说的。无脑apt就好了。安装完毕后需要将本地用户加入到Docker用户组。方便命令的执行。在生产环境下需要注意的是最好修改它的默认配置，/etc/docker/daemon.json</p>
