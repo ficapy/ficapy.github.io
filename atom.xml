@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-03-03T10:11:15.770Z</updated>
+  <updated>2018-03-03T10:13:53.189Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="https://www.zoulei.net/2018/03/03/KDTree_VPTree/"/>
     <id>https://www.zoulei.net/2018/03/03/KDTree_VPTree/</id>
     <published>2018-03-03T09:17:02.000Z</published>
-    <updated>2018-03-03T10:11:15.770Z</updated>
+    <updated>2018-03-03T10:13:53.189Z</updated>
     
     <content type="html"><![CDATA[<p>最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了KD树。记录一下</p>
 <a id="more"></a>
@@ -40,7 +40,7 @@
 <p>查找过程。查找的原理主要依靠第三条性质<code>d(x, y) + d(y, z) &gt;= d(x, z)</code>.<br>假设我们有这样一个查询要求。需要查找字符串target距离不大于n的所有结果。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">设root为x, target为y</div><div class="line">d(root, target) + d(target, element) &gt;= d(root, element)</div><div class="line">d(target, element)的取值范围是[0, n]</div><div class="line">得到d(root, element) 的最大值是 n + d(root, target)</div></pre></td></tr></table></figure></p>
 <p><strong>因此我们根据这个不等式实现了剪枝的效果</strong>。对于满足条件的元素。将其设置为根元素。递归得到所有满足条件的元素</p>
 <h3 id="VP树"><a href="#VP树" class="headerlink" title="VP树"></a>VP树</h3><p>VP树和KD树原理差不多。优点是当需要查询的距离N更大的时候效率更高(具体原理我还不太了解。写的时候发现很多时候它的效率甚至是不及KD树的)。</p>
-<p>KD树可以看出是一个多叉树。每个节点下面可以有多个节点。VP树不同，它是一个二叉树二叉树。根据我的需求。简单起见。每一个节点我设置了相同的阈值。距离小于阈值则放在左边，大于则放在右边。</p>
+<p>KD树可以看出是一个多叉树。每个节点下面可以有多个节点。VP树不同，它是一个二叉树。根据我的需求。简单起见。每一个节点我设置了相同的阈值。距离小于阈值则放在左边，大于则放在右边。</p>
 <p>查找的时候还挺尴尬的。根据上面说的<code>d(root, element) &lt;= n + d(root, target)</code>。当节点的阈值小于这个值的时候左右子节点都需要遍历。当节点阈值大于的时候就只需要遍历左边(达到剪枝的效果)</p>
 <p>注意:  以上我都只考虑了添加，没有考虑修改和删除的事情。</p>
 <p>Python版本代码实现如下</p>
