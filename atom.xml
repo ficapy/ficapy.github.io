@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2017-12-26T01:34:46.618Z</updated>
+  <updated>2018-03-03T10:11:15.770Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,51 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>KD树和VP树</title>
+    <link href="https://www.zoulei.net/2018/03/03/KDTree_VPTree/"/>
+    <id>https://www.zoulei.net/2018/03/03/KDTree_VPTree/</id>
+    <published>2018-03-03T09:17:02.000Z</published>
+    <updated>2018-03-03T10:11:15.770Z</updated>
+    
+    <content type="html"><![CDATA[<p>最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了KD树。记录一下</p>
+<a id="more"></a>
+<p>使用Python的库<a href="https://github.com/JohannesBuchner/imagehash">imageHash</a> 运算后会得到128bit长度的结果。如果两张图片的bit进行异或后不同的地方越小。说明两张图片越相似。度量这2个bit不相似程度被称之为汉明距离</p>
+<p>这个距离它又满足以下性质(被称为Levenshtein)</p>
+<ol>
+<li>d(x, y) = 0 当且仅当 x=y  （Levenshtein距离为0 &lt;==&gt; 字符串相等）</li>
+<li>d(x, y) = d(y, x)     （从x变到y的最少步数就是从y变到x的最少步数）</li>
+<li>d(x, y) + d(y, z) &gt;= d(x, z)  （从x变到z所需的步数不会超过x先变成y再变成z的步数）</li>
+</ol>
+<h3 id="KD树"><a href="#KD树" class="headerlink" title="KD树"></a>KD树</h3><p>为了加速查找, 构建了这样一种树结构。</p>
+<ol>
+<li>任选一个节点当做根节点</li>
+<li>插入节点的时候和根节点对比得到距离。如果该距离不存在则新建一个节点作为根节点的子节点。如果节点存在则获得节点作为根节点进行递归操作</li>
+</ol>
+<p>第二步的意义在于<strong>任何一个节点下面的元素对于该节点的距离都是相等的</strong>。构建就达到了这个效果。别的啥事没做。</p>
+<p>查找过程。查找的原理主要依靠第三条性质<code>d(x, y) + d(y, z) &gt;= d(x, z)</code>.<br>假设我们有这样一个查询要求。需要查找字符串target距离不大于n的所有结果。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">设root为x, target为y</div><div class="line">d(root, target) + d(target, element) &gt;= d(root, element)</div><div class="line">d(target, element)的取值范围是[0, n]</div><div class="line">得到d(root, element) 的最大值是 n + d(root, target)</div></pre></td></tr></table></figure></p>
+<p><strong>因此我们根据这个不等式实现了剪枝的效果</strong>。对于满足条件的元素。将其设置为根元素。递归得到所有满足条件的元素</p>
+<h3 id="VP树"><a href="#VP树" class="headerlink" title="VP树"></a>VP树</h3><p>VP树和KD树原理差不多。优点是当需要查询的距离N更大的时候效率更高(具体原理我还不太了解。写的时候发现很多时候它的效率甚至是不及KD树的)。</p>
+<p>KD树可以看出是一个多叉树。每个节点下面可以有多个节点。VP树不同，它是一个二叉树二叉树。根据我的需求。简单起见。每一个节点我设置了相同的阈值。距离小于阈值则放在左边，大于则放在右边。</p>
+<p>查找的时候还挺尴尬的。根据上面说的<code>d(root, element) &lt;= n + d(root, target)</code>。当节点的阈值小于这个值的时候左右子节点都需要遍历。当节点阈值大于的时候就只需要遍历左边(达到剪枝的效果)</p>
+<p>注意:  以上我都只考虑了添加，没有考虑修改和删除的事情。</p>
+<p>Python版本代码实现如下</p>
+<script src="//gist.github.com/ficapy/ed909648b184bc2fc1486ce90175d356.js?file=kd_tree.py"></script>
+<script src="//gist.github.com/ficapy/ed909648b184bc2fc1486ce90175d356.js?file=vp_tree.py"></script>
+<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="http://www.matrix67.com/blog/archives/333">编辑距离、拼写检查与度量空间：一个有趣的数据结构</a><br><a href="https://fribbels.github.io/vptree/writeup">VP Tree</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了KD树。记录一下&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="database" scheme="https://www.zoulei.net/categories/database/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>开始GitLab CI/CD</title>
@@ -1265,49 +1310,6 @@
     <summary type="html">
     
       &lt;p&gt;自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/gotbletu_tmux.png&quot; alt=&quot;gotbletu_tmux&quot;&gt;&lt;br&gt;我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="linux" scheme="https://www.zoulei.net/categories/linux/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>fasd和fzf</title>
-    <link href="https://www.zoulei.net/2016/08/29/fasd&amp;fzf/"/>
-    <id>https://www.zoulei.net/2016/08/29/fasd&amp;fzf/</id>
-    <published>2016-08-29T13:55:24.000Z</published>
-    <updated>2016-08-30T07:24:19.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找</p>
-<a id="more"></a>
-<h2 id="fasd"><a href="#fasd" class="headerlink" title="fasd"></a><a href="https://github.com/clvv/fasd">fasd</a></h2><p>目录快速跳转工具挺多的autojump,z.我最开始用的是z，用长了感觉好像有bug,然后就换fasd.<code>好像</code>感觉好用那么一点点。这种工具原理都差不多。对你的历史输入进行统计，放入数据库。然后根据你输入的结果从数据库匹配达到快速cd的结果。安装好后直接输入fasd,就可以看到得分以及目录/文件。从它的原理也能可以看出来。它只能对有记录的快速切换(从你安装这个软件开始记录)。对于一个新的目录首次访问还是需要用cd。这个软件个常用的命令也就2个<br>z和v，分别代表切换目录和使用$EDITOR打开文件.所以:</p>
-<ul>
-<li>当你需要快速cd到以前打开过的目录用z,当你首次打开一个目录用cd(或者打开当前目录)；</li>
-<li>当你需要用vim打开以前打开的文件用v,首次打开或确定目录vim</li>
-<li>它真的很方便了,我看到有些人把它和fzf合起来一起用。我想了很久，除了装逼降低效率。我没想到有什么用</li>
-</ul>
-<h2 id="fzf"><a href="#fzf" class="headerlink" title="fzf"></a><a href="https://github.com/junegunn/fzf">fzf</a></h2><p>这款软件对于提高命令行效率也是很牛逼,而且看github上面的提交记录，依旧非常活跃(对于一个小白没什么比项目的活跃更重要了，因为它意味着你可能遇到的坑前人都可能已经趟过).而且这个项目的作者好像非常自信,项目说明里面居然只列举了优点，丝毫没有缺点.</p>
-<p>这是一款安装上去就能让你眼前一亮的软件。比如Ctrl+R，完美替换了shell默认的历史记录功能,当输入指令的时候使用ctrl+T就能列出当前目录下所有的文件。当然这只是列举的2个最常用的功能,实际上，它的潜力远不止这么点，如果你用过osx上被人吹成神的alfred,那么fzf的概念可能和它有一定的相似性(取得一些结果,然后使用列表排除出来),举个例子,IDE中我们经常使用全局替换,用以下命令也能搞定<br><code>grep -rn &#39;python&#39;| fzf -m | awk -F &#39;:&#39; &#39;{print $1}&#39; | xargs -L 1 sed -i -e &#39;s/python/hello/g&#39;</code><br>效果如下<img src="https://ficapy.b0.upaiyun.com/blogimg/fzf_grep_sed.gif" alt="fzf_grep_sed"><br>解释一下，</p>
-<ol>
-<li>使用grep递归匹配当前目录含有python的文件,-r为递归，-n为显示行号。</li>
-<li>使用fzf显示出来,-m为多行模式,使用tab为选择或者取消选择。</li>
-<li>使用awk对选择的的结果进行处理,-F为选择分隔符，结果为多个目录</li>
-<li>使用xargs对结果执行sed替换,-L为对每一个非空行执行后续命令(Call utility for every number non-empty lines read.  A line ending with a space continues to the next non-empty line)</li>
-<li>另外grep的效率是非常高的,如果你直接用sed进行全局替换-_-文件一多还是很花费时间滴,比如这种<code>sed -i -- &#39;s/foo/bar/g&#39; **/*(D.)</code></li>
-</ol>
-<h3 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h3><p>虽然作者没有列举出来,我还是就我的个人感觉说一下</p>
-<ol>
-<li>蠢到家的匹配效果,你很难理解它是根据什么给你匹配的,放一张图<img src="http://ficapy.b0.upaiyun.com/blogimg/fzf_match.png" alt="fzf_match">，就这匪夷所思的匹配，你不得不使用^$!等额外的规则或者多输入一些字符然后上下键选择</li>
-<li>看着炫酷,有时候没必要那么炫酷，比如使用z的时候tab如果有多个选择，这个时候如果你用fzf替代，他会使用curses全屏让你选择,其实整个过程已经多输入了好多字符.</li>
-</ol>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>fasd和fzf的很好用，而且它们都不需要任何配置都能让你感到高效!对于fzf如果你花时间配置是有特别多玩法的，可以参照官网<a href="https://github.com/junegunn/fzf/wiki/examples">fzf_examples</a>和<a href="https://www.youtube.com/playlist?list=PLqv94xWU9zZ2fMsMMDF4PjtNHCeBFbggD">gotbletu的视频教程</a>体验它的强大。另外，如果你喜欢这2个软件，那么你一定会喜欢<a href="https://github.com/zsh-users/zsh-autosuggestions">zsh-autosuggestions</a>试一试吧~~</p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找&lt;/p&gt;
     
     </summary>
     
