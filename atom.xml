@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-03-04T02:18:38.874Z</updated>
+  <updated>2018-03-04T03:22:06.071Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,47 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>利用BK树优化汉明距离查询</title>
+    <link href="https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/"/>
+    <id>https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/</id>
+    <published>2018-03-04T02:45:47.000Z</published>
+    <updated>2018-03-04T03:22:06.071Z</updated>
+    
+    <content type="html"><![CDATA[<p><a href="/2018/03/03/BKTree_VPTree/">上一篇</a> 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍</p>
+<a id="more"></a>
+<h3 id="获得图片的simhash"><a href="#获得图片的simhash" class="headerlink" title="获得图片的simhash"></a>获得图片的simhash</h3><p>我们直接使用python的第三方库<a href="https://github.com/JohannesBuchner/imagehash">imagehash</a>。代码如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> PIL <span class="keyword">import</span> Image</div><div class="line"><span class="keyword">import</span> imagehash</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_phash</span><span class="params">(file_path)</span>:</span></div><div class="line">    img = Image.open(file_path)</div><div class="line">    phash = imagehash.phash(img).hash.flatten()</div><div class="line">    phash_list = list(map(bool, phash))</div><div class="line"></div><div class="line">    <span class="keyword">return</span> sum((<span class="number">2</span> ** k) * v <span class="keyword">for</span> k, v <span class="keyword">in</span> enumerate(phash_list[<span class="number">1</span>:][::<span class="number">-1</span>]))</div></pre></td></tr></table></figure></p>
+<p>需要注意的是。默认得到的phash是一个经过hex编码的字符串。这样会很长，而<span style="color:red"><strong>我们需要保存到数据库的数据是一个bigint类型。因此我们直接获得64位的np.array，</strong></span>将它转换成数字。因为int64中第一位是符号位。后63位是补码。如果直接将64位都转成正整数，很有可能会保存出错。从最方便的角度来说我们可以去掉第一位(实际上我测试了好多个。发现第一位基本都是1)。这样转换得到的数字就能直接存储到数据库了。</p>
+<p>如果真的要模拟转换成bigint的效果。可以看我写的<a href="https://gist.github.com/ficapy/e7012d193c5ea85110a404c006ed7273">这个</a></p>
+<h3 id="数据库优化"><a href="#数据库优化" class="headerlink" title="数据库优化"></a>数据库优化</h3><ul>
+<li>来个示例</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line"><span class="comment">--  创建表</span></div><div class="line"><span class="keyword">create</span> <span class="keyword">table</span> <span class="keyword">if</span> <span class="keyword">not</span> <span class="keyword">exists</span> int8tmp_2</div><div class="line">(</div><div class="line">	a <span class="built_in">bigint</span></div><div class="line">);</div><div class="line"></div><div class="line"><span class="comment">-- 写入一百万条数据</span></div><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> int8tmp_2 <span class="keyword">SELECT</span> val</div><div class="line">                      <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> <span class="keyword">sqrt</span>(random()) :: <span class="built_in">NUMERIC</span> * <span class="number">9223372036854775807</span> * <span class="number">2</span> -</div><div class="line">                                   <span class="number">9223372036854775807</span> :: <span class="built_in">NUMERIC</span> <span class="keyword">AS</span> val</div><div class="line">                            <span class="keyword">FROM</span> generate_series(<span class="number">1</span>, <span class="number">1000000</span>)) t;</div><div class="line"><span class="comment">-- 创建一个查询函数</span></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> <span class="keyword">bit_count</span>(<span class="keyword">value</span> <span class="built_in">BIGINT</span>)</div><div class="line">  <span class="keyword">RETURNS</span> <span class="built_in">NUMERIC</span></div><div class="line"><span class="keyword">AS</span> $$ <span class="keyword">SELECT</span> <span class="keyword">SUM</span>((<span class="keyword">value</span> &gt;&gt; <span class="built_in">bit</span>) &amp; <span class="number">1</span>)</div><div class="line">      <span class="keyword">FROM</span> generate_series(<span class="number">0</span>, <span class="number">63</span>) <span class="built_in">bit</span> $$</div><div class="line"><span class="keyword">LANGUAGE</span> <span class="keyword">SQL</span> IMMUTABLE <span class="keyword">STRICT</span>;</div><div class="line"></div><div class="line"><span class="comment">-- 查询</span></div><div class="line"><span class="keyword">SELECT</span></div><div class="line">  a,</div><div class="line">  <span class="keyword">bit_count</span>(a # <span class="number">8192711222023195111</span>) <span class="keyword">AS</span> hd</div><div class="line"><span class="keyword">FROM</span> int8tmp_2</div><div class="line"><span class="keyword">WHERE</span> <span class="keyword">bit_count</span>(a # <span class="number">8192711222023195111</span>) &lt; <span class="number">4</span></div><div class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> hd;    </div><div class="line"></div><div class="line"><span class="comment">-- 结果大概这样</span></div><div class="line"><span class="comment">-- [2018-03-04 11:06:56] 1 row retrieved starting from 1 in 25s 403ms (execution: 25s 383ms, fetching: 20ms)</span></div></pre></td></tr></table></figure>
+<ul>
+<li>使用BK树创建索引</li>
+</ul>
+<p>我选择了这个扩展<a href="https://github.com/fake-name/pg-spgist_hamming">fake-name/pg-spgist_hamming</a>. 安装的套路是这样的(只支持PG9.6以上版本)</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">git clone .......</div><div class="line">cd bktree</div><div class="line">USE_PGXS=1 make</div><div class="line">USE_PGXS=1 make install</div></pre></td></tr></table></figure>
+<p><span style="color:red"><strong>注意这个库同时提供了bktree和vptree,但是我没搞懂vptree,vptree的表现很奇怪,另外不能同时使用bktree和vptree。因为它们有一些重载的操作符重复了</strong></span></p>
+<ul>
+<li>使用流程</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="comment">-- 启用扩展</span></div><div class="line"><span class="keyword">CREATE</span> EXTENSION bktree;</div><div class="line"><span class="comment">-- 创建</span></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">INDEX</span> <span class="keyword">IF</span> <span class="keyword">NOT</span> <span class="keyword">EXISTS</span> int8idx_2 <span class="keyword">ON</span> int8tmp_2 <span class="keyword">USING</span> spgist ( a bktree_ops );</div><div class="line"><span class="comment">-- 查询( &lt;-&gt; 运算符表示计算汉明距离, &lt;@()表示符合汉明距离小于N)</span></div><div class="line"><span class="keyword">SELECT</span></div><div class="line">  a,</div><div class="line">  a &lt;-&gt; <span class="number">8192711222023195111</span> <span class="keyword">AS</span> hd</div><div class="line"><span class="keyword">FROM</span> int8tmp_2</div><div class="line"><span class="keyword">WHERE</span> a &lt;@ (<span class="number">8192711222023195111</span>, <span class="number">4</span>)</div><div class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> hd;</div><div class="line"><span class="comment">-- 结果大概是这样的</span></div><div class="line">[2018-03-04 11:18:25] 1 row retrieved starting from 1 in 44ms (execution: 31ms, fetching: 13ms)</div></pre></td></tr></table></figure>
+<p>世界真美妙┑(￣Д ￣)┍</p>
+<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="https://github.com/digoal/blog/blob/master/201708/20170804_01.md">海量数据,海明(simhash)距离高效检索(smlar) - 阿里云RDS PosgreSQL最佳实践</a><br><a href="https://stackoverflow.com/questions/46280722/bit-count-function-in-postgresql">bit_count function in PostgreSQL</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;&lt;a href=&quot;/2018/03/03/BKTree_VPTree/&quot;&gt;上一篇&lt;/a&gt; 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="database" scheme="https://www.zoulei.net/categories/database/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>BK树和VP树</title>
@@ -1265,56 +1306,6 @@
     
     
       <category term="Flask" scheme="https://www.zoulei.net/tags/Flask/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>tmux</title>
-    <link href="https://www.zoulei.net/2016/09/02/tmux_note/"/>
-    <id>https://www.zoulei.net/2016/09/02/tmux_note/</id>
-    <published>2016-09-02T07:43:22.000Z</published>
-    <updated>2016-09-04T07:33:07.000Z</updated>
-    
-    <content type="html"><![CDATA[<p>自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)<br><img src="https://ficapy.b0.upaiyun.com/blogimg/gotbletu_tmux.png" alt="gotbletu_tmux"><br>我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.</p>
-<a id="more"></a>
-<h2 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h2><ul>
-<li>tmux分客户端和服务端，这个docker这种是很相似的，我们操作的只是针对客户端，服务端以守护进程运行，这样实现了我们退出后下次再进入依旧保持了运行状态</li>
-<li>session:比如你在公司有个工作环境，在家里又是另外一个工作环境。这2个环境差别非常大。那么就使用2个不同的session</li>
-<li>window:你在工作环境中要打开多个软件，聊天的、BT下载的、听歌的etc</li>
-<li>pane:一个软件要分成多个区域输出</li>
-<li>当然一般来说越少是越方便切换的。就个人来说一个session就够了,主要切换来自于window和pane</li>
-<li>tmux主要来说最重要的就是对各个窗口的切换排列管理，各种键位绑定也是用于对窗口的切换</li>
-</ul>
-<h2 id="windows-pane基本设置"><a href="#windows-pane基本设置" class="headerlink" title="windows,pane基本设置"></a>windows,pane基本设置</h2><p>和vim一样tmux也是使用一个主要的prefix key，先输入prefix key之后再输入绑定的字母执行操作.下面就将我从多个地方copy来的配置解释一番-_-</p>
-<p>设置成C-a,同时解绑原来的C-b,最后的bind a的作用就是:C-a本来是回到行首的快捷键，被tmux使用之后使用此设定变成了C-a-a到行首</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">set -g prefix ^a</div><div class="line">unbind ^b</div><div class="line">bind a send-prefix</div></pre></td></tr></table></figure>
-<p>之后就是对window和pane的快捷键设定，本人使用vim相似的快捷键设定。这个好像没啥好说的，比如hjkl在pane中移动,s、v分屏，使用&lt;、&gt;、+、_对pane进行大小的改变，使用C-u、C-d进行交换，使用q、C-q进行关闭pane和window，举个例子</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">bind k selectp -U</div><div class="line">bind -r &lt; resize-pane -L 10</div><div class="line">bind ^u swapp -U</div><div class="line">bind q killp</div></pre></td></tr></table></figure>
-<p>使用-r(recursion)就能够输入一次&lt;之后马上多次输入&lt;、&gt;有效,这对于调整大小时是非常有用的。。。,没有被重写的配置基本都是非常好记的单词,c、n、w、d记这些都是毫不费力的</p>
-<h2 id="鼠标、复制及清屏设置"><a href="#鼠标、复制及清屏设置" class="headerlink" title="鼠标、复制及清屏设置"></a>鼠标、复制及清屏设置</h2><p>如果你不进行其他设置可能用几下动一下鼠标上下翻一下，就会高呼WTF。毕竟完全不动鼠标的大神不多，我还是打开鼠标设置吧,这样也能同时使用鼠标进行上下滑动了，其次复制也和以前不一样了，特别是如果你分了2个竖向的pane,这样和以前一样用鼠标复制就出问题了，当然你可以用z(zoom)全屏当前的pane，然后用鼠标复制。然而一个vim党是不会这样做的T_T。下面是设置</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">setw -g mouse on</div><div class="line">#set vi mode for copy mode</div><div class="line">setw -g mode-keys vi</div><div class="line"></div><div class="line"># more settings to make copy-mode more vim-like</div><div class="line">unbind [</div><div class="line">bind Escape copy-mode</div><div class="line">unbind p</div><div class="line">bind p paste-buffer</div><div class="line">bind -t vi-copy &apos;v&apos; begin-selection</div><div class="line">bind -t vi-copy &apos;y&apos; copy-selection</div><div class="line"></div><div class="line"># Buffers to/from Mac clipboard, yay tmux book from pragprog</div><div class="line">bind C-c run &quot;tmux save-buffer - | reattach-to-user-namespace pbcopy&quot;</div><div class="line">bind C-v run &quot;tmux set-buffer $(reattach-to-user-namespace pbpaste); tmux paste-buffer&quot;</div></pre></td></tr></table></figure>
-<p>这样复制好像变得复杂了。。。需要先进入选择模式C-a-ESC-v选择需要复制的内容后再执行y复制到tmux的缓冲区，另外像tmux和vim这种的粘贴板是独立的,和osx系统的粘贴板不共通,如果要再复制到系统粘贴板，此时再使用C-a-C-c,好像是比较复杂啊。。你可以按住option再用鼠标选择也是直接复制到系统粘贴板，要让vim和tmux和系统粘贴板通用，你需要<code>brew install reattach-to-user-namespace</code>安装。另外iterm2其实是可以让他们共用的，下图选中Applications in terminal may access clipboard也能达到同样的效果，不过下面的参考文章有说有缺点-_-我就听了他的了<br><img src="https://ficapy.b0.upaiyun.com/blogimg/iterm_access_clipboard.png" alt="iterm_access_clipboard"></p>
-<p>再就是配置重载和清屏</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">#bind -n C-l send-keys &apos;C-l&apos;</div><div class="line">bind -n C-k send-keys -R \; send-keys C-l \; clear-history</div><div class="line"># reload config (prefix r)</div><div class="line">bind r source ~/.tmux.conf \; display &quot;Configuration reloaded!&quot;</div></pre></td></tr></table></figure>
-<p>就好像command+k完全清屏，tmux也可以，不过需要配置(这个完美清屏命令找了很久),-n表示不需要先按prefix key直接使用C-k就调用了，另外不要将C-l设置为清屏,会让TAB补全失效</p>
-<h2 id="状态栏"><a href="#状态栏" class="headerlink" title="状态栏"></a>状态栏</h2><p>配置一个好看的状态栏好像还是比较困难的,我比较偷懒就直接使用了<a href="https://github.com/erikw/tmux-powerline">tmux-powerline</a>和<a href="https://github.com/seebi/tmux-colors-solarized/blob/master/tmuxcolors-256.conf">tmux-colors-solarized</a>,下面是效果<br><img src="https://ficapy.b0.upaiyun.com/blogimg/tmux_statusbar.png" alt="tmux_statusbar"><br>注意配置powerline的时候可能需要在~/.zshrc中加入<code>PS1=&quot;$PS1&quot;&#39;$([ -n &quot;$TMUX&quot; ] &amp;&amp; tmux setenv TMUXPWD_$(tmux display -p &quot;#D&quot; | tr -d %) &quot;$PWD&quot;)&#39;</code>有的时候修改配置可能需要tmux kill-server后重新进入才能看到效果</p>
-<p>在状体栏的配置会看到这种<code>set-option -g status-bg colour235</code>,colour235是什么鬼颜色。真是不好猜啊，可以单独开一个pane打印输出所有256种颜色，自己对比修改成喜欢的颜色</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">for i in &#123;0..255&#125; ; do</div><div class="line">    printf &quot;\x1b[38;5;$&#123;i&#125;mcolour$&#123;i&#125;\n&quot;</div><div class="line">done</div></pre></td></tr></table></figure>
-<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p>我们设置好了之后可能需要在打开iterm之后就直接进入tmux,否则岂不是白忙活~(≧▽≦)/~啦啦啦，很简单,在iterm的设置页profiles→General→Send text at start中填入<code>tmux attach -t init || tmux new -s init</code>,更有用的是在我们远程到vps上的时候直接进入到tmux,设置一个别名如下<code>alias hg=&quot;ssh -t hg \&quot;bash -c &#39;tmux a -t init || tmux new -s init&#39;\&quot;&quot;</code>这样我们执行hg的时候就新建一个session或者连接到已有的session</p>
-<p>如果我们本地开一个tmux，然后远程连接vps，vps再运行tmux，这会造成嵌套使用。特别是当你的prefix key还是一样的时候。。。悲催了，你所输入的快捷键只会被本地的tmux处理而不会被远程的tmux响应，要处理这个问题可以将2者的prefix key设置成不一样,比如一个为a另外一个为s。或者使用iterm单独开一个窗口，我更推荐后者,因为设置成不同的prefix key输入快了可能就输入混淆啦。</p>
-<p>另外,使用了tmux显著增加了iterm2的耗电量,估计是我设置的那个状态栏显示上传下载流量导致的，每几秒刷新执行一次shell或许挺耗电.</p>
-<p><a href="https://github.com/ficapy/dotfiles/blob/master/.tmux.conf">我的tmux配置</a></p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://danielmiessler.com/study/tmux/">A tmux Primer</a><br><a href="https://www.youtube.com/playlist?list=PL5BE1545D8486D66D">gotbletu youtube playlist</a><br><a href="https://evertpot.com/osx-tmux-vim-copy-paste-clipboard/">Making the clipboard work between iTerm2, tmux, vim and OS X.</a><br><a href="http://superuser.com/questions/285381/how-does-the-tmux-color-palette-work">How does the tmux color palette work?</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/gotbletu_tmux.png&quot; alt=&quot;gotbletu_tmux&quot;&gt;&lt;br&gt;我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="linux" scheme="https://www.zoulei.net/categories/linux/"/>
-    
     
   </entry>
   

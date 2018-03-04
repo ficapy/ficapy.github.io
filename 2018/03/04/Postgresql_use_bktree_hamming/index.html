@@ -6,26 +6,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>Flask项目初始配置 - 邹雷</title>
+    <title>利用BK树优化汉明距离查询 - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：  windows7 X64 vagrant ubuntu14 xshell cmder(可选) pycharm">
-<meta name="keywords" content="Flask配置,pycharm,vagrant">
+    <meta name="description" content="上一篇 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="Flask项目初始配置">
-<meta property="og:url" content="https://www.zoulei.net/2014/10/29/flask_project_init/index.html">
+<meta property="og:title" content="利用BK树优化汉明距离查询">
+<meta property="og:url" content="https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：  windows7 X64 vagrant ubuntu14 xshell cmder(可选) pycharm">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/pycharm_remote_interoreters_config.png">
-<meta property="og:updated_time" content="2016-06-29T03:48:19.000Z">
+<meta property="og:description" content="上一篇 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍">
+<meta property="og:updated_time" content="2018-03-04T03:22:06.071Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Flask项目初始配置">
-<meta name="twitter:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：  windows7 X64 vagrant ubuntu14 xshell cmder(可选) pycharm">
-<meta name="twitter:image" content="https://ficapy.b0.upaiyun.com/blogimg/pycharm_remote_interoreters_config.png">
+<meta name="twitter:title" content="利用BK树优化汉明距离查询">
+<meta name="twitter:description" content="上一篇 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -232,19 +229,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            Flask项目初始配置
+            利用BK树优化汉明距离查询
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2014-10-29T22:19:00+08:00">
+    <time itemprop="datePublished" datetime="2018-03-04T10:45:47+08:00">
 	
-		    10月 29, 2014
+		    3月 04, 2018
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/Flask/">Flask</a>
+    <a class="category-link" href="/categories/database/">database</a>
 
 
     
@@ -254,53 +251,39 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！<br>使用工具：</p>
-<ul>
-<li>windows7 X64</li>
-<li>vagrant</li>
-<li>ubuntu14</li>
-<li>xshell</li>
-<li>cmder(可选)</li>
-<li>pycharm</li>
-</ul>
+            <p><a href="/2018/03/03/BKTree_VPTree/">上一篇</a> 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍</p>
 <a id="more"></a>
-<p>准备步骤：</p>
-<h2 id="1-环境搭建"><a href="#1-环境搭建" class="headerlink" title="1.环境搭建"></a><strong>1.环境搭建</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">vagrant box add ubuntu14 URL(或者先下载box文件用文件名替代)  </div><div class="line">vagrant init ubuntu14  </div><div class="line">vagrant up  </div><div class="line">vagrant halt  </div></pre></td></tr></table></figure>
-<p><strong>NOTE.</strong><br>vagrant使用可谓相当简单了,使用单文件配置,整个周期分为add/init/up/reload/suspend/halt/destroy;</p>
-<p>另外推荐将22端口进行转发。默认转发到2222，但是当打开多个虚拟机的时候因为2222端口被占用所有会随机指定一个端口。So，固定一下对自己的设置是相当有利的。当然因为Flask默认使用5000端口进行测试，对它进行转发也是理所当然的;</p>
-<p>至于使用vagrant<br>ssh登陆,用系统自带的CMD那是相当难受滴,使用cmder全功能版不错。用过一段时间不得不说相对CMD真实赏心悦目,在我的使用中感觉确定有两个。毕竟不是专业的SSH客户端，对于中文文件名无能为力，或许是我不会设置，其二是无法设置代理而且连接到远程VPS时候输入卡顿严重。所以最后还是回归了Xshell。</p>
-<p>开机关机每次进入cmder cd c:\path 进入vagrant 在运行vagrant<br>up是相当厌烦的，用python脚本启动它是个不错的选择</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> os</div><div class="line"></div><div class="line">os.system(<span class="string">'cd "c:\\\\ficapy\\\\microblog" &amp;&amp; vagrant reload'</span>)  </div><div class="line"><span class="comment">#是不是异常简单呢 切换到目录执行reload操作→不一定要先启动再重载！  </span></div><div class="line"><span class="comment"># &amp;&amp;表示上个操作执行完毕后在执行下面的操作  </span></div></pre></td></tr></table></figure>
-<h2 id="2-Linux配置"><a href="#2-Linux配置" class="headerlink" title="2.Linux配置"></a><strong>2.Linux配置</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"> </div><div class="line">sudo apt-get update upgrade \<span class="comment">#更新源&amp;升级系统  </span></div><div class="line">sudo apt-get install git git-core python python-dev python-setuptools  </div><div class="line">sudo easy\_install pip  </div><div class="line">sudo pip install virtualenv virtualenvwrapper  </div><div class="line">nano \~/.bashrc  </div><div class="line">添加下面两行配置后重新运行(<span class="built_in">source</span> \~/.bashrc)  </div><div class="line"><span class="built_in">export</span> WORKON\_HOME=\<span class="variable">$HOME</span>/.virtualenvs  </div><div class="line"><span class="built_in">source</span> /usr/<span class="built_in">local</span>/bin/virtualenvwrapper.sh  </div></pre></td></tr></table></figure>
-<p><strong>NOTE:</strong><br>virtualenvwarpper顾名思义是对virtualenv的二次包装,给我的赶脚就是环境不是在放在开发文件夹下面了，而且命令行直观友好容易记忆，还有TAB自动补全哟。常用的大致有mkvirtualenv/rmvirtualenv/lsvirtualenv/workon/deactive;</p>
-<p>另外使用pip安装第三方包的时候不要使用sudo pip<br>install,该操作会导致安装到全局，而不是安装到当前环境中.直接使用pip<br>install安装.Linux比较小白，暂时我也不知道为什么</p>
-<p>ubuntu14自带python2.7可以不用安装python。可是python-dev这个必装，否则pip安装一些需要编译安装的第三方包的时候会报一些莫名其妙的错误，比如pycurl等。同时直接使用二进制包python-pip安装pip有时候安装包会出错（一朝被蛇咬，十年怕井绳啊，所以我还是使用官方推荐的easy_install方式安装了，还有一种是下载get.py方式）</p>
-<h2 id="3-windows端Pycharm设置"><a href="#3-windows端Pycharm设置" class="headerlink" title="3.windows端Pycharm设置"></a><strong>3.windows端Pycharm设置</strong></h2><p>使用vagrant后，默认设置文件将该目录映射到虚拟的的/vagrant文件夹。我们就将项目统一放在该文件夹下</p>
-<p>不得不说的是pycharm上的vagrant插件在windows上是无法使用的,至少对我来说是这样，手动配置远端python解释器，如下图</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/pycharm_remote_interoreters_config.png" alt="pycharm\_remote\_interoreters\_config">Note.在这里点击fill<br>from vagrant config就有用了,改变2222端口是一个很好的选择</p>
-<p>设置远端python解释器后就可以在本地调用了，这还不够，同时还需要设置项目目录映射，以便解释器能够根据本地文件映射到虚拟机文件的地址让解释器执行。选择Run→Configureations,最主要的设置是一、选择解释器；二、设置work<br>directory和Path mapping之后就能正确的使用虚拟机的python运行本地文件了;</p>
-<p>另外，有时候不想用xshell连接后运行python。这时候使用pycharm也是相当方便的。Tools→run<br>python<br>console就够了,会默认添加当前目录到python的包索引列表方便导入,只是有时候这个目录并不完全正确,可能是设置还是有错误吧，我每次都重运行sys.path.extend([‘/vagrant/path~~~~~~‘])手动解决</p>
-<p>~~~~~~~~还想写个安装heroku客户端的,自己还没有很好的实践,以后试试吧，至少测试部署还是相当方便的</p>
-<p>参考：<br><a href="http://blog.segmentfault.com/fenbox/1190000000264347">http://blog.segmentfault.com/fenbox/1190000000264347</a><br><a href="http://pedrokroger.net/getting-started-pycharm-python-ide/">http://pedrokroger.net/getting-started-pycharm-python-ide/</a><br><a href="http://bliker.github.io/cmder/">http://bliker.github.io/cmder/</a></p>
+<h3 id="获得图片的simhash"><a href="#获得图片的simhash" class="headerlink" title="获得图片的simhash"></a>获得图片的simhash</h3><p>我们直接使用python的第三方库<a href="https://github.com/JohannesBuchner/imagehash">imagehash</a>。代码如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> PIL <span class="keyword">import</span> Image</div><div class="line"><span class="keyword">import</span> imagehash</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_phash</span><span class="params">(file_path)</span>:</span></div><div class="line">    img = Image.open(file_path)</div><div class="line">    phash = imagehash.phash(img).hash.flatten()</div><div class="line">    phash_list = list(map(bool, phash))</div><div class="line"></div><div class="line">    <span class="keyword">return</span> sum((<span class="number">2</span> ** k) * v <span class="keyword">for</span> k, v <span class="keyword">in</span> enumerate(phash_list[<span class="number">1</span>:][::<span class="number">-1</span>]))</div></pre></td></tr></table></figure></p>
+<p>需要注意的是。默认得到的phash是一个经过hex编码的字符串。这样会很长，而<span style="color:red"><strong>我们需要保存到数据库的数据是一个bigint类型。因此我们直接获得64位的np.array，</strong></span>将它转换成数字。因为int64中第一位是符号位。后63位是补码。如果直接将64位都转成正整数，很有可能会保存出错。从最方便的角度来说我们可以去掉第一位(实际上我测试了好多个。发现第一位基本都是1)。这样转换得到的数字就能直接存储到数据库了。</p>
+<p>如果真的要模拟转换成bigint的效果。可以看我写的<a href="https://gist.github.com/ficapy/e7012d193c5ea85110a404c006ed7273">这个</a></p>
+<h3 id="数据库优化"><a href="#数据库优化" class="headerlink" title="数据库优化"></a>数据库优化</h3><ul>
+<li>来个示例</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line"><span class="comment">--  创建表</span></div><div class="line"><span class="keyword">create</span> <span class="keyword">table</span> <span class="keyword">if</span> <span class="keyword">not</span> <span class="keyword">exists</span> int8tmp_2</div><div class="line">(</div><div class="line">	a <span class="built_in">bigint</span></div><div class="line">);</div><div class="line"></div><div class="line"><span class="comment">-- 写入一百万条数据</span></div><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> int8tmp_2 <span class="keyword">SELECT</span> val</div><div class="line">                      <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> <span class="keyword">sqrt</span>(random()) :: <span class="built_in">NUMERIC</span> * <span class="number">9223372036854775807</span> * <span class="number">2</span> -</div><div class="line">                                   <span class="number">9223372036854775807</span> :: <span class="built_in">NUMERIC</span> <span class="keyword">AS</span> val</div><div class="line">                            <span class="keyword">FROM</span> generate_series(<span class="number">1</span>, <span class="number">1000000</span>)) t;</div><div class="line"><span class="comment">-- 创建一个查询函数</span></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> <span class="keyword">bit_count</span>(<span class="keyword">value</span> <span class="built_in">BIGINT</span>)</div><div class="line">  <span class="keyword">RETURNS</span> <span class="built_in">NUMERIC</span></div><div class="line"><span class="keyword">AS</span> $$ <span class="keyword">SELECT</span> <span class="keyword">SUM</span>((<span class="keyword">value</span> &gt;&gt; <span class="built_in">bit</span>) &amp; <span class="number">1</span>)</div><div class="line">      <span class="keyword">FROM</span> generate_series(<span class="number">0</span>, <span class="number">63</span>) <span class="built_in">bit</span> $$</div><div class="line"><span class="keyword">LANGUAGE</span> <span class="keyword">SQL</span> IMMUTABLE <span class="keyword">STRICT</span>;</div><div class="line"></div><div class="line"><span class="comment">-- 查询</span></div><div class="line"><span class="keyword">SELECT</span></div><div class="line">  a,</div><div class="line">  <span class="keyword">bit_count</span>(a # <span class="number">8192711222023195111</span>) <span class="keyword">AS</span> hd</div><div class="line"><span class="keyword">FROM</span> int8tmp_2</div><div class="line"><span class="keyword">WHERE</span> <span class="keyword">bit_count</span>(a # <span class="number">8192711222023195111</span>) &lt; <span class="number">4</span></div><div class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> hd;    </div><div class="line"></div><div class="line"><span class="comment">-- 结果大概这样</span></div><div class="line"><span class="comment">-- [2018-03-04 11:06:56] 1 row retrieved starting from 1 in 25s 403ms (execution: 25s 383ms, fetching: 20ms)</span></div></pre></td></tr></table></figure>
+<ul>
+<li>使用BK树创建索引</li>
+</ul>
+<p>我选择了这个扩展<a href="https://github.com/fake-name/pg-spgist_hamming">fake-name/pg-spgist_hamming</a>. 安装的套路是这样的(只支持PG9.6以上版本)</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">git clone .......</div><div class="line">cd bktree</div><div class="line">USE_PGXS=1 make</div><div class="line">USE_PGXS=1 make install</div></pre></td></tr></table></figure>
+<p><span style="color:red"><strong>注意这个库同时提供了bktree和vptree,但是我没搞懂vptree,vptree的表现很奇怪,另外不能同时使用bktree和vptree。因为它们有一些重载的操作符重复了</strong></span></p>
+<ul>
+<li>使用流程</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="comment">-- 启用扩展</span></div><div class="line"><span class="keyword">CREATE</span> EXTENSION bktree;</div><div class="line"><span class="comment">-- 创建</span></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">INDEX</span> <span class="keyword">IF</span> <span class="keyword">NOT</span> <span class="keyword">EXISTS</span> int8idx_2 <span class="keyword">ON</span> int8tmp_2 <span class="keyword">USING</span> spgist ( a bktree_ops );</div><div class="line"><span class="comment">-- 查询( &lt;-&gt; 运算符表示计算汉明距离, &lt;@()表示符合汉明距离小于N)</span></div><div class="line"><span class="keyword">SELECT</span></div><div class="line">  a,</div><div class="line">  a &lt;-&gt; <span class="number">8192711222023195111</span> <span class="keyword">AS</span> hd</div><div class="line"><span class="keyword">FROM</span> int8tmp_2</div><div class="line"><span class="keyword">WHERE</span> a &lt;@ (<span class="number">8192711222023195111</span>, <span class="number">4</span>)</div><div class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> hd;</div><div class="line"><span class="comment">-- 结果大概是这样的</span></div><div class="line">[2018-03-04 11:18:25] 1 row retrieved starting from 1 in 44ms (execution: 31ms, fetching: 13ms)</div></pre></td></tr></table></figure>
+<p>世界真美妙┑(￣Д ￣)┍</p>
+<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="https://github.com/digoal/blog/blob/master/201708/20170804_01.md">海量数据,海明(simhash)距离高效检索(smlar) - 阿里云RDS PosgreSQL最佳实践</a><br><a href="https://stackoverflow.com/questions/46280722/bit-count-function-in-postgresql">bit_count function in PostgreSQL</a></p>
 
             
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-            <div class="post-footer-tags">
-                <span class="text-color-light text-small">标签</span><br/>
-                
-    <a class="tag tag--primary tag--small t-link" href="/tags/Flask配置/">Flask配置</a> <a class="tag tag--primary tag--small t-link" href="/tags/pycharm/">pycharm</a> <a class="tag tag--primary tag--small t-link" href="/tags/vagrant/">vagrant</a>
-
-            </div>
-        
         <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/03/09/linode-rescue-mode-reset-root-password/"  data-tooltip="Linode紧急模式修改密码">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -308,7 +291,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/08/02/v2ex_signin/" data-tooltip="V2EX签到脚本">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/03/BKTree_VPTree/" data-tooltip="BK树和VP树">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -323,17 +306,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2014/10/29/flask_project_init/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2014/10/29/flask_project_init/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2014/10/29/flask_project_init/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -381,7 +364,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2015/03/09/linode-rescue-mode-reset-root-password/"  data-tooltip="Linode紧急模式修改密码">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -389,7 +372,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2014/08/02/v2ex_signin/" data-tooltip="V2EX签到脚本">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/03/BKTree_VPTree/" data-tooltip="BK树和VP树">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -404,17 +387,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2014/10/29/flask_project_init/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2014/10/29/flask_project_init/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2014/10/29/flask_project_init/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -440,17 +423,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2014/10/29/flask_project_init/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2014/10/29/flask_project_init/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2014/10/29/flask_project_init/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -663,9 +646,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2014/10/29/flask_project_init/';
+                 this.page.url = 'https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/';
                  
-                    this.page.identifier = '2014/10/29/flask_project_init/';
+                    this.page.identifier = '2018/03/04/Postgresql_use_bktree_hamming/';
                  
              };
             (function() {
