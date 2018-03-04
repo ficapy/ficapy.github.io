@@ -19,7 +19,7 @@
 <meta property="og:url" content="https://www.zoulei.net/2018/03/03/KDTree_VPTree/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了KD树。记录一下">
-<meta property="og:updated_time" content="2018-03-03T10:13:53.189Z">
+<meta property="og:updated_time" content="2018-03-04T01:20:03.006Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="KD树和VP树">
 <meta name="twitter:description" content="最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了KD树。记录一下">
@@ -253,7 +253,7 @@
         <div class="main-content-wrap">
             <p>最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了KD树。记录一下</p>
 <a id="more"></a>
-<p>使用Python的库<a href="https://github.com/JohannesBuchner/imagehash">imageHash</a> 运算后会得到128bit长度的结果。如果两张图片的bit进行异或后不同的地方越小。说明两张图片越相似。度量这2个bit不相似程度被称之为汉明距离</p>
+<p>使用Python的库<a href="https://github.com/JohannesBuchner/imagehash">imageHash</a> 运算后会得到64bit长度的结果(最后使用了hex编码导致结果看起来很长)。如果两张图片的bit进行异或后不同的地方越小。说明两张图片越相似。度量这2个bit不相似程度被称之为汉明距离</p>
 <p>这个距离它又满足以下性质(被称为Levenshtein)</p>
 <ol>
 <li>d(x, y) = 0 当且仅当 x=y  （Levenshtein距离为0 &lt;==&gt; 字符串相等）</li>
