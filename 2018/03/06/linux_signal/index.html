@@ -6,26 +6,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>fasd和fzf - 邹雷</title>
+    <title>Linux 信号 - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找">
+    <meta name="description" content="信号是进程间通信的一种方式,同时它是一种异步的形式。先注册信号处理函数，当接收到信号的时候回调该函数进程处理。信号在系统中以数字的形式标识。每个信号对应着一个处理函数">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="fasd和fzf">
-<meta property="og:url" content="https://www.zoulei.net/2016/08/29/fasd&fzf/index.html">
+<meta property="og:title" content="Linux 信号">
+<meta property="og:url" content="https://www.zoulei.net/2018/03/06/linux_signal/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/fzf_grep_sed.gif">
-<meta property="og:image" content="http://ficapy.b0.upaiyun.com/blogimg/fzf_match.png">
-<meta property="og:updated_time" content="2016-08-30T07:24:19.000Z">
+<meta property="og:description" content="信号是进程间通信的一种方式,同时它是一种异步的形式。先注册信号处理函数，当接收到信号的时候回调该函数进程处理。信号在系统中以数字的形式标识。每个信号对应着一个处理函数">
+<meta property="og:updated_time" content="2018-03-06T04:35:15.156Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="fasd和fzf">
-<meta name="twitter:description" content="来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找">
-<meta name="twitter:image" content="https://ficapy.b0.upaiyun.com/blogimg/fzf_grep_sed.gif">
+<meta name="twitter:title" content="Linux 信号">
+<meta name="twitter:description" content="信号是进程间通信的一种方式,同时它是一种异步的形式。先注册信号处理函数，当接收到信号的时候回调该函数进程处理。信号在系统中以数字的形式标识。每个信号对应着一个处理函数">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -232,13 +229,13 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            fasd和fzf
+            Linux 信号
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2016-08-29T21:55:24+08:00">
+    <time itemprop="datePublished" datetime="2018-03-06T12:29:40+08:00">
 	
-		    8月 29, 2016
+		    3月 06, 2018
     	
     </time>
     
@@ -254,29 +251,215 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找</p>
+            <p>信号是进程间通信的一种方式,同时它是一种异步的形式。先注册信号处理函数，当接收到信号的时候回调该函数进程处理。信号在系统中以数字的形式标识。每个信号对应着一个处理函数</p>
 <a id="more"></a>
-<h2 id="fasd"><a href="#fasd" class="headerlink" title="fasd"></a><a href="https://github.com/clvv/fasd">fasd</a></h2><p>目录快速跳转工具挺多的autojump,z.我最开始用的是z，用长了感觉好像有bug,然后就换fasd.<code>好像</code>感觉好用那么一点点。这种工具原理都差不多。对你的历史输入进行统计，放入数据库。然后根据你输入的结果从数据库匹配达到快速cd的结果。安装好后直接输入fasd,就可以看到得分以及目录/文件。从它的原理也能可以看出来。它只能对有记录的快速切换(从你安装这个软件开始记录)。对于一个新的目录首次访问还是需要用cd。这个软件个常用的命令也就2个<br>z和v，分别代表切换目录和使用$EDITOR打开文件.所以:</p>
-<ul>
-<li>当你需要快速cd到以前打开过的目录用z,当你首次打开一个目录用cd(或者打开当前目录)；</li>
-<li>当你需要用vim打开以前打开的文件用v,首次打开或确定目录vim</li>
-<li>它真的很方便了,我看到有些人把它和fzf合起来一起用。我想了很久，除了装逼降低效率。我没想到有什么用</li>
-</ul>
-<h2 id="fzf"><a href="#fzf" class="headerlink" title="fzf"></a><a href="https://github.com/junegunn/fzf">fzf</a></h2><p>这款软件对于提高命令行效率也是很牛逼,而且看github上面的提交记录，依旧非常活跃(对于一个小白没什么比项目的活跃更重要了，因为它意味着你可能遇到的坑前人都可能已经趟过).而且这个项目的作者好像非常自信,项目说明里面居然只列举了优点，丝毫没有缺点.</p>
-<p>这是一款安装上去就能让你眼前一亮的软件。比如Ctrl+R，完美替换了shell默认的历史记录功能,当输入指令的时候使用ctrl+T就能列出当前目录下所有的文件。当然这只是列举的2个最常用的功能,实际上，它的潜力远不止这么点，如果你用过osx上被人吹成神的alfred,那么fzf的概念可能和它有一定的相似性(取得一些结果,然后使用列表排除出来),举个例子,IDE中我们经常使用全局替换,用以下命令也能搞定<br><code>grep -rn &#39;python&#39;| fzf -m | awk -F &#39;:&#39; &#39;{print $1}&#39; | xargs -L 1 sed -i -e &#39;s/python/hello/g&#39;</code><br>效果如下<img src="https://ficapy.b0.upaiyun.com/blogimg/fzf_grep_sed.gif" alt="fzf_grep_sed"><br>解释一下，</p>
-<ol>
-<li>使用grep递归匹配当前目录含有python的文件,-r为递归，-n为显示行号。</li>
-<li>使用fzf显示出来,-m为多行模式,使用tab为选择或者取消选择。</li>
-<li>使用awk对选择的的结果进行处理,-F为选择分隔符，结果为多个目录</li>
-<li>使用xargs对结果执行sed替换,-L为对每一个非空行执行后续命令(Call utility for every number non-empty lines read.  A line ending with a space continues to the next non-empty line)</li>
-<li>另外grep的效率是非常高的,如果你直接用sed进行全局替换-_-文件一多还是很花费时间滴,比如这种<code>sed -i -- &#39;s/foo/bar/g&#39; **/*(D.)</code></li>
-</ol>
-<h3 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h3><p>虽然作者没有列举出来,我还是就我的个人感觉说一下</p>
-<ol>
-<li>蠢到家的匹配效果,你很难理解它是根据什么给你匹配的,放一张图<img src="http://ficapy.b0.upaiyun.com/blogimg/fzf_match.png" alt="fzf_match">，就这匪夷所思的匹配，你不得不使用^$!等额外的规则或者多输入一些字符然后上下键选择</li>
-<li>看着炫酷,有时候没必要那么炫酷，比如使用z的时候tab如果有多个选择，这个时候如果你用fzf替代，他会使用curses全屏让你选择,其实整个过程已经多输入了好多字符.</li>
-</ol>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>fasd和fzf的很好用，而且它们都不需要任何配置都能让你感到高效!对于fzf如果你花时间配置是有特别多玩法的，可以参照官网<a href="https://github.com/junegunn/fzf/wiki/examples">fzf_examples</a>和<a href="https://www.youtube.com/playlist?list=PLqv94xWU9zZ2fMsMMDF4PjtNHCeBFbggD">gotbletu的视频教程</a>体验它的强大。另外，如果你喜欢这2个软件，那么你一定会喜欢<a href="https://github.com/zsh-users/zsh-autosuggestions">zsh-autosuggestions</a>试一试吧~~</p>
+<h3 id="信号表"><a href="#信号表" class="headerlink" title="信号表"></a>信号表</h3><p>来个python打印支持的信号<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> signal</div><div class="line"></div><div class="line">signals_to_names = &#123;</div><div class="line">    getattr(signal, n): n</div><div class="line">    <span class="keyword">for</span> n <span class="keyword">in</span> dir(signal)</div><div class="line">    <span class="keyword">if</span> n.startswith(<span class="string">'SIG'</span>) <span class="keyword">and</span> <span class="string">'_'</span> <span class="keyword">not</span> <span class="keyword">in</span> n</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">for</span> s, name <span class="keyword">in</span> sorted(signals_to_names.items()):</div><div class="line">    handler = signal.getsignal(s)</div><div class="line">    <span class="keyword">if</span> handler <span class="keyword">is</span> signal.SIG_DFL:</div><div class="line">        handler = <span class="string">'SIG_DFL'</span></div><div class="line">    <span class="keyword">elif</span> handler <span class="keyword">is</span> signal.SIG_IGN:</div><div class="line">        handler = <span class="string">'SIG_IGN'</span></div><div class="line">    print(<span class="string">'&#123;:&lt;10&#125; (&#123;:2d&#125;):'</span>.format(name, s), handler)</div></pre></td></tr></table></figure></p>
+<p>因为平时用的少，而ubuntu上的<code>man 7 signal</code>的内容比较多，我只是在osx上看了一下singal的文档。它仅包含下列一些信号</p>
+<table>
+<thead>
+<tr>
+<th>序号</th>
+<th>名称</th>
+<th>默认动作</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>SIGHUP</td>
+<td>终止进程</td>
+<td>让程序挂起</td>
+</tr>
+<tr>
+<td>2</td>
+<td>SIGINT</td>
+<td>终止进程</td>
+<td>打断程序的执行</td>
+</tr>
+<tr>
+<td>3</td>
+<td>SIGQUIT</td>
+<td>dump</td>
+<td>程序</td>
+</tr>
+<tr>
+<td>4</td>
+<td>SIGILL</td>
+<td>dump</td>
+<td>非法指令</td>
+</tr>
+<tr>
+<td>5</td>
+<td>SIGTRAP</td>
+<td>dump</td>
+<td>陷阱</td>
+</tr>
+<tr>
+<td>6</td>
+<td>SIGABRT</td>
+<td>dump</td>
+<td>打断程序</td>
+</tr>
+<tr>
+<td>7</td>
+<td>SIGEMT</td>
+<td>dump</td>
+<td></td>
+</tr>
+<tr>
+<td>8</td>
+<td>SIGFPE</td>
+<td>dump</td>
+<td>浮点数异常</td>
+</tr>
+<tr>
+<td>9</td>
+<td>SIGKILL</td>
+<td>终止进程</td>
+<td>杀死程序(不可修改)</td>
+</tr>
+<tr>
+<td>10</td>
+<td>SIGBUS</td>
+<td>dump</td>
+<td>总线错误</td>
+</tr>
+<tr>
+<td>11</td>
+<td>SIGSEGV</td>
+<td>dump</td>
+<td>段错误</td>
+</tr>
+<tr>
+<td>12</td>
+<td>SIGSYS</td>
+<td>dump</td>
+<td>调用不存在的系统调用</td>
+</tr>
+<tr>
+<td>13</td>
+<td>SIGPIPE</td>
+<td>终止进程</td>
+<td>给一个没有读的管道写数据</td>
+</tr>
+<tr>
+<td>14</td>
+<td>SIGALRM</td>
+<td>终止进程</td>
+<td>实时计时器超时</td>
+</tr>
+<tr>
+<td>15</td>
+<td>SIGTERM</td>
+<td>终止进程</td>
+<td>软中断信号</td>
+</tr>
+<tr>
+<td>16</td>
+<td>SIGURG</td>
+<td>已废弃</td>
+<td></td>
+</tr>
+<tr>
+<td>17</td>
+<td>SIGSTOP</td>
+<td>停止进程</td>
+<td>停止(不可修改)</td>
+</tr>
+<tr>
+<td>18</td>
+<td>SIGTSTP</td>
+<td>停止进程</td>
+<td>从键盘生成停止信号</td>
+</tr>
+<tr>
+<td>19</td>
+<td>SIGCONT</td>
+<td>废弃</td>
+<td></td>
+</tr>
+<tr>
+<td>20</td>
+<td>SIGCHLD</td>
+<td>废弃</td>
+<td></td>
+</tr>
+<tr>
+<td>21</td>
+<td>SIGTTIN</td>
+<td>停止进程</td>
+<td>后台进程尝试读取终端时触发</td>
+</tr>
+<tr>
+<td>22</td>
+<td>SIGTOU</td>
+<td>停止进程</td>
+<td>后台进程尝试写入终端时触发</td>
+</tr>
+<tr>
+<td>23</td>
+<td>SIGIO</td>
+<td>废弃</td>
+<td></td>
+</tr>
+<tr>
+<td>24</td>
+<td>SIGXCPU</td>
+<td>终止进程</td>
+<td>进程的cpu时间片到期(setrlimit)</td>
+</tr>
+<tr>
+<td>25</td>
+<td>SIGXFSZ</td>
+<td>终止进程</td>
+<td>文件大小超过限制(setrlimit)</td>
+</tr>
+<tr>
+<td>26</td>
+<td>SIGVTLRM</td>
+<td>终止进程</td>
+<td>虚拟时钟超时(setitimer)</td>
+</tr>
+<tr>
+<td>27</td>
+<td>SIGPROF</td>
+<td>终止进程</td>
+<td>profil时钟超时(setitimer)</td>
+</tr>
+<tr>
+<td>28</td>
+<td>SIGWINCH</td>
+<td>废弃</td>
+<td></td>
+</tr>
+<tr>
+<td>29</td>
+<td>SIGINFO</td>
+<td>废弃</td>
+<td></td>
+</tr>
+<tr>
+<td>30</td>
+<td>SIGUSR1</td>
+<td>终止进程</td>
+<td>用户自定义信号1</td>
+</tr>
+<tr>
+<td>31</td>
+<td>SIGUSR2</td>
+<td>终止进程</td>
+<td>用户自定义信号2</td>
+</tr>
+</tbody>
+</table>
+<h3 id="信号的产生"><a href="#信号的产生" class="headerlink" title="信号的产生"></a>信号的产生</h3><p>信号可以产生自软件和硬件，硬件来说，我们最常用的<code>Ctrl+C</code>来终止一个程序的执行，软件层面就是经常使用<code>kill -9 pid</code>来强制终止一个程序。观察上表可以发现还有很多类似非法指令、陷入、段错误等等都是由操作系统触发反馈给应用程序。还有就是我们自己编写程序进行系统调用触发。比如python中常用的<code>signal.alarm</code></p>
+<h3 id="信号的处理"><a href="#信号的处理" class="headerlink" title="信号的处理"></a>信号的处理</h3><p>观察信号表可以发现虽然有31个信号。但是默认动作只有终止进程、dump、停止进程三种。这算成了多对一的关系，多个信号对应一个处理结果。想想这其实是一种人为的约定。操作系统遇到一些异常的时候本可以直接卡擦掉进程。但是还是先知会你一声，万一程序作者觉得遇到这种情况还能再抢救一下那就不异常了。所以规定这么多信号id。还是为了方便编程的时候对信号进行分类处理。而且不仅仅约定俗成。后面还有两个自定义信号让你自己进行定义</p>
+<p>信号处理基本有三种套路，默认、忽略、自定义。如果你觉得遇到异常你还可以再抢救一下那就自定义或者忽略。但是假如忽略掉所有的信号。管理人员可能就无法退出你的程序了。<span style="color:red"><strong>因此SIGKILL和SIGSTOP强制不允许被忽略或者自定义</strong></span>。所以<code>kill -9</code>就是一个大杀器</p>
+<p>但是很多人并不被推荐用<code>kill -9</code>，而更多的人推荐用<code>kill -15</code>。原因是强制虽然强。但是这样编程人员别无选择。有的程序在意外退出前需要做一些清理工作，比如删掉临时文件啥的。当然，渣水平的作者怎么可能会去自定义处理SIGTERM信号┑(￣Д ￣)┍</p>
+<h3 id="应用"><a href="#应用" class="headerlink" title="应用"></a>应用</h3><p>比如tornado中可以使用信号机制记录响应时间超过阈值的栈帧<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> tornado.httpserver</div><div class="line"><span class="keyword">import</span> tornado.ioloop</div><div class="line"><span class="keyword">import</span> tornado.web</div><div class="line"><span class="keyword">import</span> traceback</div><div class="line"><span class="keyword">import</span> time</div><div class="line"></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">record_block</span><span class="params">(_, frame)</span>:</span></div><div class="line">    a = traceback.format_stack(frame)</div><div class="line">    print(<span class="string">""</span>.join(a))</div><div class="line"></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">MainHandler</span><span class="params">(tornado.web.RequestHandler)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get</span><span class="params">(self)</span>:</span></div><div class="line">        time.sleep(<span class="number">10</span>)</div><div class="line">        self.write(<span class="string">"Hello, world"</span>)</div><div class="line"></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></div><div class="line">    application = tornado.web.Application([</div><div class="line">        (<span class="string">r"/"</span>, MainHandler),</div><div class="line">    ])</div><div class="line">    http_server = tornado.httpserver.HTTPServer(application)</div><div class="line">    http_server.listen(<span class="number">8888</span>)</div><div class="line">    ioloop = tornado.ioloop.IOLoop.current()</div><div class="line">    ioloop.set_blocking_signal_threshold(<span class="number">1</span>, record_block)</div><div class="line">    ioloop.start()</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</div><div class="line">    main()</div><div class="line"></div></pre></td></tr></table></figure></p>
+<p>关于它的实现就比较简单了。先使用<code>signal.signal(signal.SIGALRM,callback)</code>注册信号回调函数。在ioloop主循环中每次事件完成后将实时计时器归零<code>signal.setitimer(signal.ITIMER_REAL, 0, 0)</code>后再重新开始计时。此处为什么不是用alarm而使用setitimer。因为前者只支持整数秒，后者支持浮点数</p>
+<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="https://pymotw.com/3/signal/index.html">signal — Asynchronous System Events</a></p>
 
             
         </div>
@@ -288,7 +471,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/02/tmux_note/"  data-tooltip="tmux">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -296,7 +479,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/29/use_shell_modifier_capslock_map_on_osx/" data-tooltip="使用shell修改osx的CapsLock映射">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/04/Postgresql_use_bktree_hamming/" data-tooltip="利用BK树优化汉明距离查询">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -311,17 +494,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/29/fasd&amp;fzf/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/06/linux_signal/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/29/fasd&amp;fzf/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/06/linux_signal/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/29/fasd&amp;fzf/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/06/linux_signal/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -369,7 +552,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/02/tmux_note/"  data-tooltip="tmux">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -377,7 +560,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/29/use_shell_modifier_capslock_map_on_osx/" data-tooltip="使用shell修改osx的CapsLock映射">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/04/Postgresql_use_bktree_hamming/" data-tooltip="利用BK树优化汉明距离查询">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -392,17 +575,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/29/fasd&amp;fzf/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/06/linux_signal/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/29/fasd&amp;fzf/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/06/linux_signal/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/29/fasd&amp;fzf/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/06/linux_signal/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -428,17 +611,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/29/fasd&amp;fzf/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/06/linux_signal/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/29/fasd&amp;fzf/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/06/linux_signal/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/29/fasd&amp;fzf/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/06/linux_signal/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -651,9 +834,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2016/08/29/fasd&amp;fzf/';
+                 this.page.url = 'https://www.zoulei.net/2018/03/06/linux_signal/';
                  
-                    this.page.identifier = '2016/08/29/fasd&amp;fzf/';
+                    this.page.identifier = '2018/03/06/linux_signal/';
                  
              };
             (function() {
