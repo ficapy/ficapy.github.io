@@ -222,6 +222,61 @@
     <section class="postShorten-group main-content-wrap">
     
     
+    <article class="postShorten postShorten--thumbnailimg-bottom" itemscope itemType="http://schema.org/BlogPosting">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title" itemprop="headline">
+                    
+                        <a class="link-unstyled" href="/2016/08/29/use_shell_modifier_capslock_map_on_osx/">
+                            使用shell修改osx的CapsLock映射
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time itemprop="datePublished" datetime="2016-08-29T11:24:33+08:00">
+	
+		    8月 29, 2016
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+
+
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-content" itemprop="articleBody">
+                    <p>对于命令行爱好者,很多人会选择将黄金键盘位置CapsLock替换成Ctrl,有些人选择仅仅是和默认的Ctrl进行替换，有些人更极端，相当于去掉CapsLock键增加一个Ctrl位置。我选择后者。有时候会想。假如需要输入大段文字的时候一直按住Shift岂不是蛋疼。搜索了下，网上真有这个问题。而且有人还给出了答案。我就转发一下好了-_-</p>
+<ul>
+<li>首先你要知道在你的<code>system preferences→keyboard→modifiers keys</code>是可以修改CapsLock映射<br>到Ctrl的</li>
+<li>其次使用applescript可以编辑脚本对GUI界面进行操作(系统还自带一个Script Editor,不得不吐槽一下,脚本真不美观)</li>
+<li>脚本编写后执行需要到安全设置里面添加许可权限(<code>system preferences→security&amp;privacy→accessibility</code>,由于我使用的是iTerm,将它加入就好了)</li>
+</ul>
+<p>最后奉上脚本(添加至~/.zshrc,!!!!仅对英文系统有效,中文估计改一下也能用)<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div></pre></td><td class="code"><pre><div class="line">caps () &#123;</div><div class="line">	osascript &gt; /dev/null &lt;&lt;EOF</div><div class="line">    tell application &quot;System Preferences&quot;</div><div class="line">        reveal anchor &quot;keyboardTab&quot; of pane &quot;com.apple.preference.keyboard&quot;</div><div class="line">    end tell</div><div class="line">    tell application &quot;System Events&quot; to tell window 1 of process &quot;System Preferences&quot;</div><div class="line">        click button 1 of tab group 1</div><div class="line">        tell sheet 1</div><div class="line">            tell pop up button 4</div><div class="line">                click</div><div class="line">                delay 0.1</div><div class="line">                if value is &quot;⇪ Caps Lock&quot; then</div><div class="line">                    click menu item 2 of menu 1</div><div class="line">                    log &quot;Change Caps Lock&quot;</div><div class="line">                else</div><div class="line">                    click menu item 1 of menu 1</div><div class="line">                    log &quot;Restore Caps Lock&quot;</div><div class="line">                end if</div><div class="line">            end tell</div><div class="line">            click button &quot;OK&quot;</div><div class="line">        end tell</div><div class="line">    end tell</div><div class="line">    quit application &quot;System Preferences&quot;</div><div class="line">EOF</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://superuser.com/questions/495956/controlling-modifier-key-behavior-via-the-terminal-on-mac">Controlling modifier key behavior via the terminal on mac</a><br><a href="http://apple.stackexchange.com/questions/103621/run-applescript-from-bash-script">Run AppleScript from bash script</a></p>
+
+                    
+                        
+                    
+                    
+                        <p>
+                            <a href="/2016/08/29/use_shell_modifier_capslock_map_on_osx/#post-footer" class="postShorten-excerpt_link link">
+                                注释和共享
+                            </a>
+                        </p>
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
     <article class="postShorten postShorten--thumbnailimg-right" itemscope itemType="http://schema.org/BlogPosting">
         <div class="postShorten-wrap">
             
@@ -420,49 +475,6 @@
                     <p>刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点，线程安全应该针对于具体的操作，而不是具体的对象，我们说Queue是线程安全的是因为针对它的所有操作都是线程安全的。</p>
                     
                         <a href="/2016/07/31/list_dict_threading_safe/" class="postShorten-excerpt_link link">
-                            阅读全文
-                        </a>
-                        
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-right" itemscope itemType="http://schema.org/BlogPosting">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title" itemprop="headline">
-                    
-                        <a class="link-unstyled" href="/2016/07/25/werkzeug_note_requests_response_auto_realod/">
-                            werkzeug源码分析(Request/Response和热重启)
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time itemprop="datePublished" datetime="2016-07-25T21:48:17+08:00">
-	
-		    7月 25, 2016
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/Flask/">Flask</a>
-
-
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-excerpt" itemprop="articleBody">
-                    <p>Flask这个人人称赞的微框架就是构建在werkzeug之上，werkzeug给自己的定位就是工具集合。它实现了wsgi server、Requests/Response封装、DEBUG、热重启、路由控制以及其他的一些辅助功能。接下来的几篇文章会从一些大的方面去分析它。本篇如标题:D</p>
-                    
-                        <a href="/2016/07/25/werkzeug_note_requests_response_auto_realod/" class="postShorten-excerpt_link link">
                             阅读全文
                         </a>
                         
@@ -699,7 +711,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 65 篇文章
+                找到 66 篇文章
             </p>
         </div>
     </div>
