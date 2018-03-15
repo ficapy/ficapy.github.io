@@ -1,0 +1,679 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>Tornado 之IOLoop - 邹雷</title>
+    <meta name="author" content="ficapy">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="这是Tornado系列的开篇,Tornado作为异步web框架2010年发布1.0版本。可以说Python社区搞了这么多年，为了获得比多线程多进程更高的性能，经历了Twisted、Tornado、yield、gevent、yield from、asyncio。也不知道什么时候才是一个尽头~~。Tornado过了这么多年还算开发活跃(一个大神扛起了一片天啊)，不同于多线程模型的一潭死水，看它的代码你">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Tornado 之IOLoop">
+<meta property="og:url" content="https://www.zoulei.net/2018/03/14/tornado_ioloop/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="这是Tornado系列的开篇,Tornado作为异步web框架2010年发布1.0版本。可以说Python社区搞了这么多年，为了获得比多线程多进程更高的性能，经历了Twisted、Tornado、yield、gevent、yield from、asyncio。也不知道什么时候才是一个尽头~~。Tornado过了这么多年还算开发活跃(一个大神扛起了一片天啊)，不同于多线程模型的一潭死水，看它的代码你">
+<meta property="og:updated_time" content="2018-03-15T03:21:18.382Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tornado 之IOLoop">
+<meta name="twitter:description" content="这是Tornado系列的开篇,Tornado作为异步web框架2010年发布1.0版本。可以说Python社区搞了这么多年，为了获得比多线程多进程更高的性能，经历了Twisted、Tornado、yield、gevent、yield from、asyncio。也不知道什么时候才是一个尽头~~。Tornado过了这么多年还算开发活跃(一个大神扛起了一片天啊)，不同于多线程模型的一潭死水，看它的代码你">
+<meta name="twitter:creator" content="@aec4d">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <!--STYLES END-->
+    
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">邹雷</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a href="/#about">
+                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+                </a>
+                <h4 class="sidebar-profile-name">ficapy</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link open-algolia-search"
+                             href="#search"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            Tornado 之IOLoop
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" datetime="2018-03-14T18:03:18+08:00">
+	
+		    3月 14, 2018
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/Tornado/">Tornado</a>
+
+
+    
+</div>
+
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>这是Tornado系列的开篇,Tornado作为异步web框架2010年发布1.0版本。可以说Python社区搞了这么多年，为了获得比多线程多进程更高的性能，经历了Twisted、Tornado、yield、gevent、yield from、asyncio。也不知道什么时候才是一个尽头~~。Tornado过了这么多年还算开发活跃(<a href="https://github.com/tornadoweb/tornado/graphs/contributors">一个大神扛起了一片天啊</a>)，不同于多线程模型的一潭死水，看它的代码你会发现它还是紧跟潮流的，而且有一点。它的内部虽然一直在变动，但是提供给用户的使用接口是很稳定的，后续就会发现这个坑有多大</p>
+<a id="more"></a>
+<p>截止目前最新版本的代码是4.5，排除测试总代码量大约为12000行。我个人喜欢看精简版本的代码，所以本文为1.0.0版本。总代码量为4200行，比较容易看懂。毕竟别人优化了八年，期待一个星期精读能搞明白各种工程优化是不现实的。</p>
+<h3 id="IOLoop"><a href="#IOLoop" class="headerlink" title="IOLoop"></a>IOLoop</h3><p>说到异步非阻塞大多数人都知道是异步IO模型(select、poll、epoll、kqueue)。没错在阻塞模型中比如使用<code>socket.recv</code>它会主线程造成阻塞。这直接导致了在python中需要使用多线程或者多进程模型才能够同时处理多个请求。可是在异步模型中允许对文件描述符进行监听，操作系统提供功能，当文件的状态发生变化(可读、可写、异常)程序能够获得这一状态。对我们来说就是当明确知道某文件存在什么事件的时候去触发相应的处理函数。注意，这就是一个<span style="color:red"><strong>回调、回调、回调(重要的事情说三遍)</strong></span></p>
+<p>可以把IOLoop当做一个停不下来的死循环，类似下面这样<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> time</div><div class="line"><span class="keyword">import</span> bisect</div><div class="line"><span class="keyword">from</span> selectors <span class="keyword">import</span> DefaultSelector</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">IOLoop</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></div><div class="line">        self._callback = set()</div><div class="line">        self._timeout = []</div><div class="line">        self.ioloop = DefaultSelector()</div><div class="line"></div><div class="line"><span class="meta">    @classmethod</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">instance</span><span class="params">(cls)</span>:</span></div><div class="line">        <span class="keyword">if</span> <span class="keyword">not</span> hasattr(cls, <span class="string">'_instance'</span>):</div><div class="line">            cls._instance = cls()</div><div class="line">        <span class="keyword">return</span> cls._instance</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">add_handler</span><span class="params">(self, fd, event, func)</span>:</span></div><div class="line">        self.ioloop.register(fd, event, func)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">update_handler</span><span class="params">(self, fd, event)</span>:</span></div><div class="line">        temp = ioloop.get_key(fd)</div><div class="line">        ioloop.unregister(fd)</div><div class="line">        ioloop.register(fd, event, temp.data)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">add_callback</span><span class="params">(self, func)</span>:</span></div><div class="line">        self._callback.add(func)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">add_timeout</span><span class="params">(self, t, func)</span>:</span></div><div class="line">        <span class="class"><span class="keyword">class</span> <span class="title">_T</span>:</span></div><div class="line">            <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, t, func)</span>:</span></div><div class="line">                self.t = t</div><div class="line">                self.callback = func</div><div class="line"></div><div class="line">            <span class="function"><span class="keyword">def</span> <span class="title">__lt__</span><span class="params">(self, other)</span>:</span></div><div class="line">                <span class="keyword">return</span> self.t &lt; other.t</div><div class="line"></div><div class="line">            <span class="function"><span class="keyword">def</span> <span class="title">__gt__</span><span class="params">(self, other)</span>:</span></div><div class="line">                <span class="keyword">return</span> self.t &gt; other.t</div><div class="line"></div><div class="line">        t = _T(t, func)</div><div class="line">        bisect.insort(self._timeout, t)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">start</span><span class="params">(self)</span>:</span></div><div class="line"></div><div class="line">        <span class="keyword">while</span> <span class="number">1</span>:</div><div class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> self._callback.copy():</div><div class="line">                i()</div><div class="line">                self._callback.remove(i)</div><div class="line"></div><div class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> self._timeout.copy():</div><div class="line">                <span class="keyword">if</span> time.time() &gt; i.t:</div><div class="line">                    i.callback()</div><div class="line">                    self._timeout.remove(i)</div><div class="line">                <span class="keyword">else</span>:</div><div class="line">                    <span class="keyword">break</span></div><div class="line"></div><div class="line">            <span class="keyword">for</span> k, v <span class="keyword">in</span> self.ioloop.select(timeout=<span class="number">0.2</span>):</div><div class="line">                k.data()</div></pre></td></tr></table></figure></p>
+<p>你只需要记住以下几点</p>
+<ol>
+<li><span style="color:red"><strong>IOLoop是一个单例</strong></span></li>
+<li>IOLoop提供了处理三种情况的方法，分别是回调形式(_callback)、定时器形式(_timeout)、网络IO(selectors)</li>
+<li>最后是一个while 1的死循环</li>
+</ol>
+<h3 id="Callback"><a href="#Callback" class="headerlink" title="Callback"></a>Callback</h3><p>正因为IOLoop是一个单例。所以所有的函数最终都通过add_callback、add_timeout、add_handler放置到了IOLoop下面，最终被执行start依次调用，再调用的过程中，这些函数又使用ioloop.IOLoop.instance().add_callback等不断的加入一些事件处理。导致形成了一个callback链条，让我们最终得到结果<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 代码为python3</span></div><div class="line"><span class="keyword">from</span> selectors <span class="keyword">import</span> DefaultSelector, EVENT_WRITE, EVENT_READ</div><div class="line"><span class="keyword">import</span> socket</div><div class="line"><span class="keyword">from</span> urllib.parse <span class="keyword">import</span> urlparse</div><div class="line"></div><div class="line">done = <span class="keyword">False</span></div><div class="line">selector = DefaultSelector()</div><div class="line"></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">get</span><span class="params">(url)</span>:</span></div><div class="line">    parse = urlparse(url)</div><div class="line">    s = socket.socket()</div><div class="line">    s.setblocking(<span class="keyword">False</span>)</div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        s.connect((parse.hostname, <span class="number">80</span>))</div><div class="line">    <span class="keyword">except</span> BlockingIOError:</div><div class="line">        <span class="keyword">pass</span></div><div class="line">    selector.register(s.fileno(), EVENT_WRITE, <span class="keyword">lambda</span>: connected(s, parse.path, parse.hostname))</div><div class="line"></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">connected</span><span class="params">(s, path, host)</span>:</span></div><div class="line">    selector.unregister(s.fileno())</div><div class="line">    s.send((<span class="string">'GET &#123;&#125; HTTP/1.0\r\nHost:&#123;&#125;\r\n\r\n'</span>.format(path, host)).encode())</div><div class="line">    buf = []</div><div class="line">    selector.register(s.fileno(), EVENT_READ, <span class="keyword">lambda</span>: readable(s, buf))</div><div class="line"></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">readable</span><span class="params">(s, buf)</span>:</span></div><div class="line">    <span class="keyword">global</span> done</div><div class="line">    chunk = s.recv(<span class="number">1024</span>)</div><div class="line">    <span class="keyword">if</span> chunk:</div><div class="line">        buf.append(chunk)</div><div class="line">    <span class="keyword">else</span>:</div><div class="line">        done = <span class="keyword">True</span></div><div class="line">        selector.unregister(s.fileno())</div><div class="line">        print((<span class="string">b''</span>.join(buf)).decode())</div><div class="line">        s.close()</div><div class="line"></div><div class="line"></div><div class="line">get(<span class="string">"http://httpbin.org/ip"</span>)</div><div class="line"></div><div class="line"><span class="keyword">while</span> <span class="keyword">not</span> done:</div><div class="line">    events = selector.select()</div><div class="line">    <span class="keyword">for</span> k, v <span class="keyword">in</span> events:</div><div class="line">        k.data()</div></pre></td></tr></table></figure>    </p>
+<p>如上例.当我们调用get()开始执行代码的时候它只是开启了第一步创建了一个socket链接并在selector中注册了一个事件，等待READ事件被触发，k.data()被调用，即connected函数被调用，发送数据之后再次注册READ事件。依然等待直到k.data()被调用，即readable被调用。最后直至数据读取完成。表示整个过程结束</p>
+<h3 id="优化"><a href="#优化" class="headerlink" title="优化"></a>优化</h3><p>观察IOLoop例子中的start死循环可以知道。它其实也是伴随着阻塞的，在<code>self.ioloop.select(timeout=0.2)</code>中如果持续0.2秒没有等待的IO事件发生，那么会阻塞0.2秒，看似0.2秒也不长，但其实非常大量的事件并不是IO事件，而是在self._callback集合中。因此从效率方面考虑添加_callback的时候触发IO事件，让select不再去阻塞那0.2秒，因此创建了一个管道对象来解决了这个问题，当添加的_callback的时候同时向管道写入一个字符。那么就不存在0.2秒的阻塞了</p>
+<h3 id="应用一-PeriodicCallback"><a href="#应用一-PeriodicCallback" class="headerlink" title="应用一 PeriodicCallback"></a>应用一 PeriodicCallback</h3><p>ioloop.py下面有一个非常简单的PeriodicCallback类，它的作用是定期将callback加入到IOLoop的_timeout列表中。比如你需要每隔三十分钟去清理一次临时文件夹产生的垃圾文件等等。简易实现大概是这样<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">PeriodicCallback</span><span class="params">(object)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, interval, func)</span>:</span></div><div class="line">        self.interval = interval</div><div class="line">        self.func = func</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">start</span><span class="params">(self)</span>:</span></div><div class="line">        timeout = time.time() + self.interval</div><div class="line">        IOLoop.instance().add_timeout(timeout, self.callback)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">callback</span><span class="params">(self)</span>:</span></div><div class="line">        self.func()</div><div class="line">        self.start()</div></pre></td></tr></table></figure><br>再执行start之后添加到了_timeout。待时间到达后执行一次然后再调用start，如此反复😳。最后达到了无限循环执行的效果</p>
+<h3 id="应用二-自动重启"><a href="#应用二-自动重启" class="headerlink" title="应用二 自动重启"></a>应用二 自动重启</h3><p>对于web框架而言，在开发过程中当代码发生变更自动重启机制几乎是都必备的。在Flask中是主线程单独开了一个进程，在进程里面将主函数开一个线程运行。然后执行死循环进行代码变更检测。发现变更则进行进程退出操作。主线程捕获退出状态进行重启。示例代码可以<a href="/2016/07/25/werkzeug_note_requests_response_auto_realod/index.html#热重启实现原理">看这里</a></p>
+<p>可以看到自动重启基本由三个部分组成。</p>
+<ol>
+<li>主代码正常执行</li>
+<li>检测代码变更逻辑定期执行</li>
+<li>检测到变更后重启程序</li>
+</ol>
+<p>对于第一个条件而言Tornado没什么，就是主线程正常操作，第二个条件就利用了上面说的PeriodicCallback，将检测函数定期执行就好。第三个条件使用os.execv重载整个进程。bingo,没有单独的开启线程，开启进程。单线程完成了自动重启的操作。最简代码应该是这样的<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> functools</div><div class="line"><span class="keyword">import</span> ioloop</div><div class="line"><span class="keyword">import</span> os</div><div class="line"><span class="keyword">import</span> sys</div><div class="line"><span class="keyword">import</span> types</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">start</span><span class="params">(io_loop=None, check_time=<span class="number">500</span>)</span>:</span></div><div class="line">    io_loop = io_loop <span class="keyword">or</span> ioloop.IOLoop.instance()</div><div class="line">    modify_times = &#123;&#125;</div><div class="line">    callback = functools.partial(_reload_on_update, modify_times)</div><div class="line">    scheduler = ioloop.PeriodicCallback(callback, check_time, io_loop=io_loop)</div><div class="line">    scheduler.start()</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">_reload_on_update</span><span class="params">(modify_times)</span>:</span></div><div class="line">    <span class="keyword">for</span> module <span class="keyword">in</span> sys.modules.values():</div><div class="line">        <span class="keyword">if</span> <span class="keyword">not</span> isinstance(module, types.ModuleType): <span class="keyword">continue</span></div><div class="line">        path = getattr(module, <span class="string">"__file__"</span>, <span class="keyword">None</span>)</div><div class="line">        <span class="keyword">if</span> <span class="keyword">not</span> path: <span class="keyword">continue</span></div><div class="line">        <span class="keyword">if</span> path.endswith(<span class="string">".pyc"</span>) <span class="keyword">or</span> path.endswith(<span class="string">".pyo"</span>):</div><div class="line">            path = path[:<span class="number">-1</span>]</div><div class="line">        <span class="keyword">try</span>:</div><div class="line">            modified = os.stat(path).st_mtime</div><div class="line">        <span class="keyword">except</span>:</div><div class="line">            <span class="keyword">continue</span></div><div class="line">        <span class="keyword">if</span> path <span class="keyword">not</span> <span class="keyword">in</span> modify_times:</div><div class="line">            modify_times[path] = modified</div><div class="line">            <span class="keyword">continue</span></div><div class="line">        <span class="keyword">if</span> modify_times[path] != modified:</div><div class="line">            os.execv(sys.executable, [sys.executable] + sys.argv)</div></pre></td></tr></table></figure><br>使用sys.modules查看所有已加载的模块。每500毫秒将文件改动时间和已有数据进行对比。如果不同则执行os.execv覆盖掉当前进程，后续该代码虽然为了跨平台逻辑上有变动。可是整体思路是没有改变的</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>总结而言IOLoop的逻辑还是很好理解的。它可以被认为是一个独立性非常强的模块。一个单例，整体是一个死循环提供三种情况的处理。在运行过程中不断的调用单例的成员函数，完成对一个事务(比如获得一个网页的内容)的处理。至于为什么没有被阻塞。每当要IO阻塞的时候(比如connect)就注册一个事件回调，然后继续运行不会阻塞的部分。等到事件完成再进行IO操作就不会阻塞了。从而达到整体非阻塞的效果</p>
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/12/python_concurrent_futures_thread/" data-tooltip="Python高级多线程并发">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/14/tornado_ioloop/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/14/tornado_ioloop/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/14/tornado_ioloop/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2018 ficapy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/12/python_concurrent_futures_thread/" data-tooltip="Python高级多线程并发">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/14/tornado_ioloop/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/14/tornado_ioloop/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/14/tornado_ioloop/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/14/tornado_ioloop/">
+                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/14/tornado_ioloop/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/14/tornado_ioloop/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+        
+            <h4 id="about-card-name">ficapy</h4>
+        
+            <div id="about-card-bio"><p>author.bio</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                浙江杭州
+            </div>
+        
+    </div>
+</div>
+
+        <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-close"></i></span>
+            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    autofocus="autofocus"/>
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">没有找到文章</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                            <h3 class="media-heading">博客起航</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月29日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
+<p>：</p>
+<p>为了占行此处无耻的掠过N个字</p>
+<p>:<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                            <h3 class="media-heading">IDM-Internet Download Manager</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月30日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                            <h3 class="media-heading">everything--文件搜索神器</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月2日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                            <h3 class="media-heading">everything进阶教程</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月6日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                            <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月12日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
+<p>今天介绍的是一款据说主打截图的软件-snagit</p>
+<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                            <h3 class="media-heading">xnview-图片查看</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月25日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+<p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="没有找到文章"
+                data-message-one="找到 1 篇文章"
+                data-message-other="找到 {n} 篇文章">
+                找到 68 篇文章
+            </p>
+        </div>
+    </div>
+</div>
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'https://www.zoulei.net/2018/03/14/tornado_ioloop/';
+                 
+                    this.page.identifier = '2018/03/14/tornado_ioloop/';
+                 
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'ficapy';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+
+    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
+    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script>
+        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+    </script>
+
+
+    </body>
+</html>
