@@ -1,0 +1,665 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>Tornado 之httpserver - 邹雷</title>
+    <meta name="author" content="ficapy">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Tornado 之httpserver">
+<meta property="og:url" content="https://www.zoulei.net/2018/03/15/tornado_httpserver/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)">
+<meta property="og:updated_time" content="2018-03-15T09:14:55.763Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tornado 之httpserver">
+<meta name="twitter:description" content="Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)">
+<meta name="twitter:creator" content="@aec4d">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <!--STYLES END-->
+    
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">邹雷</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a href="/#about">
+                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+                </a>
+                <h4 class="sidebar-profile-name">ficapy</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link open-algolia-search"
+                             href="#search"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            Tornado 之httpserver
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" datetime="2018-03-15T11:37:29+08:00">
+	
+		    3月 15, 2018
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/Tornado/">Tornado</a>
+
+
+    
+</div>
+
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)</p>
+<a id="more"></a>
+<h3 id="目标"><a href="#目标" class="headerlink" title="目标"></a>目标</h3><p>本文的基本目标是实现这个需求<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> httpserver</div><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> ioloop</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">handle_request</span><span class="params">(request)</span>:</span></div><div class="line">    message = <span class="string">b"Hello World\n"</span></div><div class="line">    request.write(<span class="string">b"HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s"</span> % (</div><div class="line">        len(message), message))</div><div class="line">    request.finish()</div><div class="line"></div><div class="line">http_server = httpserver.HTTPServer(handle_request)</div><div class="line">http_server.listen(<span class="number">8888</span>)</div><div class="line">ioloop.IOLoop.instance().start()</div></pre></td></tr></table></figure></p>
+<h3 id="最简服务端"><a href="#最简服务端" class="headerlink" title="最简服务端"></a>最简服务端</h3><p>根据上一篇。我们可以想到当执行listen监听操作的时候，会创建一个监听socket.然后将处理函数添加到事件回调中。不考虑异常因素，最简单的是这样<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> socket</div><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> ioloop</div><div class="line"><span class="keyword">from</span> selectors <span class="keyword">import</span> EVENT_READ, EVENT_WRITE</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">HTTPServer</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, handler)</span>:</span></div><div class="line">        self.handler = handler</div><div class="line">        self.io_loop = ioloop.IOLoop.instance()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">listen</span><span class="params">(self, port)</span>:</span></div><div class="line">        self.s = socket.socket()</div><div class="line">        self.s.setblocking(<span class="number">0</span>)</div><div class="line">        self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, <span class="number">1</span>)</div><div class="line">        self.s.bind((<span class="string">'127.0.0.1'</span>, port))</div><div class="line">        self.s.listen(<span class="number">128</span>)</div><div class="line">        self.io_loop.add_handler(self.s.fileno(), EVENT_READ, self._handle)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_handle</span><span class="params">(self)</span>:</span></div><div class="line">        client_sock, _ = self.s.accept()</div><div class="line">        client_sock.send(<span class="string">b"HTTP/1.0 200 OK\r\nContent-Length: 12\r\n\r\nHello World\n"</span>)</div><div class="line">        client_sock.close()</div></pre></td></tr></table></figure><br>对于监听socket,当触发可读的时候意味有新的客户端连接进来了，此时调用回调进行accept得到交互socket连接。简单起见直接send发送一个简易的HTTP消息然后关闭socket</p>
+<h3 id="封装Request对象"><a href="#封装Request对象" class="headerlink" title="封装Request对象"></a>封装Request对象</h3><p>从上面的示例中可以看到。它没有调用传入的request函数，因为socket对象并没有write和finish方法。此外，即使我们将socket的send和close当做write和finish。它还有一个巨大的缺陷。我们只是进行了发送，而没有对接收到的http报文进行任何处理。<br>一般而言，会从它的行首、头部、消息体得到某一些我们需要的内容，然后对内容进行处理，最终写入信息，过程结束。因此，封装一个Request对象是必须的，最后将封装的对象传入到handler函数以供使用。如何封装呢？我们只需要知道一个完整的HTTP报文即可以得到一个requests对象，而一个http报文又有明显的分隔符.例如下文这个请求报文<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">GET /docs/index.html HTTP/1.1</div><div class="line">Host: www.ipinfo.com</div><div class="line">Accept: image/gif, image/jpeg, */*</div><div class="line">Accept-Language: en-us</div><div class="line">Accept-Encoding: gzip, deflate</div><div class="line">User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)</div><div class="line">(blank line)</div></pre></td></tr></table></figure></p>
+<p>获取流程如下。当读取到第一个<code>\r\n</code>即确定Reques Line部分，当读取到<code>\r\n\r\n</code>即确定Header部分，如果Header部分存在Content-Length则表示存在body部分，存在则继续读取Content-Length长度。如此下来单个HTTP报文读取完毕。可以构建这个过程，Requests Line读取完毕后—&gt;回调读取Header部分—&gt;回调读取Body部分—&gt;构建Request对象—&gt;回调handler函数，将Request对象传入。另外第一步可以省略,读取Header即包含Requests Line</p>
+<p>可以看到对于一个socket对象,将它根据分隔符以及长度读取就能解析成单个http包，另外对于很多流协议也是如此。我们将socket封装一下。让它提供两个功能read_until、read_bytes。允许读取到分隔符后调用回调函数、读取到固定长度后调用回调函数。最简代码如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> ioloop</div><div class="line"><span class="keyword">from</span> selectors <span class="keyword">import</span> EVENT_READ</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">IOStream</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, socket)</span>:</span></div><div class="line">        self.socket = socket</div><div class="line">        self.ioloop = ioloop.IOLoop.instance()</div><div class="line">        self.ioloop.add_handler(self.socket.fileno(), EVENT_READ, self._handler)</div><div class="line">        self._read_buffer = <span class="string">b""</span></div><div class="line">        self._read_delimiter = <span class="keyword">None</span></div><div class="line">        self._read_bytes = <span class="keyword">None</span></div><div class="line">        self._read_callback = <span class="keyword">None</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_handler</span><span class="params">(self)</span>:</span></div><div class="line">        data = self.socket.recv(<span class="number">1024</span>)</div><div class="line">        self._read_buffer += data</div><div class="line">        <span class="keyword">if</span> self._read_delimiter <span class="keyword">and</span> self._read_delimiter <span class="keyword">in</span> self._read_buffer:</div><div class="line">            result, self._read_buffer = self._read_buffer.split(self._read_delimiter)</div><div class="line">            self._read_callback(result)</div><div class="line">            self._read_delimiter = <span class="keyword">None</span></div><div class="line">            self._read_callback = <span class="keyword">None</span></div><div class="line">        <span class="keyword">elif</span> self._read_bytes <span class="keyword">and</span> len(self._read_buffer) &gt; self._read_bytes:</div><div class="line">            result = self._read_buffer[:self._read_bytes]</div><div class="line">            self._read_buffer = self._read_buffer[self._read_bytes:]</div><div class="line">            self._read_callback(result)</div><div class="line">            self._read_bytes = <span class="keyword">None</span></div><div class="line">            self._read_callback = <span class="keyword">None</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">read_until</span><span class="params">(self, delimiter, callback)</span>:</span></div><div class="line">        self._read_delimiter = delimiter</div><div class="line">        self._read_callback = callback</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">read_bytes</span><span class="params">(self, length, callback)</span>:</span></div><div class="line">        self._read_bytes = length</div><div class="line">        self._read_callback = callback</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">write</span><span class="params">(self, data)</span>:</span></div><div class="line">        self.socket.send(data)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">close</span><span class="params">(self)</span>:</span></div><div class="line">        self.ioloop.ioloop.unregister(self.socket.fileno())</div><div class="line">        self.socket.close()</div></pre></td></tr></table></figure><br>对于创建的IOStream对象，它添加READ事件，将回调函数设置为self._handler。当使用read_until的时候将历史数据给callback函数调用。<br>再看一下HTTPConnect对象<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">HTTPConnection</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, io_stream, handler_callback)</span>:</span></div><div class="line">        self.io_loop = ioloop.IOLoop.instance()</div><div class="line">        self.stream = io_stream</div><div class="line">        self.handler_callback = handler_callback</div><div class="line">        self.stream.read_until(<span class="string">b'\r\n\r\n'</span>, self._parse_header)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_parse_header</span><span class="params">(self, data)</span>:</span></div><div class="line">        <span class="comment"># 忽略行首，全部当做header</span></div><div class="line">        request = Request(connect=self, header=data)</div><div class="line">        self.handler_callback(request)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">write</span><span class="params">(self, data)</span>:</span></div><div class="line">        self.stream.write(data)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">finish</span><span class="params">(self)</span>:</span></div><div class="line">        self.stream.close()</div></pre></td></tr></table></figure><br>显然，它传入的是IOStream对象，并且在初始化的时候就调用read_until读取HTTP Header部分内容。简单起见，这里只读取并没有解析。最后封装成Request对象。让handle_request函数调用。达到我们文章开头的目的<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Request</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, connect, header)</span>:</span></div><div class="line">        self.connect = connect</div><div class="line">        self.header = header</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">write</span><span class="params">(self, data)</span>:</span></div><div class="line">        self.connect.write(data)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">finish</span><span class="params">(self)</span>:</span></div><div class="line">        self.connect.finish()</div></pre></td></tr></table></figure><br>将最开始的最简服务器部分稍微改动一下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">_handle</span><span class="params">(self)</span>:</span></div><div class="line">    client_sock, _ = self.s.accept()</div><div class="line">    stream = IOStream(client_sock)</div><div class="line">    HTTPConnection(stream, self.handler)</div></pre></td></tr></table></figure></p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>IOStream、HTTPConnection、Request、HTTPServer。其中暴漏给用户的几乎只有Request对象，从上面的分析中应该可以发现。将文件描述符加入事件，等待IOStream的全局_header进行回调，全局_header又针对各种情况(分隔符条件满足、长度条件满足)发起回调。同时<span style="color:red"><strong>如果不调用iostream.read_until等那么全局的_header就没有意义了</strong></span>。搞定IOStream后。立马在HTTPConnection里面调用<code>iostream.read_until</code>。被回调则表明HTTP头部接收完成。组装成Requests然后调用handle_request。</p>
+<p>作用分工:<br>HTTPServer:     创建监听socket,传入http处理回调函数<br>IOStream:   提供通用TCP流解析，最重要的是提供了write、read_until、read_length，<span style="color:red"><strong>且可以传入回调</strong></span><br>Request:    将字符串解析成一个Request对象。便于简单的获取访问信息。如url、host、port、body等等<br>HTTPConnection:  将前三者联系起来,调用IOStream.read_until开启获取HTTP数据包的流程</p>
+<p>另外本文简单起见，只注册了READ事件。对于send操作。同样是需要进行注册事件。等到WRITE事件触发才执行send操作，希望不要引起误解，另外本例中使用HTTP/1.0的逻辑，处理完成单个链接后直接关闭。对于HTTP/1.1来说要实现keep-alive只需要在finish的使用并不关闭链接，而是继续执行self.read_until(b’\r\n\r\n’,self._parse_header)继续等待处理下一个HTTP报文</p>
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/14/tornado_ioloop/" data-tooltip="Tornado 之IOLoop">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2018 ficapy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/14/tornado_ioloop/" data-tooltip="Tornado 之IOLoop">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+        
+            <h4 id="about-card-name">ficapy</h4>
+        
+            <div id="about-card-bio"><p>author.bio</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                浙江杭州
+            </div>
+        
+    </div>
+</div>
+
+        <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-close"></i></span>
+            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    autofocus="autofocus"/>
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">没有找到文章</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                            <h3 class="media-heading">博客起航</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月29日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
+<p>：</p>
+<p>为了占行此处无耻的掠过N个字</p>
+<p>:<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                            <h3 class="media-heading">IDM-Internet Download Manager</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月30日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                            <h3 class="media-heading">everything--文件搜索神器</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月2日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                            <h3 class="media-heading">everything进阶教程</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月6日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                            <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月12日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
+<p>今天介绍的是一款据说主打截图的软件-snagit</p>
+<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                            <h3 class="media-heading">xnview-图片查看</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月25日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+<p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="没有找到文章"
+                data-message-one="找到 1 篇文章"
+                data-message-other="找到 {n} 篇文章">
+                找到 69 篇文章
+            </p>
+        </div>
+    </div>
+</div>
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'https://www.zoulei.net/2018/03/15/tornado_httpserver/';
+                 
+                    this.page.identifier = '2018/03/15/tornado_httpserver/';
+                 
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'ficapy';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+
+    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
+    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script>
+        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+    </script>
+
+
+    </body>
+</html>
