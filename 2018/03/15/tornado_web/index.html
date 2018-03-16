@@ -6,23 +6,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>excel数字递增批量打印 - 邹雷</title>
+    <title>Tornado 之web - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4） 经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：">
+    <meta name="description" content="上一篇文章讲解了httpserver。它最终传入的是一个函数，接受的是Request对象，这和Tornado所展示的Hello World有一些差距。tornado的web模块就是将它从一个函数变化成一个类对象，并且包含了基础的路由功能，最终实现类似与这样的Hello World(代码基于1.0.0版本)123456789101112131415from tornado import webfro">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="excel数字递增批量打印">
-<meta property="og:url" content="https://www.zoulei.net/2013/12/20/excel_batch_print/index.html">
+<meta property="og:title" content="Tornado 之web">
+<meta property="og:url" content="https://www.zoulei.net/2018/03/15/tornado_web/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4） 经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：">
-<meta property="og:updated_time" content="2016-03-03T09:14:42.000Z">
+<meta property="og:description" content="上一篇文章讲解了httpserver。它最终传入的是一个函数，接受的是Request对象，这和Tornado所展示的Hello World有一些差距。tornado的web模块就是将它从一个函数变化成一个类对象，并且包含了基础的路由功能，最终实现类似与这样的Hello World(代码基于1.0.0版本)123456789101112131415from tornado import webfro">
+<meta property="og:updated_time" content="2018-03-16T03:25:03.691Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="excel数字递增批量打印">
-<meta name="twitter:description" content="工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4） 经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：">
+<meta name="twitter:title" content="Tornado 之web">
+<meta name="twitter:description" content="上一篇文章讲解了httpserver。它最终传入的是一个函数，接受的是Request对象，这和Tornado所展示的Hello World有一些差距。tornado的web模块就是将它从一个函数变化成一个类对象，并且包含了基础的路由功能，最终实现类似与这样的Hello World(代码基于1.0.0版本)123456789101112131415from tornado import webfro">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -229,19 +229,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            excel数字递增批量打印
+            Tornado 之web
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2013-12-20T20:07:00+08:00">
+    <time itemprop="datePublished" datetime="2018-03-15T17:23:07+08:00">
 	
-		    12月 20, 2013
+		    3月 15, 2018
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+    <a class="category-link" href="/categories/Tornado/">Tornado</a>
 
 
     
@@ -251,18 +251,22 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
-<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：<br><a id="more"></a><br>①打漏或者打重复；</p>
-<p>②打印机出差错（卡纸神马的），很可能将原本的栋号打乱影响后面的进展；</p>
-<p>③某些错误的方法方式会人为降低打印速度；</p>
-<p>④机械的重复心里说不好有一万只草泥马飘过吧，so。影响心情，不利于身心</p>
-<p>当然，以上综述4种情况在我身上都出现过。其他三种都应该是很容易体会到的，略讲一下我深有感悟的第三种情况。造成这种情况的主要原因是打印机的打印过程是<br>以文件为主的，打印机也在重复着一件事情—-对每一个传入到打印机的文件进行打印处理。据我粗略理解每个文件打印都有三个过程，文件传送到打印机的微处理器→打印机准备→打印机打印。如果你要打印非常多的文件前2个步骤所花费的时间不能忽略。所造成的影响就是如果你要打印1000张纸，你每次打印1张<br>打印1000次，和你一次性打印1000张所花费的时间有天壤之别。我以前就用1次打印1张的方式打印过（晚上加班）。每张打印时间大约15秒，一分钟打<br>印4张。但是打印机上的参数20ppm（每分钟打印20张）···········其主要原因就是打印机对单个文件传送和打印机预热耗费了大量时间</p>
-<p>所以，不用别的办法，<strong><span
-style="color: #ff0000;">想要打印速度快，第一重要的就是将所有需要打印的文件合成一份文件打印</span></strong></p>
-<p><p><br>以下是我采用的办法(03版本无法使用，要求excel有另存为pdf功能)：  </p>
-<script type="text/javascript" src="https://gist.github.com/ficapy/8053411.js"></script>
-
-<p>代 码会将每个栋号的文档输出成一个PDF（及其适合打印），最后用adobe<br>acrobat将所有pdf合并成单个pdf（试着合并了1000页纸，pdf大小之后9M，打印机完成能够应付）。快速打印不在话下，而且由于是单个文<br>件打印机卡纸之类的错误也不会出现上述问题②。所以，你需要做的只是打印机没纸的时候换纸&amp;解决卡纸~~~~~~~~</p>
+            <p>上一篇文章讲解了httpserver。它最终传入的是一个函数，接受的是Request对象，这和Tornado所展示的Hello World有一些差距。tornado的web模块就是将它从一个函数变化成一个类对象，并且包含了基础的路由功能，最终实现类似与这样的Hello World(代码基于1.0.0版本)<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> web</div><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> httpserver</div><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> ioloop</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">MainHandler</span><span class="params">(web.RequestHandler)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get</span><span class="params">(self)</span>:</span></div><div class="line">        self.write(<span class="string">b"Hello World"</span>)</div><div class="line"></div><div class="line">application = web.Application([</div><div class="line">    (<span class="string">r"/"</span>, MainHandler)</div><div class="line">])</div><div class="line"></div><div class="line">http_server = httpserver.HTTPServer(application)</div><div class="line">http_server.listen(<span class="number">8888</span>)</div><div class="line">ioloop.IOLoop.instance().start()</div></pre></td></tr></table></figure></p>
+<a id="more"></a>
+<h3 id="将handler-request回调封装为RequestHandler类和Application"><a href="#将handler-request回调封装为RequestHandler类和Application" class="headerlink" title="将handler_request回调封装为RequestHandler类和Application"></a>将handler_request回调封装为RequestHandler类和Application</h3><p>和上一篇的httpserver并没有太大的变动，传入的对象由单个函数变成了application对象，并且web模块有RequestHandler和Application类，能猜想到web模块提供了路由功能，对请求的HTTP。它先得到请求路径和HTTP方法。找到对应的类。调用对应的方法。由此写出以下最简代码<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">RequestHandler</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, request, application)</span>:</span></div><div class="line">        self.request = request</div><div class="line">        self.application = application</div><div class="line">        self._write_chunk = <span class="string">b""</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">raise</span> NotImplementedError()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">write</span><span class="params">(self, chunk)</span>:</span></div><div class="line">        self._write_chunk += chunk</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">finish</span><span class="params">(self)</span>:</span></div><div class="line">        self.request.write(<span class="string">b"HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s"</span> % (</div><div class="line">            len(self._write_chunk), self._write_chunk))</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_execute</span><span class="params">(self)</span>:</span></div><div class="line">        self.get()</div><div class="line">        self.finish()</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Application</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, handlers)</span>:</span></div><div class="line">        self.handlers = handlers</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, request)</span>:</span></div><div class="line">        <span class="comment"># 先从request得到访问host、url和method对handlers进行匹配</span></div><div class="line">        handler = self.handlers[<span class="number">0</span>][<span class="number">1</span>](request, self)</div><div class="line">        handler._execute()</div></pre></td></tr></table></figure></p>
+<p>将所有的RequestHandler类均放置到Application下面。当它被tornado.httpserver调用传入request对象的时候会调用Application的<code>__call__</code>函数。因为self.handlers中，每一个handler均有对应的路由地址，毫无疑问，这个地方会存在一个匹配过程。因为调用<code>__call__</code>的时候request对象已经可以提取到host、port、url、header、body等各种信息，最常用的只需要使用host和url即可确定调用哪一个RequestHandler。匹配后对RestsHandler进行初始化,此时传入了request对象和Application对象本身，最后调用_execute完成整个过程的执行</p>
+<h3 id="路由功能"><a href="#路由功能" class="headerlink" title="路由功能"></a>路由功能</h3><p>路由功能的实现主要依靠正则匹配。比如实现对博客地址的匹配<code>/(\d{4})/(\d{2})/(\d{2})/(.+?)</code>。分别表示年、月、日、主题，或者使用正则命名分组<code>/(?P&lt;year&gt;\d{4})/(?P&lt;month&gt;\d{2})/(?P&lt;day&gt;\d{2})/(?P&lt;theme&gt;.+?)</code>。那么我们只需要再添加的时候执行re.compile。在匹配的时候执行re.match即可。对于普通的不存在正则分组的情况，就不需要传入正则分组匹配的内容。否则像以下这样<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">class BlogHandler(RequestHandler):</div><div class="line">        def get(self,year,month,day):</div><div class="line">                pass</div></pre></td></tr></table></figure></p>
+<p>在Tornado里面它使用了URLSpec类来封装这个事情</p>
+<h3 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h3><p>和上一篇的httpserver中使用handler_request函数不同。本篇的web模块对它进行了进一步的封装。我们面对的编写主要的业务逻辑均是继承自RequestHandler对象。在上一章基本面对的还是直接对iostream进行写操作，写入header、写入cookies、写入etag、模板渲染这些都是没有直接提供的。web模块作为它的更高级别封装，它提供了这些功能。</p>
+<ul>
+<li>路由匹配</li>
+<li>给RequestHandler对象暴露Application对象和Request对象</li>
+<li>提供状态码、跳转、url参数、header、cookies、缓存头、模板渲染、CSRF、日志记录等功能</li>
+<li>提供http请求生命周期内的各项hook事件prepare、on_finish、on_connection_close</li>
+<li>提供最常用的辅助函数get_login_url、get_current_user等</li>
+<li>基于RequestHandler继承出了一些其他对象，比如ErrorHandler、StaticFileHandler、RedirectHandler等。注意，这一些和Flask等web框架的用法不一样。在Flask中是直接return ErrorHandler()等等。可是在Tornado中最后执行的是RequestHandler._execute，它是不支持直接返回这一些对象的。比如跳转直接执行self.redirect即可。这一些继承对象应该使用Application.add_handler进行调用。配合url匹配规则，然后最终被调用ErrorHandler._execute等等</li>
+</ul>
+<p>web里面还存在一个装饰器函数asynchronous，这个装饰器在Tornado存在了很长时间，只是现在基本可以不使用它了。可是依旧很多人喜欢一言不合就带上它。用法是这样<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">MyRequestHandler</span><span class="params">(web.RequestHandler)</span>:</span></div><div class="line"><span class="meta">    @web.asynchronous</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get</span><span class="params">(self)</span>:</span></div><div class="line">        http = httpclient.AsyncHTTPClient()</div><div class="line">        http.fetch(<span class="string">"http://friendfeed.com/"</span>, self._on_download)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_on_download</span><span class="params">(self, response)</span>:</span></div><div class="line">        self.write(<span class="string">"Downloaded!"</span>)</div><div class="line">        self.finish()</div></pre></td></tr></table></figure><br>产生的原因是最终web.RequestHandler._execute调用了get函数。get执行完http.fetch整个过程就完成了。只是http.fetch它并没有阻塞，最终的结果是加入了IOLoop的回调，_execute的默认逻辑是当get函数执行完毕后会立即调用self.finish表示请求流程结束。明显这不是我们需要的逻辑，正常逻辑是等待网页下载完毕后再返回内容，因此web.asynchronous的逻辑很简单。将get函数设置一个标志位<code>self._auto_finish = False</code>表明该函数不需要调用<code>self.finish()</code>操作，自然最后再手动调用finish就好了</p>
 
             
         </div>
@@ -274,7 +278,7 @@ style="color: #ff0000;">想要打印速度快，第一重要的就是将所有�
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2013/12/27/pip_use_china_mirror/"  data-tooltip="pip使用国内镜像">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -282,7 +286,7 @@ style="color: #ff0000;">想要打印速度快，第一重要的就是将所有�
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2013/11/28/disktool_recommend/" data-tooltip="傲梅分区助手--傻瓜化分区软件">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/15/tornado_httpserver/" data-tooltip="Tornado 之httpserver">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -297,17 +301,17 @@ style="color: #ff0000;">想要打印速度快，第一重要的就是将所有�
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2013/12/20/excel_batch_print/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_web/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2013/12/20/excel_batch_print/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_web/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2013/12/20/excel_batch_print/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_web/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -355,7 +359,7 @@ style="color: #ff0000;">想要打印速度快，第一重要的就是将所有�
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2013/12/27/pip_use_china_mirror/"  data-tooltip="pip使用国内镜像">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -363,7 +367,7 @@ style="color: #ff0000;">想要打印速度快，第一重要的就是将所有�
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2013/11/28/disktool_recommend/" data-tooltip="傲梅分区助手--傻瓜化分区软件">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/15/tornado_httpserver/" data-tooltip="Tornado 之httpserver">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -378,17 +382,17 @@ style="color: #ff0000;">想要打印速度快，第一重要的就是将所有�
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2013/12/20/excel_batch_print/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_web/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2013/12/20/excel_batch_print/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_web/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2013/12/20/excel_batch_print/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_web/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -414,17 +418,17 @@ style="color: #ff0000;">想要打印速度快，第一重要的就是将所有�
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2013/12/20/excel_batch_print/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_web/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2013/12/20/excel_batch_print/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_web/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2013/12/20/excel_batch_print/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_web/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -637,9 +641,9 @@ style="color: #ff0000;">想要打印速度快，第一重要的就是将所有�
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2013/12/20/excel_batch_print/';
+                 this.page.url = 'https://www.zoulei.net/2018/03/15/tornado_web/';
                  
-                    this.page.identifier = '2013/12/20/excel_batch_print/';
+                    this.page.identifier = '2018/03/15/tornado_web/';
                  
              };
             (function() {
