@@ -1,0 +1,688 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>Tornado 之StackContext - 邹雷</title>
+    <meta name="author" content="ficapy">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="yield这个关键字在2001年2.2版本的时候就出现了。2006加入yield.send功能。然而直到2006年2.5版本才看到使用在contextmanager上，tornado 2011年才用它实现了神奇的gen逻辑。令我没想到的是  yield出现的这么早 yield厉害一点的应用(contentmanager)居然过了五年才加入到标准库。 tornado的1.0.0版根本和yield没有">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Tornado 之StackContext">
+<meta property="og:url" content="https://www.zoulei.net/2018/03/16/Tornado_StackContext/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="yield这个关键字在2001年2.2版本的时候就出现了。2006加入yield.send功能。然而直到2006年2.5版本才看到使用在contextmanager上，tornado 2011年才用它实现了神奇的gen逻辑。令我没想到的是  yield出现的这么早 yield厉害一点的应用(contentmanager)居然过了五年才加入到标准库。 tornado的1.0.0版根本和yield没有">
+<meta property="og:updated_time" content="2018-03-17T04:01:17.534Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tornado 之StackContext">
+<meta name="twitter:description" content="yield这个关键字在2001年2.2版本的时候就出现了。2006加入yield.send功能。然而直到2006年2.5版本才看到使用在contextmanager上，tornado 2011年才用它实现了神奇的gen逻辑。令我没想到的是  yield出现的这么早 yield厉害一点的应用(contentmanager)居然过了五年才加入到标准库。 tornado的1.0.0版根本和yield没有">
+<meta name="twitter:creator" content="@aec4d">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <!--STYLES END-->
+    
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">邹雷</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a href="/#about">
+                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+                </a>
+                <h4 class="sidebar-profile-name">ficapy</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link open-algolia-search"
+                             href="#search"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            Tornado 之StackContext
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" datetime="2018-03-16T16:14:25+08:00">
+	
+		    3月 16, 2018
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/Tornado/">Tornado</a>
+
+
+    
+</div>
+
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <p>yield这个关键字在2001年2.2版本的时候就出现了。2006加入yield.send功能。然而直到2006年2.5版本才看到使用在contextmanager上，tornado 2011年才用它实现了神奇的gen逻辑。令我没想到的是</p>
+<ol>
+<li>yield出现的这么早</li>
+<li>yield厉害一点的应用(contentmanager)居然过了五年才加入到标准库。</li>
+<li>tornado的1.0.0版根本和yield没有一毛钱关系</li>
+<li>tornado最先引入yield居然并不是实现了gen</li>
+</ol>
+<p>yield最先在tornado里面展露头角是在<span style="color:red"><strong><a href="https://github.com/tornadoweb/tornado/commit/721e25d0acc68d751073261bec150ac12a9f88ab">这个commit</a></strong></span>里面。大神就是大神，虽然这个代码仅仅只有几十行。可是我觉得思路很新奇，膜拜😀(代码基于v1.0.0和v1.1.0)</p>
+<a id="more"></a>
+<p>建议打开该commit，先看一看它做了什么事情。除去测试用例，它改动的地方可谓非常少了</p>
+<h3 id="起因"><a href="#起因" class="headerlink" title="起因"></a>起因</h3><p>观察下面的代码(可以将tornado的源码在1.0.0版本和1.1.0版本切换发现不同，在1.0.0版本客户端无法得到响应，1.1.0版本客户端得到500错误)<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> tornado.ioloop</div><div class="line"><span class="keyword">import</span> tornado.web</div><div class="line"><span class="keyword">import</span> tornado.httpserver</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Index</span><span class="params">(tornado.web.RequestHandler)</span>:</span></div><div class="line"><span class="meta">    @tornado.web.asynchronous</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get</span><span class="params">(self)</span>:</span></div><div class="line">        tornado.ioloop.IOLoop.instance().add_callback(self.callback)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">callback</span><span class="params">(self,*args)</span>:</span></div><div class="line">        <span class="keyword">raise</span> Exception(<span class="string">"Error"</span>)</div><div class="line"></div><div class="line">application = tornado.web.Application(handlers=[(<span class="string">'/'</span>, Index)])</div><div class="line">tornado.httpserver.HTTPServer(application).listen(<span class="number">8888</span>)</div><div class="line">tornado.ioloop.IOLoop.instance().start()</div></pre></td></tr></table></figure><br>这是一个异步的http响应。在接受到请求之后执行get函数体，最终它将self.callback加入到IOLoop循环列表，get函数结束。因为存在asynchronous装饰器，所以并没有主动调用self.finish()。待IOLoop执行self.callback回调时。此时并函数内部触发了异常。<span style="color:red"><strong>但是这个异常已经和get函数没有任何关系，因此get函数无法捕获到这个异常</strong></span><br>对比一下get函数体自身触发异常。由web.RequestHandler._execute调用get函数。此时它将捕获异常并调用self._handle_request_exception.最简流程如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">_execute</span><span class="params">(self, transforms, *args, **kwargs)</span>:</span></div><div class="line">    self._transforms = transforms</div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        getattr(self, self.request.method.lower())(*args, **kwargs)</div><div class="line">        <span class="keyword">if</span> self._auto_finish <span class="keyword">and</span> <span class="keyword">not</span> self._finished:</div><div class="line">            self.finish()</div><div class="line">    <span class="keyword">except</span> Exception, e:</div><div class="line">        self._handle_request_exception(e)</div></pre></td></tr></table></figure><br>self._handler_request_exception的流程也比较简单输出异常调用栈。返回客户端500错误，该http流程结束</p>
+<p>可是对于一个回调，它的异常由IOLoop捕获，然而可悲的是它捕获到异常却并不能确定是谁添加到IOLoop里面的，异常捕获之后是不是只用输出调用栈就好。所以需求出来了，对于凡是由get操作下面加入到IOLoop的回调，我们期待能和get的异常处理逻辑一致</p>
+<h3 id="历史上这个问题是怎么处理的"><a href="#历史上这个问题是怎么处理的" class="headerlink" title="历史上这个问题是怎么处理的"></a>历史上这个问题是怎么处理的</h3><p>这肯定是一个非常常见的问题，当执行<code>ioloop.IOLoop.instance().add_callback</code>之后。callback函数触发的异常添加回调的函数无法感知。最容易想到的方法就是我们把callback整体加上异常捕捉逻辑<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">callback</span><span class="params">(self,*args)</span>:</span></div><div class="line">        <span class="keyword">try</span>:</div><div class="line">                ...</div><div class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</div><div class="line">                self._handle_request_exception(e)</div></pre></td></tr></table></figure><br>但是这么恶心的方法明显是不可取的。意味着我们每写一个回调逻辑都需要在外部加上try..except。在1.0.0版本提供了一个装饰器函数提供类似的功能async_callback,所以上面的写法只需要将<code>tornado.ioloop.IOLoop.instance().add_callback(self.callback)</code>变更成<code>tornado.ioloop.IOLoop.instance().add_callback(self.async_callback(self.callback))</code>就可以了。虽然方法很不好，可是临时解决了问题，在1.1.0版本就引入了StackContext逻辑，解决了这个问题</p>
+<h3 id="预备知识Yield"><a href="#预备知识Yield" class="headerlink" title="预备知识Yield"></a>预备知识Yield</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">gen_fn</span><span class="params">()</span>:</span></div><div class="line">    result = <span class="keyword">yield</span> <span class="number">1</span></div><div class="line">    print(<span class="string">"result of yueld: "</span>+result)</div><div class="line">    result2 = <span class="keyword">yield</span>  <span class="number">2</span></div><div class="line">    print(<span class="string">"result of 2nd yield: "</span> + result2)</div><div class="line">    <span class="keyword">return</span> <span class="string">'we are done'</span></div><div class="line"></div><div class="line">caller = gen_fn()</div><div class="line">x = caller.send(<span class="keyword">None</span>)</div><div class="line">print(x)</div><div class="line">y = caller.send(<span class="string">'joe'</span>)</div><div class="line">print(y)</div><div class="line"><span class="keyword">try</span>:</div><div class="line">    caller.send(<span class="string">"bob"</span>)</div><div class="line"><span class="keyword">except</span> StopIteration:</div><div class="line">    print()</div></pre></td></tr></table></figure>
+<ol>
+<li>对于一个生成器来说，调用它(gen())并不会立即被执行。只是生成了一个生成器对象</li>
+<li>nex(g)等同于g.send(None)。所以对于生成器只需要掌握send函数就可以了</li>
+<li>send(value)返回的是yield右边的值，同时value赋值给yield左边的对象，<span style="color:red"><strong>千万不要被第一次的send(None)误导，认为经过第一次send(None)后result的值为None</strong></span>,你可以在心目中将没一个yield划上竖线，运行到那里就返回，然后下一次send的值被赋值给yield左边</li>
+<li>上例中<code>we are done</code>没有被打印，因为不断的被send后生成器会触发StopIteration异常。最终被except StopIteration所捕获。可是他并没有将捕获的值输出，因而没有被显示处理。同时python2不允许在生成器执行return，所以在tornado中经常看到raise gen.Return(value)这种写法，它实质就是触发StopIteration异常，然后被except捕获后得到值，完成传递过程，到了python3语法就直接允许执行return了</li>
+</ol>
+<h3 id="预备知识-with"><a href="#预备知识-with" class="headerlink" title="预备知识 with"></a>预备知识 with</h3><p>python有很多魔术方法(可以参考<a href="https://pycoders-weekly-chinese.readthedocs.io/en/latest/issue6/a-guide-to-pythons-magic-methods.html">这篇文章</a>)。其中如果一个类存在<code>__enter__</code>和<code>__exit__</code>方法。那么当使用with语句之后。会执行<code>__enter__</code>后得到对象返回给<code>with as</code>后面的变量。在退出的时候执行<code>__exit__</code>方法，最常见的就是我们使用<code>with open() as f</code>去打开一个文件了，处理完成后自动关闭文件，避免了内存泄漏。仔细想一下，其实用装饰器是很容易实现的。可是with语句还有以一个很大的优点，Python的编码是基于缩进来决定代码块的，装饰器是作用在函数上，而with是当跳出它的缩进则执行<code>__exit__</code>(可能描述的不太好)，很多情况下with要比装饰器的写法优美很多。</p>
+<p>将with和yield联合起来使用还真的是挺神奇的。from contextlib import contextmanager，该模块将with语句做到了装饰器的效果。比如计算一个with语句下面的执行时间<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> time</div><div class="line"><span class="keyword">from</span> contextlib <span class="keyword">import</span> contextmanager</div><div class="line"></div><div class="line"><span class="meta">@contextmanager</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">timeit</span><span class="params">()</span>:</span></div><div class="line">    start = time.time()</div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        <span class="keyword">yield</span></div><div class="line">    <span class="keyword">finally</span>:</div><div class="line">        print(<span class="string">"elapsed time: &#123;&#125;"</span>.format(time.time() - start))</div><div class="line"></div><div class="line"><span class="keyword">with</span> timeit():</div><div class="line">    time.sleep(<span class="number">1</span>)</div></pre></td></tr></table></figure><br>作为不明白它实现的人，也能够很容易看出来。yield将timeit划分为了两部分。前面的相当于执行<code>__enter__</code>动作，后面的相当于执行<code>__exit__</code>动作。</p>
+<p>想象一下它的内部contextmanager装饰器是如何实现的。首先被装饰的函数timeit是一个生成器。因此，在执行<code>__enter__</code>的时候只需要执行send(None)操作就能到达yield的右边并暂停，再<code>__exit__</code>的时候再次执行send(None)，此时执行到了finally语句并触发StopIteration异常，流程结束。整个过程可以这样认为<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">contextmanager</span><span class="params">(func)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">inner</span><span class="params">(*args, **kwargs)</span>:</span></div><div class="line">        g = func(*args,**kwargs)</div><div class="line">        <span class="class"><span class="keyword">class</span> <span class="title">w</span><span class="params">()</span>:</span></div><div class="line">            <span class="function"><span class="keyword">def</span> <span class="title">__enter__</span><span class="params">(self)</span>:</span></div><div class="line">                g.send(<span class="keyword">None</span>)</div><div class="line"></div><div class="line">            <span class="function"><span class="keyword">def</span> <span class="title">__exit__</span><span class="params">(self, exc_type, exc_val, exc_tb)</span>:</span></div><div class="line">                <span class="keyword">try</span>:</div><div class="line">                    g.send(<span class="keyword">None</span>)</div><div class="line">                <span class="keyword">except</span> Exception:</div><div class="line">                    print(<span class="string">"4"</span>)</div><div class="line">        <span class="keyword">return</span> w()</div><div class="line">    <span class="keyword">return</span> inner</div><div class="line"></div><div class="line"><span class="meta">@contextmanager</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">log</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        print(<span class="string">"1"</span>)</div><div class="line">        <span class="keyword">yield</span></div><div class="line">        <span class="keyword">raise</span> Exception(<span class="string">"E"</span>)</div><div class="line">    <span class="keyword">finally</span>:</div><div class="line">        print(<span class="string">"3"</span>)</div><div class="line"></div><div class="line"><span class="keyword">with</span> log():</div><div class="line">    print(<span class="string">"2"</span>)</div></pre></td></tr></table></figure><br>是否还是感觉相对比较简单呢</p>
+<h3 id="StackContext的实现"><a href="#StackContext的实现" class="headerlink" title="StackContext的实现"></a>StackContext的实现</h3><p>在起因部分，解释了callback中会存在的问题(期待RequestHandler.get里面所有相关内容发生错误都会导致返回500错误给客户端)。1.0版本的解决方案就是给每个回调函数套上一个装饰器。触发错误的时候就可以返回500了，感觉不太好讲述这段天才般的代码了😕<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> contextlib</div><div class="line"></div><div class="line">_state = ()</div><div class="line"></div><div class="line"><span class="meta">@contextlib.contextmanager</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">StackContext</span><span class="params">(context_factory)</span>:</span></div><div class="line">    <span class="keyword">global</span> _state</div><div class="line">    old_contexts = _state</div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        _state = old_contexts + (context_factory,)</div><div class="line">        <span class="keyword">with</span> context_factory():</div><div class="line">            <span class="keyword">yield</span></div><div class="line">    <span class="keyword">finally</span>:</div><div class="line">        _state = old_contexts</div><div class="line"></div><div class="line"><span class="meta">@contextlib.contextmanager</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">ErrorCapture</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        <span class="keyword">yield</span></div><div class="line">    <span class="keyword">except</span> Exception:</div><div class="line">        <span class="keyword">pass</span></div><div class="line"></div><div class="line"><span class="keyword">with</span> StackContext(ErrorCapture):</div><div class="line">    print(_state)</div><div class="line">    <span class="keyword">raise</span> Exception(<span class="string">"Error"</span>)</div><div class="line">print(_state)</div></pre></td></tr></table></figure><br>这个地方StackContext是一个工厂模式，它传入的参数context_factory也是一个被contextlib.contextmanager装饰的对象。在StackContext的内部它又执行了with语句来初始化我们的context_factory，emmm.这个其实和多层嵌套装饰器并没有太大的区别，它实现了什么效果呢，在调用with StackContext(context_factory)的时候将context_factory加入到老的里面。<span style="color:red"><strong>注意，当前的context_factory和1.0.0版本里面的async_callback效果是一样样的，在with的语句块下面，我们可以使用_state变量。当跳出with之后_state就被恢复到原来的样子</strong></span>。</p>
+<p>那么我们该如何使用这个_state变量呢，注意到with语句进入的时候会加入context_factory，退出的时候会清除。这意味着在with下面的代码块里面我们可以安全的使用它<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">wrap</span><span class="params">(fn)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">wrapped</span><span class="params">(callback, contexts)</span>:</span></div><div class="line">        <span class="keyword">with</span> contextlib.nested(*[i() <span class="keyword">for</span> i <span class="keyword">in</span> contexts]):</div><div class="line">            callback()</div><div class="line">    contexts = _state</div><div class="line">    result = functools.partial(wrapped, fn, contexts)</div><div class="line">    <span class="keyword">return</span> result</div></pre></td></tr></table></figure><br>这里，我们添加一个装饰器。在IOLoop中所有需要添加回调的地方均由wrap包装起来<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">     def add_callback(self, callback):</div><div class="line">         &quot;&quot;&quot;Calls the given callback on the next I/O loop iteration.&quot;&quot;&quot;</div><div class="line">-        self._callbacks.add(callback)</div><div class="line">+        self._callbacks.add(stack_context.wrap(callback))</div><div class="line">         self._wake()</div><div class="line">`</div></pre></td></tr></table></figure></p>
+<p>那么，在它被调用的时候实际执行的是wrapped函数，它会先调用with contextlib.nested(*[i() for i in contexts]).此步骤恢复了with StackContext时期加入的对象(即人们常说的上下文)。对于异常捕获来说，就是能够正确的捕获callback的异常并且返回500给客户端。另外，最开始的时候捕获RequestHandle.get的异常是在_execute套上try…except,将他变动为with StackContext就好了。这里应该谨记下面两点</p>
+<ul>
+<li>Tornado的运行是单线程的,with StackContext运行的过程中不可能存在别的步骤另外去改变了_state的值(这个值很重要)</li>
+<li>StackContext是可以进行嵌套的</li>
+</ul>
+<h3 id="改进"><a href="#改进" class="headerlink" title="改进"></a>改进</h3><p>当然以上只是为了表述原理讲解的最简代码，实际上源码中略有不同。首先考虑多线程的情况，在单线程中_state的改动是很显然的，执行<code>with StackContext</code>即允许改动。在多线程中就不太一样了。多线程中如果也执行了<code>with StackContext</code>操作，那么有可能造成_state被改动。因此，_state被继承自thread.local对象。那么不同线程内的修改是互相独立的<br>其次如果一个函数已经被wrapped包装，那么就不必要再次进行包装了(想象一下递归调用add_callback)。对于不存在的<code>with StackContext</code>也需要考虑，如果执行contextlib.nested的参数为空，无疑是会报错的。<br>其他有的独立的运行的模块不希望被已存在的_state影响，因此独立设置了NullContext<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="meta">@contextlib.contextmanager</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">NullContext</span><span class="params">()</span>:</span></div><div class="line">    old_contexts = _state.contexts</div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        _state.contexts = ()</div><div class="line">        <span class="keyword">yield</span></div><div class="line">    <span class="keyword">finally</span>:</div><div class="line">        _state.contexts = old_contexts</div></pre></td></tr></table></figure><br>如果不希望被_state干扰，那么在前面加上<code>with StackContext(NullContext)</code>。_state即被置为空。显然add_callback传入的contexts为空。在它被执行的时候，也和with语句没什么事情了</p>
+<h3 id="应用"><a href="#应用" class="headerlink" title="应用"></a>应用</h3><p>我最开始看到的应用是这个,<a href="https://gist.github.com/Hackforid/7130a5d59463186e217e">在Tornado里面使用Sqlalchemy</a>。默认Sqlalchemy存在sessionmaker一个工厂函数，它会确定如何生成一个session会话对象以供使用。默认的情况是使用线程id，这对于多线程环境非常非常方便。因为多线程web框架中每一个HTTP请求的处理都是在独立的线程内进行的，那么一个http处理生命周期对应一个sqlalchemy的session生命周期非常完美。<br>可是在Tornado这种单线程的框架中发生了变化，因为它不好确定每一个http的生命周期标识。StackContext给了我们方法，虽然起因是callback的异常处理，可是我们一样可以参照它的套路，在_execute执行期间写入变量，在单个http生命周期均可以访问变量，http完结后清除它。代码可以参考给出的gist链接</p>
+<h3 id="用例"><a href="#用例" class="headerlink" title="用例"></a>用例</h3><p>下面给一个整篇文章的代码总结<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">try</span>:</div><div class="line">    <span class="keyword">from</span> contextlib <span class="keyword">import</span> nested</div><div class="line"><span class="keyword">except</span> ImportError:</div><div class="line">    <span class="keyword">from</span> contextlib <span class="keyword">import</span> ExitStack, contextmanager</div><div class="line"></div><div class="line"><span class="meta">    @contextmanager</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">nested</span><span class="params">(*contexts)</span>:</span></div><div class="line">        <span class="keyword">with</span> ExitStack() <span class="keyword">as</span> stack:</div><div class="line">            <span class="keyword">for</span> ctx <span class="keyword">in</span> contexts:</div><div class="line">                stack.enter_context(ctx)</div><div class="line">            <span class="keyword">yield</span> contexts</div><div class="line"><span class="keyword">import</span> functools</div><div class="line"></div><div class="line"><span class="meta">@contextmanager</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">StackContext</span><span class="params">(context_factory)</span>:</span></div><div class="line">    <span class="keyword">global</span> _state</div><div class="line">    old_contexts = _state</div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        _state = old_contexts + (context_factory,)</div><div class="line">        <span class="keyword">with</span> context_factory():</div><div class="line">            <span class="keyword">yield</span></div><div class="line">    <span class="keyword">finally</span>:</div><div class="line">        _state = old_contexts</div><div class="line"></div><div class="line"></div><div class="line"><span class="meta">@contextmanager</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">ErrorCapture</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        <span class="keyword">yield</span></div><div class="line">    <span class="keyword">except</span> Exception:</div><div class="line">        <span class="keyword">pass</span></div><div class="line"></div><div class="line">_state = ()</div><div class="line"></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">wrap</span><span class="params">(fn)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">wrapped</span><span class="params">(callback, contexts)</span>:</span></div><div class="line">        <span class="keyword">with</span> nested(*[i() <span class="keyword">for</span> i <span class="keyword">in</span> contexts]):</div><div class="line">            callback()</div><div class="line"></div><div class="line">    contexts = _state</div><div class="line">    result = functools.partial(wrapped, fn, contexts)</div><div class="line">    <span class="keyword">return</span> result</div><div class="line"></div><div class="line"></div><div class="line">loop_list = []</div><div class="line"></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">call_back</span><span class="params">()</span>:</span></div><div class="line">    print(<span class="string">"WTF"</span>)</div><div class="line">    print(get_current_request_id())</div><div class="line"></div><div class="line"></div><div class="line">g = &#123;&#125;</div><div class="line"></div><div class="line"><span class="meta">@contextmanager</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">ThreadRequestContext</span><span class="params">(**data)</span>:</span></div><div class="line">    <span class="keyword">global</span> g</div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        g = data</div><div class="line">        <span class="keyword">yield</span></div><div class="line">    <span class="keyword">finally</span>:</div><div class="line">        g.clear()</div><div class="line"></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_current_request_id</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">return</span> g[<span class="string">'request_id'</span>]</div><div class="line"></div><div class="line"></div><div class="line">global_data = &#123;<span class="string">"request_id"</span>: <span class="number">12</span>&#125;</div><div class="line"><span class="keyword">with</span> StackContext(functools.partial(ThreadRequestContext, **global_data)):</div><div class="line">    <span class="keyword">with</span> StackContext(ErrorCapture):</div><div class="line">        loop_list.append(wrap(call_back))</div><div class="line">        print(get_current_request_id())</div><div class="line"></div><div class="line"><span class="keyword">for</span> i <span class="keyword">in</span> loop_list:</div><div class="line">    i()</div></pre></td></tr></table></figure></p>
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/16/tornado_wsgi/" data-tooltip="Tornado 之WSGI">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/16/Tornado_StackContext/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/16/Tornado_StackContext/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/16/Tornado_StackContext/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2018 ficapy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/16/tornado_wsgi/" data-tooltip="Tornado 之WSGI">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/16/Tornado_StackContext/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/16/Tornado_StackContext/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/16/Tornado_StackContext/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/16/Tornado_StackContext/">
+                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/16/Tornado_StackContext/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/16/Tornado_StackContext/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+        
+            <h4 id="about-card-name">ficapy</h4>
+        
+            <div id="about-card-bio"><p>author.bio</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                广东深圳
+            </div>
+        
+    </div>
+</div>
+
+        <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-close"></i></span>
+            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    autofocus="autofocus"/>
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">没有找到文章</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                            <h3 class="media-heading">博客起航</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月29日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
+<p>：</p>
+<p>为了占行此处无耻的掠过N个字</p>
+<p>:<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                            <h3 class="media-heading">IDM-Internet Download Manager</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月30日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                            <h3 class="media-heading">everything--文件搜索神器</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月2日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                            <h3 class="media-heading">everything进阶教程</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月6日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                            <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月12日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
+<p>今天介绍的是一款据说主打截图的软件-snagit</p>
+<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                            <h3 class="media-heading">xnview-图片查看</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月25日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+<p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="没有找到文章"
+                data-message-one="找到 1 篇文章"
+                data-message-other="找到 {n} 篇文章">
+                找到 72 篇文章
+            </p>
+        </div>
+    </div>
+</div>
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'https://www.zoulei.net/2018/03/16/Tornado_StackContext/';
+                 
+                    this.page.identifier = '2018/03/16/Tornado_StackContext/';
+                 
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'ficapy';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+
+    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
+    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script>
+        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+    </script>
+
+
+    </body>
+</html>
