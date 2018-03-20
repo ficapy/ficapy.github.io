@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>分类: devops - 邹雷</title>
+    <title>分类: DevOps - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
@@ -15,7 +15,7 @@
     
     <meta property="og:type" content="blog">
 <meta property="og:title" content="邹雷">
-<meta property="og:url" content="https://www.zoulei.net/categories/devops/index.html">
+<meta property="og:url" content="https://www.zoulei.net/categories/DevOps/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="邹雷">
@@ -228,21 +228,21 @@
             <div class="postShorten-header">
                 <h1 class="postShorten-title" itemprop="headline">
                     
-                        <a class="link-unstyled" href="/2017/12/25/GitLabCICD_quickstart/">
-                            开始GitLab CI/CD
+                        <a class="link-unstyled" href="/2017/03/12/ssh-port-forward/">
+                            ssh端口映射
                         </a>
                     
                 </h1>
                 <div class="postShorten-meta">
-    <time itemprop="datePublished" datetime="2017-12-25T20:38:35+08:00">
+    <time itemprop="datePublished" datetime="2017-03-12T11:40:30+08:00">
 	
-		    12月 25, 2017
+		    3月 12, 2017
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/devops/">devops</a>
+    <a class="category-link" href="/categories/DevOps/">DevOps</a>
 
 
     
@@ -251,9 +251,9 @@
             </div>
             
                 <div class="postShorten-excerpt" itemprop="articleBody">
-                    <h3 id="GitLabCI-CD流程"><a href="#GitLabCI-CD流程" class="headerlink" title="GitLabCI/CD流程"></a>GitLabCI/CD流程</h3><p>gitlab如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比其他产品Gogs、github等它还算可堪一用。上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下如何从零在Gitlab上完成简单的CI/CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取重启容器<br><img src="https://ficapy.b0.upaiyun.com/blogimg/GitlabCI.jpg" alt="GitlabCI"><br>
+                    <p>开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下</p>
                     
-                        <a href="/2017/12/25/GitLabCICD_quickstart/" class="postShorten-excerpt_link link">
+                        <a href="/2017/03/12/ssh-port-forward/" class="postShorten-excerpt_link link">
                             阅读全文
                         </a>
                         
@@ -271,21 +271,21 @@
             <div class="postShorten-header">
                 <h1 class="postShorten-title" itemprop="headline">
                     
-                        <a class="link-unstyled" href="/2017/12/25/gitlabciyml_note/">
-                            gitlabci yml 笔记
+                        <a class="link-unstyled" href="/2017/03/05/acme.sh_quick_start/">
+                            使用acme.sh快速搭建https
                         </a>
                     
                 </h1>
                 <div class="postShorten-meta">
-    <time itemprop="datePublished" datetime="2017-12-25T12:17:56+08:00">
+    <time itemprop="datePublished" datetime="2017-03-05T17:19:27+08:00">
 	
-		    12月 25, 2017
+		    3月 05, 2017
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/devops/">devops</a>
+    <a class="category-link" href="/categories/DevOps/">DevOps</a>
 
 
     
@@ -294,58 +294,9 @@
             </div>
             
                 <div class="postShorten-excerpt" itemprop="articleBody">
-                    <p>以下内容来自GitlabCI官方文档</p>
-<h2 id="最基础的"><a href="#最基础的" class="headerlink" title="最基础的"></a>最基础的</h2><ul>
-<li><p>jobs作为最顶级的元素。每个job至少包含一个script</p>
-  <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">job1:</div><div class="line">    script1: pwd</div></pre></td></tr></table></figure>
-<p>  每个job的执行都是完全独立于其他的job</p>
-</li>
-</ul>
+                    <p>letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧</p>
                     
-                        <a href="/2017/12/25/gitlabciyml_note/" class="postShorten-excerpt_link link">
-                            阅读全文
-                        </a>
-                        
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-right" itemscope itemType="http://schema.org/BlogPosting">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title" itemprop="headline">
-                    
-                        <a class="link-unstyled" href="/2017/11/28/ansible-note/">
-                            ansible笔记
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time itemprop="datePublished" datetime="2017-11-28T11:28:42+08:00">
-	
-		    11月 28, 2017
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/devops/">devops</a>
-
-
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-excerpt" itemprop="articleBody">
-                    <p>以下为观看<a href="https://www.youtube.com/playlist?list=PL7hgvWUGJtUsT74AXZgVhr37riphKjzkD">Ansible-Configuration Management</a>的笔记。不适合初学者查看。可以作为温习使用</p>
-                    
-                        <a href="/2017/11/28/ansible-note/" class="postShorten-excerpt_link link">
+                        <a href="/2017/03/05/acme.sh_quick_start/" class="postShorten-excerpt_link link">
                             阅读全文
                         </a>
                         
@@ -566,7 +517,49 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 75 篇文章
+                找到 76 篇文章
+            </p>
+        </div>
+    </div>
+</div>
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<!--SCRIPTS END-->
+
+
+
+    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
+    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script>
+        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+    </script>
+
+
+    </body>
+</html>
+             2013年10月25日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+<p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="没有找到文章"
+                data-message-one="找到 1 篇文章"
+                data-message-other="找到 {n} 篇文章">
+                找到 76 篇文章
             </p>
         </div>
     </div>
