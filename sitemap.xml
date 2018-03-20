@@ -2,9 +2,23 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.zoulei.net/2018/03/19/tornado_queue/</loc>
+    
+    <lastmod>2018-03-20T06:44:46.310Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/</loc>
+    
+    <lastmod>2018-03-20T02:38:30.068Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.zoulei.net/2018/03/17/Tornado_gen_coroutine/</loc>
     
-    <lastmod>2018-03-17T11:05:25.120Z</lastmod>
+    <lastmod>2018-03-17T11:10:21.530Z</lastmod>
     
   </url>
   
@@ -226,13 +240,6 @@
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/</loc>
-    
-    <lastmod>2016-09-04T09:08:15.000Z</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>https://www.zoulei.net/2016/08/03/werkzeug_local_note/</loc>
     
     <lastmod>2016-09-04T08:14:45.000Z</lastmod>
@@ -282,7 +289,7 @@
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2016/07/22/pycallgraph_note/</loc>
+    <loc>https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     
@@ -296,7 +303,7 @@
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/</loc>
+    <loc>https://www.zoulei.net/2016/07/22/pycallgraph_note/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     

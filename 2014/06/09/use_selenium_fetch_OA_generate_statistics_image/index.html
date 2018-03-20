@@ -21,7 +21,7 @@
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。 需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺">
 <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/2014-06-05.png">
-<meta property="og:updated_time" content="2016-09-04T09:08:15.000Z">
+<meta property="og:updated_time" content="2018-03-20T02:38:30.068Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="利用selenium抓取OA数据生成综合图表">
 <meta name="twitter:description" content="最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。 需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺">
@@ -261,7 +261,7 @@
 <li>系统性能不佳，反应巨慢，异常返回情况比较多。</li>
 </ul>
 <a id="more"></a>
-<p>最后选择了使用python+selenium+IEdriver控制IE浏览器登陆系统抓取OA数据，不得不说这是一个痛苦的过程selenium对IE的支持异常差，支持最好的firefox以及速度最快的chrome都无法在该例中使用。这直接造成了几乎每一步模拟操作都要加一句time.sleep(3)进行等待操作，以免返回异常或者没有抓取到数据。最开始的时候我直接全模拟手工操作一步步进入需要抓取的页面（OA是frame里面套frame），结果浏览器经常运行不久就报告崩溃。山穷水尽疑无路，柳暗花明又一村，最终发现登陆后直接打开要抓取frame页面的地址就可以了，这一步让整个抓取数据的工作以及稳定性提高的不少<br>整个流程比较简单。模拟登陆→抓取数据→把数据存储到数据库（sqlite）→利用matplotlib把数据库的内容生成图表<br>在登录OA的时候会要求填入验证码，虽然目测该系统验证码比较弱智，但是俺目前的水平还是破不了。so。本着力求无人操作全自动的原则使用了在线打码服务。不得不吐槽一下，试了2家，联系了客服，第一家流程复杂的不得了，和技术人员折腾半天最后还是不了了之，俺的要求多简单啊，结果一定要搞啥开发者分成路线。另外一家流程倒是简单了很多，结果网站给的示例教程还是前一个网站没更新无法使用，找客服要了一个新的示例文件，根本无法运行。问客服，得到的答复是技术人员测试使用完全没问题,WQNMLGB。示例是用urllib写的上传文件操作。潇潇洒洒上百行。没办法自己用requests重新写了下20行搞定，嗯，感叹下http<br>for humans的称号果然不是白喊的&gt;_&lt;<br>最后抓取到数据就是可视化的过程啦，以前只听过matplotlib库生成牛X的图表。试过之后还不错，还好比较知名案例比较多，否则真不知道要折腾多久才能搞出来，借鉴了stackoverflow上面的一个回答看了下官网的一些文档东拼西凑生成了个看的过去的图表，如下图（嗯，打了点薄码）<img src="https://ficapy.b0.upaiyun.com/blogimg/2014-06-05.png" alt="2014-06-05"><br>以下是录制的视频，上传到youku就成渣画质了，想看的还是忍忍吧（注：由于录屏操作导致selenium无法正常截取验证码，最后用手工输入）密码:zoulei<br><a href="http://player.youku.com/player.php/sid/XNzIzNTMxOTA4/v.swf">selenium_fetch_oa</a></p>
+<p>最后选择了使用python+selenium+IEdriver控制IE浏览器登陆系统抓取OA数据，不得不说这是一个痛苦的过程selenium对IE的支持异常差，支持最好的firefox以及速度最快的chrome都无法在该例中使用。这直接造成了几乎每一步模拟操作都要加一句time.sleep(3)进行等待操作，以免返回异常或者没有抓取到数据。最开始的时候我直接全模拟手工操作一步步进入需要抓取的页面（OA是frame里面套frame），结果浏览器经常运行不久就报告崩溃。山穷水尽疑无路，柳暗花明又一村，最终发现登陆后直接打开要抓取frame页面的地址就可以了，这一步让整个抓取数据的工作以及稳定性提高的不少<br>整个流程比较简单。模拟登陆→抓取数据→把数据存储到数据库（sqlite）→利用matplotlib把数据库的内容生成图表<br>在登录OA的时候会要求填入验证码，虽然目测该系统验证码比较弱智，但是俺目前的水平还是破不了。so。本着力求无人操作全自动的原则使用了在线打码服务。不得不吐槽一下，试了2家，联系了客服，第一家流程复杂的不得了，和技术人员折腾半天最后还是不了了之，俺的要求多简单啊，结果一定要搞啥开发者分成路线。另外一家流程倒是简单了很多，结果网站给的示例教程还是前一个网站没更新无法使用，找客服要了一个新的示例文件，根本无法运行。问客服，得到的答复是技术人员测试使用完全没问题,WQNMLGB。示例是用urllib写的上传文件操作。潇潇洒洒上百行。没办法自己用requests重新写了下20行搞定，嗯，感叹下http<br>for humans的称号果然不是白喊的&gt;_&lt;<br>最后抓取到数据就是可视化的过程啦，以前只听过matplotlib库生成牛X的图表。试过之后还不错，还好比较知名案例比较多，否则真不知道要折腾多久才能搞出来，借鉴了stackoverflow上面的一个回答看了下官网的一些文档东拼西凑生成了个看的过去的图表，如下图（嗯，打了点薄码）<img src="https://ficapy.b0.upaiyun.com/blogimg/2014-06-05.png" alt="2014-06-05"><br>以下是录制的视频，上传到youku就成渣画质了，想看的还是忍忍吧（注：由于录屏操作导致selenium无法正常截取验证码，最后用手工输入）密码:zoulei<br><a href="http://v.youku.com/v_show/id_XNzIzNTMxOTA4.html">selenium_fetch_oa</a></p>
 <p>以下是github地址 <a href="https://github.com/ficapy/OA_Fetch">https://github.com/ficapy/OA_Fetch</a></p>
 <p>p.s由于暂时还不会打包，尝试使用pyinstall打包成exe文件失败。so如果想直接双击使用还是需要很费功夫的，需要安装<br><a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/#matplotlib">matplotlib</a>，<a href="http://docs.seleniumhq.org/">selenium</a>（IEdriver）</p>
 
@@ -631,7 +631,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 74 篇文章
+                找到 75 篇文章
             </p>
         </div>
     </div>
