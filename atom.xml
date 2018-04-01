@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-04-01T12:08:18.953Z</updated>
+  <updated>2018-04-01T12:09:24.727Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"/>
     <id>https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/</id>
     <published>2018-04-01T06:34:38.000Z</published>
-    <updated>2018-04-01T12:08:18.953Z</updated>
+    <updated>2018-04-01T12:09:24.727Z</updated>
     
     <content type="html"><![CDATA[<p>因为个人需求，写了一个很小众的作品，<a href="https://ocr.ficapy.com">https://ocr.ficapy.com</a>，我给它起的项目名是pdfaddtext，用途是给扫描版本的PDF文件加上搜索功能。使用场景是我有几本扫描版本的PDF书籍(网上有特别多的扫描版书籍)，有时候想搜索书中有没有提到某个知识点，纯图片是无法搜索的，你只能凭记忆去找。<span style="color:red"><strong>本项目作用就是将PDF的文本内容识别出来，然后写入一层隐藏的文字层，这样PDF阅读器就能够搜索这些文字了，同时尽量保证将识别出来的文字写到原图片对应的位置</strong></span>,类似的工具有<a href="https://github.com/jbarlow83/OCRmyPDF">OCRmyPDF</a>，它的缺点很明显，使用Tesseract OCR引擎，对比识别效果，简直被商用OCR吊打。</p>
 <p>最开始有了这个想法，我大概花费了一个下午的时间用python写出了基本的demo。将每一页PDF转换成图片，然后用免费的OCR服务去识别，得到结果，最后合并出一个新的pdf出来。过程算是比较顺利。本着独乐乐不如众乐乐的心态。我计划将它转变成一项web服务，于是挖坑之旅就此开始了</p>
