@@ -228,6 +228,51 @@
             <div class="postShorten-header">
                 <h1 class="postShorten-title" itemprop="headline">
                     
+                        <a class="link-unstyled" href="/2018/04/01/pdfaddtext_architecture/">
+                            ocr.ficapy.com 后台实现
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time itemprop="datePublished" datetime="2018-04-01T14:34:38+08:00">
+	
+		    4月 01, 2018
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/python/">python</a>
+
+
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-excerpt" itemprop="articleBody">
+                    <p>因为个人需求，写了一个很小众的作品，<a href="https://ocr.ficapy.com">https://ocr.ficapy.com</a>，我给它起的项目名是pdfaddtext，用途是给扫描版本的PDF文件加上搜索功能。使用场景是我有几本扫描版本的PDF书籍(网上有特别多的扫描版书籍)，有时候想搜索书中有没有提到某个知识点，纯图片是无法搜索的，你只能凭记忆去找。<span style="color:red"><strong>本项目作用就是将PDF的文本内容识别出来，然后写入一层隐藏的文字层，这样PDF阅读器就能够搜索这些文字了，同时尽量保证将识别出来的文字写到原图片对应的位置</strong></span>,类似的工具有<a href="https://github.com/jbarlow83/OCRmyPDF">OCRmyPDF</a>，它的缺点很明显，使用Tesseract OCR引擎，对比识别效果，简直被商用OCR吊打。</p>
+<p>最开始有了这个想法，我大概花费了一个下午的时间用python写出了基本的demo。将每一页PDF转换成图片，然后用免费的OCR服务去识别，得到结果，最后合并出一个新的pdf出来。过程算是比较顺利。本着独乐乐不如众乐乐的心态。我计划将它转变成一项web服务，于是挖坑之旅就此开始了</p>
+<p>TLDR</p>
+                    
+                        <a href="/2018/04/01/pdfaddtext_architecture/" class="postShorten-excerpt_link link">
+                            阅读全文
+                        </a>
+                        
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
+    <article class="postShorten postShorten--thumbnailimg-right" itemscope itemType="http://schema.org/BlogPosting">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title" itemprop="headline">
+                    
                         <a class="link-unstyled" href="/2018/03/20/Tornado_misc/">
                             Tornado 杂项
                         </a>
@@ -433,49 +478,6 @@
 <p>yield最先在tornado里面展露头角是在<span style="color:red"><strong><a href="https://github.com/tornadoweb/tornado/commit/721e25d0acc68d751073261bec150ac12a9f88ab">这个commit</a></strong></span>里面。大神就是大神，虽然这个代码仅仅只有几十行。可是我觉得思路很新奇，膜拜😀(代码基于v1.0.0和v1.1.0)</p>
                     
                         <a href="/2018/03/16/Tornado_StackContext/" class="postShorten-excerpt_link link">
-                            阅读全文
-                        </a>
-                        
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-right" itemscope itemType="http://schema.org/BlogPosting">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title" itemprop="headline">
-                    
-                        <a class="link-unstyled" href="/2018/03/16/tornado_wsgi/">
-                            Tornado 之WSGI
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time itemprop="datePublished" datetime="2018-03-16T11:28:02+08:00">
-	
-		    3月 16, 2018
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/Tornado/">Tornado</a>
-
-
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-excerpt" itemprop="articleBody">
-                    <p>WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是完美的，它仅仅提供了基本的兼容，效率和可用性得不到保证。因此个人还是感觉很鸡肋的</p>
-                    
-                        <a href="/2018/03/16/tornado_wsgi/" class="postShorten-excerpt_link link">
                             阅读全文
                         </a>
                         
@@ -703,7 +705,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 76 篇文章
+                找到 77 篇文章
             </p>
         </div>
     </div>
