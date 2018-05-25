@@ -2,9 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.zoulei.net/2018/05/25/mitmproxy_transparent_model_network_capture/</loc>
+    
+    <lastmod>2018-05-25T10:52:46.862Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/</loc>
     
-    <lastmod>2018-04-01T12:09:24.727Z</lastmod>
+    <lastmod>2018-04-01T12:19:21.171Z</lastmod>
     
   </url>
   
@@ -310,14 +317,14 @@
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/</loc>
+    <loc>https://www.zoulei.net/2016/07/22/pycallgraph_note/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2016/07/22/pycallgraph_note/</loc>
+    <loc>https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     
