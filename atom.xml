@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-06-03T13:16:55.033Z</updated>
+  <updated>2018-06-03T13:19:18.755Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,10 +20,11 @@
     <link href="https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"/>
     <id>https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/</id>
     <published>2018-06-03T12:56:37.000Z</published>
-    <updated>2018-06-03T13:16:55.033Z</updated>
+    <updated>2018-06-03T13:19:18.755Z</updated>
     
     <content type="html"><![CDATA[<p>作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~</p>
 <p>Golang版本:1.10.1<br>IDE: GoLand<br>操作系统: 10.13.4</p>
+<a id="more"></a>
 <h4 id="练习1-1"><a href="#练习1-1" class="headerlink" title="练习1.1"></a>练习1.1</h4><p>修改echo程序输出os.Args[0],即命令的名字</p>
 <ul>
 <li><code>os.Args</code>是一个slice</li>
@@ -60,7 +61,6 @@
     
       &lt;p&gt;作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~&lt;/p&gt;
 &lt;p&gt;Golang版本:1.10.1&lt;br&gt;IDE: GoLand&lt;br&gt;操作系统: 10.13.4&lt;/p&gt;
-&lt;h4 id=&quot;练习1-1&quot;&gt;&lt;
     
     </summary>
     
