@@ -6,23 +6,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>Tornado 之httpserver - 邹雷</title>
+    <title>Go程序设计语言课后习题答案-第二章(程序结构) - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)">
+    <meta name="description" content="第二章 名称 声明 变量 赋值 类型声明 包和文件 作用域">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="Tornado 之httpserver">
-<meta property="og:url" content="https://www.zoulei.net/2018/03/15/tornado_httpserver/index.html">
+<meta property="og:title" content="Go程序设计语言课后习题答案-第二章(程序结构)">
+<meta property="og:url" content="https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)">
-<meta property="og:updated_time" content="2018-03-15T09:14:55.763Z">
+<meta property="og:description" content="第二章 名称 声明 变量 赋值 类型声明 包和文件 作用域">
+<meta property="og:updated_time" content="2018-06-05T16:07:14.721Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Tornado 之httpserver">
-<meta name="twitter:description" content="Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)">
+<meta name="twitter:title" content="Go程序设计语言课后习题答案-第二章(程序结构)">
+<meta name="twitter:description" content="第二章 名称 声明 变量 赋值 类型声明 包和文件 作用域">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -229,19 +229,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            Tornado 之httpserver
+            Go程序设计语言课后习题答案-第二章(程序结构)
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2018-03-15T11:37:29+08:00">
+    <time itemprop="datePublished" datetime="2018-06-05T23:52:24+08:00">
 	
-		    3月 15, 2018
+		    6月 05, 2018
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/Tornado/">Tornado</a>
+    <a class="category-link" href="/categories/Go程序设计语言/">Go程序设计语言</a>
 
 
     
@@ -251,16 +251,50 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)</p>
+            <h3 id="第二章"><a href="#第二章" class="headerlink" title="第二章"></a>第二章</h3><ul>
+<li>名称</li>
+<li>声明</li>
+<li>变量</li>
+<li>赋值</li>
+<li>类型声明</li>
+<li>包和文件</li>
+<li>作用域</li>
+</ul>
 <a id="more"></a>
-<h3 id="目标"><a href="#目标" class="headerlink" title="目标"></a>目标</h3><p>本文的基本目标是实现这个需求<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> httpserver</div><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> ioloop</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">handle_request</span><span class="params">(request)</span>:</span></div><div class="line">    message = <span class="string">b"Hello World\n"</span></div><div class="line">    request.write(<span class="string">b"HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s"</span> % (</div><div class="line">        len(message), message))</div><div class="line">    request.finish()</div><div class="line"></div><div class="line">http_server = httpserver.HTTPServer(handle_request)</div><div class="line">http_server.listen(<span class="number">8888</span>)</div><div class="line">ioloop.IOLoop.instance().start()</div></pre></td></tr></table></figure></p>
-<h3 id="最简服务端"><a href="#最简服务端" class="headerlink" title="最简服务端"></a>最简服务端</h3><p>根据上一篇。我们可以想到当执行listen监听操作的时候，会创建一个监听socket.然后将处理函数添加到事件回调中。不考虑异常因素，最简单的是这样<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> socket</div><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> ioloop</div><div class="line"><span class="keyword">from</span> selectors <span class="keyword">import</span> EVENT_READ, EVENT_WRITE</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">HTTPServer</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, handler)</span>:</span></div><div class="line">        self.handler = handler</div><div class="line">        self.io_loop = ioloop.IOLoop.instance()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">listen</span><span class="params">(self, port)</span>:</span></div><div class="line">        self.s = socket.socket()</div><div class="line">        self.s.setblocking(<span class="number">0</span>)</div><div class="line">        self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, <span class="number">1</span>)</div><div class="line">        self.s.bind((<span class="string">'127.0.0.1'</span>, port))</div><div class="line">        self.s.listen(<span class="number">128</span>)</div><div class="line">        self.io_loop.add_handler(self.s.fileno(), EVENT_READ, self._handle)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_handle</span><span class="params">(self)</span>:</span></div><div class="line">        client_sock, _ = self.s.accept()</div><div class="line">        client_sock.send(<span class="string">b"HTTP/1.0 200 OK\r\nContent-Length: 12\r\n\r\nHello World\n"</span>)</div><div class="line">        client_sock.close()</div></pre></td></tr></table></figure><br>对于监听socket,当触发可读的时候意味有新的客户端连接进来了，此时调用回调进行accept得到交互socket连接。简单起见直接send发送一个简易的HTTP消息然后关闭socket</p>
-<h3 id="封装Request对象"><a href="#封装Request对象" class="headerlink" title="封装Request对象"></a>封装Request对象</h3><p>从上面的示例中可以看到。它没有调用传入的request函数，因为socket对象并没有write和finish方法。此外，即使我们将socket的send和close当做write和finish。它还有一个巨大的缺陷。我们只是进行了发送，而没有对接收到的http报文进行任何处理。<br>一般而言，会从它的行首、头部、消息体得到某一些我们需要的内容，然后对内容进行处理，最终写入信息，过程结束。因此，封装一个Request对象是必须的，最后将封装的对象传入到handler函数以供使用。如何封装呢？我们只需要知道一个完整的HTTP报文即可以得到一个requests对象，而一个http报文又有明显的分隔符.例如下文这个请求报文<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">GET /docs/index.html HTTP/1.1</div><div class="line">Host: www.ipinfo.com</div><div class="line">Accept: image/gif, image/jpeg, */*</div><div class="line">Accept-Language: en-us</div><div class="line">Accept-Encoding: gzip, deflate</div><div class="line">User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)</div><div class="line">(blank line)</div></pre></td></tr></table></figure></p>
-<p>获取流程如下。当读取到第一个<code>\r\n</code>即确定Reques Line部分，当读取到<code>\r\n\r\n</code>即确定Header部分，如果Header部分存在Content-Length则表示存在body部分，存在则继续读取Content-Length长度。如此下来单个HTTP报文读取完毕。可以构建这个过程，Requests Line读取完毕后—&gt;回调读取Header部分—&gt;回调读取Body部分—&gt;构建Request对象—&gt;回调handler函数，将Request对象传入。另外第一步可以省略,读取Header即包含Requests Line</p>
-<p>可以看到对于一个socket对象,将它根据分隔符以及长度读取就能解析成单个http包，另外对于很多流协议也是如此。我们将socket封装一下。让它提供两个功能read_until、read_bytes。允许读取到分隔符后调用回调函数、读取到固定长度后调用回调函数。最简代码如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> ioloop</div><div class="line"><span class="keyword">from</span> selectors <span class="keyword">import</span> EVENT_READ</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">IOStream</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, socket)</span>:</span></div><div class="line">        self.socket = socket</div><div class="line">        self.ioloop = ioloop.IOLoop.instance()</div><div class="line">        self.ioloop.add_handler(self.socket.fileno(), EVENT_READ, self._handler)</div><div class="line">        self._read_buffer = <span class="string">b""</span></div><div class="line">        self._read_delimiter = <span class="keyword">None</span></div><div class="line">        self._read_bytes = <span class="keyword">None</span></div><div class="line">        self._read_callback = <span class="keyword">None</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_handler</span><span class="params">(self)</span>:</span></div><div class="line">        data = self.socket.recv(<span class="number">1024</span>)</div><div class="line">        self._read_buffer += data</div><div class="line">        <span class="keyword">if</span> self._read_delimiter <span class="keyword">and</span> self._read_delimiter <span class="keyword">in</span> self._read_buffer:</div><div class="line">            result, self._read_buffer = self._read_buffer.split(self._read_delimiter)</div><div class="line">            self._read_callback(result)</div><div class="line">            self._read_delimiter = <span class="keyword">None</span></div><div class="line">            self._read_callback = <span class="keyword">None</span></div><div class="line">        <span class="keyword">elif</span> self._read_bytes <span class="keyword">and</span> len(self._read_buffer) &gt; self._read_bytes:</div><div class="line">            result = self._read_buffer[:self._read_bytes]</div><div class="line">            self._read_buffer = self._read_buffer[self._read_bytes:]</div><div class="line">            self._read_callback(result)</div><div class="line">            self._read_bytes = <span class="keyword">None</span></div><div class="line">            self._read_callback = <span class="keyword">None</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">read_until</span><span class="params">(self, delimiter, callback)</span>:</span></div><div class="line">        self._read_delimiter = delimiter</div><div class="line">        self._read_callback = callback</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">read_bytes</span><span class="params">(self, length, callback)</span>:</span></div><div class="line">        self._read_bytes = length</div><div class="line">        self._read_callback = callback</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">write</span><span class="params">(self, data)</span>:</span></div><div class="line">        self.socket.send(data)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">close</span><span class="params">(self)</span>:</span></div><div class="line">        self.ioloop.ioloop.unregister(self.socket.fileno())</div><div class="line">        self.socket.close()</div></pre></td></tr></table></figure><br>对于创建的IOStream对象，它添加READ事件，将回调函数设置为self._handler。当使用read_until的时候将历史数据给callback函数调用。<br>再看一下HTTPConnect对象<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">HTTPConnection</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, io_stream, handler_callback)</span>:</span></div><div class="line">        self.io_loop = ioloop.IOLoop.instance()</div><div class="line">        self.stream = io_stream</div><div class="line">        self.handler_callback = handler_callback</div><div class="line">        self.stream.read_until(<span class="string">b'\r\n\r\n'</span>, self._parse_header)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_parse_header</span><span class="params">(self, data)</span>:</span></div><div class="line">        <span class="comment"># 忽略行首，全部当做header</span></div><div class="line">        request = Request(connect=self, header=data)</div><div class="line">        self.handler_callback(request)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">write</span><span class="params">(self, data)</span>:</span></div><div class="line">        self.stream.write(data)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">finish</span><span class="params">(self)</span>:</span></div><div class="line">        self.stream.close()</div></pre></td></tr></table></figure><br>显然，它传入的是IOStream对象，并且在初始化的时候就调用read_until读取HTTP Header部分内容。简单起见，这里只读取并没有解析。最后封装成Request对象。让handle_request函数调用。达到我们文章开头的目的<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Request</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, connect, header)</span>:</span></div><div class="line">        self.connect = connect</div><div class="line">        self.header = header</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">write</span><span class="params">(self, data)</span>:</span></div><div class="line">        self.connect.write(data)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">finish</span><span class="params">(self)</span>:</span></div><div class="line">        self.connect.finish()</div></pre></td></tr></table></figure><br>将最开始的最简服务器部分稍微改动一下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">_handle</span><span class="params">(self)</span>:</span></div><div class="line">    client_sock, _ = self.s.accept()</div><div class="line">    stream = IOStream(client_sock)</div><div class="line">    HTTPConnection(stream, self.handler)</div></pre></td></tr></table></figure></p>
-<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>IOStream、HTTPConnection、Request、HTTPServer。其中暴漏给用户的几乎只有Request对象，从上面的分析中应该可以发现。将文件描述符加入事件，等待IOStream的全局_header进行回调，全局_header又针对各种情况(分隔符条件满足、长度条件满足)发起回调。同时<span style="color:red"><strong>如果不调用iostream.read_until等那么全局的_header就没有意义了</strong></span>。搞定IOStream后。立马在HTTPConnection里面调用<code>iostream.read_until</code>。被回调则表明HTTP头部接收完成。组装成Requests然后调用handle_request。</p>
-<p>作用分工:<br>HTTPServer:     创建监听socket,传入http处理回调函数<br>IOStream:   提供通用TCP流解析，最重要的是提供了write、read_until、read_length，<span style="color:red"><strong>且可以传入回调</strong></span><br>Request:    将字符串解析成一个Request对象。便于简单的获取访问信息。如url、host、port、body等等<br>HTTPConnection:  将前三者联系起来,调用IOStream.read_until开启获取HTTP数据包的流程</p>
-<p>另外本文简单起见，只注册了READ事件。对于send操作。同样是需要进行注册事件。等到WRITE事件触发才执行send操作，希望不要引起误解，另外本例中使用HTTP/1.0的逻辑，处理完成单个链接后直接关闭。对于HTTP/1.1来说要实现keep-alive只需要在finish的使用并不关闭链接，而是继续执行self.read_until(b’\r\n\r\n’,self._parse_header)继续等待处理下一个HTTP报文</p>
+<h4 id="练习2-1"><a href="#练习2-1" class="headerlink" title="练习2.1:"></a>练习2.1:</h4><p>添加类型、常量和函数到tempconv包中，处理以开尔文为单位(K)的温度值,0K=-273.15℃,变化1K和变化1℃是等价的</p>
+<ul>
+<li>很水的题</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> tempconv</div><div class="line"></div><div class="line"><span class="keyword">import</span> <span class="string">"fmt"</span></div><div class="line"></div><div class="line"><span class="keyword">type</span> Kelvin <span class="keyword">float64</span></div><div class="line"><span class="keyword">type</span> Celsius <span class="keyword">float64</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(k Kelvin)</span> <span class="title">String</span><span class="params">()</span> <span class="title">string</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> fmt.Sprintf(<span class="string">"%gK"</span>, k)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">CToK</span><span class="params">(c Celsius)</span> <span class="title">Kelvin</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> Kelvin(c - <span class="number">273.15</span>)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">KToC</span><span class="params">(k Kelvin)</span> <span class="title">Celsius</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> Celsius(k + <span class="number">273.15</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h5 id="练习2-2"><a href="#练习2-2" class="headerlink" title="练习2.2"></a>练习2.2</h5><p>写一个类似于cf的通用的单位转换程序,从命令行参数或者标准输入(如果没有参数)获取数字,然后将每一个数字转换为以摄氏温度和华氏温度表示的温度,以英寸和米表示的长度单位,以磅和千克表示的重量单位,等等</p>
+<ul>
+<li>略，同很水</li>
+</ul>
+<h4 id="练习2-3"><a href="#练习2-3" class="headerlink" title="练习2.3:"></a>练习2.3:</h4><p>使用循环重写PopCount来代替单个表达式.对比两个版本的效率</p>
+<ul>
+<li>下面连续三道题都是经典面试题，求二进制数中1的个数，限定了正整数</li>
+<li>书上的代码主要是预算计算,将64bit每8bit一组,8bit会有二的八次方中结果，共256种结果，将所有的结果都先计算出来(空间换时间)</li>
+<li>预计算主要是这一步<code>pc[i] = pc[i/2] + byte(i&amp;1)</code>，注意此处的含义是除以二表示二进制数右移一位，后面表示最后一位是正数还是负数</li>
+<li>代码中<code>[256]byte</code>换成<code>[256]int</code>，更好理解。可能这样写只是为了让人更加能搞明白byte和int的各种转换吧</li>
+<li>注意这种预计算的执行效率是很高的</li>
+</ul>
+<p>书上给的代码还是比较扭曲的<br><figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// 2000000000	         0.32 ns/op</span></div><div class="line"><span class="keyword">package</span> tempconv</div><div class="line"></div><div class="line"><span class="keyword">var</span> pc [<span class="number">256</span>]<span class="keyword">byte</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</div><div class="line">	<span class="keyword">for</span> i := <span class="keyword">range</span> pc &#123;</div><div class="line">		pc[i] = pc[i/<span class="number">2</span>] + <span class="keyword">byte</span>(i&amp;<span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> <span class="keyword">int</span>(pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">0</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">1</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">2</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">3</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">4</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">5</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">6</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">7</span>*<span class="number">8</span>))])</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>改成循环</p>
+<ul>
+<li>惊不惊喜，意不意外，速度居然爆降低100倍</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount1</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="keyword">byte</span>(<span class="number">0</span>)</div><div class="line">	<span class="keyword">for</span> i := <span class="keyword">uint8</span>(<span class="number">0</span>); i &lt; <span class="number">8</span>; i++ &#123;</div><div class="line">		ret += pc[<span class="keyword">byte</span>(x&gt;&gt;(i*<span class="number">8</span>))]</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> <span class="keyword">int</span>(ret)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount1</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 100000000	        21.4 ns/op</span></div><div class="line">	<span class="comment">// 循环</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		PopCount1(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习2-4"><a href="#练习2-4" class="headerlink" title="练习2.4"></a>练习2.4</h4><p>写一个用于统计位的PopCount,它在其实际参数的64位上执行移位操作,每次判断最右边的位,进而实现统计功能.把它与快查表版本的性能进行对比</p>
+<ul>
+<li>很普通的写法</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount2</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">64</span>; i++ &#123;</div><div class="line">		<span class="keyword">if</span> x&amp;<span class="number">1</span> == <span class="number">1</span> &#123;</div><div class="line">			ret += <span class="number">1</span></div><div class="line">		&#125;</div><div class="line">		x = x &gt;&gt; <span class="number">1</span></div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount2</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 20000000	        60.5 ns/op</span></div><div class="line">	<span class="comment">// &gt;&gt; 循环</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		PopCount2(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习2-5"><a href="#练习2-5" class="headerlink" title="练习2.5"></a>练习2.5</h4><p>使用x&amp;(x-1)可以清除x最右边的非零位,利用该特点写一个PopCount,然后评价它的性能</p>
+<ul>
+<li>x&amp;(x-1)面试基础题</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount3</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> x != <span class="number">0</span> &#123;</div><div class="line">		x = (x - <span class="number">1</span>) &amp; x</div><div class="line">		ret += <span class="number">1</span></div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount3</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 30000000	        50.5 ns/op</span></div><div class="line">	<span class="comment">// x&amp;(x-1)</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		PopCount3(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>最后~~~还是挺奇葩，书上的写法居然是最快的，改成循环速度居然爆降，也不知道Go编译器是如何优化代码的╭(╯^╰)╮</p>
 
             
         </div>
@@ -272,7 +306,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/15/tornado_web/"  data-tooltip="Tornado 之web">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -280,7 +314,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/14/tornado_ioloop/" data-tooltip="Tornado 之IOLoop">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/03/the_go_programming_language_answer_1/" data-tooltip="Go程序设计语言课后习题答案-第一章(入门)">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -295,17 +329,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -353,7 +387,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/15/tornado_web/"  data-tooltip="Tornado 之web">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -361,7 +395,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/14/tornado_ioloop/" data-tooltip="Tornado 之IOLoop">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/03/the_go_programming_language_answer_1/" data-tooltip="Go程序设计语言课后习题答案-第一章(入门)">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -376,17 +410,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -412,17 +446,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -635,9 +669,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2018/03/15/tornado_httpserver/';
+                 this.page.url = 'https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/';
                  
-                    this.page.identifier = '2018/03/15/tornado_httpserver/';
+                    this.page.identifier = '2018/06/05/the_go_programming_lang_usage_answer_2/';
                  
              };
             (function() {

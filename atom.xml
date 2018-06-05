@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-06-04T14:15:32.894Z</updated>
+  <updated>2018-06-05T16:07:14.721Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,78 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Go程序设计语言课后习题答案-第二章(程序结构)</title>
+    <link href="https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"/>
+    <id>https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/</id>
+    <published>2018-06-05T15:52:24.000Z</published>
+    <updated>2018-06-05T16:07:14.721Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="第二章"><a href="#第二章" class="headerlink" title="第二章"></a>第二章</h3><ul>
+<li>名称</li>
+<li>声明</li>
+<li>变量</li>
+<li>赋值</li>
+<li>类型声明</li>
+<li>包和文件</li>
+<li>作用域</li>
+</ul>
+<a id="more"></a>
+<h4 id="练习2-1"><a href="#练习2-1" class="headerlink" title="练习2.1:"></a>练习2.1:</h4><p>添加类型、常量和函数到tempconv包中，处理以开尔文为单位(K)的温度值,0K=-273.15℃,变化1K和变化1℃是等价的</p>
+<ul>
+<li>很水的题</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> tempconv</div><div class="line"></div><div class="line"><span class="keyword">import</span> <span class="string">"fmt"</span></div><div class="line"></div><div class="line"><span class="keyword">type</span> Kelvin <span class="keyword">float64</span></div><div class="line"><span class="keyword">type</span> Celsius <span class="keyword">float64</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(k Kelvin)</span> <span class="title">String</span><span class="params">()</span> <span class="title">string</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> fmt.Sprintf(<span class="string">"%gK"</span>, k)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">CToK</span><span class="params">(c Celsius)</span> <span class="title">Kelvin</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> Kelvin(c - <span class="number">273.15</span>)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">KToC</span><span class="params">(k Kelvin)</span> <span class="title">Celsius</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> Celsius(k + <span class="number">273.15</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h5 id="练习2-2"><a href="#练习2-2" class="headerlink" title="练习2.2"></a>练习2.2</h5><p>写一个类似于cf的通用的单位转换程序,从命令行参数或者标准输入(如果没有参数)获取数字,然后将每一个数字转换为以摄氏温度和华氏温度表示的温度,以英寸和米表示的长度单位,以磅和千克表示的重量单位,等等</p>
+<ul>
+<li>略，同很水</li>
+</ul>
+<h4 id="练习2-3"><a href="#练习2-3" class="headerlink" title="练习2.3:"></a>练习2.3:</h4><p>使用循环重写PopCount来代替单个表达式.对比两个版本的效率</p>
+<ul>
+<li>下面连续三道题都是经典面试题，求二进制数中1的个数，限定了正整数</li>
+<li>书上的代码主要是预算计算,将64bit每8bit一组,8bit会有二的八次方中结果，共256种结果，将所有的结果都先计算出来(空间换时间)</li>
+<li>预计算主要是这一步<code>pc[i] = pc[i/2] + byte(i&amp;1)</code>，注意此处的含义是除以二表示二进制数右移一位，后面表示最后一位是正数还是负数</li>
+<li>代码中<code>[256]byte</code>换成<code>[256]int</code>，更好理解。可能这样写只是为了让人更加能搞明白byte和int的各种转换吧</li>
+<li>注意这种预计算的执行效率是很高的</li>
+</ul>
+<p>书上给的代码还是比较扭曲的<br><figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// 2000000000	         0.32 ns/op</span></div><div class="line"><span class="keyword">package</span> tempconv</div><div class="line"></div><div class="line"><span class="keyword">var</span> pc [<span class="number">256</span>]<span class="keyword">byte</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</div><div class="line">	<span class="keyword">for</span> i := <span class="keyword">range</span> pc &#123;</div><div class="line">		pc[i] = pc[i/<span class="number">2</span>] + <span class="keyword">byte</span>(i&amp;<span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> <span class="keyword">int</span>(pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">0</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">1</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">2</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">3</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">4</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">5</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">6</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">7</span>*<span class="number">8</span>))])</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>改成循环</p>
+<ul>
+<li>惊不惊喜，意不意外，速度居然爆降低100倍</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount1</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="keyword">byte</span>(<span class="number">0</span>)</div><div class="line">	<span class="keyword">for</span> i := <span class="keyword">uint8</span>(<span class="number">0</span>); i &lt; <span class="number">8</span>; i++ &#123;</div><div class="line">		ret += pc[<span class="keyword">byte</span>(x&gt;&gt;(i*<span class="number">8</span>))]</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> <span class="keyword">int</span>(ret)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount1</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 100000000	        21.4 ns/op</span></div><div class="line">	<span class="comment">// 循环</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		PopCount1(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习2-4"><a href="#练习2-4" class="headerlink" title="练习2.4"></a>练习2.4</h4><p>写一个用于统计位的PopCount,它在其实际参数的64位上执行移位操作,每次判断最右边的位,进而实现统计功能.把它与快查表版本的性能进行对比</p>
+<ul>
+<li>很普通的写法</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount2</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">64</span>; i++ &#123;</div><div class="line">		<span class="keyword">if</span> x&amp;<span class="number">1</span> == <span class="number">1</span> &#123;</div><div class="line">			ret += <span class="number">1</span></div><div class="line">		&#125;</div><div class="line">		x = x &gt;&gt; <span class="number">1</span></div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount2</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 20000000	        60.5 ns/op</span></div><div class="line">	<span class="comment">// &gt;&gt; 循环</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		PopCount2(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习2-5"><a href="#练习2-5" class="headerlink" title="练习2.5"></a>练习2.5</h4><p>使用x&amp;(x-1)可以清除x最右边的非零位,利用该特点写一个PopCount,然后评价它的性能</p>
+<ul>
+<li>x&amp;(x-1)面试基础题</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount3</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> x != <span class="number">0</span> &#123;</div><div class="line">		x = (x - <span class="number">1</span>) &amp; x</div><div class="line">		ret += <span class="number">1</span></div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount3</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 30000000	        50.5 ns/op</span></div><div class="line">	<span class="comment">// x&amp;(x-1)</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		PopCount3(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>最后~~~还是挺奇葩，书上的写法居然是最快的，改成循环速度居然爆降，也不知道Go编译器是如何优化代码的╭(╯^╰)╮</p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;h3 id=&quot;第二章&quot;&gt;&lt;a href=&quot;#第二章&quot; class=&quot;headerlink&quot; title=&quot;第二章&quot;&gt;&lt;/a&gt;第二章&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;名称&lt;/li&gt;
+&lt;li&gt;声明&lt;/li&gt;
+&lt;li&gt;变量&lt;/li&gt;
+&lt;li&gt;赋值&lt;/li&gt;
+&lt;li&gt;类型声明&lt;/li&gt;
+&lt;li&gt;包和文件&lt;/li&gt;
+&lt;li&gt;作用域&lt;/li&gt;
+&lt;/ul&gt;
+    
+    </summary>
+    
+      <category term="Go程序设计语言" scheme="https://www.zoulei.net/categories/Go%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%E8%AF%AD%E8%A8%80/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>Go程序设计语言课后习题答案-第一章(入门)</title>
@@ -1166,128 +1238,6 @@
     </summary>
     
       <category term="devops" scheme="https://www.zoulei.net/categories/devops/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>influxdb 专业术语</title>
-    <link href="https://www.zoulei.net/2017/12/09/influxdb_glossary/"/>
-    <id>https://www.zoulei.net/2017/12/09/influxdb_glossary/</id>
-    <published>2017-12-09T00:02:41.000Z</published>
-    <updated>2017-12-09T08:52:51.153Z</updated>
-    
-    <content type="html"><![CDATA[<p>以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张两张图开始<br><img src="https://ficapy.b0.upaiyun.com/capture/influxdb_glossary.jpg" alt="influxdb_glossary"><br><img src="https://ficapy.b0.upaiyun.com/capture/influxdb_field.jpg" alt="influxdb"><br><a id="more"></a></p>
-<h3 id="aggregation-聚合"><a href="#aggregation-聚合" class="headerlink" title="aggregation 聚合"></a>aggregation 聚合</h3><p>使用聚合函数对points中的set返回聚合结果</p>
-<ul>
-<li>count 返回非null的field values个数</li>
-<li>distinct  返回唯一field values列表</li>
-<li>integral 由过滤条件组成的积分</li>
-<li>mean  返回field values的算术平均值</li>
-<li>median 返回field values排序后的中位数</li>
-<li>mode  从field values列表中返回最常用的值</li>
-<li>spread 最大减去最小</li>
-<li>stddev 标准差</li>
-<li>sum 求和</li>
-</ul>
-<h3 id="batch-批量"><a href="#batch-批量" class="headerlink" title="batch 批量"></a>batch 批量</h3><p>为了减少influxdb的负载，建议对point的集合进行上传。使用\n做分割。建议每批包含五千到一万个point</p>
-<h3 id="continuous-query-CQ-持续查询"><a href="#continuous-query-CQ-持续查询" class="headerlink" title="continuous query(CQ) 持续查询"></a>continuous query(CQ) 持续查询</h3><p>定期执行自动查询并将结果持久化到数据库</p>
-<h3 id="database-数据库"><a href="#database-数据库" class="headerlink" title="database 数据库"></a>database 数据库</h3><p>和关系型数据库差不多吧。</p>
-<table>
-<thead>
-<tr>
-<th>关系型数据库</th>
-<th>influxdb</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>database</td>
-<td>database</td>
-</tr>
-<tr>
-<td>table</td>
-<td>measurement</td>
-</tr>
-<tr>
-<td>row</td>
-<td>point</td>
-</tr>
-</tbody>
-</table>
-<p>特别点的就是。influxdb有保留策略</p>
-<h3 id="duration-持续时间"><a href="#duration-持续时间" class="headerlink" title="duration 持续时间"></a>duration 持续时间</h3><p>保留策略的一个属性表示数据会保存多久。数据过期会被执行自动删除</p>
-<h3 id="field-字段"><a href="#field-字段" class="headerlink" title="field 字段"></a>field 字段</h3><p>对比tag来说field没有被索引。在一段时间范围内查询field的值需要扫描所有的point得到结果。性能没有tag好</p>
-<h3 id="field-key-字段的key"><a href="#field-key-字段的key" class="headerlink" title="field key 字段的key"></a>field key 字段的key</h3><p>在key-value对中表示field字段的key.只能是string类型。存储到metadata中</p>
-<h3 id="field-set-字段的集合"><a href="#field-set-字段的集合" class="headerlink" title="field set 字段的集合"></a>field set 字段的集合</h3><p>所有field key的集合</p>
-<h3 id="field-value-字段的值"><a href="#field-value-字段的值" class="headerlink" title="field value 字段的值"></a>field value 字段的值</h3><p>field的value。类型可以是strings、float、integers、booleans。field的值始终与时间戳相关</p>
-<h3 id="function-函数"><a href="#function-函数" class="headerlink" title="function 函数"></a>function 函数</h3><p>分三类，聚合、选择、转换</p>
-<h3 id="identifier-标识"><a href="#identifier-标识" class="headerlink" title="identifier 标识"></a>identifier 标识</h3><p>emmm…持续查询名称、数据库名称、field字段、度量名称、保留策略名称、订阅名称、标签名称、用户名</p>
-<h3 id="line-protocol-行协议"><a href="#line-protocol-行协议" class="headerlink" title="line protocol 行协议"></a>line protocol 行协议</h3><p>基于文本格式写入到influxdb</p>
-<h3 id="measurement-度量"><a href="#measurement-度量" class="headerlink" title="measurement 度量"></a>measurement 度量</h3><p>emmm…可以类比到关系型数据库的table</p>
-<h3 id="metastore-元数据存储"><a href="#metastore-元数据存储" class="headerlink" title="metastore  元数据存储"></a>metastore  元数据存储</h3><p>包含内部系统的状态信息。元素据存储包含了用户信息、数据库信息、保留侧列、分片元数据、持续查询和订阅</p>
-<h3 id="node-节点"><a href="#node-节点" class="headerlink" title="node 节点"></a>node 节点</h3><p>一个独立的influxd进程</p>
-<h3 id="now"><a href="#now" class="headerlink" title="now()"></a>now()</h3><p>本地的纳秒时间戳</p>
-<h3 id="point-点"><a href="#point-点" class="headerlink" title="point 点"></a>point 点</h3><ul>
-<li>在serises中由fields组成的单个数据。<code>每个point由它的series和时间戳组成唯一标识</code>(重点)</li>
-<li>对于一个相同的时间戳和相同的series只能保存一个point.如果相同则新的field set覆盖掉旧的</li>
-</ul>
-<h3 id="query-查询"><a href="#query-查询" class="headerlink" title="query 查询"></a>query 查询</h3><p>从influxdb中查询到相关数据的操作</p>
-<h3 id="replication-factor-复制因子"><a href="#replication-factor-复制因子" class="headerlink" title="replication factor 复制因子"></a>replication factor 复制因子</h3><p>对集群有用。O__O “…可是集群并不是免费功能,将一份数据保留到集群上多份</p>
-<h3 id="retention-policy-RP-保留策略"><a href="#retention-policy-RP-保留策略" class="headerlink" title="retention policy(RP) 保留策略"></a>retention policy(RP) 保留策略</h3><p>以数据库作为单位，分三个方面。保留时长，数据多久进行一次分片操作。数据设置多少个副本。默认autogen表示永不删除、一个副本集(表示没副本)、七天进行一次分片</p>
-<h3 id="schema-模式"><a href="#schema-模式" class="headerlink" title="schema 模式"></a>schema 模式</h3><p>如何组织数据到influxdb。包含databases、retention policies、series、measurements、tag keys、tag values、field keys</p>
-<h3 id="selector-选择器"><a href="#selector-选择器" class="headerlink" title="selector 选择器"></a>selector 选择器</h3><p>一个函数，从特定范围的point中返回单个</p>
-<ul>
-<li>bottom 返回N个最小的field value</li>
-<li>first  返回最开始时间的field value</li>
-<li>last  返回最近时间的field value</li>
-<li>max  返回最大的field value</li>
-<li>min  返回最小的field value</li>
-<li>percentile 根据百分比返回</li>
-<li>sample  随机返回</li>
-<li>top  返回最大的N个field value</li>
-</ul>
-<h3 id="series-序列"><a href="#series-序列" class="headerlink" title="series 序列"></a>series 序列</h3><p>由measurement、tag set、retention policy组成(<code>注意:field set不在里面</code>)</p>
-<h3 id="series-cardinality-序列基数"><a href="#series-cardinality-序列基数" class="headerlink" title="series cardinality 序列基数"></a>series cardinality 序列基数</h3><p>唯一的series数，如果一个measurement有2个tag key。1个有三个唯一的值。另一个有两个。那么序列基数为6.因为tag集合是保存在内存中的。在配置里面也有默认的数量限制</p>
-<h3 id="server-服务器"><a href="#server-服务器" class="headerlink" title="server 服务器"></a>server 服务器</h3><p>运行influxdb的环境。应该一台服务器只运行一个influxdb进程</p>
-<h3 id="shard-分片"><a href="#shard-分片" class="headerlink" title="shard 分片"></a>shard 分片</h3><p>包含编码和压缩数据，作为TSM文件保存到磁盘。每个分片属于唯一的一个shard group。每个分片包含了特定的series</p>
-<h3 id="shard-duration-分片持续时间"><a href="#shard-duration-分片持续时间" class="headerlink" title="shard duration 分片持续时间"></a>shard duration 分片持续时间</h3><p>由保留策略中的shard duration决定。</p>
-<h3 id="shard-group-分片组"><a href="#shard-group-分片组" class="headerlink" title="shard group 分片组"></a>shard group 分片组</h3><p>分片组(保留策略)-&gt;shard-&gt;data.为了自动删除搞出了这么多概念┑(￣Д ￣)┍</p>
-<h3 id="subscription-订阅"><a href="#subscription-订阅" class="headerlink" title="subscription 订阅"></a>subscription 订阅</h3><p>O__O “… 好像并没有什么用。搭配kapactior使用。订阅它的数据进行存储</p>
-<h3 id="tag"><a href="#tag" class="headerlink" title="tag"></a>tag</h3><p>对比field。tag是有索引的</p>
-<h3 id="tag-key"><a href="#tag-key" class="headerlink" title="tag key"></a>tag key</h3><p>略</p>
-<h3 id="tag-set"><a href="#tag-set" class="headerlink" title="tag set"></a>tag set</h3><p>略</p>
-<h3 id="tag-value"><a href="#tag-value" class="headerlink" title="tag value"></a>tag value</h3><p>只能为数字。存储到metadata</p>
-<h3 id="timestamp-时间戳"><a href="#timestamp-时间戳" class="headerlink" title="timestamp 时间戳"></a>timestamp 时间戳</h3><p>和point关联的时间戳，可以有多种时间格式存储和查询</p>
-<h3 id="transformation-变换"><a href="#transformation-变换" class="headerlink" title="transformation 变换"></a>transformation 变换</h3><p>特定的点返回值和集合，得到的结果不能用来再次聚合</p>
-<ul>
-<li>ceiling 目前还不支持(ceil,floor)</li>
-<li>cumulative_sum 将列表变成累加和列表(原有1,1,2,2变成1,2,4,6)  </li>
-<li>derivative 导数</li>
-<li>difference 和第一个结果相减得到不同</li>
-<li>elapsed  得到时间戳的不同</li>
-<li>floor  目前还不支持</li>
-<li>histogram 目前还不支持</li>
-<li>moving_average 滚动平均值(原有1,2,3得到1.5,2.5)</li>
-<li>non_negative_derivative 非负导数</li>
-<li>non_negative_difference 非负不同</li>
-</ul>
-<h3 id="tsm-Time-Structured-Merge-tree"><a href="#tsm-Time-Structured-Merge-tree" class="headerlink" title="tsm(Time Structured Merge tree)"></a>tsm(Time Structured Merge tree)</h3><p>influxdb的专用存储格式。允许高压缩和高速写入读取速度要高于已存在的B+树或者LSM树</p>
-<h3 id="user"><a href="#user" class="headerlink" title="user"></a>user</h3><ul>
-<li>admin用户具有读写所有数据库的权限并且可以管理用户</li>
-<li>非admin有每个数据库的读写权限(被admin分配)</li>
-</ul>
-<h3 id="value-per-second"><a href="#value-per-second" class="headerlink" title="value per second"></a>value per second</h3><p>度量写入速度,比如每个point有四个field,每批有5000个point.写入速度为每秒10个。那么values per second速率为<code>4*5000*10</code></p>
-<h3 id="WAL-write-ahead-log-预写日志"><a href="#WAL-write-ahead-log-预写日志" class="headerlink" title="WAL(write ahead log) 预写日志"></a>WAL(write ahead log) 预写日志</h3><p>略</p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张两张图开始&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/capture/influxdb_glossary.jpg&quot; alt=&quot;influxdb_glossary&quot;&gt;&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/capture/influxdb_field.jpg&quot; alt=&quot;influxdb&quot;&gt;&lt;br&gt;
-    
-    </summary>
-    
-      <category term="database" scheme="https://www.zoulei.net/categories/database/"/>
     
     
   </entry>
