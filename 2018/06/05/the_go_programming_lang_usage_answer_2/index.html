@@ -19,7 +19,7 @@
 <meta property="og:url" content="https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="第二章 名称 声明 变量 赋值 类型声明 包和文件 作用域">
-<meta property="og:updated_time" content="2018-06-05T16:07:14.721Z">
+<meta property="og:updated_time" content="2018-06-05T23:52:21.886Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Go程序设计语言课后习题答案-第二章(程序结构)">
 <meta name="twitter:description" content="第二章 名称 声明 变量 赋值 类型声明 包和文件 作用域">
@@ -273,8 +273,8 @@
 <h4 id="练习2-3"><a href="#练习2-3" class="headerlink" title="练习2.3:"></a>练习2.3:</h4><p>使用循环重写PopCount来代替单个表达式.对比两个版本的效率</p>
 <ul>
 <li>下面连续三道题都是经典面试题，求二进制数中1的个数，限定了正整数</li>
-<li>书上的代码主要是预算计算,将64bit每8bit一组,8bit会有二的八次方中结果，共256种结果，将所有的结果都先计算出来(空间换时间)</li>
-<li>预计算主要是这一步<code>pc[i] = pc[i/2] + byte(i&amp;1)</code>，注意此处的含义是除以二表示二进制数右移一位，后面表示最后一位是正数还是负数</li>
+<li>书上的代码主要是预先计算,将64bit每8bit一组,8bit会有二的八次方种结果，共256种结果，将所有的结果都先计算出来(空间换时间)</li>
+<li>预计算主要是这一步<code>pc[i] = pc[i/2] + byte(i&amp;1)</code>，注意此处的含义是除以二表示二进制数右移一位，后面表示最后一位是1还是0</li>
 <li>代码中<code>[256]byte</code>换成<code>[256]int</code>，更好理解。可能这样写只是为了让人更加能搞明白byte和int的各种转换吧</li>
 <li>注意这种预计算的执行效率是很高的</li>
 </ul>
