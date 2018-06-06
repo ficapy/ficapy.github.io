@@ -1,0 +1,690 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>Go程序设计语言课后习题答案-第三章(基本数据) - 邹雷</title>
+    <meta name="author" content="ficapy">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <meta name="description" content="第三章 整数 浮点数 复数 布尔值 字符串 常量  这一章阅读体验很好，因为书上给的示例很炫酷，产生的结果是炫酷的图形，然而想要理解却挺头痛，因为需要一些基础的图形学知识，这章习题做得比较头疼，不是因为代码逻辑，而是因为”业务逻辑”">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Go程序设计语言课后习题答案-第三章(基本数据)">
+<meta property="og:url" content="https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="第三章 整数 浮点数 复数 布尔值 字符串 常量  这一章阅读体验很好，因为书上给的示例很炫酷，产生的结果是炫酷的图形，然而想要理解却挺头痛，因为需要一些基础的图形学知识，这章习题做得比较头疼，不是因为代码逻辑，而是因为”业务逻辑”">
+<meta property="og:updated_time" content="2018-06-06T16:16:43.839Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Go程序设计语言课后习题答案-第三章(基本数据)">
+<meta name="twitter:description" content="第三章 整数 浮点数 复数 布尔值 字符串 常量  这一章阅读体验很好，因为书上给的示例很炫酷，产生的结果是炫酷的图形，然而想要理解却挺头痛，因为需要一些基础的图形学知识，这章习题做得比较头疼，不是因为代码逻辑，而是因为”业务逻辑”">
+<meta name="twitter:creator" content="@aec4d">
+    
+    
+        
+    
+    
+        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <!--STYLES END-->
+    
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+        
+            
+        
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a class="header-title-link" href="/ ">邹雷</a>
+    </div>
+    
+        
+            <a  class="header-right-picture "
+                href="#about">
+        
+        
+            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+
+        
+    
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+            <div class="sidebar-profile">
+                <a href="/#about">
+                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+                </a>
+                <h4 class="sidebar-profile-name">ficapy</h4>
+                
+                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
+</h5>
+                
+            </div>
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link open-algolia-search"
+                             href="#search"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title" itemprop="headline">
+            Go程序设计语言课后习题答案-第三章(基本数据)
+        </h1>
+    
+    <div class="post-meta">
+    <time itemprop="datePublished" datetime="2018-06-06T23:59:33+08:00">
+	
+		    6月 06, 2018
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/Go程序设计语言/">Go程序设计语言</a>
+
+
+    
+</div>
+
+</div>
+    
+    <div class="post-content markdown" itemprop="articleBody">
+        <div class="main-content-wrap">
+            <h3 id="第三章"><a href="#第三章" class="headerlink" title="第三章"></a>第三章</h3><ul>
+<li>整数</li>
+<li>浮点数</li>
+<li>复数</li>
+<li>布尔值</li>
+<li>字符串</li>
+<li>常量</li>
+</ul>
+<p>这一章阅读体验很好，因为书上给的示例很炫酷，产生的结果是炫酷的图形，然而想要理解却挺头痛，因为需要一些基础的图形学知识，这章习题做得比较头疼，不是因为代码逻辑，而是因为”业务逻辑”<br><a id="more"></a></p>
+<h4 id="练习3-1"><a href="#练习3-1" class="headerlink" title="练习3.1"></a>练习3.1</h4><p> 假如函数f返回一个float64型的无穷大值,就会导致SVG文件含有无效的<polygon>元素.修改本程序以避免无效多边形</p>
+<ul>
+<li><p>我的想法是将无穷大和<code>math.MaxFloat64</code>进行比较，比它还大就替换为最大值</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"> <span class="function"><span class="keyword">func</span> <span class="title">TestMax</span><span class="params">(t *testing.T)</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> z <span class="keyword">float64</span></div><div class="line">	<span class="keyword">if</span> <span class="number">1</span>/z &gt; math.MaxFloat64&#123;</div><div class="line">		fmt.Println(math.MaxFloat64)</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"> </div></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="练习3-2"><a href="#练习3-2" class="headerlink" title="练习3.2"></a>练习3.2</h4><p>用math包的其他函数试验可视化效果.你是否能生成各种曲面,分别呈鸡蛋盒状、雪坡状或马鞍状</p>
+<ul>
+<li>没有完全搞明白，三维映射到二维的过程，不过整个代码的逻辑还是很清晰的，这一题略过</li>
+</ul>
+<p>#####练习3.3<br>按高度给每个多边形上色,使得封顶呈红色(#ff0000),谷底呈蓝色(#0000ff)</p>
+<ul>
+<li>思路是得到最大值最小值，将中间部分分为256个部分，然后每个z值都能映射到一个颜色，想着可以平滑过渡，然而效果却很糟糕😰</li>
+<li>svg的polygon显示颜色，只要在每个polygon上面添加fill属性就可以了</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"math"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">const</span> (</div><div class="line">	width, height = <span class="number">600</span>, <span class="number">320</span></div><div class="line">	cells         = <span class="number">100</span></div><div class="line">	xyrange       = <span class="number">30.0</span></div><div class="line">	xyscale       = width / <span class="number">2</span> / xyrange</div><div class="line">	zscale        = height * <span class="number">0.4</span></div><div class="line">	angle         = math.Pi / <span class="number">6</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">var</span> sin30, cos30 = math.Sin(angle), math.Cos(angle)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	fmt.Printf(<span class="string">"&lt;svg xmlns='http://www.w3.org/2000/svg' "</span>+</div><div class="line">		<span class="string">"style='stroke: grey; fill: white; stroke-width: 0.7' "</span>+</div><div class="line">		<span class="string">"width='%d' height='%d'&gt;"</span>, width, height)</div><div class="line">	min, max := getMinMax()</div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; cells; i++ &#123;</div><div class="line">		<span class="keyword">for</span> j := <span class="number">0</span>; j &lt; cells; j++ &#123;</div><div class="line">			ax, ay, r, g, b := corner(i+<span class="number">1</span>, j, min, max)</div><div class="line">			bx, by, r, g, b := corner(i, j, min, max)</div><div class="line">			cx, cy, r, g, b := corner(i, j+<span class="number">1</span>, min, max)</div><div class="line">			dx, dy, r, g, b := corner(i+<span class="number">1</span>, j+<span class="number">1</span>, min, max)</div><div class="line">			fmt.Printf(<span class="string">"&lt;polygon points='%g,%g %g,%g %g,%g %g,%g' fill='#%x%x%x'/&gt;\n"</span>,</div><div class="line">				ax, ay, bx, by, cx, cy, dx, dy, r, g, b)</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	fmt.Println(<span class="string">"&lt;/svg&gt;"</span>)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">getColor</span><span class="params">(min, max, current <span class="keyword">float64</span>)</span> <span class="params">(<span class="keyword">int</span>, <span class="keyword">int</span>, <span class="keyword">int</span>)</span></span> &#123;</div><div class="line">	step := (max - min) / <span class="number">255</span></div><div class="line">	v := <span class="keyword">int</span>((current - min) / step)</div><div class="line">	r := v</div><div class="line">	g := <span class="number">0</span></div><div class="line">	b := <span class="number">255</span> - v</div><div class="line">	<span class="keyword">return</span> r, g, b</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">getMinMax</span><span class="params">()</span> <span class="params">(<span class="keyword">float64</span>, <span class="keyword">float64</span>)</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> min, max <span class="keyword">float64</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; cells; i++ &#123;</div><div class="line">		<span class="keyword">for</span> j := <span class="number">0</span>; j &lt; cells; j++ &#123;</div><div class="line">			x := xyrange * (<span class="keyword">float64</span>(i)/cells - <span class="number">0.5</span>)</div><div class="line">			y := xyrange * (<span class="keyword">float64</span>(j)/cells - <span class="number">0.5</span>)</div><div class="line"></div><div class="line">			z := f(x, y)</div><div class="line">			<span class="keyword">if</span> z &lt; min &#123;</div><div class="line">				min = z</div><div class="line">			&#125;</div><div class="line">			<span class="keyword">if</span> z &gt; max &#123;</div><div class="line">				max = z</div><div class="line">			&#125;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> min, max</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">corner</span><span class="params">(i, j <span class="keyword">int</span>, min, max <span class="keyword">float64</span>)</span> <span class="params">(<span class="keyword">float64</span>, <span class="keyword">float64</span>, <span class="keyword">int</span>, <span class="keyword">int</span>, <span class="keyword">int</span>)</span></span> &#123;</div><div class="line">	x := xyrange * (<span class="keyword">float64</span>(i)/cells - <span class="number">0.5</span>)</div><div class="line">	y := xyrange * (<span class="keyword">float64</span>(j)/cells - <span class="number">0.5</span>)</div><div class="line"></div><div class="line">	z := f(x, y)</div><div class="line">	<span class="comment">// 将(x,y,z)等角投射到二维SVG绘图平面上,坐标是(sx,sy)</span></div><div class="line">	sx := width/<span class="number">2</span> + (x-y)*cos30*xyscale</div><div class="line">	sy := height/<span class="number">2</span> + (x+y)*sin30*xyscale - z*zscale</div><div class="line">	r, g, b := getColor(min, max, z)</div><div class="line">	<span class="keyword">return</span> sx, sy, r, g, b</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">f</span><span class="params">(x <span class="keyword">float64</span>, y <span class="keyword">float64</span>)</span> <span class="title">float64</span></span> &#123;</div><div class="line">	r := math.Hypot(x, y)</div><div class="line">	<span class="keyword">return</span> math.Sin(r) / r</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习3-4"><a href="#练习3-4" class="headerlink" title="练习3.4"></a>练习3.4</h4><p>仿照1.7节的示例Lissajous的方法,构建一个web服务器,计算并生成曲面,同时将svg数据写入客户端.服务器必须如下设置Content-Type报头 <code>w.Header().set(&quot;Content-Type&quot;,&quot;image/svg+xml&quot;)</code></p>
+<ul>
+<li>这个问题比较简单，体现了Go的接口思维，将main改成函数，传入<code>io.Writer</code>接口，将<code>fmt.Printf</code>改为<code>fmt.Fprintf</code>就可以了，最后web请求加Header让浏览器识别svg</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	handler := <span class="function"><span class="keyword">func</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</div><div class="line">		w.Header().Set(<span class="string">"Content-Type"</span>, <span class="string">"image/svg+xml"</span>)</div><div class="line">		image(w)</div><div class="line">	&#125;</div><div class="line">	http.HandleFunc(<span class="string">"/"</span>, handler)</div><div class="line">	log.Fatal(http.ListenAndServe(<span class="string">"localhost:8877"</span>, <span class="literal">nil</span>))</div><div class="line">	<span class="keyword">return</span></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习3-5"><a href="#练习3-5" class="headerlink" title="练习3.5"></a>练习3.5</h4><p>用image.NewRGBA函数和color.RGBA类型或color.YCbCr类型实现一个Mandelbrot集的全彩图</p>
+<ul>
+<li>又是一个图形学,一维变量最简单的方式是R=G=B,最后出来一个平滑变化的灰度图。作者要求变成全彩图(喂！大哥，我是来学Golang的，不是来搞图形学的)，我也不知道这需要什么图形学知识😕，不过看到有人给出了这样一个看起来很简单也符合题目要求的变化</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">mandelbrot</span><span class="params">(z <span class="keyword">complex128</span>)</span> <span class="title">color</span>.<span class="title">Color</span></span> &#123;</div><div class="line">	<span class="keyword">const</span> iterations = <span class="number">200</span></div><div class="line">	<span class="keyword">const</span> contrast = <span class="number">15</span></div><div class="line"></div><div class="line">	<span class="keyword">var</span> v <span class="keyword">complex128</span></div><div class="line">	<span class="keyword">for</span> n := <span class="keyword">uint8</span>(<span class="number">0</span>); n &lt; iterations; n++ &#123;</div><div class="line">		v = v*v + z</div><div class="line">		<span class="keyword">if</span> cmplx.Abs(v) &gt; <span class="number">2</span> &#123;</div><div class="line">			v := <span class="number">255</span> - contrast*n</div><div class="line">			<span class="keyword">return</span> color.YCbCr&#123;v, <span class="number">255</span> - v, <span class="number">255</span>&#125;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> color.Black</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+
+            
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/05/the_go_programming_lang_usage_answer_2/" data-tooltip="Go程序设计语言课后习题答案-第二章(程序结构)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+            
+                <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2018 ficapy. All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--disabled">
+                
+                    <i class="fa fa-angle-left"></i>
+                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                </a>
+            </li>
+            <li class="post-action">
+                
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/05/the_go_programming_lang_usage_answer_2/" data-tooltip="Go程序设计语言课后习题答案-第二章(程序结构)">
+                
+                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
+                <i class="fa fa-share-alt"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/">
+                <i class="fa fa-google-plus"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/">
+                <i class="fa fa-facebook-official"></i>
+            </a>
+        </li>
+        <li class="post-action hide-xs">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/">
+                <i class="fa fa-twitter"></i>
+            </a>
+        </li>
+        
+            <li class="post-action">
+                <a class="post-action-btn btn btn--default" href="#disqus_thread">
+                    <i class="fa fa-comment-o"></i>
+                </a>
+            </li>
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#">
+            
+                <i class="fa fa-list"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+    <ul class="share-options">
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/">
+                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/">
+                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
+            </a>
+        </li>
+        <li class="share-option">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/">
+                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
+            </a>
+        </li>
+    </ul>
+</div>
+<div id="share-options-mask" class="share-options-mask"></div>
+
+            
+        </div>
+        
+
+
+    
+        
+    
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-remove"></i>
+        </div>
+        
+            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
+        
+            <h4 id="about-card-name">ficapy</h4>
+        
+            <div id="about-card-bio"><p>author.bio</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker"></i>
+                <br/>
+                广东深圳
+            </div>
+        
+    </div>
+</div>
+
+        <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-close"></i></span>
+            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    autofocus="autofocus"/>
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">没有找到文章</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                            <h3 class="media-heading">博客起航</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月29日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
+<p>：</p>
+<p>为了占行此处无耻的掠过N个字</p>
+<p>:<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                            <h3 class="media-heading">IDM-Internet Download Manager</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月30日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                            <h3 class="media-heading">everything--文件搜索神器</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月2日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                            <h3 class="media-heading">everything进阶教程</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月6日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                            <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月12日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
+<p>今天介绍的是一款据说主打截图的软件-snagit</p>
+<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                            <h3 class="media-heading">xnview-图片查看</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月25日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+<p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="没有找到文章"
+                data-message-one="找到 1 篇文章"
+                data-message-other="找到 {n} 篇文章">
+                找到 81 篇文章
+            </p>
+        </div>
+    </div>
+</div>
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<!--SCRIPTS END-->
+
+    
+        <script>
+             var disqus_config = function () {
+                 this.page.url = 'https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/';
+                 
+                    this.page.identifier = '2018/06/06/the_go_programming_lang_usage_answer_3/';
+                 
+             };
+            (function() {
+                var d = document, s = d.createElement('script');
+                var disqus_shortname = 'ficapy';
+                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+
+                s.setAttribute('data-timestamp', +new Date());
+                (d.head || d.body).appendChild(s);
+            })();
+        </script>
+    
+
+
+
+    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
+    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script>
+        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+    </script>
+
+
+    </body>
+</html>

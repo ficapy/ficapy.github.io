@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-06-05T23:52:21.886Z</updated>
+  <updated>2018-06-06T16:16:43.839Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,69 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Go程序设计语言课后习题答案-第三章(基本数据)</title>
+    <link href="https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/"/>
+    <id>https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/</id>
+    <published>2018-06-06T15:59:33.000Z</published>
+    <updated>2018-06-06T16:16:43.839Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="第三章"><a href="#第三章" class="headerlink" title="第三章"></a>第三章</h3><ul>
+<li>整数</li>
+<li>浮点数</li>
+<li>复数</li>
+<li>布尔值</li>
+<li>字符串</li>
+<li>常量</li>
+</ul>
+<p>这一章阅读体验很好，因为书上给的示例很炫酷，产生的结果是炫酷的图形，然而想要理解却挺头痛，因为需要一些基础的图形学知识，这章习题做得比较头疼，不是因为代码逻辑，而是因为”业务逻辑”<br><a id="more"></a></p>
+<h4 id="练习3-1"><a href="#练习3-1" class="headerlink" title="练习3.1"></a>练习3.1</h4><p> 假如函数f返回一个float64型的无穷大值,就会导致SVG文件含有无效的<polygon>元素.修改本程序以避免无效多边形</p>
+<ul>
+<li><p>我的想法是将无穷大和<code>math.MaxFloat64</code>进行比较，比它还大就替换为最大值</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"> <span class="function"><span class="keyword">func</span> <span class="title">TestMax</span><span class="params">(t *testing.T)</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> z <span class="keyword">float64</span></div><div class="line">	<span class="keyword">if</span> <span class="number">1</span>/z &gt; math.MaxFloat64&#123;</div><div class="line">		fmt.Println(math.MaxFloat64)</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"> </div></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="练习3-2"><a href="#练习3-2" class="headerlink" title="练习3.2"></a>练习3.2</h4><p>用math包的其他函数试验可视化效果.你是否能生成各种曲面,分别呈鸡蛋盒状、雪坡状或马鞍状</p>
+<ul>
+<li>没有完全搞明白，三维映射到二维的过程，不过整个代码的逻辑还是很清晰的，这一题略过</li>
+</ul>
+<p>#####练习3.3<br>按高度给每个多边形上色,使得封顶呈红色(#ff0000),谷底呈蓝色(#0000ff)</p>
+<ul>
+<li>思路是得到最大值最小值，将中间部分分为256个部分，然后每个z值都能映射到一个颜色，想着可以平滑过渡，然而效果却很糟糕😰</li>
+<li>svg的polygon显示颜色，只要在每个polygon上面添加fill属性就可以了</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"math"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">const</span> (</div><div class="line">	width, height = <span class="number">600</span>, <span class="number">320</span></div><div class="line">	cells         = <span class="number">100</span></div><div class="line">	xyrange       = <span class="number">30.0</span></div><div class="line">	xyscale       = width / <span class="number">2</span> / xyrange</div><div class="line">	zscale        = height * <span class="number">0.4</span></div><div class="line">	angle         = math.Pi / <span class="number">6</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">var</span> sin30, cos30 = math.Sin(angle), math.Cos(angle)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	fmt.Printf(<span class="string">"&lt;svg xmlns='http://www.w3.org/2000/svg' "</span>+</div><div class="line">		<span class="string">"style='stroke: grey; fill: white; stroke-width: 0.7' "</span>+</div><div class="line">		<span class="string">"width='%d' height='%d'&gt;"</span>, width, height)</div><div class="line">	min, max := getMinMax()</div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; cells; i++ &#123;</div><div class="line">		<span class="keyword">for</span> j := <span class="number">0</span>; j &lt; cells; j++ &#123;</div><div class="line">			ax, ay, r, g, b := corner(i+<span class="number">1</span>, j, min, max)</div><div class="line">			bx, by, r, g, b := corner(i, j, min, max)</div><div class="line">			cx, cy, r, g, b := corner(i, j+<span class="number">1</span>, min, max)</div><div class="line">			dx, dy, r, g, b := corner(i+<span class="number">1</span>, j+<span class="number">1</span>, min, max)</div><div class="line">			fmt.Printf(<span class="string">"&lt;polygon points='%g,%g %g,%g %g,%g %g,%g' fill='#%x%x%x'/&gt;\n"</span>,</div><div class="line">				ax, ay, bx, by, cx, cy, dx, dy, r, g, b)</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	fmt.Println(<span class="string">"&lt;/svg&gt;"</span>)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">getColor</span><span class="params">(min, max, current <span class="keyword">float64</span>)</span> <span class="params">(<span class="keyword">int</span>, <span class="keyword">int</span>, <span class="keyword">int</span>)</span></span> &#123;</div><div class="line">	step := (max - min) / <span class="number">255</span></div><div class="line">	v := <span class="keyword">int</span>((current - min) / step)</div><div class="line">	r := v</div><div class="line">	g := <span class="number">0</span></div><div class="line">	b := <span class="number">255</span> - v</div><div class="line">	<span class="keyword">return</span> r, g, b</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">getMinMax</span><span class="params">()</span> <span class="params">(<span class="keyword">float64</span>, <span class="keyword">float64</span>)</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> min, max <span class="keyword">float64</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; cells; i++ &#123;</div><div class="line">		<span class="keyword">for</span> j := <span class="number">0</span>; j &lt; cells; j++ &#123;</div><div class="line">			x := xyrange * (<span class="keyword">float64</span>(i)/cells - <span class="number">0.5</span>)</div><div class="line">			y := xyrange * (<span class="keyword">float64</span>(j)/cells - <span class="number">0.5</span>)</div><div class="line"></div><div class="line">			z := f(x, y)</div><div class="line">			<span class="keyword">if</span> z &lt; min &#123;</div><div class="line">				min = z</div><div class="line">			&#125;</div><div class="line">			<span class="keyword">if</span> z &gt; max &#123;</div><div class="line">				max = z</div><div class="line">			&#125;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> min, max</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">corner</span><span class="params">(i, j <span class="keyword">int</span>, min, max <span class="keyword">float64</span>)</span> <span class="params">(<span class="keyword">float64</span>, <span class="keyword">float64</span>, <span class="keyword">int</span>, <span class="keyword">int</span>, <span class="keyword">int</span>)</span></span> &#123;</div><div class="line">	x := xyrange * (<span class="keyword">float64</span>(i)/cells - <span class="number">0.5</span>)</div><div class="line">	y := xyrange * (<span class="keyword">float64</span>(j)/cells - <span class="number">0.5</span>)</div><div class="line"></div><div class="line">	z := f(x, y)</div><div class="line">	<span class="comment">// 将(x,y,z)等角投射到二维SVG绘图平面上,坐标是(sx,sy)</span></div><div class="line">	sx := width/<span class="number">2</span> + (x-y)*cos30*xyscale</div><div class="line">	sy := height/<span class="number">2</span> + (x+y)*sin30*xyscale - z*zscale</div><div class="line">	r, g, b := getColor(min, max, z)</div><div class="line">	<span class="keyword">return</span> sx, sy, r, g, b</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">f</span><span class="params">(x <span class="keyword">float64</span>, y <span class="keyword">float64</span>)</span> <span class="title">float64</span></span> &#123;</div><div class="line">	r := math.Hypot(x, y)</div><div class="line">	<span class="keyword">return</span> math.Sin(r) / r</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习3-4"><a href="#练习3-4" class="headerlink" title="练习3.4"></a>练习3.4</h4><p>仿照1.7节的示例Lissajous的方法,构建一个web服务器,计算并生成曲面,同时将svg数据写入客户端.服务器必须如下设置Content-Type报头 <code>w.Header().set(&quot;Content-Type&quot;,&quot;image/svg+xml&quot;)</code></p>
+<ul>
+<li>这个问题比较简单，体现了Go的接口思维，将main改成函数，传入<code>io.Writer</code>接口，将<code>fmt.Printf</code>改为<code>fmt.Fprintf</code>就可以了，最后web请求加Header让浏览器识别svg</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	handler := <span class="function"><span class="keyword">func</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</div><div class="line">		w.Header().Set(<span class="string">"Content-Type"</span>, <span class="string">"image/svg+xml"</span>)</div><div class="line">		image(w)</div><div class="line">	&#125;</div><div class="line">	http.HandleFunc(<span class="string">"/"</span>, handler)</div><div class="line">	log.Fatal(http.ListenAndServe(<span class="string">"localhost:8877"</span>, <span class="literal">nil</span>))</div><div class="line">	<span class="keyword">return</span></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习3-5"><a href="#练习3-5" class="headerlink" title="练习3.5"></a>练习3.5</h4><p>用image.NewRGBA函数和color.RGBA类型或color.YCbCr类型实现一个Mandelbrot集的全彩图</p>
+<ul>
+<li>又是一个图形学,一维变量最简单的方式是R=G=B,最后出来一个平滑变化的灰度图。作者要求变成全彩图(喂！大哥，我是来学Golang的，不是来搞图形学的)，我也不知道这需要什么图形学知识😕，不过看到有人给出了这样一个看起来很简单也符合题目要求的变化</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">mandelbrot</span><span class="params">(z <span class="keyword">complex128</span>)</span> <span class="title">color</span>.<span class="title">Color</span></span> &#123;</div><div class="line">	<span class="keyword">const</span> iterations = <span class="number">200</span></div><div class="line">	<span class="keyword">const</span> contrast = <span class="number">15</span></div><div class="line"></div><div class="line">	<span class="keyword">var</span> v <span class="keyword">complex128</span></div><div class="line">	<span class="keyword">for</span> n := <span class="keyword">uint8</span>(<span class="number">0</span>); n &lt; iterations; n++ &#123;</div><div class="line">		v = v*v + z</div><div class="line">		<span class="keyword">if</span> cmplx.Abs(v) &gt; <span class="number">2</span> &#123;</div><div class="line">			v := <span class="number">255</span> - contrast*n</div><div class="line">			<span class="keyword">return</span> color.YCbCr&#123;v, <span class="number">255</span> - v, <span class="number">255</span>&#125;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> color.Black</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;h3 id=&quot;第三章&quot;&gt;&lt;a href=&quot;#第三章&quot; class=&quot;headerlink&quot; title=&quot;第三章&quot;&gt;&lt;/a&gt;第三章&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;整数&lt;/li&gt;
+&lt;li&gt;浮点数&lt;/li&gt;
+&lt;li&gt;复数&lt;/li&gt;
+&lt;li&gt;布尔值&lt;/li&gt;
+&lt;li&gt;字符串&lt;/li&gt;
+&lt;li&gt;常量&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这一章阅读体验很好，因为书上给的示例很炫酷，产生的结果是炫酷的图形，然而想要理解却挺头痛，因为需要一些基础的图形学知识，这章习题做得比较头疼，不是因为代码逻辑，而是因为”业务逻辑”&lt;br&gt;
+    
+    </summary>
+    
+      <category term="Go程序设计语言" scheme="https://www.zoulei.net/categories/Go%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%E8%AF%AD%E8%A8%80/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>Go程序设计语言课后习题答案-第二章(程序结构)</title>
@@ -1082,158 +1145,6 @@
     <summary type="html">
     
       &lt;h3 id=&quot;GitLabCI-CD流程&quot;&gt;&lt;a href=&quot;#GitLabCI-CD流程&quot; class=&quot;headerlink&quot; title=&quot;GitLabCI/CD流程&quot;&gt;&lt;/a&gt;GitLabCI/CD流程&lt;/h3&gt;&lt;p&gt;gitlab如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比其他产品Gogs、github等它还算可堪一用。上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下如何从零在Gitlab上完成简单的CI/CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取重启容器&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/GitlabCI.jpg&quot; alt=&quot;GitlabCI&quot;&gt;&lt;br&gt;
-    
-    </summary>
-    
-      <category term="devops" scheme="https://www.zoulei.net/categories/devops/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>gitlabci yml 笔记</title>
-    <link href="https://www.zoulei.net/2017/12/25/gitlabciyml_note/"/>
-    <id>https://www.zoulei.net/2017/12/25/gitlabciyml_note/</id>
-    <published>2017-12-25T04:17:56.000Z</published>
-    <updated>2017-12-25T06:10:56.899Z</updated>
-    
-    <content type="html"><![CDATA[<p>以下内容来自GitlabCI官方文档</p>
-<h2 id="最基础的"><a href="#最基础的" class="headerlink" title="最基础的"></a>最基础的</h2><ul>
-<li><p>jobs作为最顶级的元素。每个job至少包含一个script</p>
-  <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">job1:</div><div class="line">    script1: pwd</div></pre></td></tr></table></figure>
-<p>  每个job的执行都是完全独立于其他的job</p>
-</li>
-</ul>
-<a id="more"></a>
-<h2 id="关于Docker-Image和Service的使用"><a href="#关于Docker-Image和Service的使用" class="headerlink" title="关于Docker Image和Service的使用"></a>关于Docker Image和Service的使用</h2><ul>
-<li><a href="https://docs.gitlab.com/ee/ci/docker/using_docker_build.html">Using Docker Build</a>。主要讲述怎么在Docker里面使用Docker构建镜像。(最简单的是在注册Runner的时候共享/var/run/docker.sock)</li>
-<li><p><a href="https://docs.gitlab.com/ee/ci/docker/using_docker_images.html">Using Docker images</a>。</p>
-</li>
-<li><p>注册的时候可以同时运行Services。这样在任务执行期间可以访问services</p>
-  <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">sudo gitlab-runner register \</div><div class="line">    --url &quot;https://gitlab.example.com/&quot; \</div><div class="line">    --registration-token &quot;PROJECT_REGISTRATION_TOKEN&quot; \</div><div class="line">    --description &quot;docker-ruby-2.1&quot; \</div><div class="line">    --executor &quot;docker&quot; \</div><div class="line">    --docker-image ruby:2.1 \</div><div class="line">    --docker-postgres latest \</div><div class="line">    --docker-mysql latest</div></pre></td></tr></table></figure>
-</li>
-<li><p>service就是任务执行的时候能够访问到别的容器。比如Mysql、Postgresql、Redis、Rabbitmq啥的</p>
-</li>
-<li>访问service就和我们使用docker-compose差不多</li>
-</ul>
-<h2 id="其他的一些Top-Level设置"><a href="#其他的一些Top-Level设置" class="headerlink" title="其他的一些Top-Level设置"></a>其他的一些Top-Level设置</h2><ul>
-<li>before_script: 在每个任务执行前执行.比如配置好ssh config</li>
-<li>after_script: 在每个任务执行完成后执行.好像用处不大</li>
-<li>stages: <span style="color:red"><strong> 每个任务都可以属于一个stage.同一个stage的job是并行的.但是只有一个stage所有都执行完毕才会执行下一个stage</strong></span></li>
-<li>variables: 每个job都可以使用的环境变量。此处只能进行很简单的设置。比如我希望将当前日期用一个固定的格式表达(需要用date命令进行转换),在这里是行不通的</li>
-<li>cache: </li>
-</ul>
-<h2 id="可选项最多的Jobs配置来了"><a href="#可选项最多的Jobs配置来了" class="headerlink" title="可选项最多的Jobs配置来了"></a>可选项最多的Jobs配置来了</h2><ul>
-<li>jobs: 必须要有独立的名称</li>
-</ul>
-<table>
-<thead>
-<tr>
-<th>Keyword</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>script</td>
-<td>定义shell脚本</td>
-</tr>
-<tr>
-<td>image</td>
-<td>使用的image.可以覆盖掉全局的</td>
-</tr>
-<tr>
-<td>services</td>
-<td>使用docker services,覆盖掉全局</td>
-</tr>
-<tr>
-<td>stage</td>
-<td>属于哪个阶段</td>
-</tr>
-<tr>
-<td>variables</td>
-<td>定义job的环境变量</td>
-</tr>
-<tr>
-<td>only</td>
-<td>只有满足某条件的时候才会被执行</td>
-</tr>
-<tr>
-<td>except</td>
-<td>满足某条件的时候不执行</td>
-</tr>
-<tr>
-<td>tags</td>
-<td>哪些Runners能够执行该任务</td>
-</tr>
-<tr>
-<td>allow_failure</td>
-<td>允许任务失败。正常情况下失败则会不进行后续步骤</td>
-</tr>
-<tr>
-<td>when</td>
-<td>定义任务什么时候执行。manual手动还挺有用┑(￣Д ￣)┍</td>
-</tr>
-<tr>
-<td>artifacts</td>
-<td>将构建生成的文件上传到gitlab。允许从gitlab后台进行下载</td>
-</tr>
-<tr>
-<td>dependencies</td>
-<td>配合artifacts使用。将生成的artifacts文件跨job使用    </td>
-</tr>
-<tr>
-<td>cache</td>
-<td>缓存文件给后续job使用</td>
-</tr>
-<tr>
-<td>before_script</td>
-<td>覆盖全局</td>
-</tr>
-<tr>
-<td>after_script</td>
-<td>覆盖全局</td>
-</tr>
-<tr>
-<td>environment</td>
-<td><a href="https://docs.gitlab.com/ee/ci/environments.html">文档</a></td>
-</tr>
-<tr>
-<td>coverage</td>
-<td>代码覆盖率设置</td>
-</tr>
-<tr>
-<td>retry</td>
-<td>如果失败则重试几次</td>
-</tr>
-</tbody>
-</table>
-<p>额外说明:</p>
-<ol>
-<li>environment配合deploy使用.部署的时候人为标记是部署到了哪个环境。方便在gitlab后台查看历史记录。同时方便错误的时候可以直接在gitlab后台回滚部署。其实这个参数不要也是可以的。添加上去只是更方便一点</li>
-<li>artifacts和cache的区别.<ul>
-<li>cache可以在全局使用也可以在job内部使用.但是artifacts只能在job内部使用</li>
-<li><span style="color:red"><strong>特别注意</strong></span> cache跨越该项目的整个生命周期。跨越不同的pipeline.job开始之前会先解压已有的cache.而artifacts只会再单个pipeline周期。且某个stage创建之后。在后续的stage中才能够使用。artifacts会同时上传文件到gitlab(上传步骤还是必须的)。</li>
-</ul>
-</li>
-</ol>
-<h2 id="YAML特殊语法"><a href="#YAML特殊语法" class="headerlink" title="YAML特殊语法"></a>YAML特殊语法</h2><ul>
-<li><p>用anchors(&amp;)、aliases(*)、merging(&lt;&lt;) 来简化编写(大多数情况下应该没啥用)</p>
-  <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">.job_template: &amp;job_definition  # Hidden key that defines an anchor named &apos;job_definition&apos;</div><div class="line">image: ruby:2.1</div><div class="line">services:</div><div class="line">    - postgres</div><div class="line">    - redis</div><div class="line"></div><div class="line">test1:</div><div class="line">&lt;&lt;: *job_definition           # Merge the contents of the &apos;job_definition&apos; alias</div><div class="line">script:</div><div class="line">    - test1 project</div><div class="line"></div><div class="line">test2:</div><div class="line">&lt;&lt;: *job_definition           # Merge the contents of the &apos;job_definition&apos; alias</div><div class="line">script:</div><div class="line">    - test2 project</div></pre></td></tr></table></figure>
-</li>
-</ul>
-<h3 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h3><p><a href="https://docs.gitlab.com/ee/ci/yaml/README.html">Configuration of your jobs with .gitlab-ci.yml </a><br><a href="https://docs.gitlab.com/ee/ci/docker/using_docker_images.html">Using Docker images</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;以下内容来自GitlabCI官方文档&lt;/p&gt;
-&lt;h2 id=&quot;最基础的&quot;&gt;&lt;a href=&quot;#最基础的&quot; class=&quot;headerlink&quot; title=&quot;最基础的&quot;&gt;&lt;/a&gt;最基础的&lt;/h2&gt;&lt;ul&gt;
-&lt;li&gt;&lt;p&gt;jobs作为最顶级的元素。每个job至少包含一个script&lt;/p&gt;
-  &lt;figure class=&quot;highlight plain&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;1&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;2&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;job1:&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;    script1: pwd&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
-&lt;p&gt;  每个job的执行都是完全独立于其他的job&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
     
     </summary>
     
