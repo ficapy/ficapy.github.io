@@ -6,24 +6,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>使用Docker配置静态博客 - 邹雷</title>
+    <title>Go程序设计语言课后习题答案-第四章(基本数据) - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的">
-<meta name="keywords" content="docker">
+    <meta name="description" content="第四章 数组 slice map 结构体 json 文本和HTML模板  练习4.1编写一个函数,计算两个SHA256哈希中不同的bit的数目  得到两个字符串的sha256结果,为[32]byte类型,然而需要对比bit 暂时没有得到很好的操作bit的方法,因此采用了格式化字符串的’%08b’这种奇葩的方案 使用了bufio和bytes.Buffer,最后需要强制Flush  123456789">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="使用Docker配置静态博客">
-<meta property="og:url" content="https://www.zoulei.net/2016/08/21/docker_static_blog/index.html">
+<meta property="og:title" content="Go程序设计语言课后习题答案-第四章(基本数据)">
+<meta property="og:url" content="https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的">
-<meta property="og:updated_time" content="2016-08-29T13:53:14.000Z">
+<meta property="og:description" content="第四章 数组 slice map 结构体 json 文本和HTML模板  练习4.1编写一个函数,计算两个SHA256哈希中不同的bit的数目  得到两个字符串的sha256结果,为[32]byte类型,然而需要对比bit 暂时没有得到很好的操作bit的方法,因此采用了格式化字符串的’%08b’这种奇葩的方案 使用了bufio和bytes.Buffer,最后需要强制Flush  123456789">
+<meta property="og:updated_time" content="2018-06-08T15:53:53.182Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="使用Docker配置静态博客">
-<meta name="twitter:description" content="首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的">
+<meta name="twitter:title" content="Go程序设计语言课后习题答案-第四章(基本数据)">
+<meta name="twitter:description" content="第四章 数组 slice map 结构体 json 文本和HTML模板  练习4.1编写一个函数,计算两个SHA256哈希中不同的bit的数目  得到两个字符串的sha256结果,为[32]byte类型,然而需要对比bit 暂时没有得到很好的操作bit的方法,因此采用了格式化字符串的’%08b’这种奇葩的方案 使用了bufio和bytes.Buffer,最后需要强制Flush  123456789">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -230,19 +229,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            使用Docker配置静态博客
+            Go程序设计语言课后习题答案-第四章(基本数据)
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2016-08-21T09:29:29+08:00">
+    <time itemprop="datePublished" datetime="2018-06-08T23:48:32+08:00">
 	
-		    8月 21, 2016
+		    6月 08, 2018
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+    <a class="category-link" href="/categories/Go程序设计语言/">Go程序设计语言</a>
 
 
     
@@ -252,49 +251,39 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的</p>
-<a id="more"></a>
-<p>步骤如下(服务端)：</p>
-<ol>
-<li>参照docker官方文档安装上docker,最耗时的就是这一步了，因为docker虽然发展几年了，可是还是处于不断完善中。连安装方式都不是简单的<code>apt-get install xx</code>搞定(另外现在docker支持的最低版本号是3.1,意味着openvz是无法使用的，因为openvz的内核版本号是2.6.32，且无法升级)</li>
-<li>在你存放静态文件的目录下执行 <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">docker run -d --restart=always -p 80:80 -v `pwd`:/usr/share/nginx/html nginx</div></pre></td></tr></table></figure>
-</li>
-</ol>
-<p>解释一下:</p>
-<ul>
-<li>d参数表示以detach,以后台进程形式一直运行</li>
-<li><code>--restart=always</code>当容器因为异常退出甚至被reboot重启操作后无限自动重启</li>
-<li>p参数，用过vagrant的比较好理解，虚拟机都有这么个玩意儿。端口映射</li>
-<li>v参数。vagrant也有这个概念。文件夹共享</li>
-<li>至于共享的目录,那是因为容器内nginx默认的配置既如此。默认文件位置为/usr/share/nginx/html。这个地方前后的地址必须都是绝对地址。感觉要是能用相对就好了</li>
-<li>如果你要去容器内看看它nginx的配置啥的执行(exit退出)<code>docker run -it --restart=always -p 80:80 -v `pwd`:/usr/share/nginx/html nginx /bin/bash</code></li>
+            <h3 id="第四章"><a href="#第四章" class="headerlink" title="第四章"></a>第四章</h3><ul>
+<li>数组</li>
+<li>slice</li>
+<li>map</li>
+<li>结构体</li>
+<li>json</li>
+<li>文本和HTML模板</li>
 </ul>
-<p>至于客户端,用rsync同步就好了。我用的是hexo静态博客生成器。使用<a href="https://github.com/hexojs/hexo-deployer-rsync">https://github.com/hexojs/hexo-deployer-rsync</a>这个配合ssh config配置一下就好了。很简单O_o</p>
-<p>另外目前本人将这个静态博客放在了3个地方:</p>
-<ol>
-<li>hostker使用git部署<a href="https://www.zoulei.net">https://www.zoulei.net</a></li>
-<li>github pages使用git部署<a href="https://ficapy.github.io">https://ficapy.github.io</a></li>
-<li>128M vps rsync同步<a href="https://www.ficapy.com">https://www.ficapy.com</a></li>
-</ol>
+<h4 id="练习4-1"><a href="#练习4-1" class="headerlink" title="练习4.1"></a>练习4.1</h4><p>编写一个函数,计算两个SHA256哈希中不同的bit的数目</p>
+<ul>
+<li>得到两个字符串的sha256结果,为[32]byte类型,然而需要对比bit</li>
+<li>暂时没有得到很好的操作bit的方法,因此采用了格式化字符串的’%08b’这种奇葩的方案</li>
+<li>使用了bufio和bytes.Buffer,最后需要强制Flush</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"bytes"</span></div><div class="line">	<span class="string">"bufio"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"crypto/sha256"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> r1 bytes.Buffer</div><div class="line">	writer := bufio.NewWriter(&amp;r1)</div><div class="line">	fmt.Fprintf(writer, <span class="string">"%08b"</span>, sha256.Sum256([]<span class="keyword">byte</span>(<span class="string">"1"</span>)))</div><div class="line">	writer.Flush()</div><div class="line">	r1Str := r1.String()</div><div class="line"></div><div class="line">	<span class="keyword">var</span> r2 bytes.Buffer</div><div class="line">	writer2 := bufio.NewWriter(&amp;r2)</div><div class="line">	fmt.Fprintf(writer2, <span class="string">"%08b"</span>, sha256.Sum256([]<span class="keyword">byte</span>(<span class="string">"2"</span>)))</div><div class="line">	writer2.Flush()</div><div class="line">	r2Str := r2.String()</div><div class="line"></div><div class="line">	count := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> i, _ := <span class="keyword">range</span> r1Str &#123;</div><div class="line">		<span class="keyword">if</span> r1Str[i] != r2Str[i] &#123;</div><div class="line">			count += <span class="number">1</span></div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	fmt.Println(count)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习4-2"><a href="#练习4-2" class="headerlink" title="练习4.2"></a>练习4.2</h4><p>编写一个程序,默认情况下打印标准输入的SHA256编码,并支持通过命令行flag定制,输出SHA384或SHA512哈希算法</p>
+<ul>
+<li>这个问题看起来是一个命令行参数解析的问题,<code>flag</code>模块</li>
+<li>针对多个不同的case使用switch语句</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"flag"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"crypto/sha512"</span></div><div class="line">	<span class="string">"crypto/sha256"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	method := flag.String(<span class="string">"method"</span>, <span class="string">"sha256"</span>, <span class="string">"select hash method(sha256,sha384,sha512)"</span>)</div><div class="line">	text := flag.String(<span class="string">"text"</span>, <span class="string">""</span>, <span class="string">"input the string your want to hash"</span>)</div><div class="line">	flag.Parse()</div><div class="line">	<span class="keyword">switch</span> *method &#123;</div><div class="line">	<span class="keyword">case</span> <span class="string">"sha256"</span>:</div><div class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha256.Sum256([]<span class="keyword">byte</span>(*text)))</div><div class="line">	<span class="keyword">case</span> <span class="string">"sha384"</span>:</div><div class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha512.Sum384([]<span class="keyword">byte</span>(*text)))</div><div class="line">	<span class="keyword">case</span> <span class="string">"sha512"</span>:</div><div class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha512.Sum512([]<span class="keyword">byte</span>(*text)))</div><div class="line">	<span class="keyword">default</span>:</div><div class="line">		<span class="built_in">panic</span>(<span class="string">"not support hash method"</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
 
             
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-            <div class="post-footer-tags">
-                <span class="text-color-light text-small">标签</span><br/>
-                
-    <a class="tag tag--primary tag--small t-link" href="/tags/docker/">docker</a>
-
-            </div>
-        
         <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/29/use_shell_modifier_capslock_map_on_osx/"  data-tooltip="使用shell修改osx的CapsLock映射">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -302,7 +291,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/07/werkzeug_debug_note/" data-tooltip="werkzeug源码分析(Debug模块)">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/06/the_go_programming_lang_usage_answer_3/" data-tooltip="Go程序设计语言课后习题答案-第三章(基本数据)">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -317,17 +306,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/21/docker_static_blog/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/21/docker_static_blog/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/21/docker_static_blog/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -375,7 +364,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/29/use_shell_modifier_capslock_map_on_osx/"  data-tooltip="使用shell修改osx的CapsLock映射">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -383,7 +372,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/07/werkzeug_debug_note/" data-tooltip="werkzeug源码分析(Debug模块)">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/06/the_go_programming_lang_usage_answer_3/" data-tooltip="Go程序设计语言课后习题答案-第三章(基本数据)">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -398,17 +387,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/21/docker_static_blog/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/21/docker_static_blog/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/21/docker_static_blog/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -434,17 +423,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/21/docker_static_blog/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/21/docker_static_blog/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/21/docker_static_blog/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -657,9 +646,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2016/08/21/docker_static_blog/';
+                 this.page.url = 'https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/';
                  
-                    this.page.identifier = '2016/08/21/docker_static_blog/';
+                    this.page.identifier = '2018/06/08/the_go_programming_lang_usage_answer_4/';
                  
              };
             (function() {

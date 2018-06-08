@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-06-07T15:37:10.635Z</updated>
+  <updated>2018-06-08T15:53:53.182Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -16,11 +16,57 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>Go程序设计语言课后习题答案-第四章(基本数据)</title>
+    <link href="https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"/>
+    <id>https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/</id>
+    <published>2018-06-08T15:48:32.000Z</published>
+    <updated>2018-06-08T15:53:53.182Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="第四章"><a href="#第四章" class="headerlink" title="第四章"></a>第四章</h3><ul>
+<li>数组</li>
+<li>slice</li>
+<li>map</li>
+<li>结构体</li>
+<li>json</li>
+<li>文本和HTML模板</li>
+</ul>
+<h4 id="练习4-1"><a href="#练习4-1" class="headerlink" title="练习4.1"></a>练习4.1</h4><p>编写一个函数,计算两个SHA256哈希中不同的bit的数目</p>
+<ul>
+<li>得到两个字符串的sha256结果,为[32]byte类型,然而需要对比bit</li>
+<li>暂时没有得到很好的操作bit的方法,因此采用了格式化字符串的’%08b’这种奇葩的方案</li>
+<li>使用了bufio和bytes.Buffer,最后需要强制Flush</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"bytes"</span></div><div class="line">	<span class="string">"bufio"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"crypto/sha256"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> r1 bytes.Buffer</div><div class="line">	writer := bufio.NewWriter(&amp;r1)</div><div class="line">	fmt.Fprintf(writer, <span class="string">"%08b"</span>, sha256.Sum256([]<span class="keyword">byte</span>(<span class="string">"1"</span>)))</div><div class="line">	writer.Flush()</div><div class="line">	r1Str := r1.String()</div><div class="line"></div><div class="line">	<span class="keyword">var</span> r2 bytes.Buffer</div><div class="line">	writer2 := bufio.NewWriter(&amp;r2)</div><div class="line">	fmt.Fprintf(writer2, <span class="string">"%08b"</span>, sha256.Sum256([]<span class="keyword">byte</span>(<span class="string">"2"</span>)))</div><div class="line">	writer2.Flush()</div><div class="line">	r2Str := r2.String()</div><div class="line"></div><div class="line">	count := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> i, _ := <span class="keyword">range</span> r1Str &#123;</div><div class="line">		<span class="keyword">if</span> r1Str[i] != r2Str[i] &#123;</div><div class="line">			count += <span class="number">1</span></div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	fmt.Println(count)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习4-2"><a href="#练习4-2" class="headerlink" title="练习4.2"></a>练习4.2</h4><p>编写一个程序,默认情况下打印标准输入的SHA256编码,并支持通过命令行flag定制,输出SHA384或SHA512哈希算法</p>
+<ul>
+<li>这个问题看起来是一个命令行参数解析的问题,<code>flag</code>模块</li>
+<li>针对多个不同的case使用switch语句</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"flag"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"crypto/sha512"</span></div><div class="line">	<span class="string">"crypto/sha256"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	method := flag.String(<span class="string">"method"</span>, <span class="string">"sha256"</span>, <span class="string">"select hash method(sha256,sha384,sha512)"</span>)</div><div class="line">	text := flag.String(<span class="string">"text"</span>, <span class="string">""</span>, <span class="string">"input the string your want to hash"</span>)</div><div class="line">	flag.Parse()</div><div class="line">	<span class="keyword">switch</span> *method &#123;</div><div class="line">	<span class="keyword">case</span> <span class="string">"sha256"</span>:</div><div class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha256.Sum256([]<span class="keyword">byte</span>(*text)))</div><div class="line">	<span class="keyword">case</span> <span class="string">"sha384"</span>:</div><div class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha512.Sum384([]<span class="keyword">byte</span>(*text)))</div><div class="line">	<span class="keyword">case</span> <span class="string">"sha512"</span>:</div><div class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha512.Sum512([]<span class="keyword">byte</span>(*text)))</div><div class="line">	<span class="keyword">default</span>:</div><div class="line">		<span class="built_in">panic</span>(<span class="string">"not support hash method"</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;h3 id=&quot;第四章&quot;&gt;&lt;a href=&quot;#第四章&quot; class=&quot;headerlink&quot; title=&quot;第四章&quot;&gt;&lt;/a&gt;第四章&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;数组&lt;/li&gt;
+&lt;li&gt;slice&lt;/li&gt;
+&lt;li&gt;map&lt;/li&gt;
+&lt;li&gt;结构体&lt;/li&gt;
+&lt;li&gt;json&lt;/l
+    
+    </summary>
+    
+      <category term="Go程序设计语言" scheme="https://www.zoulei.net/categories/Go%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%E8%AF%AD%E8%A8%80/"/>
+    
+    
+  </entry>
+  
+  <entry>
     <title>Go程序设计语言课后习题答案-第三章(基本数据)</title>
     <link href="https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/"/>
     <id>https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/</id>
     <published>2018-06-06T15:59:33.000Z</published>
-    <updated>2018-06-07T15:37:10.635Z</updated>
+    <updated>2018-06-08T15:47:16.962Z</updated>
     
     <content type="html"><![CDATA[<h3 id="第三章"><a href="#第三章" class="headerlink" title="第三章"></a>第三章</h3><ul>
 <li>整数</li>
@@ -80,6 +126,22 @@
 <li>使用bytes.Buffer.String得到结果</li>
 </ul>
 <figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"bytes"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">comma</span><span class="params">(s <span class="keyword">string</span>)</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> r bytes.Buffer</div><div class="line"></div><div class="line">	l := <span class="built_in">len</span>(s)</div><div class="line">	mod := l % <span class="number">3</span></div><div class="line">	<span class="keyword">if</span> mod &gt; <span class="number">0</span> &#123;</div><div class="line">		r.Write([]<span class="keyword">byte</span>(s[:mod] + <span class="string">","</span>))</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">for</span> mod+<span class="number">3</span> &lt; l &#123;</div><div class="line">		r.Write([]<span class="keyword">byte</span>(s[mod:mod+<span class="number">3</span>] + <span class="string">","</span>))</div><div class="line">		mod += <span class="number">3</span></div><div class="line">	&#125;</div><div class="line">	<span class="keyword">if</span> mod+<span class="number">3</span> == l &#123;</div><div class="line">		r.Write([]<span class="keyword">byte</span>(s[mod:mod+<span class="number">3</span>]))</div><div class="line">	&#125;</div><div class="line">	fmt.Println(r.String())</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	comma(<span class="string">"12345"</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习3-11"><a href="#练习3-11" class="headerlink" title="练习3.11"></a>练习3.11</h4><p>完善comma函数,以支持浮点数处理和一个可选的正负号的处理</p>
+<ul>
+<li>先处理(剔除)前置符号，在处理后置浮点数,最后<code>stings.Join</code>连接起来</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"bytes"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"strings"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">comma</span><span class="params">(s <span class="keyword">string</span>)</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> r bytes.Buffer</div><div class="line">	start := <span class="string">""</span></div><div class="line">	<span class="keyword">if</span> strings.HasPrefix(s, <span class="string">"-"</span>) || strings.HasPrefix(s, <span class="string">"+"</span>) &#123;</div><div class="line">		start = <span class="keyword">string</span>(s[<span class="number">0</span>])</div><div class="line">		s = s[<span class="number">1</span>:]</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	end := <span class="string">""</span></div><div class="line">	<span class="keyword">if</span> strings.Contains(s, <span class="string">"."</span>) &#123;</div><div class="line">		ss := strings.Split(s, <span class="string">"."</span>)</div><div class="line">		s, end = ss[<span class="number">0</span>], <span class="string">"."</span>+ss[<span class="number">1</span>]</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	l := <span class="built_in">len</span>(s)</div><div class="line">	mod := l % <span class="number">3</span></div><div class="line">	<span class="keyword">if</span> mod &gt; <span class="number">0</span> &#123;</div><div class="line">		r.Write([]<span class="keyword">byte</span>(s[:mod] + <span class="string">","</span>))</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">for</span> mod+<span class="number">3</span> &lt; l &#123;</div><div class="line">		r.Write([]<span class="keyword">byte</span>(s[mod:mod+<span class="number">3</span>] + <span class="string">","</span>))</div><div class="line">		mod += <span class="number">3</span></div><div class="line">	&#125;</div><div class="line">	<span class="keyword">if</span> mod+<span class="number">3</span> == l &#123;</div><div class="line">		r.Write([]<span class="keyword">byte</span>(s[mod:mod+<span class="number">3</span>]))</div><div class="line">	&#125;</div><div class="line">	fmt.Println(strings.Join([]<span class="keyword">string</span>&#123;start, r.String(), end&#125;, <span class="string">""</span>))</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	comma(<span class="string">"12345"</span>)</div><div class="line">	comma(<span class="string">"12345.1"</span>)</div><div class="line">	comma(<span class="string">"-12345.1"</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习3-12"><a href="#练习3-12" class="headerlink" title="练习3.12"></a>练习3.12</h4><p>编写一个函数,判断两个字符串是否是相互打乱的,也就是说它们有着相同的字符,但是对应不同的顺序</p>
+<ul>
+<li>遍历字符串A,对比字符在两个字符串的个数是否相等</li>
+<li>字符串遍历有坑，得到的是数字，需要string转换一下类型</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"strings"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">same</span><span class="params">(s1, s2 <span class="keyword">string</span>)</span> <span class="title">bool</span></span> &#123;</div><div class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(s1) != <span class="built_in">len</span>(s2) &#123;</div><div class="line">		<span class="keyword">return</span> <span class="literal">false</span></div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">for</span> _, v := <span class="keyword">range</span> s1 &#123;</div><div class="line">		<span class="keyword">if</span> strings.Count(s1, <span class="keyword">string</span>(v)) != strings.Count(s2, <span class="keyword">string</span>(v)) &#123;</div><div class="line">			<span class="keyword">return</span> <span class="literal">false</span></div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> <span class="literal">true</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	fmt.Println(same(<span class="string">"123"</span>, <span class="string">"122"</span>))</div><div class="line">	fmt.Println(same(<span class="string">"123"</span>, <span class="string">"3321"</span>))</div><div class="line">	fmt.Println(same(<span class="string">"123"</span>, <span class="string">"321"</span>))</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习3-13"><a href="#练习3-13" class="headerlink" title="练习3.13"></a>练习3.13</h4><p>编写KB、MB的常量声明,然后扩展到YB</p>
+<ul>
+<li>iota </li>
+</ul>
+<p>暂略</p>
 ]]></content>
     
     <summary type="html">
@@ -1105,73 +1167,6 @@
     </summary>
     
       <category term="database" scheme="https://www.zoulei.net/categories/database/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>开始GitLab CI/CD</title>
-    <link href="https://www.zoulei.net/2017/12/25/GitLabCICD_quickstart/"/>
-    <id>https://www.zoulei.net/2017/12/25/GitLabCICD_quickstart/</id>
-    <published>2017-12-25T12:38:35.000Z</published>
-    <updated>2017-12-26T01:34:46.618Z</updated>
-    
-    <content type="html"><![CDATA[<h3 id="GitLabCI-CD流程"><a href="#GitLabCI-CD流程" class="headerlink" title="GitLabCI/CD流程"></a>GitLabCI/CD流程</h3><p>gitlab如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比其他产品Gogs、github等它还算可堪一用。上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下如何从零在Gitlab上完成简单的CI/CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取重启容器<br><img src="https://ficapy.b0.upaiyun.com/blogimg/GitlabCI.jpg" alt="GitlabCI"><br><a id="more"></a></p>
-<h3 id="1-安装Docker"><a href="#1-安装Docker" class="headerlink" title="1. 安装Docker"></a>1. 安装Docker</h3><p>这个没什么好说的。无脑apt就好了。安装完毕后需要将本地用户加入到Docker用户组。方便命令的执行。在生产环境下需要注意的是最好修改它的默认配置，/etc/docker/daemon.json</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">&#123;</div><div class="line">    &quot;data-root&quot;: &quot;/data/docker&quot;,</div><div class="line">    &quot;registry-mirrors&quot;: [&quot;https://xxx.mirror.aliyuncs.com&quot;],</div><div class="line">    &quot;log-opts&quot;: &#123;</div><div class="line">        &quot;max-size&quot;: &quot;50m&quot;,</div><div class="line">        &quot;max-file&quot;: &quot;3&quot;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<ol>
-<li>现在云主机都是低容量系统盘外加高容量挂载盘组成。修改一下默认的根目录会比较好</li>
-<li>没个镜像源下载dockerhub镜像不明智啊</li>
-<li>限定一下最大日志量总没错。否则时间太长日志多了也很烦人</li>
-</ol>
-<h2 id="2-搭建Docker镜像仓库"><a href="#2-搭建Docker镜像仓库" class="headerlink" title="2. 搭建Docker镜像仓库"></a>2. 搭建Docker镜像仓库</h2><p>我使用的是Vmware出品的<a href="https://github.com/vmware/harbor">Harbor</a>。安装中遇到了以下几个坑</p>
-<ol>
-<li>按照文档从源码安装失败。直接下载八百多兆的离线安装包安装好歹算是成功了</li>
-<li>我将HTTPS放到负载均衡上面。实际请求到后端的是http协议。所以我将配置修改为http。但是登陆失败。查了下将common/config/registry/config.yml的token由http改成https可以登陆了。解决了这个然后还不能push…没办法。我将负载均衡改成TCP端口转发。直接将证书放在harbor上。可算是没毛病了</li>
-<li>以前配置过一次Harbor。导致了历史遗留文件。再次安装结果并不会覆盖掉以前的配置也不会做任何提示。</li>
-<li>配置文件里面我改了一下secretkey_path地址。结果无法使用，无奈又改回来了</li>
-</ol>
-<p>总结。在Harbor作为宣称的企业级Docker镜像工具。杀手级功能是异地复制，镜像验证。安全扫描啥的。如果只是要搞个基础的镜像仓库。最后想了想还不如折腾Gitlab的Docker仓库。说不定在权限上和Gitlab结合的更好</p>
-<h2 id="3-注册Gitlab-runner"><a href="#3-注册Gitlab-runner" class="headerlink" title="3. 注册Gitlab-runner"></a>3. 注册Gitlab-runner</h2><p>这应该算是CI强大的地方了。它和Gitlab本身松耦合。客户端建立长连接和Gitlab服务器保持通信。当满足条件的时候由Gitlab对Runner进行调度。Gitlab-runner是使用Go编写的，便于部署。当Runner接收到请求的时候它会执行shell脚本。想象一下python界的fabric。依次执行Bash命令。Runner也是差不多的套路。多条Bash命令间是没有相关性的。比如你上一条执行<code>cd demo</code>下一条<code>pwd</code>得到的还是本地用户目录，并不是demo。</p>
-<ol>
-<li>启动gitlab-runner Service</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">docker run -d --name gitlab-runner --restart always \</div><div class="line">  -v /var/gitlab-runner/config:/etc/gitlab-runner \</div><div class="line">  -v /var/run/docker.sock:/var/run/docker.sock \</div><div class="line">  gitlab/gitlab-runner:latest</div></pre></td></tr></table></figure>
-<p>顺便说一下。要是执行gitlab-runner看它的命令行参数还挺多。其实是自身设计的不太好。显得好像很复杂，很多命令需要被<a href="https://docs.gitlab.com/runner/commands/README.html#service-related-commands">废弃了</a>.它的使用其实还是很简单的。如果你需要看帮助。那么执行<code>gitlab-runner register -h</code>还有点用</p>
-<ol>
-<li>添加Runner</li>
-</ol>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">docker exec -it gitlab-runner gitlab-runner register -n --tag-list &quot;name&quot; \</div><div class="line">    -r &quot;token&quot; --name &quot;BigBrother&quot; -u https://gitlab.company.com \</div><div class="line">    --executor &quot;docker&quot; --docker-image &quot;default_image&quot; \</div><div class="line">    --docker-volumes /var/run/docker.sock:/var/run/docker.sock</div></pre></td></tr></table></figure>
-<ul>
-<li>n 表示非交互模式</li>
-<li>tag-list表示该Runner的标签(单独的项目用单独的tag也挺好。互不干扰)</li>
-<li>r 该项目的token</li>
-<li>name 名称标识</li>
-<li>u Gitlab地址</li>
-<li>executor 和上面说的执行bash命令。有多种方式。无脑用docker挺好</li>
-<li>docker-image executor选择了docker之后,需要选择默认的镜像</li>
-<li>docker-volumes 这个是为了在docker里面<a href="https://docs.gitlab.com/ce/ci/docker/using_docker_build.html">使用Docker构建镜像</a></li>
-</ul>
-<p>以上两步完成后就能够在Gitlab后台看到正常状态的Runner了</p>
-<h3 id="4-编写-gitlab-ci-yml文件"><a href="#4-编写-gitlab-ci-yml文件" class="headerlink" title="4. 编写.gitlab-ci.yml文件"></a>4. 编写.gitlab-ci.yml文件</h3><p>如果你有丰富的Docker使用经验，这一步实际上没有太大的问题。本例中我只是通过docker build构建了镜像。然后上传到仓库。需要部署的时候使用SSH连接到远程机器上使用<code>docker-compose up --build -d</code>更新程序<br>Demo项目目录如下。正常本地启动执行python main.py</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">.</div><div class="line">├── README.md</div><div class="line">├── conf.py</div><div class="line">├── deploy</div><div class="line">│   ├── Dockerfile</div><div class="line">│   ├── prod_env</div><div class="line">│   ├── docker-compose.yml</div><div class="line">│   └── stage_env</div><div class="line">├── main.py</div><div class="line">├── .gitlab-ci.yml</div><div class="line">└── requirements.txt</div></pre></td></tr></table></figure>
-<p>Dockerfile如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">FROM ficapy/python35_alpine</div><div class="line"></div><div class="line">RUN mkdir /app</div><div class="line">WORKDIR /app</div><div class="line">ENV PYTHONPATH=/app</div><div class="line"></div><div class="line">COPY ./requirements.txt /app/requirements.txt</div><div class="line">RUN pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple</div><div class="line"></div><div class="line">COPY . /app</div><div class="line"></div><div class="line">CMD [&quot;python&quot;, &quot;main.py&quot;]</div></pre></td></tr></table></figure>
-<p>docker-compose.yml如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">version: &apos;3&apos;</div><div class="line"></div><div class="line">services:</div><div class="line">  Name:</div><div class="line">    image: registry.company.com/repos/projectname:$&#123;TAG&#125;</div><div class="line">    restart: always</div><div class="line">    env_file:</div><div class="line">      - $&#123;ENV&#125;_env</div></pre></td></tr></table></figure>
-<p>.gitlab-ci.yml如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div></pre></td><td class="code"><pre><div class="line">image: ficapy/docker:latest</div><div class="line"></div><div class="line">variables:</div><div class="line">  SSH: &quot;Host xxxxx&quot;</div><div class="line"></div><div class="line">stages:</div><div class="line">  - build</div><div class="line">  - deploy</div><div class="line"></div><div class="line">build:</div><div class="line">  stage: build</div><div class="line">  only:</div><div class="line">    - master</div><div class="line">  tags:</div><div class="line">    - tag</div><div class="line">  script:</div><div class="line">      - export DOCKER_TAG=$(env TZ=&apos;Asia/Shanghai&apos; date -d @$(git log -n1 $CI_COMMIT_SHA --format=&quot;%at&quot;) +%Y_%m_%d_%H%M%S)</div><div class="line">      - echo $DOCKER_TAG</div><div class="line">      - docker login -u deploy -p $DOCKER_PWD registry.company.com</div><div class="line">      - docker build -t registry.company.com/repos/must_lower_case:$DOCKER_TAG -f deploy/Dockerfile .</div><div class="line">      - docker push registry.company.com/repos/must_lower_case:$DOCKER_TAG</div><div class="line"></div><div class="line">prod_deploy:</div><div class="line">  stage: deploy</div><div class="line">  only:</div><div class="line">    - master</div><div class="line">  tags:</div><div class="line">    - tag</div><div class="line">  when: manual</div><div class="line">  variables:</div><div class="line">    SERVER: ssh_name</div><div class="line">  before_script:</div><div class="line">    - export DOCKER_TAG=$(env TZ=&apos;Asia/Shanghai&apos; date -d @$(git log -n1 $CI_COMMIT_SHA --format=&quot;%at&quot;) +%Y_%m_%d_%H%M%S)</div><div class="line">    - echo $DOCKER_TAG</div><div class="line">    - eval $(ssh-agent -s)</div><div class="line">    - bash -c &quot;ssh-add &lt;(echo &apos;$SSH_PRIVATE_KEY&apos;)&quot;</div><div class="line">    - mkdir -p ~/.ssh</div><div class="line">    - &apos;[[ -f /.dockerenv ]] &amp;&amp; echo -e &quot;$SSH&quot; &gt; ~/.ssh/config&apos;</div><div class="line">  script:</div><div class="line">    - ssh $SERVER &quot;mkdir -p ~/$CI_PROJECT_NAME || true&quot;</div><div class="line">    - rsync -r deploy $SERVER:~/$CI_PROJECT_NAME</div><div class="line">    - ssh $SERVER &quot;docker login -u deploy -p $DOCKER_PWD registry.company.com&quot;</div><div class="line">    - ssh $SERVER &quot;cd $CI_PROJECT_NAME/deploy &amp;&amp; TAG=$DOCKER_TAG ENV=prod docker-compose up --build -d&quot;</div><div class="line">  environment:</div><div class="line">    name: PROD</div></pre></td></tr></table></figure>
-<p>整个过程看配置文件应该还是比较容易理解的。如果有些参数不太明白请查看前一篇gitlabci yml笔记。因为它只是个Demo。所以我让他在每次master分支提交的时候都进行触发。整个部署流程实际上就是使用了SSH远程连接之后操作docker-compose进行更新。过程中感觉让我比较难以决断的是如何搞一个好的TAG方法</p>
-<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>完成上述过程之后我做一个自我总结。所谓CI/CD不过是将我们懒得输入的命令组合形成文件。让它依次执行Test-&gt;Build-&gt;Deploy。该方案几乎使用了全套Docker.从gitlab-runner、build到镜像仓库到生产环境的部署。在项目比较多的时候它是有好处的。比如有十个项目需要更新。每个项目需要更新到多个环境下。那么使用这种自动化还是有优势的。如果就一两个项目，而且只需要更新到测试和生产环境。个人觉得fabric就够了。而且该方案有一个缺点就是部署速度较慢。Gitlab每次执行任务速度并不是想象的那么快。最后生成镜像，上传，再拉取到正式环境。如果镜像过大就更慢了。而如果不使用Docker镜像的方式。直接git pull拉取源码。再supervisorctl更新程序。时间基本是秒级的。在频繁更新的测试环境它可能更高效。</p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;h3 id=&quot;GitLabCI-CD流程&quot;&gt;&lt;a href=&quot;#GitLabCI-CD流程&quot; class=&quot;headerlink&quot; title=&quot;GitLabCI/CD流程&quot;&gt;&lt;/a&gt;GitLabCI/CD流程&lt;/h3&gt;&lt;p&gt;gitlab如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比其他产品Gogs、github等它还算可堪一用。上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下如何从零在Gitlab上完成简单的CI/CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取重启容器&lt;br&gt;&lt;img src=&quot;https://ficapy.b0.upaiyun.com/blogimg/GitlabCI.jpg&quot; alt=&quot;GitlabCI&quot;&gt;&lt;br&gt;
-    
-    </summary>
-    
-      <category term="devops" scheme="https://www.zoulei.net/categories/devops/"/>
     
     
   </entry>
