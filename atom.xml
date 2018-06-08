@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-06-08T15:53:53.182Z</updated>
+  <updated>2018-06-08T15:57:09.125Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"/>
     <id>https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/</id>
     <published>2018-06-08T15:48:32.000Z</published>
-    <updated>2018-06-08T15:53:53.182Z</updated>
+    <updated>2018-06-08T15:57:09.125Z</updated>
     
     <content type="html"><![CDATA[<h3 id="第四章"><a href="#第四章" class="headerlink" title="第四章"></a>第四章</h3><ul>
 <li>数组</li>
@@ -30,6 +30,7 @@
 <li>json</li>
 <li>文本和HTML模板</li>
 </ul>
+<a id="more"></a>
 <h4 id="练习4-1"><a href="#练习4-1" class="headerlink" title="练习4.1"></a>练习4.1</h4><p>编写一个函数,计算两个SHA256哈希中不同的bit的数目</p>
 <ul>
 <li>得到两个字符串的sha256结果,为[32]byte类型,然而需要对比bit</li>
@@ -52,7 +53,9 @@
 &lt;li&gt;slice&lt;/li&gt;
 &lt;li&gt;map&lt;/li&gt;
 &lt;li&gt;结构体&lt;/li&gt;
-&lt;li&gt;json&lt;/l
+&lt;li&gt;json&lt;/li&gt;
+&lt;li&gt;文本和HTML模板&lt;/li&gt;
+&lt;/ul&gt;
     
     </summary>
     
