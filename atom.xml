@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-06-11T15:02:38.832Z</updated>
+  <updated>2018-06-13T15:03:10.618Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -16,11 +16,72 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>Go程序设计语言课后习题答案-第五章(基本数据)</title>
+    <link href="https://www.zoulei.net/2018/06/13/the_go_programming_lang_usage_answer_5/"/>
+    <id>https://www.zoulei.net/2018/06/13/the_go_programming_lang_usage_answer_5/</id>
+    <published>2018-06-13T14:44:47.000Z</published>
+    <updated>2018-06-13T15:03:10.618Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="第五章"><a href="#第五章" class="headerlink" title="第五章"></a>第五章</h3><ul>
+<li>函数声明</li>
+<li>递归</li>
+<li>多返回值</li>
+<li>错误</li>
+<li>函数变量</li>
+<li>匿名函数</li>
+<li>变长函数</li>
+<li>延迟函数调用</li>
+<li>宕机</li>
+<li>恢复</li>
+</ul>
+<a id="more"></a>
+<h4 id="练习5-1"><a href="#练习5-1" class="headerlink" title="练习5.1"></a>练习5.1</h4><p>改变findlinks程序,使用递归调用visit(而不是循环)遍历n.FirstChild链表</p>
+<ul>
+<li>可怕的递归ヽ(*。&gt;Д&lt;)o゜可怕</li>
+<li>循环还挺好理解的，可是改成递归真。。。不好理解</li>
+<li>本题就修改一句就好了</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">return</span> visit(visit(links, n.FirstChild), n.NextSibling)</div></pre></td></tr></table></figure>
+<h4 id="练习5-2"><a href="#练习5-2" class="headerlink" title="练习5.2"></a>练习5.2</h4><p>写一个函数,用于统计HTML文档树内所有的元素个数,如p,div,span等</p>
+<ul>
+<li>将传入的slice修改为map,其他不变</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"os"</span></div><div class="line"></div><div class="line">	<span class="string">"golang.org/x/net/html"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	doc, err := html.Parse(os.Stdin)</div><div class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">		fmt.Fprintf(os.Stderr, <span class="string">"findelems: %v\n"</span>, err)</div><div class="line">		os.Exit(<span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">	elements := <span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">int</span>&#123;&#125;</div><div class="line">	visit(elements, doc)</div><div class="line">	<span class="keyword">for</span> elem, count := <span class="keyword">range</span> elements &#123;</div><div class="line">		fmt.Printf(<span class="string">"%s\t%d\n"</span>, elem, count)</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">visit</span><span class="params">(e <span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">int</span>, n *html.Node)</span></span> &#123;</div><div class="line">	<span class="keyword">if</span> n.Type == html.ElementNode &#123;</div><div class="line">		e[n.Data]++</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">for</span> c := n.FirstChild; c != <span class="literal">nil</span>; c = c.NextSibling &#123;</div><div class="line">		visit(e, c)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习5-3"><a href="#练习5-3" class="headerlink" title="练习5.3"></a>练习5.3</h4><p>写一个函数,用于输出HTML文档树种所有文本节点的内容.但不包括<script>或<style>元素,因为这些内容在web浏览器中是不可见的</p>
+<ul>
+<li>还是差不多，递归读取到每一个节点，选择性输出</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"os"</span></div><div class="line">	<span class="string">"golang.org/x/net/html"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	doc, err := html.Parse(os.Stdin)</div><div class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">		fmt.Fprintf(os.Stderr, <span class="string">"findtexts: %v\n"</span>, err)</div><div class="line">		os.Exit(<span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">	visit(doc)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">visit</span><span class="params">(n *html.Node)</span></span> &#123;</div><div class="line">	<span class="keyword">if</span> n != <span class="literal">nil</span> &amp;&amp; n.Type == html.ElementNode &#123;</div><div class="line">		<span class="keyword">if</span> n.Data == <span class="string">"script"</span> || n.Data == <span class="string">"style"</span> &#123;</div><div class="line">			<span class="keyword">return</span></div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">if</span> n.Type == html.TextNode &#123;</div><div class="line">		fmt.Println(n.Data)</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">for</span> c := n.FirstChild; c != <span class="literal">nil</span>; c = c.NextSibling &#123;</div><div class="line">		visit(c)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;h3 id=&quot;第五章&quot;&gt;&lt;a href=&quot;#第五章&quot; class=&quot;headerlink&quot; title=&quot;第五章&quot;&gt;&lt;/a&gt;第五章&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;函数声明&lt;/li&gt;
+&lt;li&gt;递归&lt;/li&gt;
+&lt;li&gt;多返回值&lt;/li&gt;
+&lt;li&gt;错误&lt;/li&gt;
+&lt;li&gt;函数变量&lt;/li&gt;
+&lt;li&gt;匿名函数&lt;/li&gt;
+&lt;li&gt;变长函数&lt;/li&gt;
+&lt;li&gt;延迟函数调用&lt;/li&gt;
+&lt;li&gt;宕机&lt;/li&gt;
+&lt;li&gt;恢复&lt;/li&gt;
+&lt;/ul&gt;
+    
+    </summary>
+    
+      <category term="Go程序设计语言" scheme="https://www.zoulei.net/categories/Go%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%E8%AF%AD%E8%A8%80/"/>
+    
+    
+  </entry>
+  
+  <entry>
     <title>Go程序设计语言课后习题答案-第四章(基本数据)</title>
     <link href="https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"/>
     <id>https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/</id>
     <published>2018-06-08T15:48:32.000Z</published>
-    <updated>2018-06-11T15:02:38.832Z</updated>
+    <updated>2018-06-13T15:14:49.070Z</updated>
     
     <content type="html"><![CDATA[<h3 id="第四章"><a href="#第四章" class="headerlink" title="第四章"></a>第四章</h3><ul>
 <li>数组</li>
@@ -97,6 +158,17 @@
 <ul>
 <li>感觉这条超纲了啊，构建离线索引…….是写到sqlite里面吗？查找的时候正则匹配？</li>
 </ul>
+<h4 id="练习4-13"><a href="#练习4-13" class="headerlink" title="练习4.13"></a>练习4.13</h4><p>基于JSON开发的web服务,开放电影数据库让你可以在<a href="https://omdbapi.com/上通过名字来搜索电影并下载海报图片.开发一个poster工具以通过命令行指定的电影名称来下载海报">https://omdbapi.com/上通过名字来搜索电影并下载海报图片.开发一个poster工具以通过命令行指定的电影名称来下载海报</a></p>
+<ul>
+<li>没什么兴趣，就一个JSON解析</li>
+</ul>
+<h4 id="练习4-14"><a href="#练习4-14" class="headerlink" title="练习4.14:"></a>练习4.14:</h4><p>创建一个web服务器,可以通过查询github并缓存信息,然后可以浏览bug列表、里程碑信息以及用户参与的信息</p>
+<ul>
+<li>这题应该意图就是编写模板了</li>
+<li>至于缓存大概用Redis吧</li>
+<li>我很懒，就随便搞了个模板测试了下用法</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"html/template"</span></div><div class="line">	<span class="string">"net/http"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	<span class="keyword">const</span> templ = <span class="string">`&lt;p&gt;A: &#123;.A&#125;&lt;/p&gt;&lt;p&gt;B: &#123;.B&#125;&lt;/p&gt;`</span>  (换&#123;&#125;,因为hexo渲染问题)</div><div class="line">	t := template.Must(template.New(<span class="string">"escape"</span>).Parse(templ))</div><div class="line"></div><div class="line">	http.HandleFunc(<span class="string">"/"</span>, <span class="function"><span class="keyword">func</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</div><div class="line">		<span class="keyword">var</span> data <span class="keyword">struct</span> &#123;</div><div class="line">			A <span class="keyword">string</span></div><div class="line">			B template.HTML</div><div class="line">		&#125;</div><div class="line">		data.A = <span class="string">"&lt;b&gt;Hello!&lt;/b&gt;"</span></div><div class="line">		data.B = <span class="string">"&lt;b&gt;Hello!&lt;/b&gt;"</span></div><div class="line"></div><div class="line">		t.Execute(w, data)</div><div class="line">	&#125;)</div><div class="line">	http.ListenAndServe(<span class="string">":8888"</span>, <span class="literal">nil</span>)</div><div class="line"></div><div class="line">&#125;</div><div class="line"></div></pre></td></tr></table></figure>
 ]]></content>
     
     <summary type="html">
@@ -1174,51 +1246,6 @@
     <summary type="html">
     
       &lt;p&gt;&lt;a href=&quot;/2018/03/03/BKTree_VPTree/&quot;&gt;上一篇&lt;/a&gt; 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="database" scheme="https://www.zoulei.net/categories/database/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>BK树和VP树</title>
-    <link href="https://www.zoulei.net/2018/03/03/BKTree_VPTree/"/>
-    <id>https://www.zoulei.net/2018/03/03/BKTree_VPTree/</id>
-    <published>2018-03-03T09:17:02.000Z</published>
-    <updated>2018-03-04T02:18:38.874Z</updated>
-    
-    <content type="html"><![CDATA[<p>最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了BK树。记录一下</p>
-<a id="more"></a>
-<p>使用Python的库<a href="https://github.com/JohannesBuchner/imagehash">imageHash</a> 运算后会得到64bit长度的结果(最后使用了hex编码导致结果看起来很长)。如果两张图片的bit进行异或后不同的地方越小。说明两张图片越相似。度量这2个bit不相似程度被称之为汉明距离</p>
-<p>这个距离它又满足以下性质(被称为Levenshtein)</p>
-<ol>
-<li>d(x, y) = 0 当且仅当 x=y  （Levenshtein距离为0 &lt;==&gt; 字符串相等）</li>
-<li>d(x, y) = d(y, x)     （从x变到y的最少步数就是从y变到x的最少步数）</li>
-<li>d(x, y) + d(y, z) &gt;= d(x, z)  （从x变到z所需的步数不会超过x先变成y再变成z的步数）</li>
-</ol>
-<h3 id="BK树"><a href="#BK树" class="headerlink" title="BK树"></a>BK树</h3><p>为了加速查找, 构建了这样一种树结构。</p>
-<ol>
-<li>任选一个节点当做根节点</li>
-<li>插入节点的时候和根节点对比得到距离。如果该距离不存在则新建一个节点作为根节点的子节点。如果节点存在则获得节点作为根节点进行递归操作</li>
-</ol>
-<p>第二步的意义在于<strong>任何一个节点下面的元素对于该节点的距离都是相等的</strong>。构建就达到了这个效果。别的啥事没做。</p>
-<p>查找过程。查找的原理主要依靠第三条性质<code>d(x, y) + d(y, z) &gt;= d(x, z)</code>.<br>假设我们有这样一个查询要求。需要查找字符串target距离不大于n的所有结果。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">设root为x, target为y</div><div class="line">d(root, target) + d(target, element) &gt;= d(root, element)</div><div class="line">d(target, element)的取值范围是[0, n]</div><div class="line">得到d(root, element) 的最大值是 n + d(root, target)</div></pre></td></tr></table></figure></p>
-<p><strong>因此我们根据这个不等式实现了剪枝的效果</strong>。对于满足条件的元素。将其设置为根元素。递归得到所有满足条件的元素</p>
-<h3 id="VP树"><a href="#VP树" class="headerlink" title="VP树"></a>VP树</h3><p>VP树和BK树原理差不多。优点是当需要查询的距离N更大的时候效率更高(具体原理我还不太了解。写的时候发现很多时候它的效率甚至是不及BK树的)。</p>
-<p>BK树可以看出是一个多叉树。每个节点下面可以有多个节点。VP树不同，它是一个二叉树。根据我的需求。简单起见。每一个节点我设置了相同的阈值。距离小于阈值则放在左边，大于则放在右边。</p>
-<p>查找的时候还挺尴尬的。根据上面说的<code>d(root, element) &lt;= n + d(root, target)</code>。当节点的阈值小于这个值的时候左右子节点都需要遍历。当节点阈值大于的时候就只需要遍历左边(达到剪枝的效果)</p>
-<p>注意:  以上我都只考虑了添加，没有考虑修改和删除的事情。</p>
-<p>Python版本代码实现如下</p>
-<script src="//gist.github.com/ficapy/ed909648b184bc2fc1486ce90175d356.js?file=bk_tree.py"></script>
-<script src="//gist.github.com/ficapy/ed909648b184bc2fc1486ce90175d356.js?file=vp_tree.py"></script>
-<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="http://www.matrix67.com/blog/archives/333">编辑距离、拼写检查与度量空间：一个有趣的数据结构</a><br><a href="https://fribbels.github.io/vptree/writeup">VP Tree</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了BK树。记录一下&lt;/p&gt;
     
     </summary>
     

@@ -19,7 +19,7 @@
 <meta property="og:url" content="https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="第四章 数组 slice map 结构体 json 文本和HTML模板">
-<meta property="og:updated_time" content="2018-06-11T15:02:38.832Z">
+<meta property="og:updated_time" content="2018-06-13T15:14:49.070Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Go程序设计语言课后习题答案-第四章(基本数据)">
 <meta name="twitter:description" content="第四章 数组 slice map 结构体 json 文本和HTML模板">
@@ -326,6 +326,17 @@
 <ul>
 <li>感觉这条超纲了啊，构建离线索引…….是写到sqlite里面吗？查找的时候正则匹配？</li>
 </ul>
+<h4 id="练习4-13"><a href="#练习4-13" class="headerlink" title="练习4.13"></a>练习4.13</h4><p>基于JSON开发的web服务,开放电影数据库让你可以在<a href="https://omdbapi.com/上通过名字来搜索电影并下载海报图片.开发一个poster工具以通过命令行指定的电影名称来下载海报">https://omdbapi.com/上通过名字来搜索电影并下载海报图片.开发一个poster工具以通过命令行指定的电影名称来下载海报</a></p>
+<ul>
+<li>没什么兴趣，就一个JSON解析</li>
+</ul>
+<h4 id="练习4-14"><a href="#练习4-14" class="headerlink" title="练习4.14:"></a>练习4.14:</h4><p>创建一个web服务器,可以通过查询github并缓存信息,然后可以浏览bug列表、里程碑信息以及用户参与的信息</p>
+<ul>
+<li>这题应该意图就是编写模板了</li>
+<li>至于缓存大概用Redis吧</li>
+<li>我很懒，就随便搞了个模板测试了下用法</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"html/template"</span></div><div class="line">	<span class="string">"net/http"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	<span class="keyword">const</span> templ = <span class="string">`&lt;p&gt;A: &#123;.A&#125;&lt;/p&gt;&lt;p&gt;B: &#123;.B&#125;&lt;/p&gt;`</span>  (换&#123;&#125;,因为hexo渲染问题)</div><div class="line">	t := template.Must(template.New(<span class="string">"escape"</span>).Parse(templ))</div><div class="line"></div><div class="line">	http.HandleFunc(<span class="string">"/"</span>, <span class="function"><span class="keyword">func</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</div><div class="line">		<span class="keyword">var</span> data <span class="keyword">struct</span> &#123;</div><div class="line">			A <span class="keyword">string</span></div><div class="line">			B template.HTML</div><div class="line">		&#125;</div><div class="line">		data.A = <span class="string">"&lt;b&gt;Hello!&lt;/b&gt;"</span></div><div class="line">		data.B = <span class="string">"&lt;b&gt;Hello!&lt;/b&gt;"</span></div><div class="line"></div><div class="line">		t.Execute(w, data)</div><div class="line">	&#125;)</div><div class="line">	http.ListenAndServe(<span class="string">":8888"</span>, <span class="literal">nil</span>)</div><div class="line"></div><div class="line">&#125;</div><div class="line"></div></pre></td></tr></table></figure>
 
             
         </div>
@@ -337,7 +348,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--disabled">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/13/the_go_programming_lang_usage_answer_5/"  data-tooltip="Go程序设计语言课后习题答案-第五章(基本数据)">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -418,7 +429,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--disabled">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/13/the_go_programming_lang_usage_answer_5/"  data-tooltip="Go程序设计语言课后习题答案-第五章(基本数据)">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -686,7 +697,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 82 篇文章
+                找到 83 篇文章
             </p>
         </div>
     </div>
