@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-06-14T15:39:58.138Z</updated>
+  <updated>2018-06-14T15:41:55.247Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -16,11 +16,11 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>Go程序设计语言课后习题答案-第五章(基本数据)</title>
+    <title>Go程序设计语言课后习题答案-第五章(函数)</title>
     <link href="https://www.zoulei.net/2018/06/13/the_go_programming_lang_usage_answer_5/"/>
     <id>https://www.zoulei.net/2018/06/13/the_go_programming_lang_usage_answer_5/</id>
     <published>2018-06-13T14:44:47.000Z</published>
-    <updated>2018-06-14T15:39:58.138Z</updated>
+    <updated>2018-06-14T15:41:55.247Z</updated>
     
     <content type="html"><![CDATA[<h3 id="第五章"><a href="#第五章" class="headerlink" title="第五章"></a>第五章</h3><ul>
 <li>函数声明</li>
