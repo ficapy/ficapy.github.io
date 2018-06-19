@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-06-14T15:41:55.247Z</updated>
+  <updated>2018-06-19T14:38:39.041Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="https://www.zoulei.net/2018/06/13/the_go_programming_lang_usage_answer_5/"/>
     <id>https://www.zoulei.net/2018/06/13/the_go_programming_lang_usage_answer_5/</id>
     <published>2018-06-13T14:44:47.000Z</published>
-    <updated>2018-06-14T15:41:55.247Z</updated>
+    <updated>2018-06-19T14:38:39.041Z</updated>
     
     <content type="html"><![CDATA[<h3 id="第五章"><a href="#第五章" class="headerlink" title="第五章"></a>第五章</h3><ul>
 <li>函数声明</li>
@@ -80,6 +80,31 @@
 <li>因为传递给forEachNode的是html.Node的指针，当return的时候即为找到的第一个id，如果遍历完了还没有，最终返回值为n.FirstChild会为nil</li>
 </ul>
 <figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">ElementByID</span><span class="params">(doc *html.Node, id <span class="keyword">string</span>)</span> *<span class="title">html</span>.<span class="title">Node</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> elem *html.Node</div><div class="line">	forEachNode(doc,</div><div class="line">		<span class="function"><span class="keyword">func</span><span class="params">(n *html.Node)</span> <span class="title">bool</span></span> &#123;</div><div class="line">			<span class="keyword">if</span> n.Type == html.ElementNode &#123;</div><div class="line">				<span class="keyword">for</span> _, a := <span class="keyword">range</span> n.Attr &#123;</div><div class="line">					<span class="keyword">if</span> a.Key == <span class="string">"id"</span> &amp;&amp; a.Val == id &#123;</div><div class="line">						elem = n</div><div class="line">						<span class="keyword">return</span> <span class="literal">false</span></div><div class="line">					&#125;</div><div class="line">				&#125;</div><div class="line">			&#125;</div><div class="line">			<span class="keyword">return</span> <span class="literal">true</span></div><div class="line">		&#125;,</div><div class="line">		<span class="literal">nil</span>)</div><div class="line">	<span class="keyword">return</span> elem</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习5-9"><a href="#练习5-9" class="headerlink" title="练习5.9:"></a>练习5.9:</h4><p>写一个函数expand(s string,f func(string)string)string,该函数替换参数s中每一个子字符串”$foo”为f(“foo”)的返回值</p>
+<ul>
+<li>感觉应该是类似于<code>${foo}</code>这样，否则$后面会有很长的字符串，不利于模板进行分割</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> <span class="string">"strings"</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">Expand</span><span class="params">(s <span class="keyword">string</span>, f <span class="keyword">func</span>(<span class="keyword">string</span>)</span> <span class="title">string</span>) <span class="title">string</span></span> &#123;</div><div class="line">	ret := strings.Replace(s, <span class="string">"$foo"</span>, f(<span class="string">"foo"</span>), <span class="number">1024</span>)</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习5-10"><a href="#练习5-10" class="headerlink" title="练习5.10:"></a>练习5.10:</h4><p>重写topSort以使用map代替slice并去掉开头的排序.结果不是唯一的,验证这个结果是合法的拓扑排序</p>
+<ul>
+<li>跳过┑(￣Д ￣)┍</li>
+</ul>
+<h4 id="练习5-11"><a href="#练习5-11" class="headerlink" title="练习5.11:"></a>练习5.11:</h4><p>现在有”线性代数”这门课程,它的先决课程是”微积分”.拓展topSort以函数输出结果</p>
+<ul>
+<li>跳过┑(￣Д ￣)┍</li>
+</ul>
+<h4 id="练习5-12"><a href="#练习5-12" class="headerlink" title="练习5.12:"></a>练习5.12:</h4><p>5.5节(gopl.io/ch5/outline2)的startElement和endElement函数共享一个全局变量depth.把它们变为匿名函数以共享outline函数的一个局部变量</p>
+<ul>
+<li>跳过┑(￣Д ￣)┍</li>
+</ul>
+<h4 id="练习5-13"><a href="#练习5-13" class="headerlink" title="练习5.13:"></a>练习5.13:</h4><p>修改crawl函数保存找到的页面,根据需要创建目录.不要保存不同域名下的页面.比如本来的页面来自golang.org,那么就把它们保存下来但是不要保存vimeo.com下的页面</p>
+<ul>
+<li>跳过┑(￣Д ￣)┍</li>
+</ul>
+<h4 id="练习5-14"><a href="#练习5-14" class="headerlink" title="练习5.14:"></a>练习5.14:</h4><p>使用广度优先遍历搜索一个不同的拓扑结构.比如,你可以借鉴拓扑排序的例子里的课程依赖关系,计算机文件系统的分层结构,或者从当前城市的官网上下载公共汽车或者地铁的路线图.</p>
+<ul>
+<li>跳过┑(￣Д ￣)┍</li>
+</ul>
 ]]></content>
     
     <summary type="html">
