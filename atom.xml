@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-06-20T14:19:28.366Z</updated>
+  <updated>2018-06-21T15:40:08.410Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -14,6 +14,73 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Go程序设计语言课后习题答案-第六章(方法)</title>
+    <link href="https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/"/>
+    <id>https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/</id>
+    <published>2018-06-21T15:24:50.000Z</published>
+    <updated>2018-06-21T15:40:08.410Z</updated>
+    
+    <content type="html"><![CDATA[<h3 id="第六章"><a href="#第六章" class="headerlink" title="第六章"></a>第六章</h3><ul>
+<li>方法声明</li>
+<li>指针接收者的方法</li>
+<li>通过结构体内嵌组成类型</li>
+<li>方法变量与表达式</li>
+<li>示例: 位向量</li>
+<li>封装</li>
+</ul>
+<p>这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多</p>
+<a id="more"></a>
+<h4 id="练习6-1"><a href="#练习6-1" class="headerlink" title="练习6.1:"></a>练习6.1:</h4><p>实现这些附加的方法</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">func (*InSet) Len() int</div><div class="line">func (*InSet) Remove(x int)</div><div class="line">func (*InSet) Clear()</div><div class="line">func (*InSet) Copy() *InSet</div></pre></td></tr></table></figure>
+<ul>
+<li>首先需要注意的是，在该实现中位向量并不是完整的从左往右，在slice中每个元素是从右向左的</li>
+<li>书本上给出了稍微复杂的string实现,Len参照string就可以了</li>
+<li>Remove就是将某二进制位置为0,比置为1稍微复杂一点，方案为左移后取反再求与运算</li>
+<li>Clear实行slice的清空，slice[:0]即可</li>
+<li>Copy，使用make新建一个同等长度的slice，再copy完全拷贝</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">Len</span><span class="params">()</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> _, word := <span class="keyword">range</span> s.words &#123;</div><div class="line">		<span class="keyword">if</span> word == <span class="number">0</span> &#123;</div><div class="line">			<span class="keyword">continue</span></div><div class="line">		&#125;</div><div class="line">		<span class="keyword">for</span> j := <span class="number">0</span>; j &lt; <span class="number">64</span>; j++ &#123;</div><div class="line">			<span class="keyword">if</span> word&amp;(<span class="number">1</span>&lt;&lt;<span class="keyword">uint</span>(j)) != <span class="number">0</span> &#123;</div><div class="line">				ret += <span class="number">1</span></div><div class="line">			&#125;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">Remove</span><span class="params">(x <span class="keyword">int</span>)</span></span> &#123;</div><div class="line">	word, bit := x/<span class="number">64</span>, <span class="keyword">uint</span>(x%<span class="number">64</span>)</div><div class="line">	s.words[word] &amp;= (^(<span class="number">1</span> &lt;&lt; bit))</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">Clear</span><span class="params">()</span></span> &#123;</div><div class="line">	s.words = s.words[:<span class="number">0</span>]</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">Copy</span><span class="params">()</span> *<span class="title">IntSet</span></span> &#123;</div><div class="line">	newWords := <span class="built_in">make</span>([]<span class="keyword">uint64</span>, <span class="built_in">len</span>(s.words))</div><div class="line">	<span class="built_in">copy</span>(newWords, s.words)</div><div class="line">	<span class="keyword">return</span> &amp;IntSet&#123;newWords&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习6-2"><a href="#练习6-2" class="headerlink" title="练习6.2:"></a>练习6.2:</h4><p>定义一个变长方法(*InSet).AddAll(…int),它允许接受一串整型值作为参数,比如s.AddAll(1,2,3)</p>
+<ul>
+<li>因为已经实现了Add方法，此处直接内部调用Add就可以了</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">AddALL</span><span class="params">(values ...<span class="keyword">int</span>)</span></span> &#123;</div><div class="line">	<span class="keyword">for</span> _, v := <span class="keyword">range</span> values &#123;</div><div class="line">		s.Add(v)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习6-3"><a href="#练习6-3" class="headerlink" title="练习6.3:"></a>练习6.3:</h4><p>(*InSet).UnionWith计算了两个集合的并集,使用|操作符对每个字符进行按位或操作.实现交集、差集和对称差运算(两个集合的对称差只包含某个集合中存在的元素)</p>
+<ul>
+<li>额~~~，搞个最简单的求并集好了….,最后得到结果覆盖一下原有的slice</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">And</span><span class="params">(t *IntSet)</span></span> &#123;</div><div class="line">	min := math.Min(<span class="built_in">len</span>(s.words), <span class="built_in">len</span>(t.words))</div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; min; i++ &#123;</div><div class="line">		s.words[i] &amp;= t.words[i]</div><div class="line">	&#125;</div><div class="line">	s.words = s.words[:min]</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习6-4"><a href="#练习6-4" class="headerlink" title="练习6.4:"></a>练习6.4:</h4><p>添加方法Elems返回包含集合元素的slice,这适合在range循环中使用</p>
+<ul>
+<li>同Len方法,都是遍历,因此，从设计角度上说，应该string和len方法都直接依赖Elems的实现</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">Elems</span><span class="params">()</span> []<span class="title">int</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> ret []<span class="keyword">int</span></div><div class="line">	<span class="keyword">for</span> i, word := <span class="keyword">range</span> s.words &#123;</div><div class="line">		<span class="keyword">if</span> word == <span class="number">0</span> &#123;</div><div class="line">			<span class="keyword">continue</span></div><div class="line">		&#125;</div><div class="line">		<span class="keyword">for</span> j := <span class="number">0</span>; j &lt; <span class="number">64</span>; j++ &#123;</div><div class="line">			<span class="keyword">if</span> word&amp;(<span class="number">1</span>&lt;&lt;<span class="keyword">uint</span>(j)) != <span class="number">0</span> &#123;</div><div class="line">				ret = <span class="built_in">append</span>(ret, <span class="number">64</span>*i+j)</div><div class="line">			&#125;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习6-5"><a href="#练习6-5" class="headerlink" title="练习6.5:"></a>练习6.5:</h4><p>InSet使用的每个字符类型都是int64,但是64位的计算在32位平台上的效率不高.改写程序以使用uint类型,这是适应平台的无符号整型.除以64的操作可以使用一个常量来表示32位或者64位.你或许可以使用一个讨巧的表达式32&lt;&lt;(^uint(0)&gt;&gt;63)来表示除数</p>
+<ul>
+<li>该题只是从效率角度来提供了一种思路，顺便给了你一个trick，uint在32位平台使用32位长度,64位使用64长度,<code>32&lt;&lt;(^uint(0)&gt;&gt;63)</code>, 当为32位的时候后面为0,得到32,为64的时候，后面为1得到64</li>
+</ul>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;h3 id=&quot;第六章&quot;&gt;&lt;a href=&quot;#第六章&quot; class=&quot;headerlink&quot; title=&quot;第六章&quot;&gt;&lt;/a&gt;第六章&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;方法声明&lt;/li&gt;
+&lt;li&gt;指针接收者的方法&lt;/li&gt;
+&lt;li&gt;通过结构体内嵌组成类型&lt;/li&gt;
+&lt;li&gt;方法变量与表达式&lt;/li&gt;
+&lt;li&gt;示例: 位向量&lt;/li&gt;
+&lt;li&gt;封装&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="Go程序设计语言" scheme="https://www.zoulei.net/categories/Go%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%E8%AF%AD%E8%A8%80/"/>
+    
+    
+  </entry>
   
   <entry>
     <title>Go程序设计语言课后习题答案-第五章(函数)</title>
@@ -1289,47 +1356,6 @@
     </summary>
     
       <category term="linux" scheme="https://www.zoulei.net/categories/linux/"/>
-    
-    
-  </entry>
-  
-  <entry>
-    <title>利用BK树优化汉明距离查询</title>
-    <link href="https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/"/>
-    <id>https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/</id>
-    <published>2018-03-04T02:45:47.000Z</published>
-    <updated>2018-03-04T03:22:06.071Z</updated>
-    
-    <content type="html"><![CDATA[<p><a href="/2018/03/03/BKTree_VPTree/">上一篇</a> 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍</p>
-<a id="more"></a>
-<h3 id="获得图片的simhash"><a href="#获得图片的simhash" class="headerlink" title="获得图片的simhash"></a>获得图片的simhash</h3><p>我们直接使用python的第三方库<a href="https://github.com/JohannesBuchner/imagehash">imagehash</a>。代码如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> PIL <span class="keyword">import</span> Image</div><div class="line"><span class="keyword">import</span> imagehash</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_phash</span><span class="params">(file_path)</span>:</span></div><div class="line">    img = Image.open(file_path)</div><div class="line">    phash = imagehash.phash(img).hash.flatten()</div><div class="line">    phash_list = list(map(bool, phash))</div><div class="line"></div><div class="line">    <span class="keyword">return</span> sum((<span class="number">2</span> ** k) * v <span class="keyword">for</span> k, v <span class="keyword">in</span> enumerate(phash_list[<span class="number">1</span>:][::<span class="number">-1</span>]))</div></pre></td></tr></table></figure></p>
-<p>需要注意的是。默认得到的phash是一个经过hex编码的字符串。这样会很长，而<span style="color:red"><strong>我们需要保存到数据库的数据是一个bigint类型。因此我们直接获得64位的np.array，</strong></span>将它转换成数字。因为int64中第一位是符号位。后63位是补码。如果直接将64位都转成正整数，很有可能会保存出错。从最方便的角度来说我们可以去掉第一位(实际上我测试了好多个。发现第一位基本都是1)。这样转换得到的数字就能直接存储到数据库了。</p>
-<p>如果真的要模拟转换成bigint的效果。可以看我写的<a href="https://gist.github.com/ficapy/e7012d193c5ea85110a404c006ed7273">这个</a></p>
-<h3 id="数据库优化"><a href="#数据库优化" class="headerlink" title="数据库优化"></a>数据库优化</h3><ul>
-<li>来个示例</li>
-</ul>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line"><span class="comment">--  创建表</span></div><div class="line"><span class="keyword">create</span> <span class="keyword">table</span> <span class="keyword">if</span> <span class="keyword">not</span> <span class="keyword">exists</span> int8tmp_2</div><div class="line">(</div><div class="line">	a <span class="built_in">bigint</span></div><div class="line">);</div><div class="line"></div><div class="line"><span class="comment">-- 写入一百万条数据</span></div><div class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> int8tmp_2 <span class="keyword">SELECT</span> val</div><div class="line">                      <span class="keyword">FROM</span> (<span class="keyword">SELECT</span> <span class="keyword">sqrt</span>(random()) :: <span class="built_in">NUMERIC</span> * <span class="number">9223372036854775807</span> * <span class="number">2</span> -</div><div class="line">                                   <span class="number">9223372036854775807</span> :: <span class="built_in">NUMERIC</span> <span class="keyword">AS</span> val</div><div class="line">                            <span class="keyword">FROM</span> generate_series(<span class="number">1</span>, <span class="number">1000000</span>)) t;</div><div class="line"><span class="comment">-- 创建一个查询函数</span></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">OR</span> <span class="keyword">REPLACE</span> <span class="keyword">FUNCTION</span> <span class="keyword">bit_count</span>(<span class="keyword">value</span> <span class="built_in">BIGINT</span>)</div><div class="line">  <span class="keyword">RETURNS</span> <span class="built_in">NUMERIC</span></div><div class="line"><span class="keyword">AS</span> $$ <span class="keyword">SELECT</span> <span class="keyword">SUM</span>((<span class="keyword">value</span> &gt;&gt; <span class="built_in">bit</span>) &amp; <span class="number">1</span>)</div><div class="line">      <span class="keyword">FROM</span> generate_series(<span class="number">0</span>, <span class="number">63</span>) <span class="built_in">bit</span> $$</div><div class="line"><span class="keyword">LANGUAGE</span> <span class="keyword">SQL</span> IMMUTABLE <span class="keyword">STRICT</span>;</div><div class="line"></div><div class="line"><span class="comment">-- 查询</span></div><div class="line"><span class="keyword">SELECT</span></div><div class="line">  a,</div><div class="line">  <span class="keyword">bit_count</span>(a # <span class="number">8192711222023195111</span>) <span class="keyword">AS</span> hd</div><div class="line"><span class="keyword">FROM</span> int8tmp_2</div><div class="line"><span class="keyword">WHERE</span> <span class="keyword">bit_count</span>(a # <span class="number">8192711222023195111</span>) &lt; <span class="number">4</span></div><div class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> hd;    </div><div class="line"></div><div class="line"><span class="comment">-- 结果大概这样</span></div><div class="line"><span class="comment">-- [2018-03-04 11:06:56] 1 row retrieved starting from 1 in 25s 403ms (execution: 25s 383ms, fetching: 20ms)</span></div></pre></td></tr></table></figure>
-<ul>
-<li>使用BK树创建索引</li>
-</ul>
-<p>我选择了这个扩展<a href="https://github.com/fake-name/pg-spgist_hamming">fake-name/pg-spgist_hamming</a>. 安装的套路是这样的(只支持PG9.6以上版本)</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">git clone .......</div><div class="line">cd bktree</div><div class="line">USE_PGXS=1 make</div><div class="line">USE_PGXS=1 make install</div></pre></td></tr></table></figure>
-<p><span style="color:red"><strong>注意这个库同时提供了bktree和vptree,但是我没搞懂vptree,vptree的表现很奇怪,另外不能同时使用bktree和vptree。因为它们有一些重载的操作符重复了</strong></span></p>
-<ul>
-<li>使用流程</li>
-</ul>
-<figure class="highlight sql"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="comment">-- 启用扩展</span></div><div class="line"><span class="keyword">CREATE</span> EXTENSION bktree;</div><div class="line"><span class="comment">-- 创建</span></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">INDEX</span> <span class="keyword">IF</span> <span class="keyword">NOT</span> <span class="keyword">EXISTS</span> int8idx_2 <span class="keyword">ON</span> int8tmp_2 <span class="keyword">USING</span> spgist ( a bktree_ops );</div><div class="line"><span class="comment">-- 查询( &lt;-&gt; 运算符表示计算汉明距离, &lt;@()表示符合汉明距离小于N)</span></div><div class="line"><span class="keyword">SELECT</span></div><div class="line">  a,</div><div class="line">  a &lt;-&gt; <span class="number">8192711222023195111</span> <span class="keyword">AS</span> hd</div><div class="line"><span class="keyword">FROM</span> int8tmp_2</div><div class="line"><span class="keyword">WHERE</span> a &lt;@ (<span class="number">8192711222023195111</span>, <span class="number">4</span>)</div><div class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> hd;</div><div class="line"><span class="comment">-- 结果大概是这样的</span></div><div class="line">[2018-03-04 11:18:25] 1 row retrieved starting from 1 in 44ms (execution: 31ms, fetching: 13ms)</div></pre></td></tr></table></figure>
-<p>世界真美妙┑(￣Д ￣)┍</p>
-<h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="https://github.com/digoal/blog/blob/master/201708/20170804_01.md">海量数据,海明(simhash)距离高效检索(smlar) - 阿里云RDS PosgreSQL最佳实践</a><br><a href="https://stackoverflow.com/questions/46280722/bit-count-function-in-postgresql">bit_count function in PostgreSQL</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;&lt;a href=&quot;/2018/03/03/BKTree_VPTree/&quot;&gt;上一篇&lt;/a&gt; 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="database" scheme="https://www.zoulei.net/categories/database/"/>
     
     
   </entry>

@@ -6,23 +6,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>Tornado 之httpserver - 邹雷</title>
+    <title>Go程序设计语言课后习题答案-第六章(方法) - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
-    <meta name="description" content="Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)">
+    <meta name="description" content="第六章 方法声明 指针接收者的方法 通过结构体内嵌组成类型 方法变量与表达式 示例: 位向量 封装  这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="Tornado 之httpserver">
-<meta property="og:url" content="https://www.zoulei.net/2018/03/15/tornado_httpserver/index.html">
+<meta property="og:title" content="Go程序设计语言课后习题答案-第六章(方法)">
+<meta property="og:url" content="https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)">
-<meta property="og:updated_time" content="2018-03-15T09:14:55.763Z">
+<meta property="og:description" content="第六章 方法声明 指针接收者的方法 通过结构体内嵌组成类型 方法变量与表达式 示例: 位向量 封装  这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多">
+<meta property="og:updated_time" content="2018-06-21T15:40:08.410Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Tornado 之httpserver">
-<meta name="twitter:description" content="Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)">
+<meta name="twitter:title" content="Go程序设计语言课后习题答案-第六章(方法)">
+<meta name="twitter:description" content="第六章 方法声明 指针接收者的方法 通过结构体内嵌组成类型 方法变量与表达式 示例: 位向量 封装  这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多">
 <meta name="twitter:creator" content="@aec4d">
     
     
@@ -229,19 +229,19 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title" itemprop="headline">
-            Tornado 之httpserver
+            Go程序设计语言课后习题答案-第六章(方法)
         </h1>
     
     <div class="post-meta">
-    <time itemprop="datePublished" datetime="2018-03-15T11:37:29+08:00">
+    <time itemprop="datePublished" datetime="2018-06-21T23:24:50+08:00">
 	
-		    3月 15, 2018
+		    6月 21, 2018
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/Tornado/">Tornado</a>
+    <a class="category-link" href="/categories/Go程序设计语言/">Go程序设计语言</a>
 
 
     
@@ -251,16 +251,45 @@
     
     <div class="post-content markdown" itemprop="articleBody">
         <div class="main-content-wrap">
-            <p>Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)</p>
+            <h3 id="第六章"><a href="#第六章" class="headerlink" title="第六章"></a>第六章</h3><ul>
+<li>方法声明</li>
+<li>指针接收者的方法</li>
+<li>通过结构体内嵌组成类型</li>
+<li>方法变量与表达式</li>
+<li>示例: 位向量</li>
+<li>封装</li>
+</ul>
+<p>这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多</p>
 <a id="more"></a>
-<h3 id="目标"><a href="#目标" class="headerlink" title="目标"></a>目标</h3><p>本文的基本目标是实现这个需求<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> httpserver</div><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> ioloop</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">handle_request</span><span class="params">(request)</span>:</span></div><div class="line">    message = <span class="string">b"Hello World\n"</span></div><div class="line">    request.write(<span class="string">b"HTTP/1.0 200 OK\r\nContent-Length: %d\r\n\r\n%s"</span> % (</div><div class="line">        len(message), message))</div><div class="line">    request.finish()</div><div class="line"></div><div class="line">http_server = httpserver.HTTPServer(handle_request)</div><div class="line">http_server.listen(<span class="number">8888</span>)</div><div class="line">ioloop.IOLoop.instance().start()</div></pre></td></tr></table></figure></p>
-<h3 id="最简服务端"><a href="#最简服务端" class="headerlink" title="最简服务端"></a>最简服务端</h3><p>根据上一篇。我们可以想到当执行listen监听操作的时候，会创建一个监听socket.然后将处理函数添加到事件回调中。不考虑异常因素，最简单的是这样<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> socket</div><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> ioloop</div><div class="line"><span class="keyword">from</span> selectors <span class="keyword">import</span> EVENT_READ, EVENT_WRITE</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">HTTPServer</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, handler)</span>:</span></div><div class="line">        self.handler = handler</div><div class="line">        self.io_loop = ioloop.IOLoop.instance()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">listen</span><span class="params">(self, port)</span>:</span></div><div class="line">        self.s = socket.socket()</div><div class="line">        self.s.setblocking(<span class="number">0</span>)</div><div class="line">        self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, <span class="number">1</span>)</div><div class="line">        self.s.bind((<span class="string">'127.0.0.1'</span>, port))</div><div class="line">        self.s.listen(<span class="number">128</span>)</div><div class="line">        self.io_loop.add_handler(self.s.fileno(), EVENT_READ, self._handle)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_handle</span><span class="params">(self)</span>:</span></div><div class="line">        client_sock, _ = self.s.accept()</div><div class="line">        client_sock.send(<span class="string">b"HTTP/1.0 200 OK\r\nContent-Length: 12\r\n\r\nHello World\n"</span>)</div><div class="line">        client_sock.close()</div></pre></td></tr></table></figure><br>对于监听socket,当触发可读的时候意味有新的客户端连接进来了，此时调用回调进行accept得到交互socket连接。简单起见直接send发送一个简易的HTTP消息然后关闭socket</p>
-<h3 id="封装Request对象"><a href="#封装Request对象" class="headerlink" title="封装Request对象"></a>封装Request对象</h3><p>从上面的示例中可以看到。它没有调用传入的request函数，因为socket对象并没有write和finish方法。此外，即使我们将socket的send和close当做write和finish。它还有一个巨大的缺陷。我们只是进行了发送，而没有对接收到的http报文进行任何处理。<br>一般而言，会从它的行首、头部、消息体得到某一些我们需要的内容，然后对内容进行处理，最终写入信息，过程结束。因此，封装一个Request对象是必须的，最后将封装的对象传入到handler函数以供使用。如何封装呢？我们只需要知道一个完整的HTTP报文即可以得到一个requests对象，而一个http报文又有明显的分隔符.例如下文这个请求报文<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">GET /docs/index.html HTTP/1.1</div><div class="line">Host: www.ipinfo.com</div><div class="line">Accept: image/gif, image/jpeg, */*</div><div class="line">Accept-Language: en-us</div><div class="line">Accept-Encoding: gzip, deflate</div><div class="line">User-Agent: Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1)</div><div class="line">(blank line)</div></pre></td></tr></table></figure></p>
-<p>获取流程如下。当读取到第一个<code>\r\n</code>即确定Reques Line部分，当读取到<code>\r\n\r\n</code>即确定Header部分，如果Header部分存在Content-Length则表示存在body部分，存在则继续读取Content-Length长度。如此下来单个HTTP报文读取完毕。可以构建这个过程，Requests Line读取完毕后—&gt;回调读取Header部分—&gt;回调读取Body部分—&gt;构建Request对象—&gt;回调handler函数，将Request对象传入。另外第一步可以省略,读取Header即包含Requests Line</p>
-<p>可以看到对于一个socket对象,将它根据分隔符以及长度读取就能解析成单个http包，另外对于很多流协议也是如此。我们将socket封装一下。让它提供两个功能read_until、read_bytes。允许读取到分隔符后调用回调函数、读取到固定长度后调用回调函数。最简代码如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> ioloop</div><div class="line"><span class="keyword">from</span> selectors <span class="keyword">import</span> EVENT_READ</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">IOStream</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, socket)</span>:</span></div><div class="line">        self.socket = socket</div><div class="line">        self.ioloop = ioloop.IOLoop.instance()</div><div class="line">        self.ioloop.add_handler(self.socket.fileno(), EVENT_READ, self._handler)</div><div class="line">        self._read_buffer = <span class="string">b""</span></div><div class="line">        self._read_delimiter = <span class="keyword">None</span></div><div class="line">        self._read_bytes = <span class="keyword">None</span></div><div class="line">        self._read_callback = <span class="keyword">None</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_handler</span><span class="params">(self)</span>:</span></div><div class="line">        data = self.socket.recv(<span class="number">1024</span>)</div><div class="line">        self._read_buffer += data</div><div class="line">        <span class="keyword">if</span> self._read_delimiter <span class="keyword">and</span> self._read_delimiter <span class="keyword">in</span> self._read_buffer:</div><div class="line">            result, self._read_buffer = self._read_buffer.split(self._read_delimiter)</div><div class="line">            self._read_callback(result)</div><div class="line">            self._read_delimiter = <span class="keyword">None</span></div><div class="line">            self._read_callback = <span class="keyword">None</span></div><div class="line">        <span class="keyword">elif</span> self._read_bytes <span class="keyword">and</span> len(self._read_buffer) &gt; self._read_bytes:</div><div class="line">            result = self._read_buffer[:self._read_bytes]</div><div class="line">            self._read_buffer = self._read_buffer[self._read_bytes:]</div><div class="line">            self._read_callback(result)</div><div class="line">            self._read_bytes = <span class="keyword">None</span></div><div class="line">            self._read_callback = <span class="keyword">None</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">read_until</span><span class="params">(self, delimiter, callback)</span>:</span></div><div class="line">        self._read_delimiter = delimiter</div><div class="line">        self._read_callback = callback</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">read_bytes</span><span class="params">(self, length, callback)</span>:</span></div><div class="line">        self._read_bytes = length</div><div class="line">        self._read_callback = callback</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">write</span><span class="params">(self, data)</span>:</span></div><div class="line">        self.socket.send(data)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">close</span><span class="params">(self)</span>:</span></div><div class="line">        self.ioloop.ioloop.unregister(self.socket.fileno())</div><div class="line">        self.socket.close()</div></pre></td></tr></table></figure><br>对于创建的IOStream对象，它添加READ事件，将回调函数设置为self._handler。当使用read_until的时候将历史数据给callback函数调用。<br>再看一下HTTPConnect对象<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">HTTPConnection</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, io_stream, handler_callback)</span>:</span></div><div class="line">        self.io_loop = ioloop.IOLoop.instance()</div><div class="line">        self.stream = io_stream</div><div class="line">        self.handler_callback = handler_callback</div><div class="line">        self.stream.read_until(<span class="string">b'\r\n\r\n'</span>, self._parse_header)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_parse_header</span><span class="params">(self, data)</span>:</span></div><div class="line">        <span class="comment"># 忽略行首，全部当做header</span></div><div class="line">        request = Request(connect=self, header=data)</div><div class="line">        self.handler_callback(request)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">write</span><span class="params">(self, data)</span>:</span></div><div class="line">        self.stream.write(data)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">finish</span><span class="params">(self)</span>:</span></div><div class="line">        self.stream.close()</div></pre></td></tr></table></figure><br>显然，它传入的是IOStream对象，并且在初始化的时候就调用read_until读取HTTP Header部分内容。简单起见，这里只读取并没有解析。最后封装成Request对象。让handle_request函数调用。达到我们文章开头的目的<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Request</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, connect, header)</span>:</span></div><div class="line">        self.connect = connect</div><div class="line">        self.header = header</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">write</span><span class="params">(self, data)</span>:</span></div><div class="line">        self.connect.write(data)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">finish</span><span class="params">(self)</span>:</span></div><div class="line">        self.connect.finish()</div></pre></td></tr></table></figure><br>将最开始的最简服务器部分稍微改动一下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">_handle</span><span class="params">(self)</span>:</span></div><div class="line">    client_sock, _ = self.s.accept()</div><div class="line">    stream = IOStream(client_sock)</div><div class="line">    HTTPConnection(stream, self.handler)</div></pre></td></tr></table></figure></p>
-<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>IOStream、HTTPConnection、Request、HTTPServer。其中暴漏给用户的几乎只有Request对象，从上面的分析中应该可以发现。将文件描述符加入事件，等待IOStream的全局_header进行回调，全局_header又针对各种情况(分隔符条件满足、长度条件满足)发起回调。同时<span style="color:red"><strong>如果不调用iostream.read_until等那么全局的_header就没有意义了</strong></span>。搞定IOStream后。立马在HTTPConnection里面调用<code>iostream.read_until</code>。被回调则表明HTTP头部接收完成。组装成Requests然后调用handle_request。</p>
-<p>作用分工:<br>HTTPServer:     创建监听socket,传入http处理回调函数<br>IOStream:   提供通用TCP流解析，最重要的是提供了write、read_until、read_length，<span style="color:red"><strong>且可以传入回调</strong></span><br>Request:    将字符串解析成一个Request对象。便于简单的获取访问信息。如url、host、port、body等等<br>HTTPConnection:  将前三者联系起来,调用IOStream.read_until开启获取HTTP数据包的流程</p>
-<p>另外本文简单起见，只注册了READ事件。对于send操作。同样是需要进行注册事件。等到WRITE事件触发才执行send操作，希望不要引起误解，另外本例中使用HTTP/1.0的逻辑，处理完成单个链接后直接关闭。对于HTTP/1.1来说要实现keep-alive只需要在finish的使用并不关闭链接，而是继续执行self.read_until(b’\r\n\r\n’,self._parse_header)继续等待处理下一个HTTP报文</p>
+<h4 id="练习6-1"><a href="#练习6-1" class="headerlink" title="练习6.1:"></a>练习6.1:</h4><p>实现这些附加的方法</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">func (*InSet) Len() int</div><div class="line">func (*InSet) Remove(x int)</div><div class="line">func (*InSet) Clear()</div><div class="line">func (*InSet) Copy() *InSet</div></pre></td></tr></table></figure>
+<ul>
+<li>首先需要注意的是，在该实现中位向量并不是完整的从左往右，在slice中每个元素是从右向左的</li>
+<li>书本上给出了稍微复杂的string实现,Len参照string就可以了</li>
+<li>Remove就是将某二进制位置为0,比置为1稍微复杂一点，方案为左移后取反再求与运算</li>
+<li>Clear实行slice的清空，slice[:0]即可</li>
+<li>Copy，使用make新建一个同等长度的slice，再copy完全拷贝</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">Len</span><span class="params">()</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> _, word := <span class="keyword">range</span> s.words &#123;</div><div class="line">		<span class="keyword">if</span> word == <span class="number">0</span> &#123;</div><div class="line">			<span class="keyword">continue</span></div><div class="line">		&#125;</div><div class="line">		<span class="keyword">for</span> j := <span class="number">0</span>; j &lt; <span class="number">64</span>; j++ &#123;</div><div class="line">			<span class="keyword">if</span> word&amp;(<span class="number">1</span>&lt;&lt;<span class="keyword">uint</span>(j)) != <span class="number">0</span> &#123;</div><div class="line">				ret += <span class="number">1</span></div><div class="line">			&#125;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">Remove</span><span class="params">(x <span class="keyword">int</span>)</span></span> &#123;</div><div class="line">	word, bit := x/<span class="number">64</span>, <span class="keyword">uint</span>(x%<span class="number">64</span>)</div><div class="line">	s.words[word] &amp;= (^(<span class="number">1</span> &lt;&lt; bit))</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">Clear</span><span class="params">()</span></span> &#123;</div><div class="line">	s.words = s.words[:<span class="number">0</span>]</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">Copy</span><span class="params">()</span> *<span class="title">IntSet</span></span> &#123;</div><div class="line">	newWords := <span class="built_in">make</span>([]<span class="keyword">uint64</span>, <span class="built_in">len</span>(s.words))</div><div class="line">	<span class="built_in">copy</span>(newWords, s.words)</div><div class="line">	<span class="keyword">return</span> &amp;IntSet&#123;newWords&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习6-2"><a href="#练习6-2" class="headerlink" title="练习6.2:"></a>练习6.2:</h4><p>定义一个变长方法(*InSet).AddAll(…int),它允许接受一串整型值作为参数,比如s.AddAll(1,2,3)</p>
+<ul>
+<li>因为已经实现了Add方法，此处直接内部调用Add就可以了</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">AddALL</span><span class="params">(values ...<span class="keyword">int</span>)</span></span> &#123;</div><div class="line">	<span class="keyword">for</span> _, v := <span class="keyword">range</span> values &#123;</div><div class="line">		s.Add(v)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习6-3"><a href="#练习6-3" class="headerlink" title="练习6.3:"></a>练习6.3:</h4><p>(*InSet).UnionWith计算了两个集合的并集,使用|操作符对每个字符进行按位或操作.实现交集、差集和对称差运算(两个集合的对称差只包含某个集合中存在的元素)</p>
+<ul>
+<li>额~~~，搞个最简单的求并集好了….,最后得到结果覆盖一下原有的slice</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">And</span><span class="params">(t *IntSet)</span></span> &#123;</div><div class="line">	min := math.Min(<span class="built_in">len</span>(s.words), <span class="built_in">len</span>(t.words))</div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; min; i++ &#123;</div><div class="line">		s.words[i] &amp;= t.words[i]</div><div class="line">	&#125;</div><div class="line">	s.words = s.words[:min]</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习6-4"><a href="#练习6-4" class="headerlink" title="练习6.4:"></a>练习6.4:</h4><p>添加方法Elems返回包含集合元素的slice,这适合在range循环中使用</p>
+<ul>
+<li>同Len方法,都是遍历,因此，从设计角度上说，应该string和len方法都直接依赖Elems的实现</li>
+</ul>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *IntSet)</span> <span class="title">Elems</span><span class="params">()</span> []<span class="title">int</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> ret []<span class="keyword">int</span></div><div class="line">	<span class="keyword">for</span> i, word := <span class="keyword">range</span> s.words &#123;</div><div class="line">		<span class="keyword">if</span> word == <span class="number">0</span> &#123;</div><div class="line">			<span class="keyword">continue</span></div><div class="line">		&#125;</div><div class="line">		<span class="keyword">for</span> j := <span class="number">0</span>; j &lt; <span class="number">64</span>; j++ &#123;</div><div class="line">			<span class="keyword">if</span> word&amp;(<span class="number">1</span>&lt;&lt;<span class="keyword">uint</span>(j)) != <span class="number">0</span> &#123;</div><div class="line">				ret = <span class="built_in">append</span>(ret, <span class="number">64</span>*i+j)</div><div class="line">			&#125;</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习6-5"><a href="#练习6-5" class="headerlink" title="练习6.5:"></a>练习6.5:</h4><p>InSet使用的每个字符类型都是int64,但是64位的计算在32位平台上的效率不高.改写程序以使用uint类型,这是适应平台的无符号整型.除以64的操作可以使用一个常量来表示32位或者64位.你或许可以使用一个讨巧的表达式32&lt;&lt;(^uint(0)&gt;&gt;63)来表示除数</p>
+<ul>
+<li>该题只是从效率角度来提供了一种思路，顺便给了你一个trick，uint在32位平台使用32位长度,64位使用64长度,<code>32&lt;&lt;(^uint(0)&gt;&gt;63)</code>, 当为32位的时候后面为0,得到32,为64的时候，后面为1得到64</li>
+</ul>
 
             
         </div>
@@ -272,7 +301,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/15/tornado_web/"  data-tooltip="Tornado 之web">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -280,7 +309,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/14/tornado_ioloop/" data-tooltip="Tornado 之IOLoop">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/13/the_go_programming_lang_usage_answer_5/" data-tooltip="Go程序设计语言课后习题答案-第五章(函数)">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -295,17 +324,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -353,7 +382,7 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/15/tornado_web/"  data-tooltip="Tornado 之web">
+                    <a class="post-action-btn btn btn--disabled">
                 
                     <i class="fa fa-angle-left"></i>
                     <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
@@ -361,7 +390,7 @@
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/14/tornado_ioloop/" data-tooltip="Tornado 之IOLoop">
+                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/13/the_go_programming_lang_usage_answer_5/" data-tooltip="Go程序设计语言课后习题答案-第五章(函数)">
                 
                     <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
                     <i class="fa fa-angle-right"></i>
@@ -376,17 +405,17 @@
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/">
                 <i class="fa fa-google-plus"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/">
                 <i class="fa fa-facebook-official"></i>
             </a>
         </li>
         <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/">
                 <i class="fa fa-twitter"></i>
             </a>
         </li>
@@ -412,17 +441,17 @@
                 <div id="share-options-bar" class="share-options-bar" data-behavior="4">
     <ul class="share-options">
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/">
                 <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/">
                 <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
             </a>
         </li>
         <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/15/tornado_httpserver/">
+            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/">
                 <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
             </a>
         </li>
@@ -635,9 +664,9 @@
     
         <script>
              var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2018/03/15/tornado_httpserver/';
+                 this.page.url = 'https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/';
                  
-                    this.page.identifier = '2018/03/15/tornado_httpserver/';
+                    this.page.identifier = '2018/06/21/the_go_programming_lang_usage_answer_6/';
                  
              };
             (function() {
