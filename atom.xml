@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-06-24T09:27:30.351Z</updated>
+  <updated>2018-06-25T15:27:15.011Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="https://www.zoulei.net/2018/06/24/the_go_programming_lang_usage_answer_7/"/>
     <id>https://www.zoulei.net/2018/06/24/the_go_programming_lang_usage_answer_7/</id>
     <published>2018-06-24T09:13:40.000Z</published>
-    <updated>2018-06-24T09:27:30.351Z</updated>
+    <updated>2018-06-25T15:27:15.011Z</updated>
     
     <content type="html"><![CDATA[<h3 id="第七章"><a href="#第七章" class="headerlink" title="第七章"></a>第七章</h3><ul>
 <li>接口即约定</li>
@@ -66,6 +66,16 @@
 <li>感觉和上面的New差不多,只不过这个地方的初始化是使用了一个接口类型值</li>
 </ul>
 <figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> <span class="string">"io"</span></div><div class="line"></div><div class="line"><span class="keyword">type</span> LimitR <span class="keyword">struct</span> &#123;</div><div class="line">	R io.Reader</div><div class="line">	N <span class="keyword">int64</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(l *LimitR)</span> <span class="title">Read</span><span class="params">(p []<span class="keyword">byte</span>)</span> <span class="params">(n <span class="keyword">int</span>, err error)</span></span> &#123;</div><div class="line">	<span class="keyword">if</span> l.N &lt;= <span class="number">0</span> &#123;</div><div class="line">		<span class="keyword">return</span> <span class="number">0</span>, io.EOF</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">if</span> <span class="keyword">int64</span>(<span class="built_in">len</span>(p)) &gt; l.N &#123;</div><div class="line">		p = p[<span class="number">0</span>:l.N]</div><div class="line">	&#125;</div><div class="line">	n, err = l.R.Read(p)</div><div class="line">	l.N -= <span class="keyword">int64</span>(n)</div><div class="line">	<span class="keyword">return</span> n, err</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">LimitReader</span><span class="params">(r io.Reader, n <span class="keyword">int64</span>)</span> <span class="title">io</span>.<span class="title">Reader</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> &amp;LimitR&#123;r, n&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<h4 id="练习7-6"><a href="#练习7-6" class="headerlink" title="练习7.6:"></a>练习7.6:</h4><p>在tempflag中支持热力学温度</p>
+<ul>
+<li>这题没什么意义，添加一个case判断就可以了</li>
+<li>本小节主要讲解了flag.Value的原理,先有一个struct结构体,然后一个函数xxFlag(name string,value Type,usage string) *Type</li>
+<li>上述函数调用flag.CommandLine.Var进行注册，当调用flag.Parse的时候调用结构体相应的Set方法,达到了解析命令行参数的目的</li>
+</ul>
+<h3 id="练习7-7"><a href="#练习7-7" class="headerlink" title="练习7.7:"></a>练习7.7:</h3><p>请解释为什么默认值20.0没有写单位,而在帮助消息中却包含单位</p>
+<ul>
+<li>接上一题,因为除了String方法还有Set方法,查看帮助的时候会调用它,在celsiusFlag结构体中String方法直接添加了单位</li>
+</ul>
 ]]></content>
     
     <summary type="html">
