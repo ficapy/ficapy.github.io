@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-09-04T15:25:20.336Z</updated>
+  <updated>2018-09-04T16:17:53.681Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="https://www.zoulei.net/2018/09/04/redis_bloom_filter_case/"/>
     <id>https://www.zoulei.net/2018/09/04/redis_bloom_filter_case/</id>
     <published>2018-09-04T14:27:51.000Z</published>
-    <updated>2018-09-04T15:25:20.336Z</updated>
+    <updated>2018-09-04T16:17:53.681Z</updated>
     
     <content type="html"><![CDATA[<p>今天工作中遇到了一个小bug，本来主键id应该会存在，结果却并不存在与数据库里面。debug的时候需要查找多张表，看该id是否存在，由于未来可能还存在这种需求，就写了个小脚本。达到的效果就是给出id，能快速得到该id存在于哪张表的哪个字段</p>
 <a id="more"></a>
@@ -34,7 +34,7 @@
 <pre><code>select distinct(column) from schema.table
 </code></pre></li>
 <li><p>将这些值写入到Redis中</p>
-<p> 对于少量数据，可以很容易想到采用uuid-&gt;set的方式，记录每一个UUID存在于哪些字段中。但是当uuid的个数达到上千万级别的时候，该方式无疑会极大的浪费内存空间<br> 此时Bloom Filter数据结构就是一个极佳的形式,它拥有的特性是占据极少的空间, 判断值是否已经存在于已经添加的数据中，如果判断结果是不存在，那么它就一定没有被加入，如果结果是存在，那么有一定几率是没有加入的(具体原理可以参照下方文档)，查询效率极高，空间占用极小。因此，数据对应关系是这样的：column-&gt;uuid set。<br> Bloom Filter在Redis免费版中并不是内置的，是作为4.0版本中的一个外部模块，需要我们编译后使用<code>loadmodule</code>指令挂载.</p>
+<p> 对于少量数据，可以很容易想到采用uuid-&gt;set的方式，记录每一个UUID存在于哪些字段中。但是当uuid的个数达到上千万级别的时候，该方式无疑会极大的浪费内存空间<br> 此时Bloom Filter数据结构就是一个极佳的形式,它拥有的特性是, 判断值是否已经存在于已经添加的数据中，如果判断结果是不存在，那么它就一定没有被加入，如果结果是存在，那么有一定几率是没有加入的(具体原理可以参照下方文档)，查询效率极高，空间占用比上一种要小一些。因此，数据对应关系是这样的：column-&gt;uuid set。<br> Bloom Filter在Redis免费版中并不是内置的，是作为4.0以上版本中的一个外部模块，需要我们编译后使用<code>loadmodule</code>指令挂载.</p>
 </li>
 <li><p>客户端查询</p>
 <p> 写入Redis后需要查询的时候先keys得到所有的字段,对于每一个字段执行bf.exists查找该id是否存在于该字段中</p>
