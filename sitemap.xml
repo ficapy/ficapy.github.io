@@ -2,219 +2,226 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>https://www.zoulei.net/2018/09/04/redis_bloom_filter_case/</loc>
+    
+    <lastmod>2018-09-04T15:25:20.336Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>https://www.zoulei.net/2018/06/24/the_go_programming_lang_usage_answer_7/</loc>
     
-    <lastmod>2018-06-27T15:20:12.366Z</lastmod>
+    <lastmod>2018-06-27T15:20:12.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/</loc>
     
-    <lastmod>2018-06-21T15:40:08.410Z</lastmod>
+    <lastmod>2018-06-21T15:40:08.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/06/13/the_go_programming_lang_usage_answer_5/</loc>
     
-    <lastmod>2018-06-20T14:19:28.366Z</lastmod>
+    <lastmod>2018-06-20T14:19:28.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/</loc>
     
-    <lastmod>2018-06-13T15:14:49.070Z</lastmod>
+    <lastmod>2018-06-13T15:14:49.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/06/06/the_go_programming_lang_usage_answer_3/</loc>
     
-    <lastmod>2018-06-08T15:47:16.962Z</lastmod>
+    <lastmod>2018-06-08T15:47:16.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/</loc>
     
-    <lastmod>2018-06-05T23:52:21.886Z</lastmod>
+    <lastmod>2018-06-05T23:52:21.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/</loc>
     
-    <lastmod>2018-06-04T14:15:32.894Z</lastmod>
+    <lastmod>2018-06-04T14:15:32.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/05/25/mitmproxy_transparent_model_network_capture/</loc>
     
-    <lastmod>2018-05-25T10:52:46.862Z</lastmod>
+    <lastmod>2018-05-25T10:52:46.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/</loc>
     
-    <lastmod>2018-04-01T12:19:21.171Z</lastmod>
+    <lastmod>2018-04-01T12:19:21.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/20/Tornado_misc/</loc>
     
-    <lastmod>2018-03-20T07:23:11.034Z</lastmod>
+    <lastmod>2018-03-20T07:23:11.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/19/tornado_queue/</loc>
     
-    <lastmod>2018-03-20T06:44:46.310Z</lastmod>
+    <lastmod>2018-03-20T06:44:46.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/</loc>
     
-    <lastmod>2018-03-20T02:38:30.068Z</lastmod>
+    <lastmod>2018-03-20T02:38:30.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/17/Tornado_gen_coroutine/</loc>
     
-    <lastmod>2018-03-17T11:10:21.530Z</lastmod>
+    <lastmod>2018-03-17T11:10:21.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/17/tornado_gen_engine/</loc>
     
-    <lastmod>2018-03-17T07:49:00.209Z</lastmod>
+    <lastmod>2018-03-17T07:49:00.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/16/Tornado_StackContext/</loc>
     
-    <lastmod>2018-03-17T04:01:17.534Z</lastmod>
+    <lastmod>2018-03-17T04:01:17.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/16/tornado_wsgi/</loc>
     
-    <lastmod>2018-03-16T07:39:45.556Z</lastmod>
+    <lastmod>2018-03-16T07:39:45.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/15/tornado_web/</loc>
     
-    <lastmod>2018-03-16T03:25:03.691Z</lastmod>
+    <lastmod>2018-03-16T03:25:03.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/15/tornado_httpserver/</loc>
     
-    <lastmod>2018-03-15T09:14:55.763Z</lastmod>
+    <lastmod>2018-03-15T09:14:55.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2016/07/25/werkzeug_note_requests_response_auto_realod/</loc>
     
-    <lastmod>2018-03-15T03:22:49.874Z</lastmod>
+    <lastmod>2018-03-15T03:22:49.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/14/tornado_ioloop/</loc>
     
-    <lastmod>2018-03-15T03:21:18.382Z</lastmod>
+    <lastmod>2018-03-15T03:21:18.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/12/python_concurrent_futures_thread/</loc>
     
-    <lastmod>2018-03-12T11:27:47.101Z</lastmod>
+    <lastmod>2018-03-12T11:27:47.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/12/Python_Thread_Lock/</loc>
     
-    <lastmod>2018-03-12T09:21:24.786Z</lastmod>
+    <lastmod>2018-03-12T09:21:24.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/06/linux_signal/</loc>
     
-    <lastmod>2018-03-06T04:35:15.156Z</lastmod>
+    <lastmod>2018-03-06T04:35:15.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/</loc>
     
-    <lastmod>2018-03-04T03:22:06.071Z</lastmod>
+    <lastmod>2018-03-04T03:22:06.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2018/03/03/BKTree_VPTree/</loc>
     
-    <lastmod>2018-03-04T02:18:38.874Z</lastmod>
+    <lastmod>2018-03-04T02:18:38.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2017/12/25/GitLabCICD_quickstart/</loc>
     
-    <lastmod>2017-12-26T01:34:46.618Z</lastmod>
+    <lastmod>2017-12-26T01:34:46.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2017/12/25/gitlabciyml_note/</loc>
     
-    <lastmod>2017-12-25T06:10:56.899Z</lastmod>
+    <lastmod>2017-12-25T06:10:56.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2017/12/09/influxdb_glossary/</loc>
     
-    <lastmod>2017-12-09T08:52:51.153Z</lastmod>
+    <lastmod>2017-12-09T08:52:51.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2017/12/01/influxdb_config/</loc>
     
-    <lastmod>2017-12-08T23:59:26.538Z</lastmod>
+    <lastmod>2017-12-08T23:59:26.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2017/12/07/ELK/</loc>
     
-    <lastmod>2017-12-07T01:34:28.783Z</lastmod>
+    <lastmod>2017-12-07T01:34:28.000Z</lastmod>
     
   </url>
   
   <url>
     <loc>https://www.zoulei.net/2017/11/28/ansible-note/</loc>
     
-    <lastmod>2017-11-28T03:57:18.299Z</lastmod>
+    <lastmod>2017-11-28T03:57:18.000Z</lastmod>
     
   </url>
   
@@ -359,13 +366,6 @@
   </url>
   
   <url>
-    <loc>https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/</loc>
-    
-    <lastmod>2016-08-18T10:01:11.000Z</lastmod>
-    
-  </url>
-  
-  <url>
     <loc>https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
@@ -374,6 +374,13 @@
   
   <url>
     <loc>https://www.zoulei.net/2016/07/22/pycallgraph_note/</loc>
+    
+    <lastmod>2016-08-18T10:01:11.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/</loc>
     
     <lastmod>2016-08-18T10:01:11.000Z</lastmod>
     
