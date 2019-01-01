@@ -222,53 +222,41 @@
     <section class="postShorten-group main-content-wrap">
     
     
-    <article class="postShorten postShorten--thumbnailimg-bottom" itemscope itemType="http://schema.org/BlogPosting">
+    <article class="postShorten postShorten--thumbnailimg-right" itemscope itemType="http://schema.org/BlogPosting">
         <div class="postShorten-wrap">
             
             <div class="postShorten-header">
                 <h1 class="postShorten-title" itemprop="headline">
                     
-                        <a class="link-unstyled" href="/2018/10/09/2018-10-09/">
-                            (无标题)
+                        <a class="link-unstyled" href="/2019/01/01/ss_netflix/">
+                            国内观看Netflix
                         </a>
                     
                 </h1>
                 <div class="postShorten-meta">
-    <time itemprop="datePublished" datetime="2018-10-09T07:55:07+08:00">
+    <time itemprop="datePublished" datetime="2019-01-01T11:45:26+08:00">
 	
-		    10月 09, 2018
+		    1月 01, 2019
     	
     </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/python/">python</a>
+
+
     
 </div>
 
             </div>
             
-                <div class="postShorten-content" itemprop="articleBody">
-                    <h1 id="Pyenv"><a href="#Pyenv" class="headerlink" title="Pyenv"></a>Pyenv</h1><h3 id="使用场景"><a href="#使用场景" class="headerlink" title="使用场景"></a>使用场景</h3><p>服务器自带Python版本固定，且一般过低，安装包的时候需要使用root权限. 生产环境下一般选择安装一个独立的Python. 以往人们选择下载源码自己编译安装。pyenv代替了这个步骤，使编译安装过程自动化，并且增加了多版本管理功能</p>
-<ul>
-<li>使用方法(ubuntu)</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">echo &apos;export PYENV_ROOT=&quot;$HOME/.pyenv&quot;&apos; &gt;&gt; ~/.bashrc</div><div class="line">echo &apos;export PATH=&quot;$PYENV_ROOT/bin:$PATH&quot;&apos; &gt;&gt; ~/.bashrc</div><div class="line">echo -e &apos;if command -v pyenv 1&gt;/dev/null 2&gt;&amp;1; then\n  eval &quot;$(pyenv init -)&quot;\nfi&apos; &gt;&gt; ~/.bashrc</div><div class="line">exec &quot;$SHELL&quot;</div><div class="line"></div><div class="line">pyenv --help</div><div class="line">pyenv install --list</div><div class="line">pyenv install 3.6.6 -v (如果安装失败会有提示告诉你缺少什么)</div></pre></td></tr></table></figure>
-<p>你的问题是可能编译失败了，你却认为它成功了，正常编译安装挺慢的，一般超过一分钟<br>编译错误一般是缺少相应的依赖包<br>ubuntu系列可以先执行如下语句安装依赖<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev  libncursesw5-dev xz-utils tk-dev</div></pre></td></tr></table></figure></p>
-<p><img src="media/15390436693625.jpg" alt=""></p>
-<p>之后就会看到成功的消息</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">pyenv versions</div><div class="line">pyenv global 3.6.6</div><div class="line">pyenv local 3.6.6</div></pre></td></tr></table></figure>
-<h3 id="镜像"><a href="#镜像" class="headerlink" title="镜像"></a>镜像</h3><p>pyenv编译的时候会先下载相应的源码文件，国内访问速度可能比较慢，可以选择使用镜像，先下载到~/.pyenv/cache 然后使用此文件编译<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">v=3.7.0 ; wget https://npm.taobao.org/mirrors/python/$v/python-$v.tar.xz -O ~/.pyenv/cache/Python-$v.tar.xz ; pyenv install $v</div></pre></td></tr></table></figure></p>
-<h3 id="附加"><a href="#附加" class="headerlink" title="附加"></a>附加</h3><ul>
-<li>使用pyenv-virtualenv创建虚拟环境进行隔离</li>
-<li>生产环境抛弃pyenv，使用容器化部署</li>
-</ul>
-
+                <div class="postShorten-excerpt" itemprop="articleBody">
+                    <p>元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix</p>
                     
+                        <a href="/2019/01/01/ss_netflix/" class="postShorten-excerpt_link link">
+                            阅读全文
+                        </a>
                         
-                    
-                    
-                        <p>
-                            <a href="/2018/10/09/2018-10-09/#post-footer" class="postShorten-excerpt_link link">
-                                注释和共享
-                            </a>
-                        </p>
                     
                 </div>
             
@@ -555,7 +543,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2018 ficapy. All Rights Reserved.
+        Copyrights &copy; 2019 ficapy. All Rights Reserved.
     </span>
 </footer>
 

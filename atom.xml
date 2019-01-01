@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://www.zoulei.net/"/>
-  <updated>2018-10-09T00:44:42.811Z</updated>
+  <updated>2019-01-01T04:25:33.925Z</updated>
   <id>https://www.zoulei.net/</id>
   
   <author>
@@ -16,33 +16,35 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
-    <title></title>
-    <link href="https://www.zoulei.net/2018/10/09/2018-10-09/"/>
-    <id>https://www.zoulei.net/2018/10/09/2018-10-09/</id>
-    <published>2018-10-08T23:55:07.246Z</published>
-    <updated>2018-10-09T00:44:42.811Z</updated>
+    <title>国内观看Netflix</title>
+    <link href="https://www.zoulei.net/2019/01/01/ss_netflix/"/>
+    <id>https://www.zoulei.net/2019/01/01/ss_netflix/</id>
+    <published>2019-01-01T03:45:26.000Z</published>
+    <updated>2019-01-01T04:25:33.925Z</updated>
     
-    <content type="html"><![CDATA[<h1 id="Pyenv"><a href="#Pyenv" class="headerlink" title="Pyenv"></a>Pyenv</h1><h3 id="使用场景"><a href="#使用场景" class="headerlink" title="使用场景"></a>使用场景</h3><p>服务器自带Python版本固定，且一般过低，安装包的时候需要使用root权限. 生产环境下一般选择安装一个独立的Python. 以往人们选择下载源码自己编译安装。pyenv代替了这个步骤，使编译安装过程自动化，并且增加了多版本管理功能</p>
-<ul>
-<li>使用方法(ubuntu)</li>
-</ul>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">echo &apos;export PYENV_ROOT=&quot;$HOME/.pyenv&quot;&apos; &gt;&gt; ~/.bashrc</div><div class="line">echo &apos;export PATH=&quot;$PYENV_ROOT/bin:$PATH&quot;&apos; &gt;&gt; ~/.bashrc</div><div class="line">echo -e &apos;if command -v pyenv 1&gt;/dev/null 2&gt;&amp;1; then\n  eval &quot;$(pyenv init -)&quot;\nfi&apos; &gt;&gt; ~/.bashrc</div><div class="line">exec &quot;$SHELL&quot;</div><div class="line"></div><div class="line">pyenv --help</div><div class="line">pyenv install --list</div><div class="line">pyenv install 3.6.6 -v (如果安装失败会有提示告诉你缺少什么)</div></pre></td></tr></table></figure>
-<p>你的问题是可能编译失败了，你却认为它成功了，正常编译安装挺慢的，一般超过一分钟<br>编译错误一般是缺少相应的依赖包<br>ubuntu系列可以先执行如下语句安装依赖<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">sudo apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev  libncursesw5-dev xz-utils tk-dev</div></pre></td></tr></table></figure></p>
-<p><img src="media/15390436693625.jpg" alt=""></p>
-<p>之后就会看到成功的消息</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">pyenv versions</div><div class="line">pyenv global 3.6.6</div><div class="line">pyenv local 3.6.6</div></pre></td></tr></table></figure>
-<h3 id="镜像"><a href="#镜像" class="headerlink" title="镜像"></a>镜像</h3><p>pyenv编译的时候会先下载相应的源码文件，国内访问速度可能比较慢，可以选择使用镜像，先下载到~/.pyenv/cache 然后使用此文件编译<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">v=3.7.0 ; wget https://npm.taobao.org/mirrors/python/$v/python-$v.tar.xz -O ~/.pyenv/cache/Python-$v.tar.xz ; pyenv install $v</div></pre></td></tr></table></figure></p>
-<h3 id="附加"><a href="#附加" class="headerlink" title="附加"></a>附加</h3><ul>
-<li>使用pyenv-virtualenv创建虚拟环境进行隔离</li>
-<li>生产环境抛弃pyenv，使用容器化部署</li>
+    <content type="html"><![CDATA[<p>元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix</p>
+<a id="more"></a>
+<h3 id="ipv4现状"><a href="#ipv4现状" class="headerlink" title="ipv4现状"></a>ipv4现状</h3><p>我先后尝试使用三个代理去连接Netflix，居然都成功被识别为代理，有点心灰意冷，心想这商家还做不做生意了，有必要这样赶尽杀绝吗？后来在网上搜索了一番，发现居然有好多代理商家用能看Netflix作为卖点，搞的好像用了很高深的黑科技的样子，后来网友反馈用ipv6可以连接，我试了一下居然还真可以了</p>
+<h3 id="ipv6-解决"><a href="#ipv6-解决" class="headerlink" title="ipv6 解决"></a>ipv6 解决</h3><p>ipv4毕竟地址有限，也发展了这么多年，所以ipv4的地址归纳比较完善了，能准确的知道某个ip是否是云服务器厂商所拥有的，ipv6的地址范围明显就广的多，因此目前并不能很好的识别是否来自于云服务器，另外，商家也要赚钱，不能把路彻底堵死，我想这也是一个原因吧</p>
+<p>shadowsocks5本地提供socks5代理,socks5代理有dns解析选项，一个是本地dns解析，一个是远程dns解析，本地dns解析那得到的ip基本就是ipv4的，所以Netflix识别到的也是ipv4的ip,就被识别为代理了，远程dns解析，交由代理服务器解析，此时我们的目的是得到ipv6的地址，就能成功突破封锁了。</p>
+<p>shadowsocks的python原版和ssr都是自己实现了异步的dns解析功能，通过配置文件<a href="https://github.com/shadowsocks/shadowsocks/blob/5ff694b2c2978b432918dea6ac104706b25cbf48/shadowsocks/asyncdns.py#L251">开启ipv6解析</a>，ss是prefer_ipv6, ssr的是dns_ipv6，顺利的情况下把它们设置为true就解决问题了。可以使用如下地址连接测试是否正常使用<a href="http://v4v6.ipv6-test.com/json/defaultproto.php">http://v4v6.ipv6-test.com/json/defaultproto.php</a>。或者使用命令行看到更详细一些的交互</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">curl -x socks5h://127.0.0.1:1086 http://v4v6.ipv6-test.com/json/defaultproto.php -v</div></pre></td></tr></table></figure>
+<p>如果返回的ipv6的地址就成功了</p>
+<h3 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h3><ul>
+<li>如果你使用docker运行，那么容器环境需要<a href="https://docs.docker.com/config/daemon/ipv6/">额外开启ipv6的支持</a></li>
+<li>如果是其他版本的shadowsocks实现，具体看一下代码应该也能实现类似的配置</li>
+<li>开启ipv6有缺点，具体在于极多网站对ipv6的支持不友好，为了Netflix开启ipv6相当于全局开启了ipv6，所以保险起见，你可以开两个代理端口，一个专门看Netflix开启ipv6</li>
+<li>测试了ios端，设置代理无效，可能ios端忽略了代理设置吧，可以尝试直接部署在路由器全局翻</li>
 </ul>
 ]]></content>
     
     <summary type="html">
     
-      &lt;h1 id=&quot;Pyenv&quot;&gt;&lt;a href=&quot;#Pyenv&quot; class=&quot;headerlink&quot; title=&quot;Pyenv&quot;&gt;&lt;/a&gt;Pyenv&lt;/h1&gt;&lt;h3 id=&quot;使用场景&quot;&gt;&lt;a href=&quot;#使用场景&quot; class=&quot;headerlink&quot; title=&quot;使用场景&quot;
+      &lt;p&gt;元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix&lt;/p&gt;
     
     </summary>
+    
+      <category term="python" scheme="https://www.zoulei.net/categories/python/"/>
     
     
   </entry>
