@@ -13,31 +13,35 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。\n\n\n说一下第三种方案相对前两种方案的特点。\n\n集中化管理。第一二种方案都需要将脚本放在对应的应用机器上面。第三种不需要，它集中化了。所有的webhook都在可持续集成平台处理。由平台再来操控应用。而且每一次触发操作都有详尽的日志。集中在一起比较容易看出哪里出了什么问题\n不需要在每一台应用机处理webhook(处理意味着每个应用机都需要绑定一个域名)，可能和上面的集中化管理的优点是一个意思吧\n对于一个良好的架构。可持续集成平台比零散的脚本无疑更合适\n算是一个缺点。单独写脚本独立处理webhook相对可持续集成更容易\n\nDrone配置docker-compose我都不大用了，直接用docker stack deploy替代。后者相对前者实际没有什么区别。或者说前者是因为docker网络配置欠发达的产物。docker-compose适合单机部署，docker-swarm适合多主机。开启docker-swarm只需要docker swarm init大概就可以了，更详细的知识请查看官方文档\ndrone.yml 文件大概如下\n12345678910111213141516171819202122232425262728version: &apos;3&apos;services:  drone-server:    image: drone/drone:0.7    ports:      - 82:8000    volumes:      - /data/github_drone:/var/lib/drone/    environment:      - DRONE_OPEN=false      - DRONE_ADMIN=ficapy      - DRONE_GITLAB=true      - DRONE_GITHUB_CLIENT=xxxxxxxxx      - DRONE_GITHUB_SECRET=xxxxxxxxxx      - DRONE_SECRET=xxxpwdxxx  drone-agent:    image: drone/drone:0.7    command: agent    depends_on:      - drone-server    volumes:      - /var/run/docker.sock:/var/run/docker.sock    environment:      - DRONE_SERVER=ws://drone-server:8000/ws/broker      - DRONE_SECRET=xxxpwdxxx\n\n然后执行docker stack deploy --compose-file=drone.yml drone，整个程序就运行起来了。此处是监听81端口。从配置文件中也可以猜一个大概。了解下drone的流程。service主要用来响应浏览器端的请求。接收到请求后使用websocket和agent通信用来下发任务获取结果。agent通过/var/run/docker.sock来和docker daemon进行通信。执行创建容器。执行命令等一系列过程。\n有几点需要注意的\n\n最好指定管理员用户DRONE_ADMIN，因为有些操作需要admin权限\nDRONE_OPEN设置为true的时候所有的用户都能授权后使用你的Drone进行集成测试。这往往是你\u000e不愿意的，个人的诉求往往是私有的\ngithub和gitlab在一个drone不能同时使用，所以我部署了两套，使用了不同的域名\n起码了解OAuth流程和webhook的过程，才能更好的理解整套流程\n其他事宜可以查看Drone的安装文档\n\n之所以监听81端口，是因为我使用的Caddy当做前置web服务器。配置如下Caddyfile\n123456drone.ficapy.com &#123;    proxy / dockerhost:81 &#123;        websocket        transparent    &#125;&#125;\n\n对应的docker-compose文件如下\n12345678910111213version: &quot;3&quot;services:  Caddy:    image: &quot;abiosoft/caddy&quot;    volumes:      - /root/caddy/Caddyfile:/etc/Caddyfile      - /root/.caddy:/root/.caddy    ports:      - &quot;80:80&quot;      - &quot;443:443&quot;    extra_hosts:      - &quot;dockerhost:$&#123;dockerhost&#125;&quot;\n\n此处使用了环境变量dockerhost，我将它写入了zshrc配置文件中export dockerhost=&quot;172.17.0.1&quot;,不难看出只是为了转发请求, 和drone一样。执行docker stack deploy --compose-file=caddy_compose.yml caddy启动\n持续集成部署当使用Drone，并授权之后。Drone会自动给你的项目加上webhook地址。我们在项目根目录放置.drone.yml文件后会使用docker自动构建\n实现本文开头说的需求.drone.yml文件如下\n123456789101112pipeline:  build:    image: ruby:2.3    commands:      - bundle config mirror.https://rubygems.org https://gems.ruby-china.org      - bundle install      - apt-get update &amp;&amp; apt-get install nodejs rsync -y &amp;&amp; bundle exec middleman build --clean      - rsync -r --rsh=&apos;ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /data/id_rsa -p 22&apos; build/* user@host:~/docs --progress --delete    volumes:      - /data:/data    when:      branch: master\n\n在使用之前。我现在/data目录使用ssh-agent生成了密匙对。在目标主机上放上公钥，让我们能够ssh连接远端主机。然后容器创建的时候将密匙挂载到容器目录(此处需要管理员权限将项目设置为可信)。然后就顺理成章了。搭建环境，生成静态文件，rsync同步就完成了。\n","dateCreated":"2017-07-05T21:51:26+08:00","dateModified":"2017-07-06T00:21:28+08:00","datePublished":"2017-07-05T21:51:26+08:00","description":"最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。","headline":"Docker CD初探-Drone","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/07/05/drone/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/07/05/drone/"}</script>
     <meta name="description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Docker CD初探-Drone">
 <meta property="og:url" content="https://www.zoulei.net/2017/07/05/drone/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
+<meta property="og:locale" content="zh-cn">
 <meta property="og:updated_time" content="2017-07-05T16:21:28.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Docker CD初探-Drone">
 <meta name="twitter:description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
-<meta name="twitter:creator" content="@aec4d">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -47,23 +51,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -72,23 +79,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -98,9 +90,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -110,9 +103,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -122,9 +116,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -134,9 +129,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -146,9 +142,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -158,9 +155,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -171,27 +169,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -205,9 +242,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -223,17 +261,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             Docker CD初探-Drone
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2017-07-05T21:51:26+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2017-07-05T21:51:26+08:00">
 	
 		    7月 05, 2017
     	
@@ -247,12 +286,15 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>最近有个小需求，我们公司写文档是通过<a href="https://github.com/lord/slate">slate</a>来的。每一次文档编写完成之后都需要执行<code>bundle exec middleman build --clean</code>生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。</p>
 <a id="more"></a>
+
 <p>说一下第三种方案相对前两种方案的特点。</p>
 <ul>
 <li>集中化管理。第一二种方案都需要将脚本放在对应的应用机器上面。第三种不需要，它集中化了。所有的webhook都在可持续集成平台处理。由平台再来操控应用。而且每一次触发操作都有详尽的日志。集中在一起比较容易看出哪里出了什么问题</li>
@@ -261,7 +303,9 @@
 <li>算是一个缺点。单独写脚本独立处理webhook相对可持续集成更容易</li>
 </ul>
 <h3 id="Drone配置"><a href="#Drone配置" class="headerlink" title="Drone配置"></a>Drone配置</h3><p>docker-compose我都不大用了，直接用docker stack deploy替代。后者相对前者实际没有什么区别。或者说前者是因为docker网络配置欠发达的产物。docker-compose适合单机部署，docker-swarm适合多主机。开启docker-swarm只需要docker swarm init大概就可以了，更详细的知识请查看官方文档</p>
-<p>drone.yml 文件大概如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">version: &apos;3&apos;</div><div class="line"></div><div class="line">services:</div><div class="line">  drone-server:</div><div class="line">    image: drone/drone:0.7</div><div class="line">    ports:</div><div class="line">      - 82:8000</div><div class="line">    volumes:</div><div class="line">      - /data/github_drone:/var/lib/drone/</div><div class="line">    environment:</div><div class="line">      - DRONE_OPEN=false</div><div class="line">      - DRONE_ADMIN=ficapy</div><div class="line">      - DRONE_GITLAB=true</div><div class="line">      - DRONE_GITHUB_CLIENT=xxxxxxxxx</div><div class="line">      - DRONE_GITHUB_SECRET=xxxxxxxxxx</div><div class="line">      - DRONE_SECRET=xxxpwdxxx</div><div class="line"></div><div class="line">  drone-agent:</div><div class="line">    image: drone/drone:0.7</div><div class="line">    command: agent</div><div class="line">    depends_on:</div><div class="line">      - drone-server</div><div class="line">    volumes:</div><div class="line">      - /var/run/docker.sock:/var/run/docker.sock</div><div class="line">    environment:</div><div class="line">      - DRONE_SERVER=ws://drone-server:8000/ws/broker</div><div class="line">      - DRONE_SECRET=xxxpwdxxx</div><div class="line"></div></pre></td></tr></table></figure></p>
+<p>drone.yml 文件大概如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">version: &apos;3&apos;</span><br><span class="line"></span><br><span class="line">services:</span><br><span class="line">  drone-server:</span><br><span class="line">    image: drone/drone:0.7</span><br><span class="line">    ports:</span><br><span class="line">      - 82:8000</span><br><span class="line">    volumes:</span><br><span class="line">      - /data/github_drone:/var/lib/drone/</span><br><span class="line">    environment:</span><br><span class="line">      - DRONE_OPEN=false</span><br><span class="line">      - DRONE_ADMIN=ficapy</span><br><span class="line">      - DRONE_GITLAB=true</span><br><span class="line">      - DRONE_GITHUB_CLIENT=xxxxxxxxx</span><br><span class="line">      - DRONE_GITHUB_SECRET=xxxxxxxxxx</span><br><span class="line">      - DRONE_SECRET=xxxpwdxxx</span><br><span class="line"></span><br><span class="line">  drone-agent:</span><br><span class="line">    image: drone/drone:0.7</span><br><span class="line">    command: agent</span><br><span class="line">    depends_on:</span><br><span class="line">      - drone-server</span><br><span class="line">    volumes:</span><br><span class="line">      - /var/run/docker.sock:/var/run/docker.sock</span><br><span class="line">    environment:</span><br><span class="line">      - DRONE_SERVER=ws://drone-server:8000/ws/broker</span><br><span class="line">      - DRONE_SECRET=xxxpwdxxx</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
 <p>然后执行<code>docker stack deploy --compose-file=drone.yml drone</code>，整个程序就运行起来了。此处是监听81端口。从配置文件中也可以猜一个大概。了解下drone的流程。service主要用来响应浏览器端的请求。接收到请求后使用websocket和agent通信用来下发任务获取结果。agent通过/var/run/docker.sock来和docker daemon进行通信。执行创建容器。执行命令等一系列过程。</p>
 <p>有几点需要注意的</p>
 <ul>
@@ -272,73 +316,117 @@
 <li>其他事宜可以查看Drone的<a href="http://docs.drone.io/installation/">安装文档</a></li>
 </ul>
 <p>之所以监听81端口，是因为我使用的Caddy当做前置web服务器。配置如下Caddyfile</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">drone.ficapy.com &#123;</div><div class="line">    proxy / dockerhost:81 &#123;</div><div class="line">        websocket</div><div class="line">        transparent</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">drone.ficapy.com &#123;</span><br><span class="line">    proxy / dockerhost:81 &#123;</span><br><span class="line">        websocket</span><br><span class="line">        transparent</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <p>对应的docker-compose文件如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">version: &quot;3&quot;</div><div class="line"></div><div class="line">services:</div><div class="line">  Caddy:</div><div class="line">    image: &quot;abiosoft/caddy&quot;</div><div class="line">    volumes:</div><div class="line">      - /root/caddy/Caddyfile:/etc/Caddyfile</div><div class="line">      - /root/.caddy:/root/.caddy</div><div class="line">    ports:</div><div class="line">      - &quot;80:80&quot;</div><div class="line">      - &quot;443:443&quot;</div><div class="line">    extra_hosts:</div><div class="line">      - &quot;dockerhost:$&#123;dockerhost&#125;&quot;</div></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">version: &quot;3&quot;</span><br><span class="line"></span><br><span class="line">services:</span><br><span class="line">  Caddy:</span><br><span class="line">    image: &quot;abiosoft/caddy&quot;</span><br><span class="line">    volumes:</span><br><span class="line">      - /root/caddy/Caddyfile:/etc/Caddyfile</span><br><span class="line">      - /root/.caddy:/root/.caddy</span><br><span class="line">    ports:</span><br><span class="line">      - &quot;80:80&quot;</span><br><span class="line">      - &quot;443:443&quot;</span><br><span class="line">    extra_hosts:</span><br><span class="line">      - &quot;dockerhost:$&#123;dockerhost&#125;&quot;</span><br></pre></td></tr></table></figure>
+
 <p>此处使用了环境变量dockerhost，我将它写入了zshrc配置文件中<code>export dockerhost=&quot;172.17.0.1&quot;</code>,不难看出只是为了转发请求, 和drone一样。执行<code>docker stack deploy --compose-file=caddy_compose.yml caddy</code>启动</p>
 <h3 id="持续集成部署"><a href="#持续集成部署" class="headerlink" title="持续集成部署"></a>持续集成部署</h3><p>当使用Drone，并授权之后。Drone会自动给你的项目加上webhook地址。我们在项目根目录放置.drone.yml文件后会使用docker自动构建</p>
-<p>实现本文开头说的需求.drone.yml文件如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">pipeline:</div><div class="line">  build:</div><div class="line">    image: ruby:2.3</div><div class="line">    commands:</div><div class="line">      - bundle config mirror.https://rubygems.org https://gems.ruby-china.org</div><div class="line">      - bundle install</div><div class="line">      - apt-get update &amp;&amp; apt-get install nodejs rsync -y &amp;&amp; bundle exec middleman build --clean</div><div class="line">      - rsync -r --rsh=&apos;ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /data/id_rsa -p 22&apos; build/* user@host:~/docs --progress --delete</div><div class="line">    volumes:</div><div class="line">      - /data:/data</div><div class="line">    when:</div><div class="line">      branch: master</div></pre></td></tr></table></figure></p>
+<p>实现本文开头说的需求.drone.yml文件如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">pipeline:</span><br><span class="line">  build:</span><br><span class="line">    image: ruby:2.3</span><br><span class="line">    commands:</span><br><span class="line">      - bundle config mirror.https://rubygems.org https://gems.ruby-china.org</span><br><span class="line">      - bundle install</span><br><span class="line">      - apt-get update &amp;&amp; apt-get install nodejs rsync -y &amp;&amp; bundle exec middleman build --clean</span><br><span class="line">      - rsync -r --rsh=&apos;ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /data/id_rsa -p 22&apos; build/* user@host:~/docs --progress --delete</span><br><span class="line">    volumes:</span><br><span class="line">      - /data:/data</span><br><span class="line">    when:</span><br><span class="line">      branch: master</span><br></pre></td></tr></table></figure>
+
 <p>在使用之前。我现在/data目录使用ssh-agent生成了密匙对。在目标主机上放上公钥，让我们能够ssh连接远端主机。然后容器创建的时候将密匙挂载到容器目录(此处需要管理员权限将项目设置为可信)。然后就顺理成章了。搭建环境，生成静态文件，rsync同步就完成了。</p>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/07/15/develop_quick_restore_postgresql_database/"  data-tooltip="开发环境中数据库快速回滚">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2017/07/15/develop_quick_restore_postgresql_database/"
+                    data-tooltip="开发环境中数据库快速回滚"
+                    aria-label="上一篇: 开发环境中数据库快速回滚"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/24/python_metaclass/" data-tooltip="理解metaclass">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2017/03/24/python_metaclass/"
+                    data-tooltip="理解metaclass"
+                    aria-label="下一篇: 理解metaclass"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/07/05/drone/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/07/05/drone/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/07/05/drone/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/07/05/drone/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/07/05/drone/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/07/05/drone/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -346,10 +434,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -371,55 +456,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/07/15/develop_quick_restore_postgresql_database/"  data-tooltip="开发环境中数据库快速回滚">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2017/07/15/develop_quick_restore_postgresql_database/"
+                    data-tooltip="开发环境中数据库快速回滚"
+                    aria-label="上一篇: 开发环境中数据库快速回滚"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/03/24/python_metaclass/" data-tooltip="理解metaclass">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2017/03/24/python_metaclass/"
+                    data-tooltip="理解metaclass"
+                    aria-label="下一篇: 理解metaclass"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/07/05/drone/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/07/05/drone/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/07/05/drone/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/07/05/drone/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/07/05/drone/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/07/05/drone/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -427,43 +549,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/07/05/drone/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/07/05/drone/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/07/05/drone/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/07/05/drone/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/07/05/drone/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2017/07/05/drone/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -479,28 +622,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -510,7 +648,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -523,7 +665,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -532,7 +674,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -543,7 +689,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -552,7 +698,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -562,9 +712,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -573,7 +723,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -583,7 +737,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -592,7 +746,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -604,7 +762,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -614,7 +772,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -624,9 +786,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -644,38 +806,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2017/07/05/drone/';
-                 
-                    this.page.identifier = '2017/07/05/drone/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

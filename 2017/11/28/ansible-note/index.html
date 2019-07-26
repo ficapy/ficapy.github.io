@@ -13,33 +13,37 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用\n\n\nAnsible总结\n单个Module是基石，将机器分组，严重依靠变量\ntask\b组成任务\n全部的task组成playbooks.\b将所有的机器定义到一个\b确定的\b状态\n使用role对playbooks进行拆分.role有约定好的目录结构\nansible galaxy来分享role.\b使用时完全使用变量\b来\b覆盖原有变量,严重依赖社区水平(比如国情安装许多软件都需要使用镜像,而外国作者编写role并不会考虑这些)\n\n特点\nchange management(定义一个特定的系统状态，change_event用于回调)\nProvisioning(role。\b服务划分。比如一个webserver会依次执行某些步骤)\nAutomation(playbook同时设置上千台)\nOrchestration(编排\b多个tasks让其协调coordinates执行。\b多个系统配置。解决task间的依赖性)\n\n\b为什么使用它\nNo agents\nNo database\nNo residual software\nNo complex upgrades\n题外话。使用yaml文件描述而无法使用编程控制。我认为迟早药丸。只不过目前还没找到更好的替代品\b\n\bssh/root/encrypted vault(共享到github仓库成标配了,几乎所有的软件都是这个套路)\n\beasy to extend:http call、shell commands(挺有用)、scripts(暂时不太懂，感觉是扩充model)、Ansible-Galaxy\n\nAnsible 架构\n\b\u001bVariables:\n\nHost Variables: 在资产中给host或者group设置的变量\nFacts: ansible进行的第一步就是setup。获取机器的基础信息。\b比如内网ip\nDynamic Variables: \b收集tasks数据或者运行时获取？比如将上一个task的结果作为参数\n\n\b执行过程中将model发送到远方机器临时目录执行。\b返回json结果。然后删除临时目录内容\n学习环境搭建(视频19)\nVagrant、Virtualbox、Ansible\nRemote、Local(基本不使用Local模式。仅有一次无法远程ssh我用过)\n\nInventory Features\nBehavioral Parameters\nGroups\nGroups of Groups\nAssign Variables\nScaling out using multiple files\nStatic/Dynamic分组、组合、\b赋予变量(和python里面变量作用域LEGB差不多)\n\n12345678910[db]db1.company.com ansible_ssh_user=aarom xx=xxdb2.company.com[datacenter-west:children]db[datacenter-west:vars]ansible_ssh_user=ansible_userxx=xx\n\n\b分组的套路(group_vars、host_vars\b下面的文件必须和inventory相对应)\n1234567├── group_vars   # \b全局│   ├── all│   ├── db├── host_vars   # 单个host│   └── web1├── inventory_prod├── inventory_test\n\n12345# variable file example---     # 标记# key-value pairsntp:  ntp-west.company.comsyslog: logger-west.company.com\n\n\bAd-Hoc 临时使用1234ansible -m ping allansible -m shell -a &quot;hostname&quot; allansible -m shell -a &quot;getent passwd | grep deploy&quot; allansible -b -K -m shell -a &quot;whoami&quot; all -vvv -T 30 -c paramiko\n\n参数注解\n\n-b become\b变成某用户一般是root\n-K 配合-b输入密码\n-m 使用某个模块\n-vvv 和ssh -vvv一样查看详细日志\n-T timeout 设置超时\n-c 选择连接的模块. 3.5使用默认值搞sudo可能会有问题\n\n12使用\b变量(估计使用janja2模板\b引擎是会python的人使用ansible的唯一优势了-_-)ansible webservers -i inventory_prod -m user -a &quot;name=&#123;&#123;username&#125;&#125; password=1234 -b&quot;\n\nansible-doc可以查看文档  \nHost/Group Target Patterns\nOR (group1:group2)\nNOT (!group2)\nWildcard (web*.ex.com)\nRegex (~web[0-9]+)\nComplex Patterns AND (group1:&amp;group2) # 求交集、中间出现一个:有点奇葩\n\nAnaible Playbooks\n组合ansible modules组成play,多个play组成playbooks\nlogic controls &amp; error handle\ninclude 合并多个\nGrab output of task for another task(register)\nDebug Module(debug/msg or var)\nPromptins for input(类似与input,vars_prompt)\nPlaybook Handlers(notify)\nTasks with asynchronous execution\nOnly runs tasks when notified\nTasks Only notify when state=changed\nDoes not run until all playbook tasks have executed\nMost common for restarting services to load changes(if changes are made)\n\n\nContitional Clause(when: ansible_os_family == “Debian”,搭配register使用)\nJinja2 Template Module(template)\n\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950---- hosts: webservres  sudo: yes  vars:    http_port: 80    doc_dir: /ansible/    doc_root: /var/www/html/ansible/    max_clients: 5    vars_prompt:    - name: username      prompt: what is your name?  tasks:  - name: Ensure that Apache is installed    yum: name=httpd state=present    when: ansible_os_family == &quot;RedHat&quot;  - name: Start Apache Services    service: name=httpd enabled=yes state=started  - name: Deploy configuration File    template: src=templates/httpd.j2 dest=/etc/httpd/conf/httpd.conf    notify:      - Restart Apache      - name: Copy Site Files      template: src=templates/index.j2 dest=&#123;&#123; doc_root &#125;&#125;/index.html  handlers:    - name: Restart Apache      service: name=httpd state=restarted- hosts: dbservers  sudo: yes  tasks:  - name: Ensure MySQL is installed    yum: name=mysql-server state=present    - name: Start MySQL    service: name=mysqld state=started- hosts: webservers:dbservers  sudo: yes  tasks:  - name: Stop IPTABLES NOW!!!    service: name=iptables state=stopped\n\nansible-playbook -i inventory web_db.yaml\nRoles\nPredefined directory structure\n\ndefaults、files、handlers、meta、tasks、templates、vars\n\nmain.yml,使用include.vars除外\n\nuse tags to define categories within your playbooks\n\nAdding Roles to Playbook\n  1234567891011    ---    - hosts: code-dev    roles:        - server-common        - builders    gather_facts: no    tasks:        # Build your extra tasks here like    ``` - Pre-tasks and Post-tasks(executes plays before or after roles)- ```ansible-playbook site.yml -tags &quot;web&quot; -limit atlanta\n\nansible galaxy(ansible-galaxy install username.role)\n\n\n最佳实践ansible-best-practises\n","dateCreated":"2017-11-28T11:28:42+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2017-11-28T11:28:42+08:00","description":"以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用","headline":"ansible笔记","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/11/28/ansible-note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/11/28/ansible-note/"}</script>
     <meta name="description" content="以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="ansible笔记">
 <meta property="og:url" content="https://www.zoulei.net/2017/11/28/ansible-note/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/capture/ansible_arch.jpg">
-<meta property="og:updated_time" content="2017-11-28T03:57:18.000Z">
+<meta property="og:locale" content="zh-cn">
+<meta property="og:image" content="https://blogimg.ficapy.com/capture/ansible_arch.jpg">
+<meta property="og:updated_time" content="2019-07-26T06:53:30.701Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="ansible笔记">
 <meta name="twitter:description" content="以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用">
-<meta name="twitter:image" content="https://ficapy.b0.upaiyun.com/capture/ansible_arch.jpg">
-<meta name="twitter:creator" content="@aec4d">
+<meta name="twitter:image" content="https://blogimg.ficapy.com/capture/ansible_arch.jpg">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -49,23 +53,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -74,23 +81,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -100,9 +92,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -112,9 +105,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -124,9 +118,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -136,9 +131,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -148,9 +144,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -160,9 +157,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -173,27 +171,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -207,9 +244,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -225,17 +263,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             ansible笔记
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2017-11-28T11:28:42+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2017-11-28T11:28:42+08:00">
 	
 		    11月 28, 2017
     	
@@ -249,12 +288,15 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>以下为观看<a href="https://www.youtube.com/playlist?list=PL7hgvWUGJtUsT74AXZgVhr37riphKjzkD">Ansible-Configuration Management</a>的笔记。不适合初学者查看。可以作为温习使用</p>
 <a id="more"></a>
+
 <h2 id="Ansible总结"><a href="#Ansible总结" class="headerlink" title="Ansible总结"></a>Ansible总结</h2><ol>
 <li>单个Module是基石，将机器分组，严重依靠变量</li>
 <li>task组成任务</li>
@@ -277,7 +319,7 @@
 <li>ssh/root/encrypted vault(共享到github仓库成标配了,几乎所有的软件都是这个套路)</li>
 <li>easy to extend:http call、shell commands(挺有用)、scripts(暂时不太懂，感觉是扩充model)、Ansible-Galaxy</li>
 </ul>
-<h2 id="Ansible-架构"><a href="#Ansible-架构" class="headerlink" title="Ansible 架构"></a>Ansible 架构</h2><p><img src="https://ficapy.b0.upaiyun.com/capture/ansible_arch.jpg" alt="Ansible 架构"></p>
+<h2 id="Ansible-架构"><a href="#Ansible-架构" class="headerlink" title="Ansible 架构"></a>Ansible 架构</h2><p><img src="https://blogimg.ficapy.com/capture/ansible_arch.jpg" alt="Ansible 架构"></p>
 <p>Variables:</p>
 <ul>
 <li>Host Variables: 在资产中给host或者group设置的变量</li>
@@ -297,10 +339,15 @@
 <li>Scaling out using multiple files</li>
 <li>Static/Dynamic<br>分组、组合、赋予变量(和python里面变量作用域LEGB差不多)</li>
 </ul>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">[db]</div><div class="line">db1.company.com ansible_ssh_user=aarom xx=xx</div><div class="line">db2.company.com</div><div class="line"></div><div class="line">[datacenter-west:children]</div><div class="line">db</div><div class="line"></div><div class="line">[datacenter-west:vars]</div><div class="line">ansible_ssh_user=ansible_user</div><div class="line">xx=xx</div></pre></td></tr></table></figure>
-<p>分组的套路(group_vars、host_vars下面的文件必须和inventory相对应)<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">├── group_vars   # 全局</div><div class="line">│   ├── all</div><div class="line">│   ├── db</div><div class="line">├── host_vars   # 单个host</div><div class="line">│   └── web1</div><div class="line">├── inventory_prod</div><div class="line">├── inventory_test</div></pre></td></tr></table></figure></p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"># variable file example</div><div class="line">---     # 标记</div><div class="line"># key-value pairs</div><div class="line">ntp:  ntp-west.company.com</div><div class="line">syslog: logger-west.company.com</div></pre></td></tr></table></figure>
-<h2 id="Ad-Hoc-临时使用"><a href="#Ad-Hoc-临时使用" class="headerlink" title="Ad-Hoc 临时使用"></a>Ad-Hoc 临时使用</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">ansible -m ping all</div><div class="line">ansible -m shell -a &quot;hostname&quot; all</div><div class="line">ansible -m shell -a &quot;getent passwd | grep deploy&quot; all</div><div class="line">ansible -b -K -m shell -a &quot;whoami&quot; all -vvv -T 30 -c paramiko</div></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">[db]</span><br><span class="line">db1.company.com ansible_ssh_user=aarom xx=xx</span><br><span class="line">db2.company.com</span><br><span class="line"></span><br><span class="line">[datacenter-west:children]</span><br><span class="line">db</span><br><span class="line"></span><br><span class="line">[datacenter-west:vars]</span><br><span class="line">ansible_ssh_user=ansible_user</span><br><span class="line">xx=xx</span><br></pre></td></tr></table></figure>
+
+<p>分组的套路(group_vars、host_vars下面的文件必须和inventory相对应)</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">├── group_vars   # 全局</span><br><span class="line">│   ├── all</span><br><span class="line">│   ├── db</span><br><span class="line">├── host_vars   # 单个host</span><br><span class="line">│   └── web1</span><br><span class="line">├── inventory_prod</span><br><span class="line">├── inventory_test</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># variable file example</span><br><span class="line">---     # 标记</span><br><span class="line"># key-value pairs</span><br><span class="line">ntp:  ntp-west.company.com</span><br><span class="line">syslog: logger-west.company.com</span><br></pre></td></tr></table></figure>
+
+<h2 id="Ad-Hoc-临时使用"><a href="#Ad-Hoc-临时使用" class="headerlink" title="Ad-Hoc 临时使用"></a>Ad-Hoc 临时使用</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ansible -m ping all</span><br><span class="line">ansible -m shell -a &quot;hostname&quot; all</span><br><span class="line">ansible -m shell -a &quot;getent passwd | grep deploy&quot; all</span><br><span class="line">ansible -b -K -m shell -a &quot;whoami&quot; all -vvv -T 30 -c paramiko</span><br></pre></td></tr></table></figure>
+
 <p>参数注解</p>
 <ul>
 <li>-b become变成某用户一般是root</li>
@@ -310,7 +357,8 @@
 <li>-T timeout 设置超时</li>
 <li>-c 选择连接的模块. 3.5使用默认值搞sudo可能会有问题</li>
 </ul>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">使用变量(估计使用janja2模板引擎是会python的人使用ansible的唯一优势了-_-)</div><div class="line">ansible webservers -i inventory_prod -m user -a &quot;name=&#123;&#123;username&#125;&#125; password=1234 -b&quot;</div></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">使用变量(估计使用janja2模板引擎是会python的人使用ansible的唯一优势了-_-)</span><br><span class="line">ansible webservers -i inventory_prod -m user -a &quot;name=&#123;&#123;username&#125;&#125; password=1234 -b&quot;</span><br></pre></td></tr></table></figure>
+
 <p>ansible-doc可以查看文档  </p>
 <h2 id="Host-Group-Target-Patterns"><a href="#Host-Group-Target-Patterns" class="headerlink" title="Host/Group Target Patterns"></a>Host/Group Target Patterns</h2><ul>
 <li>OR (group1:group2)</li>
@@ -337,15 +385,20 @@
 <li>Contitional Clause(when: ansible_os_family == “Debian”,搭配register使用)</li>
 <li>Jinja2 Template Module(template)</li>
 </ul>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div></pre></td><td class="code"><pre><div class="line">---</div><div class="line">- hosts: webservres</div><div class="line">  sudo: yes</div><div class="line"></div><div class="line">  vars:</div><div class="line">    http_port: 80</div><div class="line">    doc_dir: /ansible/</div><div class="line">    doc_root: /var/www/html/ansible/</div><div class="line">    max_clients: 5</div><div class="line">  </div><div class="line">  vars_prompt:</div><div class="line">    - name: username</div><div class="line">      prompt: what is your name?</div><div class="line"></div><div class="line">  tasks:</div><div class="line">  - name: Ensure that Apache is installed</div><div class="line">    yum: name=httpd state=present</div><div class="line">    when: ansible_os_family == &quot;RedHat&quot;</div><div class="line"></div><div class="line">  - name: Start Apache Services</div><div class="line">    service: name=httpd enabled=yes state=started</div><div class="line"></div><div class="line">  - name: Deploy configuration File</div><div class="line">    template: src=templates/httpd.j2 dest=/etc/httpd/conf/httpd.conf</div><div class="line">    notify:</div><div class="line">      - Restart Apache</div><div class="line">    </div><div class="line">  - name: Copy Site Files</div><div class="line">      template: src=templates/index.j2 dest=&#123;&#123; doc_root &#125;&#125;/index.html</div><div class="line"></div><div class="line">  handlers:</div><div class="line">    - name: Restart Apache</div><div class="line">      service: name=httpd state=restarted</div><div class="line"></div><div class="line">- hosts: dbservers</div><div class="line">  sudo: yes</div><div class="line"></div><div class="line">  tasks:</div><div class="line">  - name: Ensure MySQL is installed</div><div class="line">    yum: name=mysql-server state=present</div><div class="line">  </div><div class="line">  - name: Start MySQL</div><div class="line">    service: name=mysqld state=started</div><div class="line"></div><div class="line">- hosts: webservers:dbservers</div><div class="line">  sudo: yes</div><div class="line"></div><div class="line">  tasks:</div><div class="line">  - name: Stop IPTABLES NOW!!!</div><div class="line">    service: name=iptables state=stopped</div></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">- hosts: webservres</span><br><span class="line">  sudo: yes</span><br><span class="line"></span><br><span class="line">  vars:</span><br><span class="line">    http_port: 80</span><br><span class="line">    doc_dir: /ansible/</span><br><span class="line">    doc_root: /var/www/html/ansible/</span><br><span class="line">    max_clients: 5</span><br><span class="line">  </span><br><span class="line">  vars_prompt:</span><br><span class="line">    - name: username</span><br><span class="line">      prompt: what is your name?</span><br><span class="line"></span><br><span class="line">  tasks:</span><br><span class="line">  - name: Ensure that Apache is installed</span><br><span class="line">    yum: name=httpd state=present</span><br><span class="line">    when: ansible_os_family == &quot;RedHat&quot;</span><br><span class="line"></span><br><span class="line">  - name: Start Apache Services</span><br><span class="line">    service: name=httpd enabled=yes state=started</span><br><span class="line"></span><br><span class="line">  - name: Deploy configuration File</span><br><span class="line">    template: src=templates/httpd.j2 dest=/etc/httpd/conf/httpd.conf</span><br><span class="line">    notify:</span><br><span class="line">      - Restart Apache</span><br><span class="line">    </span><br><span class="line">  - name: Copy Site Files</span><br><span class="line">      template: src=templates/index.j2 dest=&#123;&#123; doc_root &#125;&#125;/index.html</span><br><span class="line"></span><br><span class="line">  handlers:</span><br><span class="line">    - name: Restart Apache</span><br><span class="line">      service: name=httpd state=restarted</span><br><span class="line"></span><br><span class="line">- hosts: dbservers</span><br><span class="line">  sudo: yes</span><br><span class="line"></span><br><span class="line">  tasks:</span><br><span class="line">  - name: Ensure MySQL is installed</span><br><span class="line">    yum: name=mysql-server state=present</span><br><span class="line">  </span><br><span class="line">  - name: Start MySQL</span><br><span class="line">    service: name=mysqld state=started</span><br><span class="line"></span><br><span class="line">- hosts: webservers:dbservers</span><br><span class="line">  sudo: yes</span><br><span class="line"></span><br><span class="line">  tasks:</span><br><span class="line">  - name: Stop IPTABLES NOW!!!</span><br><span class="line">    service: name=iptables state=stopped</span><br></pre></td></tr></table></figure>
+
 <p>ansible-playbook -i inventory web_db.yaml</p>
 <h2 id="Roles"><a href="#Roles" class="headerlink" title="Roles"></a>Roles</h2><ul>
-<li>Predefined directory structure</li>
-<li>defaults、files、handlers、meta、tasks、templates、vars</li>
-<li>main.yml,使用include.vars除外</li>
-<li>use tags to define categories within your playbooks</li>
+<li><p>Predefined directory structure</p>
+</li>
+<li><p>defaults、files、handlers、meta、tasks、templates、vars</p>
+</li>
+<li><p>main.yml,使用include.vars除外</p>
+</li>
+<li><p>use tags to define categories within your playbooks</p>
+</li>
 <li><p>Adding Roles to Playbook</p>
-  <figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">    ---</div><div class="line">    - hosts: code-dev</div><div class="line">    roles:</div><div class="line">        - server-common</div><div class="line">        - builders</div><div class="line">    gather_facts: no</div><div class="line">    tasks:</div><div class="line">        # Build your extra tasks here like</div><div class="line">    ``` </div><div class="line">- Pre-tasks and Post-tasks(executes plays before or after roles)</div><div class="line">- ```ansible-playbook site.yml -tags &quot;web&quot; -limit atlanta</div></pre></td></tr></table></figure>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">    ---</span><br><span class="line">    - hosts: code-dev</span><br><span class="line">    roles:</span><br><span class="line">        - server-common</span><br><span class="line">        - builders</span><br><span class="line">    gather_facts: no</span><br><span class="line">    tasks:</span><br><span class="line">        # Build your extra tasks here like</span><br><span class="line">    ``` </span><br><span class="line">- Pre-tasks and Post-tasks(executes plays before or after roles)</span><br><span class="line">- ```ansible-playbook site.yml -tags &quot;web&quot; -limit atlanta</span><br></pre></td></tr></table></figure>
 </li>
 <li><p>ansible galaxy(ansible-galaxy install username.role)</p>
 </li>
@@ -353,64 +406,104 @@
 <h2 id="最佳实践"><a href="#最佳实践" class="headerlink" title="最佳实践"></a>最佳实践</h2><p><a href="https://github.com/enginyoyen/ansible-best-practises">ansible-best-practises</a></p>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/12/01/influxdb_config/"  data-tooltip="influxdb配置文件">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2017/12/01/influxdb_config/"
+                    data-tooltip="influxdb配置文件"
+                    aria-label="上一篇: influxdb配置文件"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/08/13/when_no_network_setup_environment/" data-tooltip="内网无网络环境初始化线上环境">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2017/08/13/when_no_network_setup_environment/"
+                    data-tooltip="内网无网络环境初始化线上环境"
+                    aria-label="下一篇: 内网无网络环境初始化线上环境"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/11/28/ansible-note/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/11/28/ansible-note/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/11/28/ansible-note/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/11/28/ansible-note/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/11/28/ansible-note/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/11/28/ansible-note/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -418,10 +511,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -443,55 +533,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/12/01/influxdb_config/"  data-tooltip="influxdb配置文件">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2017/12/01/influxdb_config/"
+                    data-tooltip="influxdb配置文件"
+                    aria-label="上一篇: influxdb配置文件"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2017/08/13/when_no_network_setup_environment/" data-tooltip="内网无网络环境初始化线上环境">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2017/08/13/when_no_network_setup_environment/"
+                    data-tooltip="内网无网络环境初始化线上环境"
+                    aria-label="下一篇: 内网无网络环境初始化线上环境"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/11/28/ansible-note/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/11/28/ansible-note/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/11/28/ansible-note/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/11/28/ansible-note/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/11/28/ansible-note/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/11/28/ansible-note/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -499,43 +626,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2017/11/28/ansible-note/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/11/28/ansible-note/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/11/28/ansible-note/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2017/11/28/ansible-note/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2017/11/28/ansible-note/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2017/11/28/ansible-note/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -551,28 +699,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -582,7 +725,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -595,7 +742,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -604,7 +751,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -615,7 +766,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -624,7 +775,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -634,9 +789,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -645,7 +800,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -655,7 +814,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -664,7 +823,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -676,7 +839,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -686,7 +849,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -696,9 +863,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -716,38 +883,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2017/11/28/ansible-note/';
-                 
-                    this.page.identifier = '2017/11/28/ansible-note/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

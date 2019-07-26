@@ -13,31 +13,35 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"多线程是个坑爹的课题，有多线程就有锁。Python中有低级线程模块_thread、再封装一下就是threading、再来一下就是from concurrent.futures import ThreadPoolExecutor。其中涉及到的锁大概有Lock、RLock、Condition、Semaphore、BoundedSeamphore、Event。这么多看起来怪吓人的，其实这么多的锁全部只是由Lock演化出来的\n\n\nLockLock = _thread._allocate_lock 这个是直接由最低级别的_thread直接引用过来的。创建锁的时候是处于未被锁定的状态。这应该是最容易被理解和使用的一种锁了。刚学习的时候铁定写过类似下面这种示例。本质原因是python中的原子操作是针对单条指令。而a+=1被翻译成了多条指令。执行过程中任何时刻可能被打断\n1234567891011a = 0def change():    global a    for i in range(100000):        a += 1t = [threading.Thread(target=change) for i in range(100)][i.start() for i in t][i.join() for i in t]print(a)\n\n解决方法就是所有线程共享同一个锁，虽然锁有很多种，但是几乎都是这样暴露给用户使用的，这是大家都知道的。一个锁都好理解。如果有两个锁就不是那么好理解了，比如这个有点装逼的例子。交叉打印Hello和World\n12345678910111213141516171819lock_a = Lock()lock_b = Lock()def hello():    for i in range(5):        lock_a.acquire()        time.sleep(0.1)        print(\"Hello\")        lock_b.release()def world():    for i in range(5):        lock_b.acquire()        time.sleep(0.1)        print(\"World\")        lock_a.release()Thread(target=hello).start()Thread(target=world).start()\n\nRLock可重入锁允许线程获得锁之后该线程可以无数次的再次获得锁。看起来没什么用，大概也确实没啥用吧，不过考虑一下下面这种场景\n123456789101112131415161718class Change:    def __init__(self):        self.a = 1        self.b = 1        self.lock = RLock()    def adda(self):        with self.lock:            self.a += 1    def addb(self):        with self.lock:            self.b += 1    def addab(self):        with self.lock:            self.adda()            self.addb()\n你有一个类。其中adda改变a,addb改变b.还提供方法addab同时调用前两者。如果没有可重入锁那么你将不得不把两个函数粘贴到addab下面。它的实现原理是获取锁的时候根据get_ident得到当前线程标识。如果和当前锁的标识一样则仅仅是给值加1，否则就尝试去获取锁。简要代码如下\n12345678910111213141516171819202122232425262728293031from threading import Lock, get_identclass RLock:    def __init__(self):        self.lock = Lock()        self._owner = None        self._count = 0    def acquire(self):        me = get_ident()        if self._owner == me:            self._count += 1            return        rc = self.lock.acquire()        if rc:            self._owner = me            self._count = 1    __enter__ = acquire    def release(self):        if self._owner != get_ident():            raise RuntimeError()        self._count -= 1        if self._count == 0:            self._owner = None            self.lock.release()    def __exit__(self, exc_type, exc_val, exc_tb):        self.release()\n\nCondition被称为条件变量，这个应该是很少被使用的。它允许传入一个锁，当满足条件的时候触发通知(可以看一下queue模块的实现，当get不到数据的时候就执行wait等待，新加入数据的时候执行notify通知唤醒)，这应该是它被称为条件变量的原因(感觉都有点牵强😕),和Lock以及RLock不同。这个东东主要是用来通知其他线程的。大概有两个方法wait(阻塞直到被通知)，notify(唤醒wait)。实现的思路是所有的线程共享同一个锁A，同时有一个共用的锁列表。每当调用wait的时候生成一个新的锁放入锁列表，然后获得该锁，再释放锁A(因为wait必须在获得锁A才能调用，如果不释放则其他线程无法获得锁A)。最绝的来了，再次获得新生成的锁造成死锁。由此该线程被挂起。直到其他获得锁A的线程执行notify操作。将wait的锁释放。实现代码如下\n123456789101112131415161718192021222324252627282930from collections import dequeclass Condition:    def __init__(self):        self._lock = RLock()        self._waiters = deque()    def __enter__(self):        return self._lock.__enter__()    def __exit__(self, *args):        return self._lock.__exit__(*args)    def wait(self):        assert get_ident() == self._lock._owner        waiter = Lock()        self._waiters.append(waiter)        waiter.acquire()        self._lock.release()        waiter.acquire()        self._lock.acquire()        del waiter    def notify(self):        assert get_ident() == self._lock._owner        for waiter in self._waiters.copy():            waiter.release()            self._waiters.remove(waiter)\n\n这个东东吧其实不太适合被直接使用。但是网上还是有人硬生生凑了一个消费者生产者的例子出来做演示\n12345678910111213141516171819202122232425262728293031323334353637import threadingimport randomimport timeclass Producer(threading.Thread):    def __init__(self, integers, condition):        super(Producer, self).__init__()        self.integers = integers        self.condition = condition    def run(self):        for i in range(10):            integer = random.randint(0, 256)            with self.condition:                self.integers.append(integer)                self.condition.notify()                time.sleep(0.5)class Consumer(threading.Thread):    def __init__(self, integers, condition):        super(Consumer, self).__init__()        self.integers = integers        self.condition = condition    def run(self):        with self.condition:            while True:                while self.integers:                    integer = self.integers.pop()                    print(integer)                self.condition.wait()integers = []condition = Condition()Producer(integers, condition).start()Consumer(integers, condition).start()\n这个例子有个地方需要注意。notify和wait并不是一一对应的。不代表执行了notify，wait部分一定会被执行。所以如果消费者部分这样写会造成部分没有被处理\n12345678910111213class Consumer(threading.Thread):    def __init__(self, integers, condition):        super(Consumer, self).__init__()        self.integers = integers        self.condition = condition    def run(self):        with self.condition:            while True:                self.condition.wait()                integer = self.integers.pop()                print(integer)\n\nSemaphore &amp; BoundedSeamphore上面先介绍Condition是有原因的，因为多线程信号量和事件都是基于它生成的。信号量常用于限制对有限资源的访问。比如你有1000个线程，如果每一个线程都去创建数据库连接，那么数据库可能会崩。或者爬虫创建对网站的连接，太过凶残并不好，这个时候用信号量来处理就不错。\n这里如果直接使用Lock来构建。那么一个锁同时只允许一个线程来获得显然是不达不到要求的。祭出刚才构建的Condition\n12345678910111213141516171819202122class Semaphore:    # value值用完了就被调用wait.只有notify能解除    def __init__(self, value=1):        self._lock = Condition()        self.value = value    def __enter__(self):        with self._lock:            if self.value == 0:                self._lock.wait()            else:                self.value -= 1    def __exit__(self, exc_type, exc_val, exc_tb):        self.value += 1        self._lock.notify()class BoundedSemaphore(Semaphore):    def __init__(self, value=1):        super(BoundedSemaphore, self).__init__(value=value)\n\nEventEvent和Condition差不多。区别就是上面提到的，使用Condition，如果在单线程，那么当notify的时候是无法触发wait的，再调用wait线程会被阻塞。但是Event就支持在单线程使用。提供两个主要方法，set和wait。但是它并不需要先获得锁。使用好像更方便一点，实现如下\n1234567891011121314151617181920class Event:    def __init__(self):        self._cond = Condition()        self._flag = False    def set(self):        with self._cond:            self._flag = True            self._cond.notify()    def clear(self):        with self._cond:            self._flag = False    def wait(self):        with self._cond:            signaled = self._flag            if not signaled:                signaled = self._cond.wait()            return signaled\n\n如果把刚才那个生产者消费者换到它上面来，大概是这个样子了\n1234567891011121314151617181920212223242526272829303132333435import threadingimport randomimport timeclass Producer(threading.Thread):    def __init__(self, integers, condition):        super(Producer, self).__init__()        self.integers = integers        self.condition = condition    def run(self):        for i in range(10):            integer = random.randint(0, 256)            self.integers.append(integer)            self.condition.set()            time.sleep(0.5)class Consumer(threading.Thread):    def __init__(self, integers, condition):        super(Consumer, self).__init__()        self.integers = integers        self.condition = condition    def run(self):        while True:            while self.integers:                integer = self.integers.pop()                print(integer)            self.condition.wait()integers = []condition = Event()Producer(integers, condition).start()Consumer(integers, condition).start()\n当然，没啥必要用这些比较低级的东东。能用通用高级数据结构就直接用，这样大家都比较好理解，总结就是只是给共享资源加锁用Lock、限制资源访问使用BoundedSeamphore，唤醒相关线程使用Event\n","dateCreated":"2018-03-12T14:16:13+08:00","dateModified":"2018-03-12T17:21:24+08:00","datePublished":"2018-03-12T14:16:13+08:00","description":"多线程是个坑爹的课题，有多线程就有锁。Python中有低级线程模块_thread、再封装一下就是threading、再来一下就是from concurrent.futures import ThreadPoolExecutor。其中涉及到的锁大概有Lock、RLock、Condition、Semaphore、BoundedSeamphore、Event。这么多看起来怪吓人的，其实这么多的锁全部只是由Lock演化出来的","headline":"Python中的多线程锁","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"}</script>
     <meta name="description" content="多线程是个坑爹的课题，有多线程就有锁。Python中有低级线程模块_thread、再封装一下就是threading、再来一下就是from concurrent.futures import ThreadPoolExecutor。其中涉及到的锁大概有Lock、RLock、Condition、Semaphore、BoundedSeamphore、Event。这么多看起来怪吓人的，其实这么多的锁全部只是">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Python中的多线程锁">
 <meta property="og:url" content="https://www.zoulei.net/2018/03/12/Python_Thread_Lock/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="多线程是个坑爹的课题，有多线程就有锁。Python中有低级线程模块_thread、再封装一下就是threading、再来一下就是from concurrent.futures import ThreadPoolExecutor。其中涉及到的锁大概有Lock、RLock、Condition、Semaphore、BoundedSeamphore、Event。这么多看起来怪吓人的，其实这么多的锁全部只是">
+<meta property="og:locale" content="zh-cn">
 <meta property="og:updated_time" content="2018-03-12T09:21:24.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Python中的多线程锁">
 <meta name="twitter:description" content="多线程是个坑爹的课题，有多线程就有锁。Python中有低级线程模块_thread、再封装一下就是threading、再来一下就是from concurrent.futures import ThreadPoolExecutor。其中涉及到的锁大概有Lock、RLock、Condition、Semaphore、BoundedSeamphore、Event。这么多看起来怪吓人的，其实这么多的锁全部只是">
-<meta name="twitter:creator" content="@aec4d">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -47,23 +51,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -72,23 +79,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -98,9 +90,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -110,9 +103,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -122,9 +116,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -134,9 +129,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -146,9 +142,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -158,9 +155,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -171,27 +169,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -205,9 +242,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -223,17 +261,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             Python中的多线程锁
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2018-03-12T14:16:13+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2018-03-12T14:16:13+08:00">
 	
 		    3月 12, 2018
     	
@@ -247,84 +286,144 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>多线程是个坑爹的课题，有多线程就有锁。Python中有低级线程模块_thread、再封装一下就是threading、再来一下就是<code>from concurrent.futures import ThreadPoolExecutor</code>。其中涉及到的锁大概有Lock、RLock、Condition、Semaphore、BoundedSeamphore、Event。这么多看起来怪吓人的，其实这么多的锁全部只是由Lock演化出来的</p>
 <a id="more"></a>
+
 <h3 id="Lock"><a href="#Lock" class="headerlink" title="Lock"></a>Lock</h3><p><code>Lock = _thread._allocate_lock</code> 这个是直接由最低级别的_thread直接引用过来的。创建锁的时候是处于未被锁定的状态。这应该是最容易被理解和使用的一种锁了。刚学习的时候铁定写过类似下面这种示例。本质原因是python中的原子操作是针对单条指令。而a+=1被翻译成了多条指令。执行过程中任何时刻可能被打断</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">a = <span class="number">0</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">change</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">global</span> a</div><div class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">100000</span>):</div><div class="line">        a += <span class="number">1</span></div><div class="line"></div><div class="line">t = [threading.Thread(target=change) <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">100</span>)]</div><div class="line">[i.start() <span class="keyword">for</span> i <span class="keyword">in</span> t]</div><div class="line">[i.join() <span class="keyword">for</span> i <span class="keyword">in</span> t]</div><div class="line">print(a)</div></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">a = <span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">change</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">global</span> a</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">100000</span>):</span><br><span class="line">        a += <span class="number">1</span></span><br><span class="line"></span><br><span class="line">t = [threading.Thread(target=change) <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">100</span>)]</span><br><span class="line">[i.start() <span class="keyword">for</span> i <span class="keyword">in</span> t]</span><br><span class="line">[i.join() <span class="keyword">for</span> i <span class="keyword">in</span> t]</span><br><span class="line">print(a)</span><br></pre></td></tr></table></figure>
+
 <p>解决方法就是<span style="color:red"><strong>所有线程共享同一个锁，虽然锁有很多种，但是几乎都是这样暴露给用户使用的</strong></span>，这是大家都知道的。一个锁都好理解。如果有两个锁就不是那么好理解了，比如这个有点装逼的例子。交叉打印Hello和World</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">lock_a = Lock()</div><div class="line">lock_b = Lock()</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">hello</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">5</span>):</div><div class="line">        lock_a.acquire()</div><div class="line">        time.sleep(<span class="number">0.1</span>)</div><div class="line">        print(<span class="string">"Hello"</span>)</div><div class="line">        lock_b.release()</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">world</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">5</span>):</div><div class="line">        lock_b.acquire()</div><div class="line">        time.sleep(<span class="number">0.1</span>)</div><div class="line">        print(<span class="string">"World"</span>)</div><div class="line">        lock_a.release()</div><div class="line"></div><div class="line">Thread(target=hello).start()</div><div class="line">Thread(target=world).start()</div></pre></td></tr></table></figure>
-<h3 id="RLock"><a href="#RLock" class="headerlink" title="RLock"></a>RLock</h3><p>可重入锁允许线程获得锁之后该线程可以无数次的再次获得锁。看起来没什么用，大概也确实没啥用吧，不过考虑一下下面这种场景<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Change</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></div><div class="line">        self.a = <span class="number">1</span></div><div class="line">        self.b = <span class="number">1</span></div><div class="line">        self.lock = RLock()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">adda</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">with</span> self.lock:</div><div class="line">            self.a += <span class="number">1</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">addb</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">with</span> self.lock:</div><div class="line">            self.b += <span class="number">1</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">addab</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">with</span> self.lock:</div><div class="line">            self.adda()</div><div class="line">            self.addb()</div></pre></td></tr></table></figure><br>你有一个类。其中adda改变a,addb改变b.还提供方法addab同时调用前两者。如果没有可重入锁那么你将不得不把两个函数粘贴到addab下面。它的实现原理是获取锁的时候根据get_ident得到当前线程标识。如果和当前锁的标识一样则仅仅是给值加1，否则就尝试去获取锁。简要代码如下</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> threading <span class="keyword">import</span> Lock, get_ident</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">RLock</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></div><div class="line">        self.lock = Lock()</div><div class="line">        self._owner = <span class="keyword">None</span></div><div class="line">        self._count = <span class="number">0</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">acquire</span><span class="params">(self)</span>:</span></div><div class="line">        me = get_ident()</div><div class="line">        <span class="keyword">if</span> self._owner == me:</div><div class="line">            self._count += <span class="number">1</span></div><div class="line">            <span class="keyword">return</span></div><div class="line">        rc = self.lock.acquire()</div><div class="line">        <span class="keyword">if</span> rc:</div><div class="line">            self._owner = me</div><div class="line">            self._count = <span class="number">1</span></div><div class="line"></div><div class="line">    __enter__ = acquire</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">release</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">if</span> self._owner != get_ident():</div><div class="line">            <span class="keyword">raise</span> RuntimeError()</div><div class="line">        self._count -= <span class="number">1</span></div><div class="line">        <span class="keyword">if</span> self._count == <span class="number">0</span>:</div><div class="line">            self._owner = <span class="keyword">None</span></div><div class="line">            self.lock.release()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__exit__</span><span class="params">(self, exc_type, exc_val, exc_tb)</span>:</span></div><div class="line">        self.release()</div></pre></td></tr></table></figure>
-<h2 id="Condition"><a href="#Condition" class="headerlink" title="Condition"></a>Condition</h2><p>被称为条件变量，这个应该是很少被使用的。它允许传入一个锁，当满足条件的时候触发通知(可以看一下queue模块的实现，当get不到数据的时候就执行wait等待，新加入数据的时候执行notify通知唤醒)，这应该是它被称为条件变量的原因(感觉都有点牵强😕),和Lock以及RLock不同。这个东东主要是用来通知其他线程的。大概有两个方法wait(阻塞直到被通知)，notify(唤醒wait)。<br>实现的思路是所有的线程共享同一个锁A，同时有一个共用的锁列表。每当调用wait的时候生成一个新的锁放入锁列表，然后获得该锁，再释放锁A(因为wait必须在获得锁A才能调用，如果不释放则其他线程无法获得锁A)。最绝的来了，<span style="color:red"><strong>再次获得新生成的锁造成死锁</strong></span>。由此该线程被挂起。直到其他获得锁A的线程执行notify操作。将wait的锁释放。<br>实现代码如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> collections <span class="keyword">import</span> deque</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Condition</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></div><div class="line">        self._lock = RLock()</div><div class="line">        self._waiters = deque()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__enter__</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self._lock.__enter__()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__exit__</span><span class="params">(self, *args)</span>:</span></div><div class="line">        <span class="keyword">return</span> self._lock.__exit__(*args)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">wait</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">assert</span> get_ident() == self._lock._owner</div><div class="line">        waiter = Lock()</div><div class="line">        self._waiters.append(waiter)</div><div class="line"></div><div class="line">        waiter.acquire()</div><div class="line">        self._lock.release()</div><div class="line">        waiter.acquire()</div><div class="line">        self._lock.acquire()</div><div class="line">        <span class="keyword">del</span> waiter</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">notify</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">assert</span> get_ident() == self._lock._owner</div><div class="line">        <span class="keyword">for</span> waiter <span class="keyword">in</span> self._waiters.copy():</div><div class="line">            waiter.release()</div><div class="line">            self._waiters.remove(waiter)</div></pre></td></tr></table></figure></p>
-<p>这个东东吧其实不太适合被直接使用。但是网上还是有人硬生生凑了一个消费者生产者的例子出来做演示<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> threading</div><div class="line"><span class="keyword">import</span> random</div><div class="line"><span class="keyword">import</span> time</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Producer</span><span class="params">(threading.Thread)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, integers, condition)</span>:</span></div><div class="line">        super(Producer, self).__init__()</div><div class="line">        self.integers = integers</div><div class="line">        self.condition = condition</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">10</span>):</div><div class="line">            integer = random.randint(<span class="number">0</span>, <span class="number">256</span>)</div><div class="line">            <span class="keyword">with</span> self.condition:</div><div class="line">                self.integers.append(integer)</div><div class="line">                self.condition.notify()</div><div class="line">                time.sleep(<span class="number">0.5</span>)</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Consumer</span><span class="params">(threading.Thread)</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, integers, condition)</span>:</span></div><div class="line">        super(Consumer, self).__init__()</div><div class="line">        self.integers = integers</div><div class="line">        self.condition = condition</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">with</span> self.condition:</div><div class="line">            <span class="keyword">while</span> <span class="keyword">True</span>:</div><div class="line">                <span class="keyword">while</span> self.integers:</div><div class="line">                    integer = self.integers.pop()</div><div class="line">                    print(integer)</div><div class="line">                self.condition.wait()</div><div class="line"></div><div class="line">integers = []</div><div class="line">condition = Condition()</div><div class="line">Producer(integers, condition).start()</div><div class="line">Consumer(integers, condition).start()</div></pre></td></tr></table></figure><br>这个例子有个地方需要注意。notify和wait并不是一一对应的。不代表执行了notify，wait部分一定会被执行。所以如果消费者部分这样写会造成部分没有被处理<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Consumer</span><span class="params">(threading.Thread)</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, integers, condition)</span>:</span></div><div class="line">        super(Consumer, self).__init__()</div><div class="line">        self.integers = integers</div><div class="line">        self.condition = condition</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">with</span> self.condition:</div><div class="line">            <span class="keyword">while</span> <span class="keyword">True</span>:</div><div class="line">                self.condition.wait()</div><div class="line">                integer = self.integers.pop()</div><div class="line">                print(integer)</div></pre></td></tr></table></figure></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">lock_a = Lock()</span><br><span class="line">lock_b = Lock()</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">hello</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">5</span>):</span><br><span class="line">        lock_a.acquire()</span><br><span class="line">        time.sleep(<span class="number">0.1</span>)</span><br><span class="line">        print(<span class="string">"Hello"</span>)</span><br><span class="line">        lock_b.release()</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">world</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">5</span>):</span><br><span class="line">        lock_b.acquire()</span><br><span class="line">        time.sleep(<span class="number">0.1</span>)</span><br><span class="line">        print(<span class="string">"World"</span>)</span><br><span class="line">        lock_a.release()</span><br><span class="line"></span><br><span class="line">Thread(target=hello).start()</span><br><span class="line">Thread(target=world).start()</span><br></pre></td></tr></table></figure>
+
+<h3 id="RLock"><a href="#RLock" class="headerlink" title="RLock"></a>RLock</h3><p>可重入锁允许线程获得锁之后该线程可以无数次的再次获得锁。看起来没什么用，大概也确实没啥用吧，不过考虑一下下面这种场景</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Change</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.a = <span class="number">1</span></span><br><span class="line">        self.b = <span class="number">1</span></span><br><span class="line">        self.lock = RLock()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">adda</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> self.lock:</span><br><span class="line">            self.a += <span class="number">1</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">addb</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> self.lock:</span><br><span class="line">            self.b += <span class="number">1</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">addab</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> self.lock:</span><br><span class="line">            self.adda()</span><br><span class="line">            self.addb()</span><br></pre></td></tr></table></figure>
+<p>你有一个类。其中adda改变a,addb改变b.还提供方法addab同时调用前两者。如果没有可重入锁那么你将不得不把两个函数粘贴到addab下面。它的实现原理是获取锁的时候根据get_ident得到当前线程标识。如果和当前锁的标识一样则仅仅是给值加1，否则就尝试去获取锁。简要代码如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> threading <span class="keyword">import</span> Lock, get_ident</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">RLock</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.lock = Lock()</span><br><span class="line">        self._owner = <span class="literal">None</span></span><br><span class="line">        self._count = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">acquire</span><span class="params">(self)</span>:</span></span><br><span class="line">        me = get_ident()</span><br><span class="line">        <span class="keyword">if</span> self._owner == me:</span><br><span class="line">            self._count += <span class="number">1</span></span><br><span class="line">            <span class="keyword">return</span></span><br><span class="line">        rc = self.lock.acquire()</span><br><span class="line">        <span class="keyword">if</span> rc:</span><br><span class="line">            self._owner = me</span><br><span class="line">            self._count = <span class="number">1</span></span><br><span class="line"></span><br><span class="line">    __enter__ = acquire</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">release</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> self._owner != get_ident():</span><br><span class="line">            <span class="keyword">raise</span> RuntimeError()</span><br><span class="line">        self._count -= <span class="number">1</span></span><br><span class="line">        <span class="keyword">if</span> self._count == <span class="number">0</span>:</span><br><span class="line">            self._owner = <span class="literal">None</span></span><br><span class="line">            self.lock.release()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__exit__</span><span class="params">(self, exc_type, exc_val, exc_tb)</span>:</span></span><br><span class="line">        self.release()</span><br></pre></td></tr></table></figure>
+
+<h2 id="Condition"><a href="#Condition" class="headerlink" title="Condition"></a>Condition</h2><p>被称为条件变量，这个应该是很少被使用的。它允许传入一个锁，当满足条件的时候触发通知(可以看一下queue模块的实现，当get不到数据的时候就执行wait等待，新加入数据的时候执行notify通知唤醒)，这应该是它被称为条件变量的原因(感觉都有点牵强😕),和Lock以及RLock不同。这个东东主要是用来通知其他线程的。大概有两个方法wait(阻塞直到被通知)，notify(唤醒wait)。<br>实现的思路是所有的线程共享同一个锁A，同时有一个共用的锁列表。每当调用wait的时候生成一个新的锁放入锁列表，然后获得该锁，再释放锁A(因为wait必须在获得锁A才能调用，如果不释放则其他线程无法获得锁A)。最绝的来了，<span style="color:red"><strong>再次获得新生成的锁造成死锁</strong></span>。由此该线程被挂起。直到其他获得锁A的线程执行notify操作。将wait的锁释放。<br>实现代码如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> collections <span class="keyword">import</span> deque</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Condition</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></span><br><span class="line">        self._lock = RLock()</span><br><span class="line">        self._waiters = deque()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__enter__</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self._lock.__enter__()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__exit__</span><span class="params">(self, *args)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self._lock.__exit__(*args)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">wait</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">assert</span> get_ident() == self._lock._owner</span><br><span class="line">        waiter = Lock()</span><br><span class="line">        self._waiters.append(waiter)</span><br><span class="line"></span><br><span class="line">        waiter.acquire()</span><br><span class="line">        self._lock.release()</span><br><span class="line">        waiter.acquire()</span><br><span class="line">        self._lock.acquire()</span><br><span class="line">        <span class="keyword">del</span> waiter</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">notify</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">assert</span> get_ident() == self._lock._owner</span><br><span class="line">        <span class="keyword">for</span> waiter <span class="keyword">in</span> self._waiters.copy():</span><br><span class="line">            waiter.release()</span><br><span class="line">            self._waiters.remove(waiter)</span><br></pre></td></tr></table></figure>
+
+<p>这个东东吧其实不太适合被直接使用。但是网上还是有人硬生生凑了一个消费者生产者的例子出来做演示</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Producer</span><span class="params">(threading.Thread)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, integers, condition)</span>:</span></span><br><span class="line">        super(Producer, self).__init__()</span><br><span class="line">        self.integers = integers</span><br><span class="line">        self.condition = condition</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">10</span>):</span><br><span class="line">            integer = random.randint(<span class="number">0</span>, <span class="number">256</span>)</span><br><span class="line">            <span class="keyword">with</span> self.condition:</span><br><span class="line">                self.integers.append(integer)</span><br><span class="line">                self.condition.notify()</span><br><span class="line">                time.sleep(<span class="number">0.5</span>)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Consumer</span><span class="params">(threading.Thread)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, integers, condition)</span>:</span></span><br><span class="line">        super(Consumer, self).__init__()</span><br><span class="line">        self.integers = integers</span><br><span class="line">        self.condition = condition</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> self.condition:</span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                <span class="keyword">while</span> self.integers:</span><br><span class="line">                    integer = self.integers.pop()</span><br><span class="line">                    print(integer)</span><br><span class="line">                self.condition.wait()</span><br><span class="line"></span><br><span class="line">integers = []</span><br><span class="line">condition = Condition()</span><br><span class="line">Producer(integers, condition).start()</span><br><span class="line">Consumer(integers, condition).start()</span><br></pre></td></tr></table></figure>
+<p>这个例子有个地方需要注意。notify和wait并不是一一对应的。不代表执行了notify，wait部分一定会被执行。所以如果消费者部分这样写会造成部分没有被处理</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Consumer</span><span class="params">(threading.Thread)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, integers, condition)</span>:</span></span><br><span class="line">        super(Consumer, self).__init__()</span><br><span class="line">        self.integers = integers</span><br><span class="line">        self.condition = condition</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> self.condition:</span><br><span class="line">            <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">                self.condition.wait()</span><br><span class="line">                integer = self.integers.pop()</span><br><span class="line">                print(integer)</span><br></pre></td></tr></table></figure>
+
 <h3 id="Semaphore-amp-BoundedSeamphore"><a href="#Semaphore-amp-BoundedSeamphore" class="headerlink" title="Semaphore &amp; BoundedSeamphore"></a>Semaphore &amp; BoundedSeamphore</h3><p>上面先介绍Condition是有原因的，因为多线程信号量和事件都是基于它生成的。信号量常用于限制对有限资源的访问。比如你有1000个线程，如果每一个线程都去创建数据库连接，那么数据库可能会崩。或者爬虫创建对网站的连接，太过凶残并不好，这个时候用信号量来处理就不错。</p>
-<p>这里如果直接使用Lock来构建。那么一个锁同时只允许一个线程来获得显然是不达不到要求的。祭出刚才构建的Condition<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Semaphore</span>:</span></div><div class="line">    <span class="comment"># value值用完了就被调用wait.只有notify能解除</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, value=<span class="number">1</span>)</span>:</span></div><div class="line">        self._lock = Condition()</div><div class="line">        self.value = value</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__enter__</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">with</span> self._lock:</div><div class="line">            <span class="keyword">if</span> self.value == <span class="number">0</span>:</div><div class="line">                self._lock.wait()</div><div class="line">            <span class="keyword">else</span>:</div><div class="line">                self.value -= <span class="number">1</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__exit__</span><span class="params">(self, exc_type, exc_val, exc_tb)</span>:</span></div><div class="line">        self.value += <span class="number">1</span></div><div class="line">        self._lock.notify()</div><div class="line"></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">BoundedSemaphore</span><span class="params">(Semaphore)</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, value=<span class="number">1</span>)</span>:</span></div><div class="line">        super(BoundedSemaphore, self).__init__(value=value)</div></pre></td></tr></table></figure></p>
-<h3 id="Event"><a href="#Event" class="headerlink" title="Event"></a>Event</h3><p>Event和Condition差不多。区别就是上面提到的，使用Condition，如果在单线程，那么当notify的时候是无法触发wait的，再调用wait线程会被阻塞。<span style="color:red"><strong>但是Event就支持在单线程使用。</strong></span>提供两个主要方法，set和wait。但是它并不需要先获得锁。使用好像更方便一点，实现如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Event</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></div><div class="line">        self._cond = Condition()</div><div class="line">        self._flag = <span class="keyword">False</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">set</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">with</span> self._cond:</div><div class="line">            self._flag = <span class="keyword">True</span></div><div class="line">            self._cond.notify()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">clear</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">with</span> self._cond:</div><div class="line">            self._flag = <span class="keyword">False</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">wait</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">with</span> self._cond:</div><div class="line">            signaled = self._flag</div><div class="line">            <span class="keyword">if</span> <span class="keyword">not</span> signaled:</div><div class="line">                signaled = self._cond.wait()</div><div class="line">            <span class="keyword">return</span> signaled</div></pre></td></tr></table></figure></p>
-<p>如果把刚才那个生产者消费者换到它上面来，大概是这个样子了<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> threading</div><div class="line"><span class="keyword">import</span> random</div><div class="line"><span class="keyword">import</span> time</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Producer</span><span class="params">(threading.Thread)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, integers, condition)</span>:</span></div><div class="line">        super(Producer, self).__init__()</div><div class="line">        self.integers = integers</div><div class="line">        self.condition = condition</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">10</span>):</div><div class="line">            integer = random.randint(<span class="number">0</span>, <span class="number">256</span>)</div><div class="line">            self.integers.append(integer)</div><div class="line">            self.condition.set()</div><div class="line">            time.sleep(<span class="number">0.5</span>)</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Consumer</span><span class="params">(threading.Thread)</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, integers, condition)</span>:</span></div><div class="line">        super(Consumer, self).__init__()</div><div class="line">        self.integers = integers</div><div class="line">        self.condition = condition</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">while</span> <span class="keyword">True</span>:</div><div class="line">            <span class="keyword">while</span> self.integers:</div><div class="line">                integer = self.integers.pop()</div><div class="line">                print(integer)</div><div class="line">            self.condition.wait()</div><div class="line"></div><div class="line">integers = []</div><div class="line">condition = Event()</div><div class="line">Producer(integers, condition).start()</div><div class="line">Consumer(integers, condition).start()</div></pre></td></tr></table></figure><br>当然，没啥必要用这些比较低级的东东。能用通用高级数据结构就直接用，这样大家都比较好理解，总结就是只是给共享资源加锁用Lock、限制资源访问使用BoundedSeamphore，唤醒相关线程使用Event</p>
+<p>这里如果直接使用Lock来构建。那么一个锁同时只允许一个线程来获得显然是不达不到要求的。祭出刚才构建的Condition</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Semaphore</span>:</span></span><br><span class="line">    <span class="comment"># value值用完了就被调用wait.只有notify能解除</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, value=<span class="number">1</span>)</span>:</span></span><br><span class="line">        self._lock = Condition()</span><br><span class="line">        self.value = value</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__enter__</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> self._lock:</span><br><span class="line">            <span class="keyword">if</span> self.value == <span class="number">0</span>:</span><br><span class="line">                self._lock.wait()</span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                self.value -= <span class="number">1</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__exit__</span><span class="params">(self, exc_type, exc_val, exc_tb)</span>:</span></span><br><span class="line">        self.value += <span class="number">1</span></span><br><span class="line">        self._lock.notify()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">BoundedSemaphore</span><span class="params">(Semaphore)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, value=<span class="number">1</span>)</span>:</span></span><br><span class="line">        super(BoundedSemaphore, self).__init__(value=value)</span><br></pre></td></tr></table></figure>
+
+<h3 id="Event"><a href="#Event" class="headerlink" title="Event"></a>Event</h3><p>Event和Condition差不多。区别就是上面提到的，使用Condition，如果在单线程，那么当notify的时候是无法触发wait的，再调用wait线程会被阻塞。<span style="color:red"><strong>但是Event就支持在单线程使用。</strong></span>提供两个主要方法，set和wait。但是它并不需要先获得锁。使用好像更方便一点，实现如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Event</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></span><br><span class="line">        self._cond = Condition()</span><br><span class="line">        self._flag = <span class="literal">False</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">set</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> self._cond:</span><br><span class="line">            self._flag = <span class="literal">True</span></span><br><span class="line">            self._cond.notify()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">clear</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> self._cond:</span><br><span class="line">            self._flag = <span class="literal">False</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">wait</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> self._cond:</span><br><span class="line">            signaled = self._flag</span><br><span class="line">            <span class="keyword">if</span> <span class="keyword">not</span> signaled:</span><br><span class="line">                signaled = self._cond.wait()</span><br><span class="line">            <span class="keyword">return</span> signaled</span><br></pre></td></tr></table></figure>
+
+<p>如果把刚才那个生产者消费者换到它上面来，大概是这个样子了</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Producer</span><span class="params">(threading.Thread)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, integers, condition)</span>:</span></span><br><span class="line">        super(Producer, self).__init__()</span><br><span class="line">        self.integers = integers</span><br><span class="line">        self.condition = condition</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">10</span>):</span><br><span class="line">            integer = random.randint(<span class="number">0</span>, <span class="number">256</span>)</span><br><span class="line">            self.integers.append(integer)</span><br><span class="line">            self.condition.set()</span><br><span class="line">            time.sleep(<span class="number">0.5</span>)</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Consumer</span><span class="params">(threading.Thread)</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, integers, condition)</span>:</span></span><br><span class="line">        super(Consumer, self).__init__()</span><br><span class="line">        self.integers = integers</span><br><span class="line">        self.condition = condition</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">            <span class="keyword">while</span> self.integers:</span><br><span class="line">                integer = self.integers.pop()</span><br><span class="line">                print(integer)</span><br><span class="line">            self.condition.wait()</span><br><span class="line"></span><br><span class="line">integers = []</span><br><span class="line">condition = Event()</span><br><span class="line">Producer(integers, condition).start()</span><br><span class="line">Consumer(integers, condition).start()</span><br></pre></td></tr></table></figure>
+<p>当然，没啥必要用这些比较低级的东东。能用通用高级数据结构就直接用，这样大家都比较好理解，总结就是只是给共享资源加锁用Lock、限制资源访问使用BoundedSeamphore，唤醒相关线程使用Event</p>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/12/python_concurrent_futures_thread/"  data-tooltip="Python高级多线程并发">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/12/python_concurrent_futures_thread/"
+                    data-tooltip="Python高级多线程并发"
+                    aria-label="上一篇: Python高级多线程并发"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/06/linux_signal/" data-tooltip="Linux 信号">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/06/linux_signal/"
+                    data-tooltip="Linux 信号"
+                    aria-label="下一篇: Linux 信号"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -332,10 +431,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -357,55 +453,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/12/python_concurrent_futures_thread/"  data-tooltip="Python高级多线程并发">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/12/python_concurrent_futures_thread/"
+                    data-tooltip="Python高级多线程并发"
+                    aria-label="上一篇: Python高级多线程并发"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/06/linux_signal/" data-tooltip="Linux 信号">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/06/linux_signal/"
+                    data-tooltip="Linux 信号"
+                    aria-label="下一篇: Linux 信号"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -413,43 +546,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/12/Python_Thread_Lock/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -465,28 +619,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -496,7 +645,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -509,7 +662,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -518,7 +671,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -529,7 +686,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -538,7 +695,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -548,9 +709,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -559,7 +720,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -569,7 +734,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -578,7 +743,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -590,7 +759,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -600,7 +769,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -610,9 +783,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -630,38 +803,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2018/03/12/Python_Thread_Lock/';
-                 
-                    this.page.identifier = '2018/03/12/Python_Thread_Lock/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

@@ -13,6 +13,7 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"个人认为python中描述符协议是一个比较神奇的存在，是因为如果你不去了解property的内部实现，没有深究别人写的__set__、__get__方法。或许写python很多年都对这个东西没什么了解。然而这玩意儿有时候真的挺好用的。本文不会详述描述符协议。会着重讲一个小例子。如果以前没有接触过描述符，请依次查看文末相关资料的两篇文章\n\n\n适用范围描述符协议都是针对对象属性的访问。先要明白我们不会去针对一个全局的def使用property进行装饰。我们一般都是在类里面使用。可以对类的访问使用描述符(比较少用)，更常用的是针对类实例的访问使用描述符协议\n资料描述符和非资料描述符的区别1234567891011121314151617181920212223class RevealAccess(object):    def __get__(self, obj, objtype):        try:            return self.val        except:            return 'error'    # def __set__(self, obj, val):    #     self.val = valclass MyClass(object):    x = RevealAccess()m = MyClass()print(m.x)m.x = 20print(m.__dict__)m.__dict__['x'] = 1print(m.__dict__)print(m.x)print(m.__class__ is type(m))\n首先，当对属性x进行访问的时候不是直接返回描述符对象，而是按照描述符规则执行了描述符对象的_get_等方法！资料描述符就是同时实现了__get__和__set__，区别就是是资料描述符的时候就按照资料描述符的__get__、__set__来。非资料描述符的时候那就先访问`instance.__dict[‘x’]`，没有就在按照非资料描述符的__get__来。上面的例子先注释掉__set__就是非资料描述符，对实例属性进行访问的时候先访问了instance.__dict__没有就使用了描述符对象的__get__方法。当为资料描述符的时候纵然对instance.__dict__设置了。依然会调用描述符对象。\n示例应用:property加强版，增加缓存(最简代码)首先来一个例子\n12345678910111213class Foo(object):    @property    def jammy(self,_cache=&#123;&#125;):        if 'result' in _cache:            return _cache['result']        print('jammy called')        result = 1        _cache.update(&#123;'result':result&#125;)        return resultf = Foo()print(f.jammy)print(f.jammy)\n该方法使用python函数的默认参数只初始化一次对结果进行缓存。缺点比较明显。1.无法复用。2.对原函数进行了修改\n下面看pyramid的实现\n123456789101112131415161718class reify(object):    def __init__(self, func):        self.func = func    def __get__(self, obj, cls):        value = obj.__dict__[self.func.__name__] = self.func(obj)        return valueclass Foo(object):    @reify    def jammy(self):        print('jammy called')        return 1f = Foo()print(f.jammy)print(f.jammy)\n使用的是非资料描述符，第一次对属性进行访问的时候，因为f.__dict__是没有jammy的。故而访问了描述符，在描述符__get__里面将结果加入到了f.__dict__里面。后面访问就没__get__什么事儿了。实现了对结果的缓存\n再看werkzeug的实现\n1234567891011121314151617181920212223242526class cached_property(property):    def __init__(self, func, name=None, doc=None):        self.__name__ = func.__name__        self.func = func    def __set__(self, obj, value):        obj.__dict__[self.__name__] = value    def __get__(self, obj, type=None):        value = obj.__dict__.get(self.__name__)        if value is None:            value = self.func(obj)            obj.__dict__[self.__name__] = value        return valueclass Foo(object):    @cached_property    def jammy(self):        print('jammy called')        return 1f = Foo()print(f.jammy)print(f.jammy)\n可以看到和资料描述符的基本一样。可以看到__set__基本没什么用，仅仅只是表面了这是一个资料描述符。而且同样的，为了方便也一样把结果存储到了f.__dict__里面\n_getattr_、__getattribute\\虽然都有get，可是区别是很大的。描述符是控制对象某个属性的访问(所以看到描述符对象一般主要用__get__，__get__)。__getattr__它控制属性不存在的时候该咋办__getattribute__和上面相反，默认行为，从__dict__中找到属性值返回\n12345678910111213141516class Foo(object):    def __getattr__(self, attr):        print \"looking up\", attr        value = 42        self.__dict__[attr] = value        return valuef = Foo()print f.x print f.x#output &gt;&gt;&gt; looking up x 42#output &gt;&gt;&gt; 42f.x = 3print f.x #output &gt;&gt;&gt; 3\n\n再加一个类似的例子吧O_o(https://github.com/faif/python-patterns/blob/master/lazy_evaluation.py)\n相关资料python官方文档描述符指南(译)python描述符解密Difference between _getattr_ vs _getattribute_\n","dateCreated":"2016-07-10T17:13:43+08:00","dateModified":"2016-08-02T11:40:42+08:00","datePublished":"2016-07-10T17:13:43+08:00","description":"个人认为python中描述符协议是一个比较神奇的存在，是因为如果你不去了解property的内部实现，没有深究别人写的__set__、__get__方法。或许写python很多年都对这个东西没什么了解。然而这玩意儿有时候真的挺好用的。本文不会详述描述符协议。会着重讲一个小例子。如果以前没有接触过描述符，请依次查看文末相关资料的两篇文章","headline":"python描述符应用","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/07/10/python_descriptor/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/07/10/python_descriptor/","keywords":"python"}</script>
     <meta name="description" content="个人认为python中描述符协议是一个比较神奇的存在，是因为如果你不去了解property的内部实现，没有深究别人写的__set__、__get__方法。或许写python很多年都对这个东西没什么了解。然而这玩意儿有时候真的挺好用的。本文不会详述描述符协议。会着重讲一个小例子。如果以前没有接触过描述符，请依次查看文末相关资料的两篇文章">
 <meta name="keywords" content="python">
 <meta property="og:type" content="blog">
@@ -20,25 +21,28 @@
 <meta property="og:url" content="https://www.zoulei.net/2016/07/10/python_descriptor/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="个人认为python中描述符协议是一个比较神奇的存在，是因为如果你不去了解property的内部实现，没有深究别人写的__set__、__get__方法。或许写python很多年都对这个东西没什么了解。然而这玩意儿有时候真的挺好用的。本文不会详述描述符协议。会着重讲一个小例子。如果以前没有接触过描述符，请依次查看文末相关资料的两篇文章">
+<meta property="og:locale" content="zh-cn">
 <meta property="og:updated_time" content="2016-08-02T03:40:42.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="python描述符应用">
 <meta name="twitter:description" content="个人认为python中描述符协议是一个比较神奇的存在，是因为如果你不去了解property的内部实现，没有深究别人写的__set__、__get__方法。或许写python很多年都对这个东西没什么了解。然而这玩意儿有时候真的挺好用的。本文不会详述描述符协议。会着重讲一个小例子。如果以前没有接触过描述符，请依次查看文末相关资料的两篇文章">
-<meta name="twitter:creator" content="@aec4d">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -48,23 +52,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -73,23 +80,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -99,9 +91,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -111,9 +104,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -123,9 +117,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -135,9 +130,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -147,9 +143,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -159,9 +156,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -172,27 +170,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -206,9 +243,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -224,17 +262,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             python描述符应用
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2016-07-10T17:13:43+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2016-07-10T17:13:43+08:00">
 	
 		    7月 10, 2016
     	
@@ -242,23 +281,36 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>个人认为python中描述符协议是一个比较神奇的存在，是因为如果你不去了解property的内部实现，没有深究别人写的__set__、__get__方法。或许写python很多年都对这个东西没什么了解。然而这玩意儿有时候真的挺好用的。本文不会详述描述符协议。会着重讲一个小例子。如果以前没有接触过描述符，请依次查看文末相关资料的两篇文章</p>
 <a id="more"></a>
+
 <h3 id="适用范围"><a href="#适用范围" class="headerlink" title="适用范围"></a>适用范围</h3><p>描述符协议都是针对对象属性的访问。先要明白我们不会去针对一个全局的def使用property进行装饰。我们一般都是在类里面使用。可以对类的访问使用描述符(比较少用)，更常用的是针对类实例的访问使用描述符协议</p>
-<h3 id="资料描述符和非资料描述符的区别"><a href="#资料描述符和非资料描述符的区别" class="headerlink" title="资料描述符和非资料描述符的区别"></a>资料描述符和非资料描述符的区别</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">RevealAccess</span><span class="params">(object)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__get__</span><span class="params">(self, obj, objtype)</span>:</span></div><div class="line">        <span class="keyword">try</span>:</div><div class="line">            <span class="keyword">return</span> self.val</div><div class="line">        <span class="keyword">except</span>:</div><div class="line">            <span class="keyword">return</span> <span class="string">'error'</span></div><div class="line"></div><div class="line">    <span class="comment"># def __set__(self, obj, val):</span></div><div class="line">    <span class="comment">#     self.val = val</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">MyClass</span><span class="params">(object)</span>:</span></div><div class="line">    x = RevealAccess()</div><div class="line"></div><div class="line"></div><div class="line">m = MyClass()</div><div class="line">print(m.x)</div><div class="line">m.x = <span class="number">20</span></div><div class="line">print(m.__dict__)</div><div class="line">m.__dict__[<span class="string">'x'</span>] = <span class="number">1</span></div><div class="line">print(m.__dict__)</div><div class="line">print(m.x)</div><div class="line">print(m.__class__ <span class="keyword">is</span> type(m))</div></pre></td></tr></table></figure>
-<p>首先，当对属性x进行访问的时候不是直接返回描述符对象，而是按照描述符规则执行了描述符对象的__get__等方法！资料描述符就是同时实现了__get__和__set__，区别就是是资料描述符的时候就按照资料描述符的__get__、__set__来。非资料描述符的时候那就先访问<code>instance.__dict__[&#39;x&#39;]</code>，没有就在按照非资料描述符的__get__来。上面的例子先注释掉__set__就是非资料描述符，对实例属性进行访问的时候先访问了instance.__dict__没有就使用了描述符对象的__get__方法。当为资料描述符的时候纵然对instance.__dict__设置了。依然会调用描述符对象。</p>
-<h3 id="示例应用-property加强版，增加缓存-最简代码"><a href="#示例应用-property加强版，增加缓存-最简代码" class="headerlink" title="示例应用:property加强版，增加缓存(最简代码)"></a>示例应用:property加强版，增加缓存(最简代码)</h3><p>首先来一个例子<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Foo</span><span class="params">(object)</span>:</span></div><div class="line"><span class="meta">    @property</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">jammy</span><span class="params">(self,_cache=&#123;&#125;)</span>:</span></div><div class="line">        <span class="keyword">if</span> <span class="string">'result'</span> <span class="keyword">in</span> _cache:</div><div class="line">            <span class="keyword">return</span> _cache[<span class="string">'result'</span>]</div><div class="line">        print(<span class="string">'jammy called'</span>)</div><div class="line">        result = <span class="number">1</span></div><div class="line">        _cache.update(&#123;<span class="string">'result'</span>:result&#125;)</div><div class="line">        <span class="keyword">return</span> result</div><div class="line"></div><div class="line">f = Foo()</div><div class="line">print(f.jammy)</div><div class="line">print(f.jammy)</div></pre></td></tr></table></figure><br>该方法使用python函数的默认参数只初始化一次对结果进行缓存。缺点比较明显。1.无法复用。2.对原函数进行了修改</p>
-<p>下面看pyramid的实现<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">reify</span><span class="params">(object)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, func)</span>:</span></div><div class="line">        self.func = func</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__get__</span><span class="params">(self, obj, cls)</span>:</span></div><div class="line">        value = obj.__dict__[self.func.__name__] = self.func(obj)</div><div class="line">        <span class="keyword">return</span> value</div><div class="line"></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Foo</span><span class="params">(object)</span>:</span></div><div class="line"><span class="meta">    @reify</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">jammy</span><span class="params">(self)</span>:</span></div><div class="line">        print(<span class="string">'jammy called'</span>)</div><div class="line">        <span class="keyword">return</span> <span class="number">1</span></div><div class="line"></div><div class="line">f = Foo()</div><div class="line">print(f.jammy)</div><div class="line">print(f.jammy)</div></pre></td></tr></table></figure><br>使用的是非资料描述符，第一次对属性进行访问的时候，因为f.__dict__是没有jammy的。故而访问了描述符，在描述符__get__里面将结果加入到了f.__dict__里面。后面访问就没__get__什么事儿了。实现了对结果的缓存</p>
-<p>再看werkzeug的实现<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">cached_property</span><span class="params">(property)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, func, name=None, doc=None)</span>:</span></div><div class="line">        self.__name__ = func.__name__</div><div class="line">        self.func = func</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__set__</span><span class="params">(self, obj, value)</span>:</span></div><div class="line">        obj.__dict__[self.__name__] = value</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__get__</span><span class="params">(self, obj, type=None)</span>:</span></div><div class="line">        value = obj.__dict__.get(self.__name__)</div><div class="line">        <span class="keyword">if</span> value <span class="keyword">is</span> <span class="keyword">None</span>:</div><div class="line">            value = self.func(obj)</div><div class="line">            obj.__dict__[self.__name__] = value</div><div class="line">        <span class="keyword">return</span> value</div><div class="line"></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Foo</span><span class="params">(object)</span>:</span></div><div class="line"><span class="meta">    @cached_property</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">jammy</span><span class="params">(self)</span>:</span></div><div class="line">        print(<span class="string">'jammy called'</span>)</div><div class="line">        <span class="keyword">return</span> <span class="number">1</span></div><div class="line"></div><div class="line"></div><div class="line">f = Foo()</div><div class="line">print(f.jammy)</div><div class="line">print(f.jammy)</div></pre></td></tr></table></figure><br>可以看到和资料描述符的基本一样。可以看到__set__基本没什么用，仅仅只是表面了这是一个资料描述符。而且同样的，为了方便也一样把结果存储到了f.__dict__里面</p>
-<h3 id="getattr-、-getattribute"><a href="#getattr-、-getattribute" class="headerlink" title="__getattr__、__getattribute__"></a>__getattr__、__getattribute__</h3><p>虽然都有get，可是区别是很大的。<br>描述符是<code>控制对象某个属性的访问</code>(所以看到描述符对象一般主要用<code>__get__</code>，<code>__get__</code>)。<br><code>__getattr__</code>它<code>控制属性不存在的时候该咋办</code><br><code>__getattribute__</code>和上面相反，默认行为，从__dict__中找到属性值返回<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Foo</span><span class="params">(object)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__getattr__</span><span class="params">(self, attr)</span>:</span></div><div class="line">        <span class="keyword">print</span> <span class="string">"looking up"</span>, attr</div><div class="line">        value = <span class="number">42</span></div><div class="line">        self.__dict__[attr] = value</div><div class="line">        <span class="keyword">return</span> value</div><div class="line"></div><div class="line">f = Foo()</div><div class="line"><span class="keyword">print</span> f.x </div><div class="line"><span class="keyword">print</span> f.x</div><div class="line"><span class="comment">#output &gt;&gt;&gt; looking up x 42</span></div><div class="line"><span class="comment">#output &gt;&gt;&gt; 42</span></div><div class="line"></div><div class="line">f.x = <span class="number">3</span></div><div class="line"><span class="keyword">print</span> f.x </div><div class="line"><span class="comment">#output &gt;&gt;&gt; 3</span></div></pre></td></tr></table></figure></p>
+<h3 id="资料描述符和非资料描述符的区别"><a href="#资料描述符和非资料描述符的区别" class="headerlink" title="资料描述符和非资料描述符的区别"></a>资料描述符和非资料描述符的区别</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">RevealAccess</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__get__</span><span class="params">(self, obj, objtype)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="keyword">return</span> self.val</span><br><span class="line">        <span class="keyword">except</span>:</span><br><span class="line">            <span class="keyword">return</span> <span class="string">'error'</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># def __set__(self, obj, val):</span></span><br><span class="line">    <span class="comment">#     self.val = val</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MyClass</span><span class="params">(object)</span>:</span></span><br><span class="line">    x = RevealAccess()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">m = MyClass()</span><br><span class="line">print(m.x)</span><br><span class="line">m.x = <span class="number">20</span></span><br><span class="line">print(m.__dict__)</span><br><span class="line">m.__dict__[<span class="string">'x'</span>] = <span class="number">1</span></span><br><span class="line">print(m.__dict__)</span><br><span class="line">print(m.x)</span><br><span class="line">print(m.__class__ <span class="keyword">is</span> type(m))</span><br></pre></td></tr></table></figure>
+<p>首先，当对属性x进行访问的时候不是直接返回描述符对象，而是按照描述符规则执行了描述符对象的_<em>get_<em>等方法！资料描述符就是同时实现了__get__和__set__，区别就是是资料描述符的时候就按照资料描述符的__get__、__set__来。非资料描述符的时候那就先访问`instance.__dict</em></em>[‘x’]`，没有就在按照非资料描述符的__get__来。上面的例子先注释掉__set__就是非资料描述符，对实例属性进行访问的时候先访问了instance.__dict__没有就使用了描述符对象的__get__方法。当为资料描述符的时候纵然对instance.__dict__设置了。依然会调用描述符对象。</p>
+<h3 id="示例应用-property加强版，增加缓存-最简代码"><a href="#示例应用-property加强版，增加缓存-最简代码" class="headerlink" title="示例应用:property加强版，增加缓存(最简代码)"></a>示例应用:property加强版，增加缓存(最简代码)</h3><p>首先来一个例子</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Foo</span><span class="params">(object)</span>:</span></span><br><span class="line"><span class="meta">    @property</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">jammy</span><span class="params">(self,_cache=&#123;&#125;)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> <span class="string">'result'</span> <span class="keyword">in</span> _cache:</span><br><span class="line">            <span class="keyword">return</span> _cache[<span class="string">'result'</span>]</span><br><span class="line">        print(<span class="string">'jammy called'</span>)</span><br><span class="line">        result = <span class="number">1</span></span><br><span class="line">        _cache.update(&#123;<span class="string">'result'</span>:result&#125;)</span><br><span class="line">        <span class="keyword">return</span> result</span><br><span class="line"></span><br><span class="line">f = Foo()</span><br><span class="line">print(f.jammy)</span><br><span class="line">print(f.jammy)</span><br></pre></td></tr></table></figure>
+<p>该方法使用python函数的默认参数只初始化一次对结果进行缓存。缺点比较明显。1.无法复用。2.对原函数进行了修改</p>
+<p>下面看pyramid的实现</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">reify</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, func)</span>:</span></span><br><span class="line">        self.func = func</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__get__</span><span class="params">(self, obj, cls)</span>:</span></span><br><span class="line">        value = obj.__dict__[self.func.__name__] = self.func(obj)</span><br><span class="line">        <span class="keyword">return</span> value</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Foo</span><span class="params">(object)</span>:</span></span><br><span class="line"><span class="meta">    @reify</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">jammy</span><span class="params">(self)</span>:</span></span><br><span class="line">        print(<span class="string">'jammy called'</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line"></span><br><span class="line">f = Foo()</span><br><span class="line">print(f.jammy)</span><br><span class="line">print(f.jammy)</span><br></pre></td></tr></table></figure>
+<p>使用的是非资料描述符，第一次对属性进行访问的时候，因为f.__dict__是没有jammy的。故而访问了描述符，在描述符__get__里面将结果加入到了f.__dict__里面。后面访问就没__get__什么事儿了。实现了对结果的缓存</p>
+<p>再看werkzeug的实现</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">cached_property</span><span class="params">(property)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, func, name=None, doc=None)</span>:</span></span><br><span class="line">        self.__name__ = func.__name__</span><br><span class="line">        self.func = func</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__set__</span><span class="params">(self, obj, value)</span>:</span></span><br><span class="line">        obj.__dict__[self.__name__] = value</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__get__</span><span class="params">(self, obj, type=None)</span>:</span></span><br><span class="line">        value = obj.__dict__.get(self.__name__)</span><br><span class="line">        <span class="keyword">if</span> value <span class="keyword">is</span> <span class="literal">None</span>:</span><br><span class="line">            value = self.func(obj)</span><br><span class="line">            obj.__dict__[self.__name__] = value</span><br><span class="line">        <span class="keyword">return</span> value</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Foo</span><span class="params">(object)</span>:</span></span><br><span class="line"><span class="meta">    @cached_property</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">jammy</span><span class="params">(self)</span>:</span></span><br><span class="line">        print(<span class="string">'jammy called'</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">f = Foo()</span><br><span class="line">print(f.jammy)</span><br><span class="line">print(f.jammy)</span><br></pre></td></tr></table></figure>
+<p>可以看到和资料描述符的基本一样。可以看到__set__基本没什么用，仅仅只是表面了这是一个资料描述符。而且同样的，为了方便也一样把结果存储到了f.__dict__里面</p>
+<h3 id="getattr-、-getattribute"><a href="#getattr-、-getattribute" class="headerlink" title="_getattr_、__getattribute\"></a>_<em>getattr_<em>、__getattribute\</em></em></h3><p>虽然都有get，可是区别是很大的。<br>描述符是<code>控制对象某个属性的访问</code>(所以看到描述符对象一般主要用<code>__get__</code>，<code>__get__</code>)。<br><code>__getattr__</code>它<code>控制属性不存在的时候该咋办</code><br><code>__getattribute__</code>和上面相反，默认行为，从__dict__中找到属性值返回</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Foo</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__getattr__</span><span class="params">(self, attr)</span>:</span></span><br><span class="line">        <span class="keyword">print</span> <span class="string">"looking up"</span>, attr</span><br><span class="line">        value = <span class="number">42</span></span><br><span class="line">        self.__dict__[attr] = value</span><br><span class="line">        <span class="keyword">return</span> value</span><br><span class="line"></span><br><span class="line">f = Foo()</span><br><span class="line"><span class="keyword">print</span> f.x </span><br><span class="line"><span class="keyword">print</span> f.x</span><br><span class="line"><span class="comment">#output &gt;&gt;&gt; looking up x 42</span></span><br><span class="line"><span class="comment">#output &gt;&gt;&gt; 42</span></span><br><span class="line"></span><br><span class="line">f.x = <span class="number">3</span></span><br><span class="line"><span class="keyword">print</span> f.x </span><br><span class="line"><span class="comment">#output &gt;&gt;&gt; 3</span></span><br></pre></td></tr></table></figure>
+
 <p>再加一个类似的例子吧O_o(<a href="https://github.com/faif/python-patterns/blob/master/lazy_evaluation.py">https://github.com/faif/python-patterns/blob/master/lazy_evaluation.py</a>)</p>
-<h3 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h3><p><a href="https://harveyqing.gitbooks.io/python-read-and-write/content/python_advance/python_descriptor.html">python官方文档描述符指南(译)</a><br><a href="http://www.geekfan.net/7862/">python描述符解密</a><br><a href="http://stackoverflow.com/questions/3278077/difference-between-getattr-vs-getattribute">Difference between __getattr__ vs __getattribute__</a></p>
+<h3 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h3><p><a href="https://harveyqing.gitbooks.io/python-read-and-write/content/python_advance/python_descriptor.html">python官方文档描述符指南(译)</a><br><a href="http://www.geekfan.net/7862/">python描述符解密</a><br><a href="http://stackoverflow.com/questions/3278077/difference-between-getattr-vs-getattribute">Difference between _<em>getattr_</em> vs _<em>getattribute_</em></a></p>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
@@ -270,60 +322,98 @@
 
             </div>
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/15/pyenv_use_mirror/"  data-tooltip="pyenv使用镜像加速">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/07/15/pyenv_use_mirror/"
+                    data-tooltip="pyenv使用镜像加速"
+                    aria-label="上一篇: pyenv使用镜像加速"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/04/2016-07-04/" data-tooltip="wsgiref源码阅读">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/07/04/2016-07-04/"
+                    data-tooltip="wsgiref源码阅读"
+                    aria-label="下一篇: wsgiref源码阅读"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/07/10/python_descriptor/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/07/10/python_descriptor/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/07/10/python_descriptor/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/07/10/python_descriptor/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/07/10/python_descriptor/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/07/10/python_descriptor/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -331,10 +421,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -356,55 +443,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/15/pyenv_use_mirror/"  data-tooltip="pyenv使用镜像加速">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/07/15/pyenv_use_mirror/"
+                    data-tooltip="pyenv使用镜像加速"
+                    aria-label="上一篇: pyenv使用镜像加速"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/07/04/2016-07-04/" data-tooltip="wsgiref源码阅读">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/07/04/2016-07-04/"
+                    data-tooltip="wsgiref源码阅读"
+                    aria-label="下一篇: wsgiref源码阅读"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/07/10/python_descriptor/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/07/10/python_descriptor/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/07/10/python_descriptor/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/07/10/python_descriptor/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/07/10/python_descriptor/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/07/10/python_descriptor/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -412,43 +536,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/07/10/python_descriptor/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/07/10/python_descriptor/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/07/10/python_descriptor/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/07/10/python_descriptor/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/07/10/python_descriptor/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2016/07/10/python_descriptor/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -464,28 +609,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -495,7 +635,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -508,7 +652,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -517,7 +661,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -528,7 +676,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -537,7 +685,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -547,9 +699,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -558,7 +710,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -568,7 +724,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -577,7 +733,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -589,7 +749,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -599,7 +759,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -609,9 +773,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -629,38 +793,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2016/07/10/python_descriptor/';
-                 
-                    this.page.identifier = '2016/07/10/python_descriptor/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

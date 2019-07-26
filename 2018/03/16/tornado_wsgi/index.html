@@ -13,31 +13,35 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是完美的，它仅仅提供了基本的兼容，效率和可用性得不到保证。因此个人还是感觉很鸡肋的\n\n\n回顾WSGIwsgi由PEP333开始，在PEP3333得到增强。分为两部分，一部分为容器，另一部分为应用。应用的最简形式如下传入environ基础环境字典(必须包含一些值)和回调函数，最终返回一个可迭代对线\n12345def simple_app(environ, start_response):    status = '200 OK'    response_headers = [('Content-type', 'text/plain')]    start_response(status, response_headers)    return ['Hello world!\\n']\n对于容器。则是每接收到一个http请求则调用一次应用。这样的好处是容器和应用可以完全隔离，应用可以使用任意容器来执行\nTornado application转变成WSGI application实现效果如下\n12345678910111213141516import tornado.webimport tornado.wsgiimport wsgiref.simple_serverclass MainHandler(tornado.web.RequestHandler):    def get(self):        self.write(\"Hello, world\")if __name__ == \"__main__\":    application = tornado.wsgi.WSGIApplication([        (r\"/\", MainHandler),    ])    server = wsgiref.simple_server.make_server('', 8888, application)    server.serve_forever()\n\n在Tornado里面application接受一个参数调用，传入Requests对象。调用的结果是最终生成header以及handler._write_buffer对象(会触发iostream的写事件，最终由IOLoop触发socket写操作)。因此虽然它执行了RequestsHandler._execute操作，实际并没有发生socket发送操作，我们可以从handler对象取得完整的HTTP回复报文。然后调用start_response和返回一个可迭代对象可以看到重点就是从WSGI server传递的environ字典里面重组出一个Request对象(模拟到和httpserver模块中的HTTPRequest对象一样)\n12345678910111213141516171819class WSGIApplication(web.Application):    def __init__(self, handlers=None, default_host=\"\", **settings):        web.Application.__init__(self, handlers, default_host, transforms=[],                                 wsgi=True, **settings)    def __call__(self, environ, start_response):        handler = web.Application.__call__(self, HTTPRequest(environ))        assert handler._finished        status = str(handler._status_code) + \" \" + \\            httplib.responses[handler._status_code]        headers = handler._headers.items()        for cookie_dict in getattr(handler, \"_new_cookies\", []):            for cookie in cookie_dict.values():                headers.append((\"Set-Cookie\", cookie.OutputString(None)))        start_response(status, headers)        return handler._write_bufferclass HTTPRequest(object):    pass\n可以看到重点就是从environ里面构建出一个兼容httpserver的HTTPRequest对象。另外由于IOLoop在这种情况下不允许使用，所以依赖IOLoop的异步特性也就不存在了。而且连同多线程的特性也不在存在。所以只是一个玩具罢了吧\n在Tornado中运行WSGI application上面的是将tornado的应用转变成WSGI兼容，然后让WSGI的容器去运行。这一个是反过来，让tornado作为容器去运行WSGI应用。实现这样的效果\n12345678910def simple_app(environ, start_response):    status = \"200 OK\"    response_headers = [(\"Content-type\", \"text/plain\")]    start_response(status, response_headers)    return [\"Hello world!\\n\"]container = tornado.wsgi.WSGIContainer(simple_app)http_server = tornado.httpserver.HTTPServer(container)http_server.listen(8888)tornado.ioloop.IOLoop.instance().start()\n\ntornado.httpserver.HTTPServer会调用函数并传入一个Request对象。刚好和上面的过程相反。将Request对象分割为environ和start_response。直接贴1.0.0的原始代码吧\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687class WSGIContainer(object):    def __init__(self, wsgi_application):        self.wsgi_application = wsgi_application    def __call__(self, request):        data = &#123;&#125;        response = []        # 将status和headers放入字典中,后续调用则写入body        def start_response(status, response_headers, exc_info=None):            data[\"status\"] = status            data[\"headers\"] = response_headers            return response.append        # wsgi app最终返回可迭代对象作为body        app_response = self.wsgi_application(            WSGIContainer.environ(request), start_response)        response.extend(app_response)        body = \"\".join(response)        if hasattr(app_response, \"close\"):            app_response.close()        if not data: raise Exception(\"WSGI app did not call start_response\")        # 组合成整个http报文        status_code = int(data[\"status\"].split()[0])        headers = data[\"headers\"]        header_set = set(k.lower() for (k,v) in headers)        body = escape.utf8(body)        if \"content-length\" not in header_set:            headers.append((\"Content-Length\", str(len(body))))        if \"content-type\" not in header_set:            headers.append((\"Content-Type\", \"text/html; charset=UTF-8\"))        if \"server\" not in header_set:            headers.append((\"Server\", \"TornadoServer/0.1\"))        parts = [\"HTTP/1.1 \" + data[\"status\"] + \"\\r\\n\"]        for key, value in headers:            parts.append(escape.utf8(key) + \": \" + escape.utf8(value) + \"\\r\\n\")        parts.append(\"\\r\\n\")        parts.append(body)        # 发送完成        request.write(\"\".join(parts))        request.finish()        self._log(status_code, request)    @staticmethod    def environ(request):        hostport = request.host.split(\":\")        if len(hostport) == 2:            host = hostport[0]            port = int(hostport[1])        else:            host = request.host            port = 443 if request.protocol == \"https\" else 80        environ = &#123;            \"REQUEST_METHOD\": request.method,            \"SCRIPT_NAME\": \"\",            \"PATH_INFO\": request.path,            \"QUERY_STRING\": request.query,            \"REMOTE_ADDR\": request.remote_ip,            \"SERVER_NAME\": host,            \"SERVER_PORT\": port,            \"SERVER_PROTOCOL\": request.version,            \"wsgi.version\": (1, 0),            \"wsgi.url_scheme\": request.protocol,            \"wsgi.input\": cStringIO.StringIO(escape.utf8(request.body)),            \"wsgi.errors\": sys.stderr,            \"wsgi.multithread\": False,            \"wsgi.multiprocess\": True,            \"wsgi.run_once\": False,        &#125;        if \"Content-Type\" in request.headers:            environ[\"CONTENT_TYPE\"] = request.headers[\"Content-Type\"]        if \"Content-Length\" in request.headers:            environ[\"CONTENT_LENGTH\"] = request.headers[\"Content-Length\"]        for key, value in request.headers.iteritems():            environ[\"HTTP_\" + key.replace(\"-\", \"_\").upper()] = value        return environ    def _log(self, status_code, request):        if status_code &lt; 400:            log_method = logging.info        elif status_code &lt; 500:            log_method = logging.warning        else:            log_method = logging.error        request_time = 1000.0 * request.request_time()        summary = request.method + \" \" + request.uri + \" (\" + \\            request.remote_ip + \")\"        log_method(\"%d %s %.2fms\", status_code, summary, request_time)\n\n主要是将Requests转变成environ，传入给WSGI应用。最终根据应用的返回重组成一个HTTP回复报文字符串调用发送逻辑，流程完成。\n","dateCreated":"2018-03-16T11:28:02+08:00","dateModified":"2018-03-16T15:39:45+08:00","datePublished":"2018-03-16T11:28:02+08:00","description":"WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是完美的，它仅仅提供了基本的兼容，效率和可用性得不到保证。因此个人还是感觉很鸡肋的","headline":"Tornado 之WSGI","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/16/tornado_wsgi/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/16/tornado_wsgi/"}</script>
     <meta name="description" content="WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Tornado 之WSGI">
 <meta property="og:url" content="https://www.zoulei.net/2018/03/16/tornado_wsgi/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是">
+<meta property="og:locale" content="zh-cn">
 <meta property="og:updated_time" content="2018-03-16T07:39:45.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Tornado 之WSGI">
 <meta name="twitter:description" content="WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是">
-<meta name="twitter:creator" content="@aec4d">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -47,23 +51,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -72,23 +79,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -98,9 +90,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -110,9 +103,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -122,9 +116,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -134,9 +129,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -146,9 +142,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -158,9 +155,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -171,27 +169,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -205,9 +242,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -223,17 +261,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             Tornado 之WSGI
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2018-03-16T11:28:02+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2018-03-16T11:28:02+08:00">
 	
 		    3月 16, 2018
     	
@@ -247,78 +286,131 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是完美的，它仅仅提供了基本的兼容，效率和可用性得不到保证。因此个人还是感觉很鸡肋的</p>
 <a id="more"></a>
-<h3 id="回顾WSGI"><a href="#回顾WSGI" class="headerlink" title="回顾WSGI"></a>回顾WSGI</h3><p>wsgi由<a href="https://www.python.org/dev/peps/pep-0333/">PEP333</a>开始，在<a href="https://www.python.org/dev/peps/pep-3333/">PEP3333</a>得到增强。分为两部分，一部分为容器，另一部分为应用。应用的最简形式如下<br>传入environ基础环境字典(必须包含一些值)和回调函数，最终返回一个可迭代对线<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">simple_app</span><span class="params">(environ, start_response)</span>:</span></div><div class="line">    status = <span class="string">'200 OK'</span></div><div class="line">    response_headers = [(<span class="string">'Content-type'</span>, <span class="string">'text/plain'</span>)]</div><div class="line">    start_response(status, response_headers)</div><div class="line">    <span class="keyword">return</span> [<span class="string">'Hello world!\n'</span>]</div></pre></td></tr></table></figure><br>对于容器。则是每接收到一个http请求则调用一次应用。这样的好处是容器和应用可以完全隔离，应用可以使用任意容器来执行</p>
-<h3 id="Tornado-application转变成WSGI-application"><a href="#Tornado-application转变成WSGI-application" class="headerlink" title="Tornado application转变成WSGI application"></a>Tornado application转变成WSGI application</h3><p>实现效果如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> tornado.web</div><div class="line"><span class="keyword">import</span> tornado.wsgi</div><div class="line"><span class="keyword">import</span> wsgiref.simple_server</div><div class="line"></div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">MainHandler</span><span class="params">(tornado.web.RequestHandler)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get</span><span class="params">(self)</span>:</span></div><div class="line">        self.write(<span class="string">"Hello, world"</span>)</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</div><div class="line">    application = tornado.wsgi.WSGIApplication([</div><div class="line">        (<span class="string">r"/"</span>, MainHandler),</div><div class="line">    ])</div><div class="line">    server = wsgiref.simple_server.make_server(<span class="string">''</span>, <span class="number">8888</span>, application)</div><div class="line">    server.serve_forever()</div></pre></td></tr></table></figure></p>
-<p>在Tornado里面application接受一个参数调用，传入Requests对象。调用的结果是最终生成header以及handler._write_buffer对象(会触发iostream的写事件，最终由IOLoop触发socket写操作)。因此虽然它执行了RequestsHandler._execute操作，实际并没有发生socket发送操作，我们可以从handler对象取得完整的HTTP回复报文。然后调用start_response和返回一个可迭代对象<br>可以看到重点就是从WSGI server传递的environ字典里面重组出一个Request对象(模拟到和httpserver模块中的HTTPRequest对象一样)<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">WSGIApplication</span><span class="params">(web.Application)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, handlers=None, default_host=<span class="string">""</span>, **settings)</span>:</span></div><div class="line">        web.Application.__init__(self, handlers, default_host, transforms=[],</div><div class="line">                                 wsgi=<span class="keyword">True</span>, **settings)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, environ, start_response)</span>:</span></div><div class="line">        handler = web.Application.__call__(self, HTTPRequest(environ))</div><div class="line">        <span class="keyword">assert</span> handler._finished</div><div class="line">        status = str(handler._status_code) + <span class="string">" "</span> + \</div><div class="line">            httplib.responses[handler._status_code]</div><div class="line">        headers = handler._headers.items()</div><div class="line">        <span class="keyword">for</span> cookie_dict <span class="keyword">in</span> getattr(handler, <span class="string">"_new_cookies"</span>, []):</div><div class="line">            <span class="keyword">for</span> cookie <span class="keyword">in</span> cookie_dict.values():</div><div class="line">                headers.append((<span class="string">"Set-Cookie"</span>, cookie.OutputString(<span class="keyword">None</span>)))</div><div class="line">        start_response(status, headers)</div><div class="line">        <span class="keyword">return</span> handler._write_buffer</div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">HTTPRequest</span><span class="params">(object)</span>:</span></div><div class="line">    <span class="keyword">pass</span></div></pre></td></tr></table></figure><br>可以看到重点就是从environ里面构建出一个兼容httpserver的HTTPRequest对象。另外由于IOLoop在这种情况下不允许使用，所以依赖IOLoop的异步特性也就不存在了。而且连同多线程的特性也不在存在。所以只是一个玩具罢了吧</p>
-<h3 id="在Tornado中运行WSGI-application"><a href="#在Tornado中运行WSGI-application" class="headerlink" title="在Tornado中运行WSGI application"></a>在Tornado中运行WSGI application</h3><p>上面的是将tornado的应用转变成WSGI兼容，然后让WSGI的容器去运行。这一个是反过来，让tornado作为容器去运行WSGI应用。实现这样的效果<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">simple_app</span><span class="params">(environ, start_response)</span>:</span></div><div class="line">    status = <span class="string">"200 OK"</span></div><div class="line">    response_headers = [(<span class="string">"Content-type"</span>, <span class="string">"text/plain"</span>)]</div><div class="line">    start_response(status, response_headers)</div><div class="line">    <span class="keyword">return</span> [<span class="string">"Hello world!\n"</span>]</div><div class="line"></div><div class="line">container = tornado.wsgi.WSGIContainer(simple_app)</div><div class="line">http_server = tornado.httpserver.HTTPServer(container)</div><div class="line">http_server.listen(<span class="number">8888</span>)</div><div class="line">tornado.ioloop.IOLoop.instance().start()</div></pre></td></tr></table></figure></p>
-<p>tornado.httpserver.HTTPServer会调用函数并传入一个Request对象。<span style="color:red"><strong>刚好和上面的过程相反</strong></span>。将Request对象分割为<code>environ</code>和<code>start_response</code>。直接贴1.0.0的原始代码吧<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">WSGIContainer</span><span class="params">(object)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, wsgi_application)</span>:</span></div><div class="line">        self.wsgi_application = wsgi_application</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, request)</span>:</span></div><div class="line">        data = &#123;&#125;</div><div class="line">        response = []</div><div class="line">        <span class="comment"># 将status和headers放入字典中,后续调用则写入body</span></div><div class="line">        <span class="function"><span class="keyword">def</span> <span class="title">start_response</span><span class="params">(status, response_headers, exc_info=None)</span>:</span></div><div class="line">            data[<span class="string">"status"</span>] = status</div><div class="line">            data[<span class="string">"headers"</span>] = response_headers</div><div class="line">            <span class="keyword">return</span> response.append</div><div class="line">        <span class="comment"># wsgi app最终返回可迭代对象作为body</span></div><div class="line">        app_response = self.wsgi_application(</div><div class="line">            WSGIContainer.environ(request), start_response)</div><div class="line">        response.extend(app_response)</div><div class="line">        body = <span class="string">""</span>.join(response)</div><div class="line">        <span class="keyword">if</span> hasattr(app_response, <span class="string">"close"</span>):</div><div class="line">            app_response.close()</div><div class="line">        <span class="keyword">if</span> <span class="keyword">not</span> data: <span class="keyword">raise</span> Exception(<span class="string">"WSGI app did not call start_response"</span>)</div><div class="line">        <span class="comment"># 组合成整个http报文</span></div><div class="line">        status_code = int(data[<span class="string">"status"</span>].split()[<span class="number">0</span>])</div><div class="line">        headers = data[<span class="string">"headers"</span>]</div><div class="line">        header_set = set(k.lower() <span class="keyword">for</span> (k,v) <span class="keyword">in</span> headers)</div><div class="line">        body = escape.utf8(body)</div><div class="line">        <span class="keyword">if</span> <span class="string">"content-length"</span> <span class="keyword">not</span> <span class="keyword">in</span> header_set:</div><div class="line">            headers.append((<span class="string">"Content-Length"</span>, str(len(body))))</div><div class="line">        <span class="keyword">if</span> <span class="string">"content-type"</span> <span class="keyword">not</span> <span class="keyword">in</span> header_set:</div><div class="line">            headers.append((<span class="string">"Content-Type"</span>, <span class="string">"text/html; charset=UTF-8"</span>))</div><div class="line">        <span class="keyword">if</span> <span class="string">"server"</span> <span class="keyword">not</span> <span class="keyword">in</span> header_set:</div><div class="line">            headers.append((<span class="string">"Server"</span>, <span class="string">"TornadoServer/0.1"</span>))</div><div class="line"></div><div class="line">        parts = [<span class="string">"HTTP/1.1 "</span> + data[<span class="string">"status"</span>] + <span class="string">"\r\n"</span>]</div><div class="line">        <span class="keyword">for</span> key, value <span class="keyword">in</span> headers:</div><div class="line">            parts.append(escape.utf8(key) + <span class="string">": "</span> + escape.utf8(value) + <span class="string">"\r\n"</span>)</div><div class="line">        parts.append(<span class="string">"\r\n"</span>)</div><div class="line">        parts.append(body)</div><div class="line">        <span class="comment"># 发送完成</span></div><div class="line">        request.write(<span class="string">""</span>.join(parts))</div><div class="line">        request.finish()</div><div class="line">        self._log(status_code, request)</div><div class="line"></div><div class="line"><span class="meta">    @staticmethod</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">environ</span><span class="params">(request)</span>:</span></div><div class="line">        hostport = request.host.split(<span class="string">":"</span>)</div><div class="line">        <span class="keyword">if</span> len(hostport) == <span class="number">2</span>:</div><div class="line">            host = hostport[<span class="number">0</span>]</div><div class="line">            port = int(hostport[<span class="number">1</span>])</div><div class="line">        <span class="keyword">else</span>:</div><div class="line">            host = request.host</div><div class="line">            port = <span class="number">443</span> <span class="keyword">if</span> request.protocol == <span class="string">"https"</span> <span class="keyword">else</span> <span class="number">80</span></div><div class="line">        environ = &#123;</div><div class="line">            <span class="string">"REQUEST_METHOD"</span>: request.method,</div><div class="line">            <span class="string">"SCRIPT_NAME"</span>: <span class="string">""</span>,</div><div class="line">            <span class="string">"PATH_INFO"</span>: request.path,</div><div class="line">            <span class="string">"QUERY_STRING"</span>: request.query,</div><div class="line">            <span class="string">"REMOTE_ADDR"</span>: request.remote_ip,</div><div class="line">            <span class="string">"SERVER_NAME"</span>: host,</div><div class="line">            <span class="string">"SERVER_PORT"</span>: port,</div><div class="line">            <span class="string">"SERVER_PROTOCOL"</span>: request.version,</div><div class="line">            <span class="string">"wsgi.version"</span>: (<span class="number">1</span>, <span class="number">0</span>),</div><div class="line">            <span class="string">"wsgi.url_scheme"</span>: request.protocol,</div><div class="line">            <span class="string">"wsgi.input"</span>: cStringIO.StringIO(escape.utf8(request.body)),</div><div class="line">            <span class="string">"wsgi.errors"</span>: sys.stderr,</div><div class="line">            <span class="string">"wsgi.multithread"</span>: <span class="keyword">False</span>,</div><div class="line">            <span class="string">"wsgi.multiprocess"</span>: <span class="keyword">True</span>,</div><div class="line">            <span class="string">"wsgi.run_once"</span>: <span class="keyword">False</span>,</div><div class="line">        &#125;</div><div class="line">        <span class="keyword">if</span> <span class="string">"Content-Type"</span> <span class="keyword">in</span> request.headers:</div><div class="line">            environ[<span class="string">"CONTENT_TYPE"</span>] = request.headers[<span class="string">"Content-Type"</span>]</div><div class="line">        <span class="keyword">if</span> <span class="string">"Content-Length"</span> <span class="keyword">in</span> request.headers:</div><div class="line">            environ[<span class="string">"CONTENT_LENGTH"</span>] = request.headers[<span class="string">"Content-Length"</span>]</div><div class="line">        <span class="keyword">for</span> key, value <span class="keyword">in</span> request.headers.iteritems():</div><div class="line">            environ[<span class="string">"HTTP_"</span> + key.replace(<span class="string">"-"</span>, <span class="string">"_"</span>).upper()] = value</div><div class="line">        <span class="keyword">return</span> environ</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_log</span><span class="params">(self, status_code, request)</span>:</span></div><div class="line">        <span class="keyword">if</span> status_code &lt; <span class="number">400</span>:</div><div class="line">            log_method = logging.info</div><div class="line">        <span class="keyword">elif</span> status_code &lt; <span class="number">500</span>:</div><div class="line">            log_method = logging.warning</div><div class="line">        <span class="keyword">else</span>:</div><div class="line">            log_method = logging.error</div><div class="line">        request_time = <span class="number">1000.0</span> * request.request_time()</div><div class="line">        summary = request.method + <span class="string">" "</span> + request.uri + <span class="string">" ("</span> + \</div><div class="line">            request.remote_ip + <span class="string">")"</span></div><div class="line">        log_method(<span class="string">"%d %s %.2fms"</span>, status_code, summary, request_time)</div></pre></td></tr></table></figure></p>
+
+<h3 id="回顾WSGI"><a href="#回顾WSGI" class="headerlink" title="回顾WSGI"></a>回顾WSGI</h3><p>wsgi由<a href="https://www.python.org/dev/peps/pep-0333/">PEP333</a>开始，在<a href="https://www.python.org/dev/peps/pep-3333/">PEP3333</a>得到增强。分为两部分，一部分为容器，另一部分为应用。应用的最简形式如下<br>传入environ基础环境字典(必须包含一些值)和回调函数，最终返回一个可迭代对线</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">simple_app</span><span class="params">(environ, start_response)</span>:</span></span><br><span class="line">    status = <span class="string">'200 OK'</span></span><br><span class="line">    response_headers = [(<span class="string">'Content-type'</span>, <span class="string">'text/plain'</span>)]</span><br><span class="line">    start_response(status, response_headers)</span><br><span class="line">    <span class="keyword">return</span> [<span class="string">'Hello world!\n'</span>]</span><br></pre></td></tr></table></figure>
+<p>对于容器。则是每接收到一个http请求则调用一次应用。这样的好处是容器和应用可以完全隔离，应用可以使用任意容器来执行</p>
+<h3 id="Tornado-application转变成WSGI-application"><a href="#Tornado-application转变成WSGI-application" class="headerlink" title="Tornado application转变成WSGI application"></a>Tornado application转变成WSGI application</h3><p>实现效果如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tornado.web</span><br><span class="line"><span class="keyword">import</span> tornado.wsgi</span><br><span class="line"><span class="keyword">import</span> wsgiref.simple_server</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MainHandler</span><span class="params">(tornado.web.RequestHandler)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.write(<span class="string">"Hello, world"</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    application = tornado.wsgi.WSGIApplication([</span><br><span class="line">        (<span class="string">r"/"</span>, MainHandler),</span><br><span class="line">    ])</span><br><span class="line">    server = wsgiref.simple_server.make_server(<span class="string">''</span>, <span class="number">8888</span>, application)</span><br><span class="line">    server.serve_forever()</span><br></pre></td></tr></table></figure>
+
+<p>在Tornado里面application接受一个参数调用，传入Requests对象。调用的结果是最终生成header以及handler._write_buffer对象(会触发iostream的写事件，最终由IOLoop触发socket写操作)。因此虽然它执行了RequestsHandler._execute操作，实际并没有发生socket发送操作，我们可以从handler对象取得完整的HTTP回复报文。然后调用start_response和返回一个可迭代对象<br>可以看到重点就是从WSGI server传递的environ字典里面重组出一个Request对象(模拟到和httpserver模块中的HTTPRequest对象一样)</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WSGIApplication</span><span class="params">(web.Application)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, handlers=None, default_host=<span class="string">""</span>, **settings)</span>:</span></span><br><span class="line">        web.Application.__init__(self, handlers, default_host, transforms=[],</span><br><span class="line">                                 wsgi=<span class="literal">True</span>, **settings)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, environ, start_response)</span>:</span></span><br><span class="line">        handler = web.Application.__call__(self, HTTPRequest(environ))</span><br><span class="line">        <span class="keyword">assert</span> handler._finished</span><br><span class="line">        status = str(handler._status_code) + <span class="string">" "</span> + \</span><br><span class="line">            httplib.responses[handler._status_code]</span><br><span class="line">        headers = handler._headers.items()</span><br><span class="line">        <span class="keyword">for</span> cookie_dict <span class="keyword">in</span> getattr(handler, <span class="string">"_new_cookies"</span>, []):</span><br><span class="line">            <span class="keyword">for</span> cookie <span class="keyword">in</span> cookie_dict.values():</span><br><span class="line">                headers.append((<span class="string">"Set-Cookie"</span>, cookie.OutputString(<span class="literal">None</span>)))</span><br><span class="line">        start_response(status, headers)</span><br><span class="line">        <span class="keyword">return</span> handler._write_buffer</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">HTTPRequest</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="keyword">pass</span></span><br></pre></td></tr></table></figure>
+<p>可以看到重点就是从environ里面构建出一个兼容httpserver的HTTPRequest对象。另外由于IOLoop在这种情况下不允许使用，所以依赖IOLoop的异步特性也就不存在了。而且连同多线程的特性也不在存在。所以只是一个玩具罢了吧</p>
+<h3 id="在Tornado中运行WSGI-application"><a href="#在Tornado中运行WSGI-application" class="headerlink" title="在Tornado中运行WSGI application"></a>在Tornado中运行WSGI application</h3><p>上面的是将tornado的应用转变成WSGI兼容，然后让WSGI的容器去运行。这一个是反过来，让tornado作为容器去运行WSGI应用。实现这样的效果</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">simple_app</span><span class="params">(environ, start_response)</span>:</span></span><br><span class="line">    status = <span class="string">"200 OK"</span></span><br><span class="line">    response_headers = [(<span class="string">"Content-type"</span>, <span class="string">"text/plain"</span>)]</span><br><span class="line">    start_response(status, response_headers)</span><br><span class="line">    <span class="keyword">return</span> [<span class="string">"Hello world!\n"</span>]</span><br><span class="line"></span><br><span class="line">container = tornado.wsgi.WSGIContainer(simple_app)</span><br><span class="line">http_server = tornado.httpserver.HTTPServer(container)</span><br><span class="line">http_server.listen(<span class="number">8888</span>)</span><br><span class="line">tornado.ioloop.IOLoop.instance().start()</span><br></pre></td></tr></table></figure>
+
+<p>tornado.httpserver.HTTPServer会调用函数并传入一个Request对象。<span style="color:red"><strong>刚好和上面的过程相反</strong></span>。将Request对象分割为<code>environ</code>和<code>start_response</code>。直接贴1.0.0的原始代码吧</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WSGIContainer</span><span class="params">(object)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, wsgi_application)</span>:</span></span><br><span class="line">        self.wsgi_application = wsgi_application</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__call__</span><span class="params">(self, request)</span>:</span></span><br><span class="line">        data = &#123;&#125;</span><br><span class="line">        response = []</span><br><span class="line">        <span class="comment"># 将status和headers放入字典中,后续调用则写入body</span></span><br><span class="line">        <span class="function"><span class="keyword">def</span> <span class="title">start_response</span><span class="params">(status, response_headers, exc_info=None)</span>:</span></span><br><span class="line">            data[<span class="string">"status"</span>] = status</span><br><span class="line">            data[<span class="string">"headers"</span>] = response_headers</span><br><span class="line">            <span class="keyword">return</span> response.append</span><br><span class="line">        <span class="comment"># wsgi app最终返回可迭代对象作为body</span></span><br><span class="line">        app_response = self.wsgi_application(</span><br><span class="line">            WSGIContainer.environ(request), start_response)</span><br><span class="line">        response.extend(app_response)</span><br><span class="line">        body = <span class="string">""</span>.join(response)</span><br><span class="line">        <span class="keyword">if</span> hasattr(app_response, <span class="string">"close"</span>):</span><br><span class="line">            app_response.close()</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> data: <span class="keyword">raise</span> Exception(<span class="string">"WSGI app did not call start_response"</span>)</span><br><span class="line">        <span class="comment"># 组合成整个http报文</span></span><br><span class="line">        status_code = int(data[<span class="string">"status"</span>].split()[<span class="number">0</span>])</span><br><span class="line">        headers = data[<span class="string">"headers"</span>]</span><br><span class="line">        header_set = set(k.lower() <span class="keyword">for</span> (k,v) <span class="keyword">in</span> headers)</span><br><span class="line">        body = escape.utf8(body)</span><br><span class="line">        <span class="keyword">if</span> <span class="string">"content-length"</span> <span class="keyword">not</span> <span class="keyword">in</span> header_set:</span><br><span class="line">            headers.append((<span class="string">"Content-Length"</span>, str(len(body))))</span><br><span class="line">        <span class="keyword">if</span> <span class="string">"content-type"</span> <span class="keyword">not</span> <span class="keyword">in</span> header_set:</span><br><span class="line">            headers.append((<span class="string">"Content-Type"</span>, <span class="string">"text/html; charset=UTF-8"</span>))</span><br><span class="line">        <span class="keyword">if</span> <span class="string">"server"</span> <span class="keyword">not</span> <span class="keyword">in</span> header_set:</span><br><span class="line">            headers.append((<span class="string">"Server"</span>, <span class="string">"TornadoServer/0.1"</span>))</span><br><span class="line"></span><br><span class="line">        parts = [<span class="string">"HTTP/1.1 "</span> + data[<span class="string">"status"</span>] + <span class="string">"\r\n"</span>]</span><br><span class="line">        <span class="keyword">for</span> key, value <span class="keyword">in</span> headers:</span><br><span class="line">            parts.append(escape.utf8(key) + <span class="string">": "</span> + escape.utf8(value) + <span class="string">"\r\n"</span>)</span><br><span class="line">        parts.append(<span class="string">"\r\n"</span>)</span><br><span class="line">        parts.append(body)</span><br><span class="line">        <span class="comment"># 发送完成</span></span><br><span class="line">        request.write(<span class="string">""</span>.join(parts))</span><br><span class="line">        request.finish()</span><br><span class="line">        self._log(status_code, request)</span><br><span class="line"></span><br><span class="line"><span class="meta">    @staticmethod</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">environ</span><span class="params">(request)</span>:</span></span><br><span class="line">        hostport = request.host.split(<span class="string">":"</span>)</span><br><span class="line">        <span class="keyword">if</span> len(hostport) == <span class="number">2</span>:</span><br><span class="line">            host = hostport[<span class="number">0</span>]</span><br><span class="line">            port = int(hostport[<span class="number">1</span>])</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            host = request.host</span><br><span class="line">            port = <span class="number">443</span> <span class="keyword">if</span> request.protocol == <span class="string">"https"</span> <span class="keyword">else</span> <span class="number">80</span></span><br><span class="line">        environ = &#123;</span><br><span class="line">            <span class="string">"REQUEST_METHOD"</span>: request.method,</span><br><span class="line">            <span class="string">"SCRIPT_NAME"</span>: <span class="string">""</span>,</span><br><span class="line">            <span class="string">"PATH_INFO"</span>: request.path,</span><br><span class="line">            <span class="string">"QUERY_STRING"</span>: request.query,</span><br><span class="line">            <span class="string">"REMOTE_ADDR"</span>: request.remote_ip,</span><br><span class="line">            <span class="string">"SERVER_NAME"</span>: host,</span><br><span class="line">            <span class="string">"SERVER_PORT"</span>: port,</span><br><span class="line">            <span class="string">"SERVER_PROTOCOL"</span>: request.version,</span><br><span class="line">            <span class="string">"wsgi.version"</span>: (<span class="number">1</span>, <span class="number">0</span>),</span><br><span class="line">            <span class="string">"wsgi.url_scheme"</span>: request.protocol,</span><br><span class="line">            <span class="string">"wsgi.input"</span>: cStringIO.StringIO(escape.utf8(request.body)),</span><br><span class="line">            <span class="string">"wsgi.errors"</span>: sys.stderr,</span><br><span class="line">            <span class="string">"wsgi.multithread"</span>: <span class="literal">False</span>,</span><br><span class="line">            <span class="string">"wsgi.multiprocess"</span>: <span class="literal">True</span>,</span><br><span class="line">            <span class="string">"wsgi.run_once"</span>: <span class="literal">False</span>,</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> <span class="string">"Content-Type"</span> <span class="keyword">in</span> request.headers:</span><br><span class="line">            environ[<span class="string">"CONTENT_TYPE"</span>] = request.headers[<span class="string">"Content-Type"</span>]</span><br><span class="line">        <span class="keyword">if</span> <span class="string">"Content-Length"</span> <span class="keyword">in</span> request.headers:</span><br><span class="line">            environ[<span class="string">"CONTENT_LENGTH"</span>] = request.headers[<span class="string">"Content-Length"</span>]</span><br><span class="line">        <span class="keyword">for</span> key, value <span class="keyword">in</span> request.headers.iteritems():</span><br><span class="line">            environ[<span class="string">"HTTP_"</span> + key.replace(<span class="string">"-"</span>, <span class="string">"_"</span>).upper()] = value</span><br><span class="line">        <span class="keyword">return</span> environ</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_log</span><span class="params">(self, status_code, request)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> status_code &lt; <span class="number">400</span>:</span><br><span class="line">            log_method = logging.info</span><br><span class="line">        <span class="keyword">elif</span> status_code &lt; <span class="number">500</span>:</span><br><span class="line">            log_method = logging.warning</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            log_method = logging.error</span><br><span class="line">        request_time = <span class="number">1000.0</span> * request.request_time()</span><br><span class="line">        summary = request.method + <span class="string">" "</span> + request.uri + <span class="string">" ("</span> + \</span><br><span class="line">            request.remote_ip + <span class="string">")"</span></span><br><span class="line">        log_method(<span class="string">"%d %s %.2fms"</span>, status_code, summary, request_time)</span><br></pre></td></tr></table></figure>
+
 <p>主要是将Requests转变成environ，传入给WSGI应用。最终根据应用的返回重组成一个HTTP回复报文字符串调用发送逻辑，流程完成。</p>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/16/Tornado_StackContext/"  data-tooltip="Tornado 之StackContext">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/16/Tornado_StackContext/"
+                    data-tooltip="Tornado 之StackContext"
+                    aria-label="上一篇: Tornado 之StackContext"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/15/tornado_web/" data-tooltip="Tornado 之web">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/15/tornado_web/"
+                    data-tooltip="Tornado 之web"
+                    aria-label="下一篇: Tornado 之web"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/16/tornado_wsgi/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/16/tornado_wsgi/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/16/tornado_wsgi/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/16/tornado_wsgi/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/16/tornado_wsgi/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/16/tornado_wsgi/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -326,10 +418,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -351,55 +440,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/16/Tornado_StackContext/"  data-tooltip="Tornado 之StackContext">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/16/Tornado_StackContext/"
+                    data-tooltip="Tornado 之StackContext"
+                    aria-label="上一篇: Tornado 之StackContext"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/15/tornado_web/" data-tooltip="Tornado 之web">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/15/tornado_web/"
+                    data-tooltip="Tornado 之web"
+                    aria-label="下一篇: Tornado 之web"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/16/tornado_wsgi/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/16/tornado_wsgi/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/16/tornado_wsgi/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/16/tornado_wsgi/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/16/tornado_wsgi/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/16/tornado_wsgi/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -407,43 +533,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/16/tornado_wsgi/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/16/tornado_wsgi/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/16/tornado_wsgi/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/16/tornado_wsgi/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/16/tornado_wsgi/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/16/tornado_wsgi/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -459,28 +606,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -490,7 +632,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -503,7 +649,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -512,7 +658,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -523,7 +673,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -532,7 +682,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -542,9 +696,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -553,7 +707,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -563,7 +721,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -572,7 +730,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -584,7 +746,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -594,7 +756,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -604,9 +770,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -624,38 +790,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2018/03/16/tornado_wsgi/';
-                 
-                    this.page.identifier = '2018/03/16/tornado_wsgi/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

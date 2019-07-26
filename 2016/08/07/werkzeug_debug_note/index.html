@@ -13,6 +13,7 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现\n\n\n基本概念python的运行是讲源码进行编译，之后虚拟机执行。这2个步骤python都提供了接口,compile和exec。exec的执行会调用compile,我们一般不会主动去调用compile。compile这个函数有三个模式官方文档 stackoverflow\n\nexec:一系列声明\neval:单条表达式\nsingle:单条声明,和exec不同的是当返回不为None的时候执行的时候会打印。这一想都知道专门是为交互式环境准备的\n\n编译之后不用说。使用内建函数exec执行就好啦。它带有2个可选参数,全局空间变量及局部空间变量。看一个例子\n1234567891011121314151617local = &#123;&#125;code = compile('a=1', filename='&lt;string&gt;', mode='single')print(code)exec(code,local)code = compile('a+=1', filename='&lt;string&gt;', mode='single')try:    exec(code)except:    print('Error')exec(code,local)print(local.get('a'))code = compile('x+=1',filename='&lt;string&gt;',mode='single')print(code)# &lt;code object &lt;module&gt; at 0x10fd9dc90, file \"&lt;string&gt;\", line 1&gt;# Error# 2# &lt;code object &lt;module&gt; at 0x105c25c90, file \"&lt;string&gt;\", line 1&gt;\n\n编译的时候只要语法没有问题就可以通过，看x+=1,即使全局变量不存在x也能够编译通过\n使用exec的时候，可以引入一个字典，否则会自动使用默认的global,有了这个字典我们就可以连接上下文，想一想。要是我们执行a=1，如果没有记录。那么后面执行a+=1就会报错了，这肯定不是我们所希望的\n\n自带REPL要实现一个类似的IDLE环境2条语句就够了\n12import codecode.interact()\n看调用图会涉及到2个模块，code和codeop，这2个模块可以都说是为生成交互式解释器服务的。code模块作用是接收请求然后解析再执行(exec)。解析部分就是由codeop提供的。设想一下为什么有了compile还需要一个单独的codeop模块。我们使用交互式解释器的时候并不是所有的命令都是一行输入完成的。比如输入一个函数，那就需要多行。将我们输入的多行编译一次。这是我们的需求。codeop就是为这个而存在的。比如你执行codeop.compile_command(‘math(‘)会返回None。这就代表你下一行继续输入，直到你连续输入了2个空行。好了，它知道你输入完成了。核心代码如下\n123456789101112131415def runsource(self, source, filename=\"&lt;input&gt;\", symbol=\"single\"):    try:        code = self.compile(source, filename, symbol)    except (OverflowError, SyntaxError, ValueError):        # Case 1        self.showsyntaxerror(filename)        return False    if code is None:        # Case 2        return True    # Case 3    self.runcode(code)    return False\n逻辑还是比较好理解的。\nException,traceback,frame联系上个例子\n12345678910111213141516171819202122232425262728293031323334353637import sysclass CustomeExcept(Exception):    def __init__(self, desc):        super(CustomeExcept, self).__init__()        self.desc = desc    def __repr__(self):        return self.desc    __str__ = __repr__def t():    raise CustomeExcept('l')def app():    a = 1    t()try:    app()except Exception as e:    # traceback.print_exc(file=sys.stdout)    exc_type, exc_value, exc_tb = sys.exc_info()    print(exc_tb.tb_frame.f_lineno)    print(exc_type)    print(exc_value is e)    print(exc_value)    print([i for i in dir(exc_tb) if not i.startswith('_')])    print(exc_tb.tb_frame, exc_tb.tb_lineno, exc_tb.tb_next.tb_lineno, exc_tb.tb_next.tb_next.tb_lineno,          exc_tb.tb_next.tb_next.tb_next, sys._getframe(0), exc_tb.tb_frame.f_back)    print(exc_tb.tb_next.tb_frame.f_locals)# 23# &lt;class '__main__.CustomeExcept'&gt;# True# l# ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next']# &lt;frame object at 0x7f90b5813958&gt; 19 17 13 None &lt;frame object at 0x7f90b5813958&gt; None# &#123;'a': 1&#125;\n\nException配合raise使用,使用except捕获异常的时候返回它的实例\n返回的实例是和帧栈Frame是没有关系的\nsys.exc_info返回了异常类，异常实例,traceback实例\ntraceback对象记录的帧不是当前帧,而是从发起异常的那个函数开始记录帧栈,因此比当前帧栈更长,traceback的中文意思是回溯,它的tb_next可以想象一下,实际上更可以说是读取上一个帧(因为引发异常的那个帧实际上在最上面)\ntb_next返回的还是一个traceback对象\ntraceback模块提供了一些接口(比如traceback.print_exc)从帧中提取出信息然后格式化打印偷一张图(引用自http://busuncle.github.io/python-vm-and-bytecode.html)\n\nwerkzeug实现1234__debugger__:yescmd:a = 1+1frm:0s:3WcibzVj8YXQDR0Na4bv\n\n参考资料Python虚拟机与字节码\n","dateCreated":"2016-08-07T08:43:31+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-08-07T08:43:31+08:00","description":"flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现","headline":"werkzeug源码分析(Debug模块)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/08/07/werkzeug_debug_note/","keywords":"Flask"}</script>
     <meta name="description" content="flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现">
 <meta name="keywords" content="Flask">
 <meta property="og:type" content="blog">
@@ -20,28 +21,31 @@
 <meta property="og:url" content="https://www.zoulei.net/2016/08/07/werkzeug_debug_note/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现">
-<meta property="og:image" content="http://ficapy.b0.upaiyun.com/blogimg/code_interactiveconsole.png">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/pyframeobject_busuncle.github.io.jpg">
-<meta property="og:updated_time" content="2016-09-04T07:32:59.000Z">
+<meta property="og:locale" content="zh-cn">
+<meta property="og:image" content="http://blogimg.ficapy.com/blogimg/code_interactiveconsole.png">
+<meta property="og:image" content="https://blogimg.ficapy.com/blogimg/pyframeobject_busuncle.github.io.jpg">
+<meta property="og:updated_time" content="2019-07-26T06:53:30.672Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="werkzeug源码分析(Debug模块)">
 <meta name="twitter:description" content="flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现">
-<meta name="twitter:image" content="http://ficapy.b0.upaiyun.com/blogimg/code_interactiveconsole.png">
-<meta name="twitter:creator" content="@aec4d">
+<meta name="twitter:image" content="http://blogimg.ficapy.com/blogimg/code_interactiveconsole.png">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -51,23 +55,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -76,23 +83,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -102,9 +94,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -114,9 +107,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -126,9 +120,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -138,9 +133,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -150,9 +146,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -162,9 +159,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -175,27 +173,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -209,9 +246,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -227,17 +265,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             werkzeug源码分析(Debug模块)
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2016-08-07T08:43:31+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2016-08-07T08:43:31+08:00">
 	
 		    8月 07, 2016
     	
@@ -251,37 +290,49 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现</p>
 <a id="more"></a>
+
 <h3 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h3><p>python的运行是讲源码进行编译，之后虚拟机执行。这2个步骤python都提供了接口,compile和exec。exec的执行会调用compile,我们一般不会主动去调用compile。compile这个函数有三个模式<a href="https://docs.python.org/3/library/functions.html#compile">官方文档</a> <a href="http://stackoverflow.com/questions/2220699/whats-the-difference-between-eval-exec-and-compile-in-python">stackoverflow</a></p>
 <ul>
 <li>exec:一系列声明</li>
 <li>eval:单条表达式</li>
 <li>single:单条声明,和exec不同的是当返回不为None的时候执行的时候会打印。这一想都知道专门是为交互式环境准备的</li>
 </ul>
-<p>编译之后不用说。使用内建函数exec执行就好啦。它带有2个可选参数,全局空间变量及局部空间变量。看一个例子<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">local = &#123;&#125;</div><div class="line">code = compile(<span class="string">'a=1'</span>, filename=<span class="string">'&lt;string&gt;'</span>, mode=<span class="string">'single'</span>)</div><div class="line">print(code)</div><div class="line">exec(code,local)</div><div class="line">code = compile(<span class="string">'a+=1'</span>, filename=<span class="string">'&lt;string&gt;'</span>, mode=<span class="string">'single'</span>)</div><div class="line"><span class="keyword">try</span>:</div><div class="line">    exec(code)</div><div class="line"><span class="keyword">except</span>:</div><div class="line">    print(<span class="string">'Error'</span>)</div><div class="line">exec(code,local)</div><div class="line">print(local.get(<span class="string">'a'</span>))</div><div class="line">code = compile(<span class="string">'x+=1'</span>,filename=<span class="string">'&lt;string&gt;'</span>,mode=<span class="string">'single'</span>)</div><div class="line">print(code)</div><div class="line"><span class="comment"># &lt;code object &lt;module&gt; at 0x10fd9dc90, file "&lt;string&gt;", line 1&gt;</span></div><div class="line"><span class="comment"># Error</span></div><div class="line"><span class="comment"># 2</span></div><div class="line"><span class="comment"># &lt;code object &lt;module&gt; at 0x105c25c90, file "&lt;string&gt;", line 1&gt;</span></div></pre></td></tr></table></figure></p>
+<p>编译之后不用说。使用内建函数exec执行就好啦。它带有2个可选参数,全局空间变量及局部空间变量。看一个例子</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">local = &#123;&#125;</span><br><span class="line">code = compile(<span class="string">'a=1'</span>, filename=<span class="string">'&lt;string&gt;'</span>, mode=<span class="string">'single'</span>)</span><br><span class="line">print(code)</span><br><span class="line">exec(code,local)</span><br><span class="line">code = compile(<span class="string">'a+=1'</span>, filename=<span class="string">'&lt;string&gt;'</span>, mode=<span class="string">'single'</span>)</span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    exec(code)</span><br><span class="line"><span class="keyword">except</span>:</span><br><span class="line">    print(<span class="string">'Error'</span>)</span><br><span class="line">exec(code,local)</span><br><span class="line">print(local.get(<span class="string">'a'</span>))</span><br><span class="line">code = compile(<span class="string">'x+=1'</span>,filename=<span class="string">'&lt;string&gt;'</span>,mode=<span class="string">'single'</span>)</span><br><span class="line">print(code)</span><br><span class="line"><span class="comment"># &lt;code object &lt;module&gt; at 0x10fd9dc90, file "&lt;string&gt;", line 1&gt;</span></span><br><span class="line"><span class="comment"># Error</span></span><br><span class="line"><span class="comment"># 2</span></span><br><span class="line"><span class="comment"># &lt;code object &lt;module&gt; at 0x105c25c90, file "&lt;string&gt;", line 1&gt;</span></span><br></pre></td></tr></table></figure>
 <ol>
 <li>编译的时候只要语法没有问题就可以通过，看x+=1,即使全局变量不存在x也能够编译通过</li>
 <li>使用exec的时候，可以引入一个字典，否则会自动使用默认的global,有了这个字典我们就可以连接上下文，想一想。要是我们执行a=1，如果没有记录。那么后面执行a+=1就会报错了，这肯定不是我们所希望的</li>
 </ol>
-<h3 id="自带REPL"><a href="#自带REPL" class="headerlink" title="自带REPL"></a>自带REPL</h3><p>要实现一个类似的IDLE环境2条语句就够了<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> code</div><div class="line">code.interact()</div></pre></td></tr></table></figure><br>看调用图<br><img src="http://ficapy.b0.upaiyun.com/blogimg/code_interactiveconsole.png" alt="code_interactiveconsole"><br>会涉及到2个模块，code和codeop，这2个模块可以都说是为生成交互式解释器服务的。code模块作用是接收请求然后解析再执行(exec)。解析部分就是由codeop提供的。设想一下为什么有了compile还需要一个单独的codeop模块。<br>我们使用交互式解释器的时候并不是所有的命令都是一行输入完成的。比如输入一个函数，那就需要多行。将我们输入的多行编译一次。这是我们的需求。codeop就是为这个而存在的。比如你执行codeop.compile_command(‘math(‘)会返回None。这就代表你下一行继续输入，直到你连续输入了2个空行。好了，它知道你输入完成了。核心代码如下<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">runsource</span><span class="params">(self, source, filename=<span class="string">"&lt;input&gt;"</span>, symbol=<span class="string">"single"</span>)</span>:</span></div><div class="line">    <span class="keyword">try</span>:</div><div class="line">        code = self.compile(source, filename, symbol)</div><div class="line">    <span class="keyword">except</span> (OverflowError, SyntaxError, ValueError):</div><div class="line">        <span class="comment"># Case 1</span></div><div class="line">        self.showsyntaxerror(filename)</div><div class="line">        <span class="keyword">return</span> <span class="keyword">False</span></div><div class="line"></div><div class="line">    <span class="keyword">if</span> code <span class="keyword">is</span> <span class="keyword">None</span>:</div><div class="line">        <span class="comment"># Case 2</span></div><div class="line">        <span class="keyword">return</span> <span class="keyword">True</span></div><div class="line"></div><div class="line">    <span class="comment"># Case 3</span></div><div class="line">    self.runcode(code)</div><div class="line">    <span class="keyword">return</span> <span class="keyword">False</span></div></pre></td></tr></table></figure><br>逻辑还是比较好理解的。</p>
-<h3 id="Exception-traceback-frame联系"><a href="#Exception-traceback-frame联系" class="headerlink" title="Exception,traceback,frame联系"></a>Exception,traceback,frame联系</h3><p>上个例子<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> sys</div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">CustomeExcept</span><span class="params">(Exception)</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, desc)</span>:</span></div><div class="line">        super(CustomeExcept, self).__init__()</div><div class="line">        self.desc = desc</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__repr__</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self.desc</div><div class="line"></div><div class="line">    __str__ = __repr__</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">t</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">raise</span> CustomeExcept(<span class="string">'l'</span>)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">app</span><span class="params">()</span>:</span></div><div class="line">    a = <span class="number">1</span></div><div class="line">    t()</div><div class="line"><span class="keyword">try</span>:</div><div class="line">    app()</div><div class="line"><span class="keyword">except</span> Exception <span class="keyword">as</span> e:</div><div class="line">    <span class="comment"># traceback.print_exc(file=sys.stdout)</span></div><div class="line">    exc_type, exc_value, exc_tb = sys.exc_info()</div><div class="line">    print(exc_tb.tb_frame.f_lineno)</div><div class="line">    print(exc_type)</div><div class="line">    print(exc_value <span class="keyword">is</span> e)</div><div class="line">    print(exc_value)</div><div class="line">    print([i <span class="keyword">for</span> i <span class="keyword">in</span> dir(exc_tb) <span class="keyword">if</span> <span class="keyword">not</span> i.startswith(<span class="string">'_'</span>)])</div><div class="line">    print(exc_tb.tb_frame, exc_tb.tb_lineno, exc_tb.tb_next.tb_lineno, exc_tb.tb_next.tb_next.tb_lineno,</div><div class="line">          exc_tb.tb_next.tb_next.tb_next, sys._getframe(<span class="number">0</span>), exc_tb.tb_frame.f_back)</div><div class="line">    print(exc_tb.tb_next.tb_frame.f_locals)</div><div class="line"><span class="comment"># 23</span></div><div class="line"><span class="comment"># &lt;class '__main__.CustomeExcept'&gt;</span></div><div class="line"><span class="comment"># True</span></div><div class="line"><span class="comment"># l</span></div><div class="line"><span class="comment"># ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next']</span></div><div class="line"><span class="comment"># &lt;frame object at 0x7f90b5813958&gt; 19 17 13 None &lt;frame object at 0x7f90b5813958&gt; None</span></div><div class="line"><span class="comment"># &#123;'a': 1&#125;</span></div></pre></td></tr></table></figure></p>
+<h3 id="自带REPL"><a href="#自带REPL" class="headerlink" title="自带REPL"></a>自带REPL</h3><p>要实现一个类似的IDLE环境2条语句就够了</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> code</span><br><span class="line">code.interact()</span><br></pre></td></tr></table></figure>
+<p>看调用图<br><img src="http://blogimg.ficapy.com/blogimg/code_interactiveconsole.png" alt="code_interactiveconsole"><br>会涉及到2个模块，code和codeop，这2个模块可以都说是为生成交互式解释器服务的。code模块作用是接收请求然后解析再执行(exec)。解析部分就是由codeop提供的。设想一下为什么有了compile还需要一个单独的codeop模块。<br>我们使用交互式解释器的时候并不是所有的命令都是一行输入完成的。比如输入一个函数，那就需要多行。将我们输入的多行编译一次。这是我们的需求。codeop就是为这个而存在的。比如你执行codeop.compile_command(‘math(‘)会返回None。这就代表你下一行继续输入，直到你连续输入了2个空行。好了，它知道你输入完成了。核心代码如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">runsource</span><span class="params">(self, source, filename=<span class="string">"&lt;input&gt;"</span>, symbol=<span class="string">"single"</span>)</span>:</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        code = self.compile(source, filename, symbol)</span><br><span class="line">    <span class="keyword">except</span> (OverflowError, SyntaxError, ValueError):</span><br><span class="line">        <span class="comment"># Case 1</span></span><br><span class="line">        self.showsyntaxerror(filename)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> code <span class="keyword">is</span> <span class="literal">None</span>:</span><br><span class="line">        <span class="comment"># Case 2</span></span><br><span class="line">        <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># Case 3</span></span><br><span class="line">    self.runcode(code)</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br></pre></td></tr></table></figure>
+<p>逻辑还是比较好理解的。</p>
+<h3 id="Exception-traceback-frame联系"><a href="#Exception-traceback-frame联系" class="headerlink" title="Exception,traceback,frame联系"></a>Exception,traceback,frame联系</h3><p>上个例子</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sys</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">CustomeExcept</span><span class="params">(Exception)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, desc)</span>:</span></span><br><span class="line">        super(CustomeExcept, self).__init__()</span><br><span class="line">        self.desc = desc</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__repr__</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self.desc</span><br><span class="line"></span><br><span class="line">    __str__ = __repr__</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">t</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">raise</span> CustomeExcept(<span class="string">'l'</span>)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">app</span><span class="params">()</span>:</span></span><br><span class="line">    a = <span class="number">1</span></span><br><span class="line">    t()</span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    app()</span><br><span class="line"><span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">    <span class="comment"># traceback.print_exc(file=sys.stdout)</span></span><br><span class="line">    exc_type, exc_value, exc_tb = sys.exc_info()</span><br><span class="line">    print(exc_tb.tb_frame.f_lineno)</span><br><span class="line">    print(exc_type)</span><br><span class="line">    print(exc_value <span class="keyword">is</span> e)</span><br><span class="line">    print(exc_value)</span><br><span class="line">    print([i <span class="keyword">for</span> i <span class="keyword">in</span> dir(exc_tb) <span class="keyword">if</span> <span class="keyword">not</span> i.startswith(<span class="string">'_'</span>)])</span><br><span class="line">    print(exc_tb.tb_frame, exc_tb.tb_lineno, exc_tb.tb_next.tb_lineno, exc_tb.tb_next.tb_next.tb_lineno,</span><br><span class="line">          exc_tb.tb_next.tb_next.tb_next, sys._getframe(<span class="number">0</span>), exc_tb.tb_frame.f_back)</span><br><span class="line">    print(exc_tb.tb_next.tb_frame.f_locals)</span><br><span class="line"><span class="comment"># 23</span></span><br><span class="line"><span class="comment"># &lt;class '__main__.CustomeExcept'&gt;</span></span><br><span class="line"><span class="comment"># True</span></span><br><span class="line"><span class="comment"># l</span></span><br><span class="line"><span class="comment"># ['tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next']</span></span><br><span class="line"><span class="comment"># &lt;frame object at 0x7f90b5813958&gt; 19 17 13 None &lt;frame object at 0x7f90b5813958&gt; None</span></span><br><span class="line"><span class="comment"># &#123;'a': 1&#125;</span></span><br></pre></td></tr></table></figure>
 <ul>
 <li>Exception配合raise使用,使用except捕获异常的时候返回它的实例</li>
 <li>返回的实例是和帧栈Frame是没有关系的</li>
 <li>sys.exc_info返回了异常类，异常实例,traceback实例</li>
 <li>traceback对象记录的帧不是当前帧,而是从发起异常的那个函数开始记录帧栈,因此比当前帧栈更长,traceback的中文意思是回溯,它的tb_next可以想象一下,实际上更可以说是读取上一个帧(因为引发异常的那个帧实际上在最上面)</li>
 <li>tb_next返回的还是一个traceback对象</li>
-<li>traceback模块提供了一些接口(比如traceback.print_exc)从帧中提取出信息然后格式化打印<br>偷一张图(引用自<a href="http://busuncle.github.io/python-vm-and-bytecode.html">http://busuncle.github.io/python-vm-and-bytecode.html</a>)<br><img src="https://ficapy.b0.upaiyun.com/blogimg/pyframeobject_busuncle.github.io.jpg" alt="pyframeobject"></li>
+<li>traceback模块提供了一些接口(比如traceback.print_exc)从帧中提取出信息然后格式化打印<br>偷一张图(引用自<a href="http://busuncle.github.io/python-vm-and-bytecode.html">http://busuncle.github.io/python-vm-and-bytecode.html</a>)<br><img src="https://blogimg.ficapy.com/blogimg/pyframeobject_busuncle.github.io.jpg" alt="pyframeobject"></li>
 </ul>
-<h3 id="werkzeug实现"><a href="#werkzeug实现" class="headerlink" title="werkzeug实现"></a>werkzeug实现</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">__debugger__:yes</div><div class="line">cmd:a = 1+1</div><div class="line">frm:0</div><div class="line">s:3WcibzVj8YXQDR0Na4bv</div></pre></td></tr></table></figure>
+<h3 id="werkzeug实现"><a href="#werkzeug实现" class="headerlink" title="werkzeug实现"></a>werkzeug实现</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">__debugger__:yes</span><br><span class="line">cmd:a = 1+1</span><br><span class="line">frm:0</span><br><span class="line">s:3WcibzVj8YXQDR0Na4bv</span><br></pre></td></tr></table></figure>
+
 <h3 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h3><p><a href="http://busuncle.github.io/python-vm-and-bytecode.html">Python虚拟机与字节码</a></p>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
@@ -293,60 +344,98 @@
 
             </div>
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/21/docker_static_blog/"  data-tooltip="使用Docker配置静态博客">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/08/21/docker_static_blog/"
+                    data-tooltip="使用Docker配置静态博客"
+                    aria-label="上一篇: 使用Docker配置静态博客"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/06/redis_py_note/" data-tooltip="redis-py源码分析">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/08/06/redis_py_note/"
+                    data-tooltip="redis-py源码分析"
+                    aria-label="下一篇: redis-py源码分析"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -354,10 +443,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -379,55 +465,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/21/docker_static_blog/"  data-tooltip="使用Docker配置静态博客">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/08/21/docker_static_blog/"
+                    data-tooltip="使用Docker配置静态博客"
+                    aria-label="上一篇: 使用Docker配置静态博客"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/06/redis_py_note/" data-tooltip="redis-py源码分析">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/08/06/redis_py_note/"
+                    data-tooltip="redis-py源码分析"
+                    aria-label="下一篇: redis-py源码分析"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -435,43 +558,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -487,28 +631,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -518,7 +657,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -531,7 +674,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -540,7 +683,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -551,7 +698,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -560,7 +707,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -570,9 +721,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -581,7 +732,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -591,7 +746,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -600,7 +755,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -612,7 +771,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -622,7 +781,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -632,9 +795,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -652,38 +815,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2016/08/07/werkzeug_debug_note/';
-                 
-                    this.page.identifier = '2016/08/07/werkzeug_debug_note/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

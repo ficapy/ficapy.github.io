@@ -13,31 +13,35 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"第二章\n名称\n声明\n变量\n赋值\n类型声明\n包和文件\n作用域\n\n\n\n练习2.1:添加类型、常量和函数到tempconv包中，处理以开尔文为单位(K)的温度值,0K=-273.15℃,变化1K和变化1℃是等价的\n\n很水的题\n\n123456789101112131415161718package tempconvimport \"fmt\"type Kelvin float64type Celsius float64func (k Kelvin) String() string &#123;\treturn fmt.Sprintf(\"%gK\", k)&#125;func CToK(c Celsius) Kelvin &#123;\treturn Kelvin(c - 273.15)&#125;func KToC(k Kelvin) Celsius &#123;\treturn Celsius(k + 273.15)&#125;\n\n练习2.2写一个类似于cf的通用的单位转换程序,从命令行参数或者标准输入(如果没有参数)获取数字,然后将每一个数字转换为以摄氏温度和华氏温度表示的温度,以英寸和米表示的长度单位,以磅和千克表示的重量单位,等等\n\n略，同很水\n\n练习2.3:使用循环重写PopCount来代替单个表达式.对比两个版本的效率\n\n下面连续三道题都是经典面试题，求二进制数中1的个数，限定了正整数\n书上的代码主要是预先计算,将64bit每8bit一组,8bit会有二的八次方种结果，共256种结果，将所有的结果都先计算出来(空间换时间)\n预计算主要是这一步pc[i] = pc[i/2] + byte(i&amp;1)，注意此处的含义是除以二表示二进制数右移一位，后面表示最后一位是1还是0\n代码中[256]byte换成[256]int，更好理解。可能这样写只是为了让人更加能搞明白byte和int的各种转换吧\n注意这种预计算的执行效率是很高的\n\n书上给的代码还是比较扭曲的\n123456789101112131415161718192021// 2000000000\t         0.32 ns/oppackage tempconvvar pc [256]bytefunc init() &#123;\tfor i := range pc &#123;\t\tpc[i] = pc[i/2] + byte(i&amp;1)\t&#125;&#125;func PopCount(x uint64) int &#123;\treturn int(pc[byte(x&gt;&gt;(0*8))] +\t\tpc[byte(x&gt;&gt;(1*8))] +\t\tpc[byte(x&gt;&gt;(2*8))] +\t\tpc[byte(x&gt;&gt;(3*8))] +\t\tpc[byte(x&gt;&gt;(4*8))] +\t\tpc[byte(x&gt;&gt;(5*8))] +\t\tpc[byte(x&gt;&gt;(6*8))] +\t\tpc[byte(x&gt;&gt;(7*8))])&#125;\n\n改成循环\n\n惊不惊喜，意不意外，速度居然爆降低100倍\n\n123456789101112131415func PopCount1(x uint64) int &#123;\tret := byte(0)\tfor i := uint8(0); i &lt; 8; i++ &#123;\t\tret += pc[byte(x&gt;&gt;(i*8))]\t&#125;\treturn int(ret)&#125;func BenchmarkPopCount1(b *testing.B) &#123;\t// 100000000\t        21.4 ns/op\t// 循环\tfor i := 0; i &lt; b.N; i++ &#123;\t\tPopCount1(2&lt;&lt;63 - 1)\t&#125;&#125;\n\n\n练习2.4写一个用于统计位的PopCount,它在其实际参数的64位上执行移位操作,每次判断最右边的位,进而实现统计功能.把它与快查表版本的性能进行对比\n\n很普通的写法\n\n123456789101112131415161718func PopCount2(x uint64) int &#123;\tret := 0\tfor i := 0; i &lt; 64; i++ &#123;\t\tif x&amp;1 == 1 &#123;\t\t\tret += 1\t\t&#125;\t\tx = x &gt;&gt; 1\t&#125;\treturn ret&#125;func BenchmarkPopCount2(b *testing.B) &#123;\t// 20000000\t        60.5 ns/op\t// &gt;&gt; 循环\tfor i := 0; i &lt; b.N; i++ &#123;\t\tPopCount2(2&lt;&lt;63 - 1)\t&#125;&#125;\n\n\n练习2.5使用x&amp;(x-1)可以清除x最右边的非零位,利用该特点写一个PopCount,然后评价它的性能\n\nx&amp;(x-1)面试基础题\n\n123456789101112131415func PopCount3(x uint64) int &#123;\tret := 0\tfor x != 0 &#123;\t\tx = (x - 1) &amp; x\t\tret += 1\t&#125;\treturn ret&#125;func BenchmarkPopCount3(b *testing.B) &#123;\t// 30000000\t        50.5 ns/op\t// x&amp;(x-1)\tfor i := 0; i &lt; b.N; i++ &#123;\t\tPopCount3(2&lt;&lt;63 - 1)\t&#125;&#125;\n\n\n最后~还是挺奇葩，书上的写法居然是最快的，改成循环速度居然爆降，也不知道Go编译器是如何优化代码的╭(╯^╰)╮\n","dateCreated":"2018-06-05T23:52:24+08:00","dateModified":"2018-06-06T07:52:21+08:00","datePublished":"2018-06-05T23:52:24+08:00","description":"第二章\n名称\n声明\n变量\n赋值\n类型声明\n包和文件\n作用域\n","headline":"Go程序设计语言课后习题答案-第二章(程序结构)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"}</script>
     <meta name="description" content="第二章 名称 声明 变量 赋值 类型声明 包和文件 作用域">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Go程序设计语言课后习题答案-第二章(程序结构)">
 <meta property="og:url" content="https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="第二章 名称 声明 变量 赋值 类型声明 包和文件 作用域">
+<meta property="og:locale" content="zh-cn">
 <meta property="og:updated_time" content="2018-06-05T23:52:21.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Go程序设计语言课后习题答案-第二章(程序结构)">
 <meta name="twitter:description" content="第二章 名称 声明 变量 赋值 类型声明 包和文件 作用域">
-<meta name="twitter:creator" content="@aec4d">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -47,23 +51,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -72,23 +79,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -98,9 +90,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -110,9 +103,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -122,9 +116,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -134,9 +129,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -146,9 +142,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -158,9 +155,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -171,27 +169,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -205,9 +242,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -223,17 +261,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             Go程序设计语言课后习题答案-第二章(程序结构)
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2018-06-05T23:52:24+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2018-06-05T23:52:24+08:00">
 	
 		    6月 05, 2018
     	
@@ -247,9 +286,11 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
             <h3 id="第二章"><a href="#第二章" class="headerlink" title="第二章"></a>第二章</h3><ul>
 <li>名称</li>
@@ -261,11 +302,13 @@
 <li>作用域</li>
 </ul>
 <a id="more"></a>
+
 <h4 id="练习2-1"><a href="#练习2-1" class="headerlink" title="练习2.1:"></a>练习2.1:</h4><p>添加类型、常量和函数到tempconv包中，处理以开尔文为单位(K)的温度值,0K=-273.15℃,变化1K和变化1℃是等价的</p>
 <ul>
 <li>很水的题</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> tempconv</div><div class="line"></div><div class="line"><span class="keyword">import</span> <span class="string">"fmt"</span></div><div class="line"></div><div class="line"><span class="keyword">type</span> Kelvin <span class="keyword">float64</span></div><div class="line"><span class="keyword">type</span> Celsius <span class="keyword">float64</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(k Kelvin)</span> <span class="title">String</span><span class="params">()</span> <span class="title">string</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> fmt.Sprintf(<span class="string">"%gK"</span>, k)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">CToK</span><span class="params">(c Celsius)</span> <span class="title">Kelvin</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> Kelvin(c - <span class="number">273.15</span>)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">KToC</span><span class="params">(k Kelvin)</span> <span class="title">Celsius</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> Celsius(k + <span class="number">273.15</span>)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> tempconv</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="string">"fmt"</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> Kelvin <span class="keyword">float64</span></span><br><span class="line"><span class="keyword">type</span> Celsius <span class="keyword">float64</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(k Kelvin)</span> <span class="title">String</span><span class="params">()</span> <span class="title">string</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> fmt.Sprintf(<span class="string">"%gK"</span>, k)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">CToK</span><span class="params">(c Celsius)</span> <span class="title">Kelvin</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> Kelvin(c - <span class="number">273.15</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">KToC</span><span class="params">(k Kelvin)</span> <span class="title">Celsius</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> Celsius(k + <span class="number">273.15</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h5 id="练习2-2"><a href="#练习2-2" class="headerlink" title="练习2.2"></a>练习2.2</h5><p>写一个类似于cf的通用的单位转换程序,从命令行参数或者标准输入(如果没有参数)获取数字,然后将每一个数字转换为以摄氏温度和华氏温度表示的温度,以英寸和米表示的长度单位,以磅和千克表示的重量单位,等等</p>
 <ul>
 <li>略，同很水</li>
@@ -278,83 +321,131 @@
 <li>代码中<code>[256]byte</code>换成<code>[256]int</code>，更好理解。可能这样写只是为了让人更加能搞明白byte和int的各种转换吧</li>
 <li>注意这种预计算的执行效率是很高的</li>
 </ul>
-<p>书上给的代码还是比较扭曲的<br><figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// 2000000000	         0.32 ns/op</span></div><div class="line"><span class="keyword">package</span> tempconv</div><div class="line"></div><div class="line"><span class="keyword">var</span> pc [<span class="number">256</span>]<span class="keyword">byte</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</div><div class="line">	<span class="keyword">for</span> i := <span class="keyword">range</span> pc &#123;</div><div class="line">		pc[i] = pc[i/<span class="number">2</span>] + <span class="keyword">byte</span>(i&amp;<span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	<span class="keyword">return</span> <span class="keyword">int</span>(pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">0</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">1</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">2</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">3</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">4</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">5</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">6</span>*<span class="number">8</span>))] +</div><div class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">7</span>*<span class="number">8</span>))])</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>书上给的代码还是比较扭曲的</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 2000000000	         0.32 ns/op</span></span><br><span class="line"><span class="keyword">package</span> tempconv</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> pc [<span class="number">256</span>]<span class="keyword">byte</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> i := <span class="keyword">range</span> pc &#123;</span><br><span class="line">		pc[i] = pc[i/<span class="number">2</span>] + <span class="keyword">byte</span>(i&amp;<span class="number">1</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">int</span>(pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">0</span>*<span class="number">8</span>))] +</span><br><span class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">1</span>*<span class="number">8</span>))] +</span><br><span class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">2</span>*<span class="number">8</span>))] +</span><br><span class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">3</span>*<span class="number">8</span>))] +</span><br><span class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">4</span>*<span class="number">8</span>))] +</span><br><span class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">5</span>*<span class="number">8</span>))] +</span><br><span class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">6</span>*<span class="number">8</span>))] +</span><br><span class="line">		pc[<span class="keyword">byte</span>(x&gt;&gt;(<span class="number">7</span>*<span class="number">8</span>))])</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <p>改成循环</p>
 <ul>
 <li>惊不惊喜，意不意外，速度居然爆降低100倍</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount1</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="keyword">byte</span>(<span class="number">0</span>)</div><div class="line">	<span class="keyword">for</span> i := <span class="keyword">uint8</span>(<span class="number">0</span>); i &lt; <span class="number">8</span>; i++ &#123;</div><div class="line">		ret += pc[<span class="keyword">byte</span>(x&gt;&gt;(i*<span class="number">8</span>))]</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> <span class="keyword">int</span>(ret)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount1</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 100000000	        21.4 ns/op</span></div><div class="line">	<span class="comment">// 循环</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		PopCount1(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount1</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</span><br><span class="line">	ret := <span class="keyword">byte</span>(<span class="number">0</span>)</span><br><span class="line">	<span class="keyword">for</span> i := <span class="keyword">uint8</span>(<span class="number">0</span>); i &lt; <span class="number">8</span>; i++ &#123;</span><br><span class="line">		ret += pc[<span class="keyword">byte</span>(x&gt;&gt;(i*<span class="number">8</span>))]</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">int</span>(ret)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount1</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="comment">// 100000000	        21.4 ns/op</span></span><br><span class="line">	<span class="comment">// 循环</span></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">		PopCount1(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
 <h4 id="练习2-4"><a href="#练习2-4" class="headerlink" title="练习2.4"></a>练习2.4</h4><p>写一个用于统计位的PopCount,它在其实际参数的64位上执行移位操作,每次判断最右边的位,进而实现统计功能.把它与快查表版本的性能进行对比</p>
 <ul>
 <li>很普通的写法</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount2</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">64</span>; i++ &#123;</div><div class="line">		<span class="keyword">if</span> x&amp;<span class="number">1</span> == <span class="number">1</span> &#123;</div><div class="line">			ret += <span class="number">1</span></div><div class="line">		&#125;</div><div class="line">		x = x &gt;&gt; <span class="number">1</span></div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount2</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 20000000	        60.5 ns/op</span></div><div class="line">	<span class="comment">// &gt;&gt; 循环</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		PopCount2(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount2</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</span><br><span class="line">	ret := <span class="number">0</span></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">64</span>; i++ &#123;</span><br><span class="line">		<span class="keyword">if</span> x&amp;<span class="number">1</span> == <span class="number">1</span> &#123;</span><br><span class="line">			ret += <span class="number">1</span></span><br><span class="line">		&#125;</span><br><span class="line">		x = x &gt;&gt; <span class="number">1</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> ret</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount2</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="comment">// 20000000	        60.5 ns/op</span></span><br><span class="line">	<span class="comment">// &gt;&gt; 循环</span></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">		PopCount2(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
 <h4 id="练习2-5"><a href="#练习2-5" class="headerlink" title="练习2.5"></a>练习2.5</h4><p>使用x&amp;(x-1)可以清除x最右边的非零位,利用该特点写一个PopCount,然后评价它的性能</p>
 <ul>
 <li>x&amp;(x-1)面试基础题</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount3</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</div><div class="line">	ret := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> x != <span class="number">0</span> &#123;</div><div class="line">		x = (x - <span class="number">1</span>) &amp; x</div><div class="line">		ret += <span class="number">1</span></div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> ret</div><div class="line">&#125;</div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount3</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 30000000	        50.5 ns/op</span></div><div class="line">	<span class="comment">// x&amp;(x-1)</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		PopCount3(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<p>最后~~~还是挺奇葩，书上的写法居然是最快的，改成循环速度居然爆降，也不知道Go编译器是如何优化代码的╭(╯^╰)╮</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">PopCount3</span><span class="params">(x <span class="keyword">uint64</span>)</span> <span class="title">int</span></span> &#123;</span><br><span class="line">	ret := <span class="number">0</span></span><br><span class="line">	<span class="keyword">for</span> x != <span class="number">0</span> &#123;</span><br><span class="line">		x = (x - <span class="number">1</span>) &amp; x</span><br><span class="line">		ret += <span class="number">1</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> ret</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPopCount3</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="comment">// 30000000	        50.5 ns/op</span></span><br><span class="line">	<span class="comment">// x&amp;(x-1)</span></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">		PopCount3(<span class="number">2</span>&lt;&lt;<span class="number">63</span> - <span class="number">1</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<p>最后<del>~</del>还是挺奇葩，书上的写法居然是最快的，改成循环速度居然爆降，也不知道Go编译器是如何优化代码的╭(╯^╰)╮</p>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/06/the_go_programming_lang_usage_answer_3/"  data-tooltip="Go程序设计语言课后习题答案-第三章(基本数据)">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/06/06/the_go_programming_lang_usage_answer_3/"
+                    data-tooltip="Go程序设计语言课后习题答案-第三章(基本数据)"
+                    aria-label="上一篇: Go程序设计语言课后习题答案-第三章(基本数据)"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/03/the_go_programming_language_answer_1/" data-tooltip="Go程序设计语言课后习题答案-第一章(入门)">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/06/03/the_go_programming_language_answer_1/"
+                    data-tooltip="Go程序设计语言课后习题答案-第一章(入门)"
+                    aria-label="下一篇: Go程序设计语言课后习题答案-第一章(入门)"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -362,10 +453,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -387,55 +475,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/06/the_go_programming_lang_usage_answer_3/"  data-tooltip="Go程序设计语言课后习题答案-第三章(基本数据)">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/06/06/the_go_programming_lang_usage_answer_3/"
+                    data-tooltip="Go程序设计语言课后习题答案-第三章(基本数据)"
+                    aria-label="上一篇: Go程序设计语言课后习题答案-第三章(基本数据)"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/03/the_go_programming_language_answer_1/" data-tooltip="Go程序设计语言课后习题答案-第一章(入门)">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/06/03/the_go_programming_language_answer_1/"
+                    data-tooltip="Go程序设计语言课后习题答案-第一章(入门)"
+                    aria-label="下一篇: Go程序设计语言课后习题答案-第一章(入门)"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -443,43 +568,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -495,28 +641,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -526,7 +667,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -539,7 +684,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -548,7 +693,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -559,7 +708,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -568,7 +717,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -578,9 +731,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -589,7 +742,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -599,7 +756,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -608,7 +765,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -620,7 +781,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -630,7 +791,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -640,9 +805,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -660,38 +825,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/';
-                 
-                    this.page.identifier = '2018/06/05/the_go_programming_lang_usage_answer_2/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

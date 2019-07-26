@@ -13,31 +13,35 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~\nGolang版本:1.10.1IDE: GoLand操作系统: 10.13.4\n\n\n练习1.1修改echo程序输出os.Args[0],即命令的名字\n\nos.Args是一个slice\n\n123func TestOutputName(t *testing.T) &#123;\tfmt.Println(os.Args[0])&#125;\n\n\n练习1.2修改echo程序,输出参数的索引和值,每行一个\n\nfor range结构的使用\n\n12345func TestListArgs(t *testing.T) &#123;\tfor k, v := range os.Args &#123;\t\tfmt.Printf(\"%d\\t%s\\n\", k, v)\t&#125;&#125;\n\n练习1.3尝试测量可能低效的程序和使用strings.Join的程序在执行时间上的差异\n\n该用例大概显示相比+=,使用strings.Join要快1782倍\n\n1234567891011121314151617181920212223242526func BenchmarkStringJoin1(b *testing.B) &#123;\t// 1\t1581441327 ns/op\tvar a [100000]string\tfor i := 0; i &lt; 100000; i++ &#123;\t\ta[i] = \"1\"\t&#125;\tfor i := 0; i &lt; b.N; i++ &#123;\t\tvar ret string\t\tfor _, i := range a &#123;\t\t\tret += i\t\t&#125;\t&#125;&#125;func BenchmarkStringJoin2(b *testing.B) &#123;\t// 2000\t    844351 ns/op\tvar a [100000]string\tfor i := 0; i &lt; 100000; i++ &#123;\t\ta[i] = \"1\"\t&#125;\tfor i := 0; i &lt; b.N; i++ &#123;\t\t_ = strings.Join(a[:], \"\")\t&#125;&#125;\n\n练习1.4修改dup2程序,输出出现重复行的文件的名称\n\n用结构体代替原有的string类型\n\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647package mainimport (\t\"os\"\t\"fmt\"\t\"bufio\")type line struct &#123;\tFileName string\tString   string&#125;func main() &#123;\tcounts := make(map[line]int)\tfiles := os.Args[1:]\tif len(files) == 0 &#123;\t\tcountLines(os.Stdin, counts, \"ARGS\")\t&#125; else &#123;\t\tfor _, arg := range files &#123;\t\t\tf, err := os.Open(arg)\t\t\tif err != nil &#123;\t\t\t\tfmt.Fprintf(os.Stderr, \"dup2: %v\\n\", err)\t\t\t\tcontinue\t\t\t&#125;\t\t\tcountLines(f, counts, f.Name())\t\t\tf.Close()\t\t&#125;\t&#125;\tfor line, n := range counts &#123;\t\tif n &gt; 1 &#123;\t\t\tfmt.Printf(\"%s\\t%s\\t%d\\n\", line.FileName, line.String, n)\t\t&#125;\t&#125;&#125;func countLines(file *os.File, counts map[line]int, fileName string) &#123;\tinput := bufio.NewScanner(file)\tfor input.Scan() &#123;\t\tcounts[line&#123;\t\t\tFileName: fileName,\t\t\tString:   input.Text(),\t\t&#125;]++\t&#125;&#125;\n\n练习1.5改变利萨如程序的画板颜色为绿色黑底来增加真实性。使用color.RGBA{0xRR,0xGG,0xBB,0xff}创建一种web颜色#RRGGBB,每一对十六进制数组表示组成一个像素红、绿、蓝分量的亮度。\n\n画板底色为palette的第一个元素，可采用0x表示十六进制数字\n\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960package mainimport (\t\"image/color\"\t\"math/rand\"\t\"time\"\t\"os\"\t\"net/http\"\t\"log\"\t\"io\"\t\"image/gif\"\t\"image\"\t\"math\")var palette = []color.Color&#123;color.Black, color.RGBA&#123;\tR: 0,\tG: 0xFF,\tB: 0,\tA: 0xFF,&#125;&#125;func main() &#123;\trand.Seed(time.Now().UTC().UnixNano())\tif len(os.Args) &gt; 1 &amp;&amp; os.Args[1] == \"web\" &#123;\t\thandler := func(w http.ResponseWriter, r *http.Request) &#123;\t\t\tlissajous(w)\t\t&#125;\t\thttp.HandleFunc(\"/\", handler)\t\tlog.Fatal(http.ListenAndServe(\"localhost:8000\", nil))\t\treturn\t&#125;\tlissajous(os.Stdout)&#125;func lissajous(out io.Writer) &#123;\tconst (\t\tcycles  = 5     // 完整的x振荡器变化的个数\t\tres     = 0.001 //\t角度分辨率\t\tsize    = 100   //\t图像画布包含 [-size..+size]\t\tnframes = 64    //\t动画中的帧数\t\tdelay   = 8     //\t以10ms为单位的帧间延迟\t)\tfreq := rand.Float64() * 3.0 // y振荡器的相对频率\tanim := gif.GIF&#123;LoopCount: nframes&#125;\tphase := 0.0\tfor i := 0; i &lt; nframes; i++ &#123;\t\trect := image.Rect(0, 0, 2*size+1, 2*size+1)\t\timg := image.NewPaletted(rect, palette)\t\tfor t := 0.0; t &lt; cycles*2*math.Pi; t += res &#123;\t\t\tx := math.Sin(t)\t\t\ty := math.Sin(t*freq + phase)\t\t\timg.SetColorIndex(size+int(x*size+0.5), size+int(y*size+0.5), 1)\t\t&#125;\t\tphase += 0.1\t\tanim.Delay = append(anim.Delay, delay)\t\tanim.Image = append(anim.Image, img)\t&#125;\tgif.EncodeAll(out, &amp;anim)&#125;\n\n练习1.6通过在画板中添加更多颜色，然后通过有趣的方式改变SetColorIndex的第三个参数,修改利萨如程序来产生多彩的图片\n\n没想到什么有趣的方式，随便用了个随机生成，rand.Intn,注意init在main前面被执行，因此随机种子需要放在init里面\n\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566package mainimport (\t\"image/color\"\t\"math/rand\"\t\"time\"\t\"os\"\t\"net/http\"\t\"log\"\t\"io\"\t\"image/gif\"\t\"image\"\t\"math\")var palette []color.Colorfunc init() &#123;\trand.Seed(time.Now().UTC().UnixNano())\tfor i := 0; i &lt; 256; i++ &#123;\t\tpalette = append(palette, color.RGBA&#123;\t\t\tR: uint8(rand.Intn(256)),\t\t\tG: uint8(rand.Intn(256)),\t\t\tB: uint8(rand.Intn(256)),\t\t\tA: 0xFF,\t\t&#125;)\t&#125;&#125;func main() &#123;\tif len(os.Args) &gt; 1 &amp;&amp; os.Args[1] == \"web\" &#123;\t\thandler := func(w http.ResponseWriter, r *http.Request) &#123;\t\t\tlissajous(w)\t\t&#125;\t\thttp.HandleFunc(\"/\", handler)\t\tlog.Fatal(http.ListenAndServe(\"localhost:8000\", nil))\t\treturn\t&#125;\tlissajous(os.Stdout)&#125;func lissajous(out io.Writer) &#123;\tconst (\t\tcycles  = 5     // 完整的x振荡器变化的个数\t\tres     = 0.001 //\t角度分辨率\t\tsize    = 100   //\t图像画布包含 [-size..+size]\t\tnframes = 64    //\t动画中的帧数\t\tdelay   = 8     //\t以10ms为单位的帧间延迟\t)\tfreq := rand.Float64() * 3.0 // y振荡器的相对频率\tanim := gif.GIF&#123;LoopCount: nframes&#125;\tphase := 0.0\tfor i := 0; i &lt; nframes; i++ &#123;\t\trect := image.Rect(0, 0, 2*size+1, 2*size+1)\t\timg := image.NewPaletted(rect, palette)\t\tfor t := 0.0; t &lt; cycles*2*math.Pi; t += res &#123;\t\t\tx := math.Sin(t)\t\t\ty := math.Sin(t*freq + phase)\t\t\timg.SetColorIndex(size+int(x*size+0.5), size+int(y*size+0.5), uint8(rand.Intn(len(palette))))\t\t&#125;\t\tphase += 0.1\t\tanim.Delay = append(anim.Delay, delay)\t\tanim.Image = append(anim.Image, img)\t&#125;\tgif.EncodeAll(out, &amp;anim)&#125;\n\n练习1.7函数io.Copy(dst,src)从src读,并且写入dst.使用它代替ioutil.ReadAll来复制响应内容到os.StdOut,这样不需要装下整个数据流的缓冲区.确保检查io.Copy返回的错误结果\n\nio.Copy代替ioutil.ReadAll更省内存，同时也可以把它看做是一个同步的操作，返回了最终传输数据的大小\n\n123456789101112131415161718192021222324252627282930313233343536373839package mainimport (\t\"time\"\t\"os\"\t\"fmt\"\t\"net/http\"\t\"io\"\t\"io/ioutil\")func main() &#123;\tstart := time.Now()\tch := make(chan string)\tfor _, url := range os.Args[1:] &#123;\t\tgo fetch(url, ch)\t&#125;\tfor range os.Args[1:] &#123;\t\tfmt.Println(&lt;-ch)\t&#125;\tfmt.Printf(\"%.2f elapsed\\n\", time.Since(start).Seconds())&#125;func fetch(url string, ch chan&lt;- string) &#123;\tstart := time.Now()\tresp, err := http.Get(url)\tif err != nil &#123;\t\tch &lt;- fmt.Sprint(err)\t\treturn\t&#125;\tnbytes, err := io.Copy(ioutil.Discard, resp.Body)\tresp.Body.Close()\tif err != nil &#123;\t\tch &lt;- fmt.Sprintf(\"while reading %s: %v\", url, err)\t\treturn\t&#125;\tsecs := time.Since(start).Seconds()\tch &lt;- fmt.Sprintf(\"%.2fs %7d %s\", secs, nbytes, url)&#125;\n\n练习1.8修改fetch程序添加一个http://前缀(假如该URL参数缺失协议前缀).可能会用到strings.HasPrefix\n1234567func TestAddPrefix(t *testing.T) &#123;\tinputURL := \"z.cn\"\tif ! strings.HasPrefix(inputURL, \"http\") &#123;\t\tinputURL = \"http://\" + inputURL\t&#125;\tfmt.Println(inputURL)&#125;\n\n练习1.9修改fetch来输出http状态码,可以在resp.Status中找到它\n123456func TestOutputStatusCode(t *testing.T) &#123;\tresp, _ := http.Get(\"http://z.cn\")\tfmt.Println(\"StatusCode: \", resp.StatusCode)\tio.Copy(os.Stdout, resp.Body)\tresp.Body.Close()&#125;\n\n练习1.10找一个产生大量数据的网站.连续两次运行fetchall,看报告的时间是否会有大的变化,调查缓存情况.每一次获取的内容一样吗?修改fetchall将内容输出到文件,这样可以检查它是否一致\n\n这问题不是他傻就是我傻，我还是偏向是他傻。猜测有可能说的是访问网站第一次很慢，第二次会因为缓存策略加速传输(比如http运营商缓存啥的)，亦或者是本机缓存304状态码(但是两次完全独立的访问和这个扯不上什么关系)\n\n练习1.11使用更长的参数列表来尝试fetchall,例如使用alexa.com排名前100万的网站,如果一个网站没有响应,程序的行为是则么样的\n\nGo net/http 超时机制完全手册\n虽然每个URL都对应了一个chan，但是有可能某几个URL特别慢，那么所有的请求都需要等到最慢的那个完成，比如你在本地nc -l 8000监听端口，再直接使用http.Get访问。它默认永不超时，直到tcp连接被中断\n打开太多的链接会启用N多的goroutine，这样会达到系统上限，比如触发常见的too many open files\n\n","dateCreated":"2018-06-03T20:56:37+08:00","dateModified":"2018-06-04T22:15:32+08:00","datePublished":"2018-06-03T20:56:37+08:00","description":"作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~\nGolang版本:1.10.1IDE: GoLand操作系统: 10.13.4","headline":"Go程序设计语言课后习题答案-第一章(入门)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"}</script>
     <meta name="description" content="作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~ Golang版本:1.10.1IDE: GoLand操作系统: 10.13.4">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Go程序设计语言课后习题答案-第一章(入门)">
 <meta property="og:url" content="https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~ Golang版本:1.10.1IDE: GoLand操作系统: 10.13.4">
+<meta property="og:locale" content="zh-cn">
 <meta property="og:updated_time" content="2018-06-04T14:15:32.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Go程序设计语言课后习题答案-第一章(入门)">
 <meta name="twitter:description" content="作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~ Golang版本:1.10.1IDE: GoLand操作系统: 10.13.4">
-<meta name="twitter:creator" content="@aec4d">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -47,23 +51,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -72,23 +79,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -98,9 +90,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -110,9 +103,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -122,9 +116,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -134,9 +129,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -146,9 +142,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -158,9 +155,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -171,27 +169,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -205,9 +242,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -223,17 +261,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             Go程序设计语言课后习题答案-第一章(入门)
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2018-06-03T20:56:37+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2018-06-03T20:56:37+08:00">
 	
 		    6月 03, 2018
     	
@@ -247,52 +286,65 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~</p>
 <p>Golang版本:1.10.1<br>IDE: GoLand<br>操作系统: 10.13.4</p>
 <a id="more"></a>
+
 <h4 id="练习1-1"><a href="#练习1-1" class="headerlink" title="练习1.1"></a>练习1.1</h4><p>修改echo程序输出os.Args[0],即命令的名字</p>
 <ul>
 <li><code>os.Args</code>是一个slice</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestOutputName</span><span class="params">(t *testing.T)</span></span> &#123;</div><div class="line">	fmt.Println(os.Args[<span class="number">0</span>])</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestOutputName</span><span class="params">(t *testing.T)</span></span> &#123;</span><br><span class="line">	fmt.Println(os.Args[<span class="number">0</span>])</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
 <h4 id="练习1-2"><a href="#练习1-2" class="headerlink" title="练习1.2"></a>练习1.2</h4><p>修改echo程序,输出参数的索引和值,每行一个</p>
 <ul>
 <li><code>for range</code>结构的使用</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestListArgs</span><span class="params">(t *testing.T)</span></span> &#123;</div><div class="line">	<span class="keyword">for</span> k, v := <span class="keyword">range</span> os.Args &#123;</div><div class="line">		fmt.Printf(<span class="string">"%d\t%s\n"</span>, k, v)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestListArgs</span><span class="params">(t *testing.T)</span></span> &#123;</span><br><span class="line">	<span class="keyword">for</span> k, v := <span class="keyword">range</span> os.Args &#123;</span><br><span class="line">		fmt.Printf(<span class="string">"%d\t%s\n"</span>, k, v)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h4 id="练习1-3"><a href="#练习1-3" class="headerlink" title="练习1.3"></a>练习1.3</h4><p>尝试测量可能低效的程序和使用strings.Join的程序在执行时间上的差异</p>
 <ul>
 <li>该用例大概显示相比<code>+=</code>,使用strings.Join要快1782倍</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkStringJoin1</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 1	1581441327 ns/op</span></div><div class="line">	<span class="keyword">var</span> a [<span class="number">100000</span>]<span class="keyword">string</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">100000</span>; i++ &#123;</div><div class="line">		a[i] = <span class="string">"1"</span></div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		<span class="keyword">var</span> ret <span class="keyword">string</span></div><div class="line">		<span class="keyword">for</span> _, i := <span class="keyword">range</span> a &#123;</div><div class="line">			ret += i</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkStringJoin2</span><span class="params">(b *testing.B)</span></span> &#123;</div><div class="line">	<span class="comment">// 2000	    844351 ns/op</span></div><div class="line">	<span class="keyword">var</span> a [<span class="number">100000</span>]<span class="keyword">string</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">100000</span>; i++ &#123;</div><div class="line">		a[i] = <span class="string">"1"</span></div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</div><div class="line">		_ = strings.Join(a[:], <span class="string">""</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkStringJoin1</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="comment">// 1	1581441327 ns/op</span></span><br><span class="line">	<span class="keyword">var</span> a [<span class="number">100000</span>]<span class="keyword">string</span></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">100000</span>; i++ &#123;</span><br><span class="line">		a[i] = <span class="string">"1"</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">		<span class="keyword">var</span> ret <span class="keyword">string</span></span><br><span class="line">		<span class="keyword">for</span> _, i := <span class="keyword">range</span> a &#123;</span><br><span class="line">			ret += i</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkStringJoin2</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">	<span class="comment">// 2000	    844351 ns/op</span></span><br><span class="line">	<span class="keyword">var</span> a [<span class="number">100000</span>]<span class="keyword">string</span></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">100000</span>; i++ &#123;</span><br><span class="line">		a[i] = <span class="string">"1"</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">		_ = strings.Join(a[:], <span class="string">""</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h4 id="练习1-4"><a href="#练习1-4" class="headerlink" title="练习1.4"></a>练习1.4</h4><p>修改dup2程序,输出出现重复行的文件的名称</p>
 <ul>
 <li>用结构体代替原有的string类型</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"os"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"bufio"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">type</span> line <span class="keyword">struct</span> &#123;</div><div class="line">	FileName <span class="keyword">string</span></div><div class="line">	String   <span class="keyword">string</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	counts := <span class="built_in">make</span>(<span class="keyword">map</span>[line]<span class="keyword">int</span>)</div><div class="line">	files := os.Args[<span class="number">1</span>:]</div><div class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(files) == <span class="number">0</span> &#123;</div><div class="line">		countLines(os.Stdin, counts, <span class="string">"ARGS"</span>)</div><div class="line">	&#125; <span class="keyword">else</span> &#123;</div><div class="line">		<span class="keyword">for</span> _, arg := <span class="keyword">range</span> files &#123;</div><div class="line">			f, err := os.Open(arg)</div><div class="line">			<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">				fmt.Fprintf(os.Stderr, <span class="string">"dup2: %v\n"</span>, err)</div><div class="line">				<span class="keyword">continue</span></div><div class="line">			&#125;</div><div class="line">			countLines(f, counts, f.Name())</div><div class="line">			f.Close()</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">for</span> line, n := <span class="keyword">range</span> counts &#123;</div><div class="line">		<span class="keyword">if</span> n &gt; <span class="number">1</span> &#123;</div><div class="line">			fmt.Printf(<span class="string">"%s\t%s\t%d\n"</span>, line.FileName, line.String, n)</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">countLines</span><span class="params">(file *os.File, counts <span class="keyword">map</span>[line]<span class="keyword">int</span>, fileName <span class="keyword">string</span>)</span></span> &#123;</div><div class="line">	input := bufio.NewScanner(file)</div><div class="line">	<span class="keyword">for</span> input.Scan() &#123;</div><div class="line">		counts[line&#123;</div><div class="line">			FileName: fileName,</div><div class="line">			String:   input.Text(),</div><div class="line">		&#125;]++</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"os"</span></span><br><span class="line">	<span class="string">"fmt"</span></span><br><span class="line">	<span class="string">"bufio"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> line <span class="keyword">struct</span> &#123;</span><br><span class="line">	FileName <span class="keyword">string</span></span><br><span class="line">	String   <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	counts := <span class="built_in">make</span>(<span class="keyword">map</span>[line]<span class="keyword">int</span>)</span><br><span class="line">	files := os.Args[<span class="number">1</span>:]</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(files) == <span class="number">0</span> &#123;</span><br><span class="line">		countLines(os.Stdin, counts, <span class="string">"ARGS"</span>)</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="keyword">for</span> _, arg := <span class="keyword">range</span> files &#123;</span><br><span class="line">			f, err := os.Open(arg)</span><br><span class="line">			<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">				fmt.Fprintf(os.Stderr, <span class="string">"dup2: %v\n"</span>, err)</span><br><span class="line">				<span class="keyword">continue</span></span><br><span class="line">			&#125;</span><br><span class="line">			countLines(f, counts, f.Name())</span><br><span class="line">			f.Close()</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> line, n := <span class="keyword">range</span> counts &#123;</span><br><span class="line">		<span class="keyword">if</span> n &gt; <span class="number">1</span> &#123;</span><br><span class="line">			fmt.Printf(<span class="string">"%s\t%s\t%d\n"</span>, line.FileName, line.String, n)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">countLines</span><span class="params">(file *os.File, counts <span class="keyword">map</span>[line]<span class="keyword">int</span>, fileName <span class="keyword">string</span>)</span></span> &#123;</span><br><span class="line">	input := bufio.NewScanner(file)</span><br><span class="line">	<span class="keyword">for</span> input.Scan() &#123;</span><br><span class="line">		counts[line&#123;</span><br><span class="line">			FileName: fileName,</span><br><span class="line">			String:   input.Text(),</span><br><span class="line">		&#125;]++</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
 <h4 id="练习1-5"><a href="#练习1-5" class="headerlink" title="练习1.5"></a>练习1.5</h4><p>改变利萨如程序的画板颜色为绿色黑底来增加真实性。使用color.RGBA{0xRR,0xGG,0xBB,0xff}创建一种web颜色#RRGGBB,每一对十六进制数组表示组成一个像素红、绿、蓝分量的亮度。</p>
 <ul>
 <li>画板底色为palette的第一个元素，可采用<code>0x</code>表示十六进制数字</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"image/color"</span></div><div class="line">	<span class="string">"math/rand"</span></div><div class="line">	<span class="string">"time"</span></div><div class="line">	<span class="string">"os"</span></div><div class="line">	<span class="string">"net/http"</span></div><div class="line">	<span class="string">"log"</span></div><div class="line">	<span class="string">"io"</span></div><div class="line">	<span class="string">"image/gif"</span></div><div class="line">	<span class="string">"image"</span></div><div class="line">	<span class="string">"math"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">var</span> palette = []color.Color&#123;color.Black, color.RGBA&#123;</div><div class="line">	R: <span class="number">0</span>,</div><div class="line">	G: <span class="number">0xFF</span>,</div><div class="line">	B: <span class="number">0</span>,</div><div class="line">	A: <span class="number">0xFF</span>,</div><div class="line">&#125;&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	rand.Seed(time.Now().UTC().UnixNano())</div><div class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(os.Args) &gt; <span class="number">1</span> &amp;&amp; os.Args[<span class="number">1</span>] == <span class="string">"web"</span> &#123;</div><div class="line">		handler := <span class="function"><span class="keyword">func</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</div><div class="line">			lissajous(w)</div><div class="line">		&#125;</div><div class="line">		http.HandleFunc(<span class="string">"/"</span>, handler)</div><div class="line">		log.Fatal(http.ListenAndServe(<span class="string">"localhost:8000"</span>, <span class="literal">nil</span>))</div><div class="line">		<span class="keyword">return</span></div><div class="line">	&#125;</div><div class="line">	lissajous(os.Stdout)</div><div class="line"></div><div class="line">&#125;</div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">lissajous</span><span class="params">(out io.Writer)</span></span> &#123;</div><div class="line">	<span class="keyword">const</span> (</div><div class="line">		cycles  = <span class="number">5</span>     <span class="comment">// 完整的x振荡器变化的个数</span></div><div class="line">		res     = <span class="number">0.001</span> <span class="comment">//	角度分辨率</span></div><div class="line">		size    = <span class="number">100</span>   <span class="comment">//	图像画布包含 [-size..+size]</span></div><div class="line">		nframes = <span class="number">64</span>    <span class="comment">//	动画中的帧数</span></div><div class="line">		delay   = <span class="number">8</span>     <span class="comment">//	以10ms为单位的帧间延迟</span></div><div class="line">	)</div><div class="line">	freq := rand.Float64() * <span class="number">3.0</span> <span class="comment">// y振荡器的相对频率</span></div><div class="line">	anim := gif.GIF&#123;LoopCount: nframes&#125;</div><div class="line">	phase := <span class="number">0.0</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; nframes; i++ &#123;</div><div class="line">		rect := image.Rect(<span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>*size+<span class="number">1</span>, <span class="number">2</span>*size+<span class="number">1</span>)</div><div class="line">		img := image.NewPaletted(rect, palette)</div><div class="line">		<span class="keyword">for</span> t := <span class="number">0.0</span>; t &lt; cycles*<span class="number">2</span>*math.Pi; t += res &#123;</div><div class="line">			x := math.Sin(t)</div><div class="line">			y := math.Sin(t*freq + phase)</div><div class="line">			img.SetColorIndex(size+<span class="keyword">int</span>(x*size+<span class="number">0.5</span>), size+<span class="keyword">int</span>(y*size+<span class="number">0.5</span>), <span class="number">1</span>)</div><div class="line">		&#125;</div><div class="line">		phase += <span class="number">0.1</span></div><div class="line">		anim.Delay = <span class="built_in">append</span>(anim.Delay, delay)</div><div class="line">		anim.Image = <span class="built_in">append</span>(anim.Image, img)</div><div class="line">	&#125;</div><div class="line">	gif.EncodeAll(out, &amp;anim)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"image/color"</span></span><br><span class="line">	<span class="string">"math/rand"</span></span><br><span class="line">	<span class="string">"time"</span></span><br><span class="line">	<span class="string">"os"</span></span><br><span class="line">	<span class="string">"net/http"</span></span><br><span class="line">	<span class="string">"log"</span></span><br><span class="line">	<span class="string">"io"</span></span><br><span class="line">	<span class="string">"image/gif"</span></span><br><span class="line">	<span class="string">"image"</span></span><br><span class="line">	<span class="string">"math"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> palette = []color.Color&#123;color.Black, color.RGBA&#123;</span><br><span class="line">	R: <span class="number">0</span>,</span><br><span class="line">	G: <span class="number">0xFF</span>,</span><br><span class="line">	B: <span class="number">0</span>,</span><br><span class="line">	A: <span class="number">0xFF</span>,</span><br><span class="line">&#125;&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	rand.Seed(time.Now().UTC().UnixNano())</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(os.Args) &gt; <span class="number">1</span> &amp;&amp; os.Args[<span class="number">1</span>] == <span class="string">"web"</span> &#123;</span><br><span class="line">		handler := <span class="function"><span class="keyword">func</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</span><br><span class="line">			lissajous(w)</span><br><span class="line">		&#125;</span><br><span class="line">		http.HandleFunc(<span class="string">"/"</span>, handler)</span><br><span class="line">		log.Fatal(http.ListenAndServe(<span class="string">"localhost:8000"</span>, <span class="literal">nil</span>))</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	lissajous(os.Stdout)</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">lissajous</span><span class="params">(out io.Writer)</span></span> &#123;</span><br><span class="line">	<span class="keyword">const</span> (</span><br><span class="line">		cycles  = <span class="number">5</span>     <span class="comment">// 完整的x振荡器变化的个数</span></span><br><span class="line">		res     = <span class="number">0.001</span> <span class="comment">//	角度分辨率</span></span><br><span class="line">		size    = <span class="number">100</span>   <span class="comment">//	图像画布包含 [-size..+size]</span></span><br><span class="line">		nframes = <span class="number">64</span>    <span class="comment">//	动画中的帧数</span></span><br><span class="line">		delay   = <span class="number">8</span>     <span class="comment">//	以10ms为单位的帧间延迟</span></span><br><span class="line">	)</span><br><span class="line">	freq := rand.Float64() * <span class="number">3.0</span> <span class="comment">// y振荡器的相对频率</span></span><br><span class="line">	anim := gif.GIF&#123;LoopCount: nframes&#125;</span><br><span class="line">	phase := <span class="number">0.0</span></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; nframes; i++ &#123;</span><br><span class="line">		rect := image.Rect(<span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>*size+<span class="number">1</span>, <span class="number">2</span>*size+<span class="number">1</span>)</span><br><span class="line">		img := image.NewPaletted(rect, palette)</span><br><span class="line">		<span class="keyword">for</span> t := <span class="number">0.0</span>; t &lt; cycles*<span class="number">2</span>*math.Pi; t += res &#123;</span><br><span class="line">			x := math.Sin(t)</span><br><span class="line">			y := math.Sin(t*freq + phase)</span><br><span class="line">			img.SetColorIndex(size+<span class="keyword">int</span>(x*size+<span class="number">0.5</span>), size+<span class="keyword">int</span>(y*size+<span class="number">0.5</span>), <span class="number">1</span>)</span><br><span class="line">		&#125;</span><br><span class="line">		phase += <span class="number">0.1</span></span><br><span class="line">		anim.Delay = <span class="built_in">append</span>(anim.Delay, delay)</span><br><span class="line">		anim.Image = <span class="built_in">append</span>(anim.Image, img)</span><br><span class="line">	&#125;</span><br><span class="line">	gif.EncodeAll(out, &amp;anim)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h4 id="练习1-6"><a href="#练习1-6" class="headerlink" title="练习1.6"></a>练习1.6</h4><p>通过在画板中添加更多颜色，然后通过有趣的方式改变SetColorIndex的第三个参数,修改利萨如程序来产生多彩的图片</p>
 <ul>
 <li>没想到什么有趣的方式，随便用了个随机生成，<code>rand.Intn</code>,注意init在main前面被执行，因此随机种子需要放在init里面</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"image/color"</span></div><div class="line">	<span class="string">"math/rand"</span></div><div class="line">	<span class="string">"time"</span></div><div class="line">	<span class="string">"os"</span></div><div class="line">	<span class="string">"net/http"</span></div><div class="line">	<span class="string">"log"</span></div><div class="line">	<span class="string">"io"</span></div><div class="line">	<span class="string">"image/gif"</span></div><div class="line">	<span class="string">"image"</span></div><div class="line">	<span class="string">"math"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">var</span> palette []color.Color</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</div><div class="line">	rand.Seed(time.Now().UTC().UnixNano())</div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">256</span>; i++ &#123;</div><div class="line">		palette = <span class="built_in">append</span>(palette, color.RGBA&#123;</div><div class="line">			R: <span class="keyword">uint8</span>(rand.Intn(<span class="number">256</span>)),</div><div class="line">			G: <span class="keyword">uint8</span>(rand.Intn(<span class="number">256</span>)),</div><div class="line">			B: <span class="keyword">uint8</span>(rand.Intn(<span class="number">256</span>)),</div><div class="line">			A: <span class="number">0xFF</span>,</div><div class="line">		&#125;)</div><div class="line">	&#125;</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(os.Args) &gt; <span class="number">1</span> &amp;&amp; os.Args[<span class="number">1</span>] == <span class="string">"web"</span> &#123;</div><div class="line">		handler := <span class="function"><span class="keyword">func</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</div><div class="line">			lissajous(w)</div><div class="line">		&#125;</div><div class="line">		http.HandleFunc(<span class="string">"/"</span>, handler)</div><div class="line">		log.Fatal(http.ListenAndServe(<span class="string">"localhost:8000"</span>, <span class="literal">nil</span>))</div><div class="line">		<span class="keyword">return</span></div><div class="line">	&#125;</div><div class="line">	lissajous(os.Stdout)</div><div class="line"></div><div class="line">&#125;</div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">lissajous</span><span class="params">(out io.Writer)</span></span> &#123;</div><div class="line">	<span class="keyword">const</span> (</div><div class="line">		cycles  = <span class="number">5</span>     <span class="comment">// 完整的x振荡器变化的个数</span></div><div class="line">		res     = <span class="number">0.001</span> <span class="comment">//	角度分辨率</span></div><div class="line">		size    = <span class="number">100</span>   <span class="comment">//	图像画布包含 [-size..+size]</span></div><div class="line">		nframes = <span class="number">64</span>    <span class="comment">//	动画中的帧数</span></div><div class="line">		delay   = <span class="number">8</span>     <span class="comment">//	以10ms为单位的帧间延迟</span></div><div class="line">	)</div><div class="line">	freq := rand.Float64() * <span class="number">3.0</span> <span class="comment">// y振荡器的相对频率</span></div><div class="line">	anim := gif.GIF&#123;LoopCount: nframes&#125;</div><div class="line">	phase := <span class="number">0.0</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; nframes; i++ &#123;</div><div class="line">		rect := image.Rect(<span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>*size+<span class="number">1</span>, <span class="number">2</span>*size+<span class="number">1</span>)</div><div class="line">		img := image.NewPaletted(rect, palette)</div><div class="line">		<span class="keyword">for</span> t := <span class="number">0.0</span>; t &lt; cycles*<span class="number">2</span>*math.Pi; t += res &#123;</div><div class="line">			x := math.Sin(t)</div><div class="line">			y := math.Sin(t*freq + phase)</div><div class="line">			img.SetColorIndex(size+<span class="keyword">int</span>(x*size+<span class="number">0.5</span>), size+<span class="keyword">int</span>(y*size+<span class="number">0.5</span>), <span class="keyword">uint8</span>(rand.Intn(<span class="built_in">len</span>(palette))))</div><div class="line">		&#125;</div><div class="line">		phase += <span class="number">0.1</span></div><div class="line">		anim.Delay = <span class="built_in">append</span>(anim.Delay, delay)</div><div class="line">		anim.Image = <span class="built_in">append</span>(anim.Image, img)</div><div class="line">	&#125;</div><div class="line">	gif.EncodeAll(out, &amp;anim)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"image/color"</span></span><br><span class="line">	<span class="string">"math/rand"</span></span><br><span class="line">	<span class="string">"time"</span></span><br><span class="line">	<span class="string">"os"</span></span><br><span class="line">	<span class="string">"net/http"</span></span><br><span class="line">	<span class="string">"log"</span></span><br><span class="line">	<span class="string">"io"</span></span><br><span class="line">	<span class="string">"image/gif"</span></span><br><span class="line">	<span class="string">"image"</span></span><br><span class="line">	<span class="string">"math"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> palette []color.Color</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</span><br><span class="line">	rand.Seed(time.Now().UTC().UnixNano())</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; <span class="number">256</span>; i++ &#123;</span><br><span class="line">		palette = <span class="built_in">append</span>(palette, color.RGBA&#123;</span><br><span class="line">			R: <span class="keyword">uint8</span>(rand.Intn(<span class="number">256</span>)),</span><br><span class="line">			G: <span class="keyword">uint8</span>(rand.Intn(<span class="number">256</span>)),</span><br><span class="line">			B: <span class="keyword">uint8</span>(rand.Intn(<span class="number">256</span>)),</span><br><span class="line">			A: <span class="number">0xFF</span>,</span><br><span class="line">		&#125;)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(os.Args) &gt; <span class="number">1</span> &amp;&amp; os.Args[<span class="number">1</span>] == <span class="string">"web"</span> &#123;</span><br><span class="line">		handler := <span class="function"><span class="keyword">func</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</span><br><span class="line">			lissajous(w)</span><br><span class="line">		&#125;</span><br><span class="line">		http.HandleFunc(<span class="string">"/"</span>, handler)</span><br><span class="line">		log.Fatal(http.ListenAndServe(<span class="string">"localhost:8000"</span>, <span class="literal">nil</span>))</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	lissajous(os.Stdout)</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">lissajous</span><span class="params">(out io.Writer)</span></span> &#123;</span><br><span class="line">	<span class="keyword">const</span> (</span><br><span class="line">		cycles  = <span class="number">5</span>     <span class="comment">// 完整的x振荡器变化的个数</span></span><br><span class="line">		res     = <span class="number">0.001</span> <span class="comment">//	角度分辨率</span></span><br><span class="line">		size    = <span class="number">100</span>   <span class="comment">//	图像画布包含 [-size..+size]</span></span><br><span class="line">		nframes = <span class="number">64</span>    <span class="comment">//	动画中的帧数</span></span><br><span class="line">		delay   = <span class="number">8</span>     <span class="comment">//	以10ms为单位的帧间延迟</span></span><br><span class="line">	)</span><br><span class="line">	freq := rand.Float64() * <span class="number">3.0</span> <span class="comment">// y振荡器的相对频率</span></span><br><span class="line">	anim := gif.GIF&#123;LoopCount: nframes&#125;</span><br><span class="line">	phase := <span class="number">0.0</span></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; nframes; i++ &#123;</span><br><span class="line">		rect := image.Rect(<span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>*size+<span class="number">1</span>, <span class="number">2</span>*size+<span class="number">1</span>)</span><br><span class="line">		img := image.NewPaletted(rect, palette)</span><br><span class="line">		<span class="keyword">for</span> t := <span class="number">0.0</span>; t &lt; cycles*<span class="number">2</span>*math.Pi; t += res &#123;</span><br><span class="line">			x := math.Sin(t)</span><br><span class="line">			y := math.Sin(t*freq + phase)</span><br><span class="line">			img.SetColorIndex(size+<span class="keyword">int</span>(x*size+<span class="number">0.5</span>), size+<span class="keyword">int</span>(y*size+<span class="number">0.5</span>), <span class="keyword">uint8</span>(rand.Intn(<span class="built_in">len</span>(palette))))</span><br><span class="line">		&#125;</span><br><span class="line">		phase += <span class="number">0.1</span></span><br><span class="line">		anim.Delay = <span class="built_in">append</span>(anim.Delay, delay)</span><br><span class="line">		anim.Image = <span class="built_in">append</span>(anim.Image, img)</span><br><span class="line">	&#125;</span><br><span class="line">	gif.EncodeAll(out, &amp;anim)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h4 id="练习1-7"><a href="#练习1-7" class="headerlink" title="练习1.7"></a>练习1.7</h4><p>函数io.Copy(dst,src)从src读,并且写入dst.使用它代替ioutil.ReadAll来复制响应内容到os.StdOut,这样不需要装下整个数据流的缓冲区.确保检查io.Copy返回的错误结果</p>
 <ul>
 <li>io.Copy代替ioutil.ReadAll更省内存，同时也可以把它看做是一个同步的操作，返回了最终传输数据的大小</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"time"</span></div><div class="line">	<span class="string">"os"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"net/http"</span></div><div class="line">	<span class="string">"io"</span></div><div class="line">	<span class="string">"io/ioutil"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	start := time.Now()</div><div class="line">	ch := <span class="built_in">make</span>(<span class="keyword">chan</span> <span class="keyword">string</span>)</div><div class="line">	<span class="keyword">for</span> _, url := <span class="keyword">range</span> os.Args[<span class="number">1</span>:] &#123;</div><div class="line">		<span class="keyword">go</span> fetch(url, ch)</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">for</span> <span class="keyword">range</span> os.Args[<span class="number">1</span>:] &#123;</div><div class="line">		fmt.Println(&lt;-ch)</div><div class="line">	&#125;</div><div class="line">	fmt.Printf(<span class="string">"%.2f elapsed\n"</span>, time.Since(start).Seconds())</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">fetch</span><span class="params">(url <span class="keyword">string</span>, ch <span class="keyword">chan</span>&lt;- <span class="keyword">string</span>)</span></span> &#123;</div><div class="line">	start := time.Now()</div><div class="line">	resp, err := http.Get(url)</div><div class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">		ch &lt;- fmt.Sprint(err)</div><div class="line">		<span class="keyword">return</span></div><div class="line">	&#125;</div><div class="line">	nbytes, err := io.Copy(ioutil.Discard, resp.Body)</div><div class="line">	resp.Body.Close()</div><div class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">		ch &lt;- fmt.Sprintf(<span class="string">"while reading %s: %v"</span>, url, err)</div><div class="line">		<span class="keyword">return</span></div><div class="line">	&#125;</div><div class="line">	secs := time.Since(start).Seconds()</div><div class="line">	ch &lt;- fmt.Sprintf(<span class="string">"%.2fs %7d %s"</span>, secs, nbytes, url)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<h4 id="练习1-8"><a href="#练习1-8" class="headerlink" title="练习1.8"></a>练习1.8</h4><p>修改fetch程序添加一个<a href="http://前缀(假如该URL参数缺失协议前缀).可能会用到strings.HasPrefix">http://前缀(假如该URL参数缺失协议前缀).可能会用到strings.HasPrefix</a></p>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestAddPrefix</span><span class="params">(t *testing.T)</span></span> &#123;</div><div class="line">	inputURL := <span class="string">"z.cn"</span></div><div class="line">	<span class="keyword">if</span> ! strings.HasPrefix(inputURL, <span class="string">"http"</span>) &#123;</div><div class="line">		inputURL = <span class="string">"http://"</span> + inputURL</div><div class="line">	&#125;</div><div class="line">	fmt.Println(inputURL)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"time"</span></span><br><span class="line">	<span class="string">"os"</span></span><br><span class="line">	<span class="string">"fmt"</span></span><br><span class="line">	<span class="string">"net/http"</span></span><br><span class="line">	<span class="string">"io"</span></span><br><span class="line">	<span class="string">"io/ioutil"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	start := time.Now()</span><br><span class="line">	ch := <span class="built_in">make</span>(<span class="keyword">chan</span> <span class="keyword">string</span>)</span><br><span class="line">	<span class="keyword">for</span> _, url := <span class="keyword">range</span> os.Args[<span class="number">1</span>:] &#123;</span><br><span class="line">		<span class="keyword">go</span> fetch(url, ch)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">for</span> <span class="keyword">range</span> os.Args[<span class="number">1</span>:] &#123;</span><br><span class="line">		fmt.Println(&lt;-ch)</span><br><span class="line">	&#125;</span><br><span class="line">	fmt.Printf(<span class="string">"%.2f elapsed\n"</span>, time.Since(start).Seconds())</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">fetch</span><span class="params">(url <span class="keyword">string</span>, ch <span class="keyword">chan</span>&lt;- <span class="keyword">string</span>)</span></span> &#123;</span><br><span class="line">	start := time.Now()</span><br><span class="line">	resp, err := http.Get(url)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		ch &lt;- fmt.Sprint(err)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	nbytes, err := io.Copy(ioutil.Discard, resp.Body)</span><br><span class="line">	resp.Body.Close()</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		ch &lt;- fmt.Sprintf(<span class="string">"while reading %s: %v"</span>, url, err)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">	secs := time.Since(start).Seconds()</span><br><span class="line">	ch &lt;- fmt.Sprintf(<span class="string">"%.2fs %7d %s"</span>, secs, nbytes, url)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="练习1-8"><a href="#练习1-8" class="headerlink" title="练习1.8"></a>练习1.8</h4><p>修改fetch程序添加一个http://前缀(假如该URL参数缺失协议前缀).可能会用到strings.HasPrefix</p>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestAddPrefix</span><span class="params">(t *testing.T)</span></span> &#123;</span><br><span class="line">	inputURL := <span class="string">"z.cn"</span></span><br><span class="line">	<span class="keyword">if</span> ! strings.HasPrefix(inputURL, <span class="string">"http"</span>) &#123;</span><br><span class="line">		inputURL = <span class="string">"http://"</span> + inputURL</span><br><span class="line">	&#125;</span><br><span class="line">	fmt.Println(inputURL)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h4 id="练习1-9"><a href="#练习1-9" class="headerlink" title="练习1.9"></a>练习1.9</h4><p>修改fetch来输出http状态码,可以在resp.Status中找到它</p>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestOutputStatusCode</span><span class="params">(t *testing.T)</span></span> &#123;</div><div class="line">	resp, _ := http.Get(<span class="string">"http://z.cn"</span>)</div><div class="line">	fmt.Println(<span class="string">"StatusCode: "</span>, resp.StatusCode)</div><div class="line">	io.Copy(os.Stdout, resp.Body)</div><div class="line">	resp.Body.Close()</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TestOutputStatusCode</span><span class="params">(t *testing.T)</span></span> &#123;</span><br><span class="line">	resp, _ := http.Get(<span class="string">"http://z.cn"</span>)</span><br><span class="line">	fmt.Println(<span class="string">"StatusCode: "</span>, resp.StatusCode)</span><br><span class="line">	io.Copy(os.Stdout, resp.Body)</span><br><span class="line">	resp.Body.Close()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h4 id="练习1-10"><a href="#练习1-10" class="headerlink" title="练习1.10"></a>练习1.10</h4><p>找一个产生大量数据的网站.连续两次运行fetchall,看报告的时间是否会有大的变化,调查缓存情况.每一次获取的内容一样吗?修改fetchall将内容输出到文件,这样可以检查它是否一致</p>
 <ul>
 <li>这问题不是他傻就是我傻，我还是偏向是他傻。猜测有可能说的是访问网站第一次很慢，第二次会因为缓存策略加速传输(比如http运营商缓存啥的)，亦或者是本机缓存304状态码(但是两次完全独立的访问和这个扯不上什么关系)</li>
@@ -305,64 +357,104 @@
 </ul>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/05/the_go_programming_lang_usage_answer_2/"  data-tooltip="Go程序设计语言课后习题答案-第二章(程序结构)">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                    data-tooltip="Go程序设计语言课后习题答案-第二章(程序结构)"
+                    aria-label="上一篇: Go程序设计语言课后习题答案-第二章(程序结构)"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/05/25/mitmproxy_transparent_model_network_capture/" data-tooltip="mac上使用mitmproxy对ios app进行抓包">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/05/25/mitmproxy_transparent_model_network_capture/"
+                    data-tooltip="mac上使用mitmproxy对ios app进行抓包"
+                    aria-label="下一篇: mac上使用mitmproxy对ios app进行抓包"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -370,10 +462,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -395,55 +484,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/05/the_go_programming_lang_usage_answer_2/"  data-tooltip="Go程序设计语言课后习题答案-第二章(程序结构)">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/06/05/the_go_programming_lang_usage_answer_2/"
+                    data-tooltip="Go程序设计语言课后习题答案-第二章(程序结构)"
+                    aria-label="上一篇: Go程序设计语言课后习题答案-第二章(程序结构)"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/05/25/mitmproxy_transparent_model_network_capture/" data-tooltip="mac上使用mitmproxy对ios app进行抓包">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/05/25/mitmproxy_transparent_model_network_capture/"
+                    data-tooltip="mac上使用mitmproxy对ios app进行抓包"
+                    aria-label="下一篇: mac上使用mitmproxy对ios app进行抓包"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -451,43 +577,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -503,28 +650,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -534,7 +676,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -547,7 +693,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -556,7 +702,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -567,7 +717,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -576,7 +726,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -586,9 +740,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -597,7 +751,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -607,7 +765,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -616,7 +774,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -628,7 +790,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -638,7 +800,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -648,9 +814,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -668,38 +834,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/';
-                 
-                    this.page.identifier = '2018/06/03/the_go_programming_language_answer_1/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

@@ -13,34 +13,38 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"因为个人需求，写了一个很小众的作品，https://ocr.ficapy.com，我给它起的项目名是pdfaddtext，用途是给扫描版本的PDF文件加上搜索功能。使用场景是我有几本扫描版本的PDF书籍(网上有特别多的扫描版书籍)，有时候想搜索书中有没有提到某个知识点，纯图片是无法搜索的，你只能凭记忆去找。本项目作用就是将PDF的文本内容识别出来，然后写入一层隐藏的文字层，这样PDF阅读器就能够搜索这些文字了，同时尽量保证将识别出来的文字写到原图片对应的位置,类似的工具有OCRmyPDF，它的缺点很明显，使用Tesseract OCR引擎，对比识别效果，简直被商用OCR吊打。\n最开始有了这个想法，我大概花费了一个下午的时间用python写出了基本的demo。将每一页PDF转换成图片，然后用免费的OCR服务去识别，得到结果，最后合并出一个新的pdf出来。过程算是比较顺利。本着独乐乐不如众乐乐的心态。我计划将它转变成一项web服务，于是挖坑之旅就此开始了\nTLDR\n\n\n开始的构思是这个样子的后台接收到文件进行拆分，依次获取结果最后服务端生成文件返回给客户端。流程完成，是不是特简单😕\n问题一: pdf转换生成jpg效率过低python的生态无需质疑，各种包齐全到你怀疑人生。pdf转换成jpg也都是有的，比如pdf2image。它有一个无法忽视的缺点，效率太低。个人处理少量问题可以，但是如果用于web服务。每生成一张照片卡两秒，肯定无法忍受，后来对比imagemagick和ghostscript，ghostscript的效率比imagemagick高一些，当然比python不知道高到哪里去了。注: imagemagick的pdf转图片底层使用的是ghostscript，最后选择了subprocess调用ghostscript\n问题二: OCR效率过低目前没有能力搭建一个识别准确度比较高的文字识别引擎，于是使用了免费的OCR。在网上腾讯的免费OCR口碑是很不错的，超高的识别准确率，而且看文档发现不限制识别次数，只是不保证并发(是不是感觉超级良心！)。醒醒了少年，哪里有这么好的事情！！！\n我刚开始用的时候大概四五秒返回结果。识别准确率网上没有瞎吹，对中文的准确率还是很不错的，后来可能该服务用的人太多，效率大幅度降低。降低到10到20秒才会返回结果。而且经常性返回系统繁忙的错误。这也可能和我的需求有关，因为我上传的识别素材都是1000像素以上的图片。里面的文字众多，所以识别效率比较低。但是腾讯提供的免费OCR服务有劣化服务质量的嫌疑，毕竟如果免费的服务提供的过于的好，用户付费的热情肯定大幅度降低。很明显的是你上传一张图片得到结果，之后再次上传依旧是等待十几秒才得到结果，稍微正常的开发肯定都知道将结果缓存一下，再次相同的图片请求直接返回结果。鉴于腾讯OCR的低效，我不得不找其他的OCR服务同时使用，保证系统的可靠性，最终同时使用了以下服务\n\n腾讯\n百度\n微软\n搜狗\nfaceplusplus\n\n开发过程中的个人感觉,识别准确率依次是百度&gt;腾讯&gt;搜狗&gt;微软&gt;faceplusplus\n123456分别是百度  腾讯  搜狗  微软 face++     对同一张简单图片的识别结果[[&apos;这是第一段文字&apos;, 316, 123, 22, 131], [&apos;这个地方是第二段Ohye&apos;, 213, 286, 21, 195]][[&apos;这是第一段文字&apos;, 316, 123, 22, 131], [&apos;这个地方是第二段Ohye&apos;, 213, 286, 21, 195]][[&apos;这是第一段文字&apos;, 309, 122, 24, 149], [&apos;这个地方是第二段Ohye&apos;, 202, 283, 26, 213]][[&apos;这是第一段文字&apos;, 318, 125, 21, 124], [&apos;这个地方是第二段Ohye&apos;, 220, 290, 21, 189]][[&apos;这是第一段文字&apos;, 319, 125, 19, 128], [&apos;个地方是第段Oye&apos;, 232, 286, 22, 176]]\n\n基本上国内能免费使用的OCR服务我都给想办法整合了，它们的输出都差不多，提供文字在图片中的定位功能，除了腾讯返回很慢，其他服务基本都在四秒左右返回。搜狗的OCR服务很低调，好像知道的人都不多，而且是这些服务里面文档最奇葩的，文档几乎没有，就提供了一个PHP调用服务的demo。\n即便同时使用了五个免费服务，依旧不够用，而且几乎除了腾讯是不限制每日调用次数，其他的服务都会限制每天最多调用多少次。最后预估每天可供识别的图片数量最多不超过3000页。底层OCR服务的限制直接导致了设计复杂度的成倍上升，如果本地能在500毫秒内识别得到一个结果，也就没那么多事儿了。\n问题三：更快的响应如果是单人使用,那么一个任务进行完毕之后再进行下一个任务。不存在并发调度的问题。但是它作为一项web服务，势必会存在并发问题，当某个用户正在执行转换操作，此时另外一个用户又提交了一个任务请求。是选择继续将前面的任务执行完毕再执行后续的(先到先服务)，还是采取一定的策略进行乱序执行。本程序选择了短任务优先策略，以pdf中的单页作为最小任务单元，使用优先级队列对任务进行排序。将每一个任务未完成的页数作为比较元素。每次选择任务的时候总是从优先级中选择未完成页数最少的任务优先执行。同时为了避免饥饿，假设存在几百页的大文件，每隔一分钟，按照任务的创建时间来调整任务优先级\n最开始的最简架构几乎是认为不存在并发的。但是不并发是不可能的，所以流程改成了这样\n\n用户将图片上传到阿里云OSS, 后台接收到回调后下载文件。返回给客户端任务id。\n客户端根据此ID创建websocket连接。后台下载文件完毕后发送redis队列消息。\n开启一个独立的PDF分片进程。接收到消息后进程获取文件地址，然后将PDF文件的每一页转换成图片(放到特定的目录)。\n生产者负责轮询目录发现新生成的图片。然后每一张图片被封装成一个Task任务对象，被加入到全局队列，全局队列的基本格式是一个字典{file_md5:Queue}，每一个文件都拥有一个队列。\n消费者负责从队列中获取一个任务。获取的规则是从优先级队列中找到第一个文件md5。然后在全局队列中对应文件md5队列中取出一个任务，执行任务，更新优先级队列，如果该文件被全部执行完成则返回结果\n\n这里涉及到了三个很重要的地方、Task任务、全局队列、优先级队列。其中第五步是整个过程中最容易出现错误的地方。\n后台整个是使用Tornado实现的，最开始我考虑的是将PDF分片使用multiprocess进程来实现就好了。后来考虑它要是挂了怎么办。如果它挂了整个流程就无法进行。如果一定要将它使用multiprocess，那么将不得不监控它是不是挂掉了对它进行重启。最后还是将它独立出来用supervisord处理了\n问题四: 锁&amp;死锁上图中的消费者和生产者并不是简单的共享同一个任务队列。消费者取出任务的流程是先读取优先级队列得到文件md5，再从全局队列字典中获得相应队列获得任务。设想程序最开始从优先级队列里面取得的是空值。再用空值去查找全局队列无疑会被报错。要么你就在获取任务的时候使用while语句不断的判断当前优先级任务队列是否有元素。然而在Tornado里面死循环这种方式是不允许的，会直接造成其他部分无法执行，无法响应用户请求。因此需要使用Tornado提供的tornado.lock.Event。在读取优先级队列之前先判断该事件锁是否被锁。如果被锁那么coroutine就被阻塞。这样只需要在优先级队列添加和删除元素的地方统一处理。添加元素的时候取消锁。取消元素的时候判断优先级队列是否为空。为空则设置锁\n为了不浪费系统资源。如果一个用户的任务正在被执行，而此时用户退出了。毫无疑问，这种情况下本着快速响应的原则，我们会直接删掉该文件的所有任务。再删掉任务之前，该文件在优先级队列中排列在最前面，因此，就有可能有的消费者获取了该文件的队列锁。然而{file_md5: Queue}任务队列被删除，意味着获取到锁的消费者永远无法被执行，造成死锁，该消费者再也无法消费任务。亦或者一个文件任务在未完成之前所有的消费者都会去读取这个队列，当任务被完成的时候(该队列会被删除)总有消费者还在持有该锁。避免方法是获取锁设置超时时间(比如五秒)，如果没有获取到任务直接报告异常，捕获异常，返回一个空任务，消费者对空任务忽略处理，等待再次去全局队列获取任务，此时刚才的文件队列应该已经删除了。\n注: 系统重启的时候清空redis优先级队列(后来想了一下优先级队列不必要放在redis当中,直接python实现也是可以的，它并没有持久化的需求)\n问题五: 何时触发redis消息，何时将任务加入到优先级队列这好像不是一个问题。最开始的时候我选择在文件下载完成后发送redis消息并加入到优先级队列。先想这样一个问题，当用户断开后为了节省资源势必会选择立刻删掉优先级队列(同时删掉全局队列的相关项TODO:我好像没有考虑两个用户正在处理同一个PDF一个用户断线的情况)。假设用户是非正常断开(它过几秒后会再次连接，我是不是闲的蛋疼。考虑这种情况😕)。为了更好的体验会选择前端重连机制。我们希望重连后任务能恢复并继续。如果在下载完成后发送redis消息。那么websocket重连就不会发消息了。此时这个任务就没办法继续了\n你会想，前端重连我也可以采用模拟重新上传文件的步骤啊~，too navie! 上传的时候添加了google验证码这一步。重新模拟上传自动化是做不到的。所以发送redis这一步再建立websocket连接后发比较合适问题又来了。建立websocket后文件还没有下载完毕，此时发送redis消息到分片进程，分片进程无疑会出错。解决方法就和上面那个锁一样。添加Event事件锁，下载的时候执行set\n1234download_event = &#123;&#125;if self.file_md5 in download_event:    download_event[self.file_md5].set()    IOLoop().instance().call_later(2, lambda: download_event.pop(self.file_md5, 1))\n\n优先级队列可供选择的地方就更多了\n\n文件下载完成后\nwebsocket建立连接后\n生产者添加任务后这里最重要的是不要在多个地方插入同一个事件，出了问题不好debug。下载完成前标志着第一次建立连接，websocket有可能标志着断线重连。它们最终都会走向生产者这个地方，所以我选择在生产者这里添加。先检测该file_md5是否存在对应的websocket连接，如果存在则加入全局队列，同时加入优先级队列\n\n优化一：重复文件直接得到结果如果文件在后台数据库存在记录，如果该文件全部结果都正确存在则直接返回结果。如果正在被执行或者有部分内容没有被OCR。则后台新建任务，总而言之，避免用户再次上传文件到阿里云OSS\n优化二：减少OCR次数OCR的机会很宝贵,所以应该尽量减少OCR的次数，首先想到的是同一个文件如果得到了结果就不需要再次去调用OCR接口，再其次，一个PDF文件由N张图片组成。对每一张图片进行相似度判断，如果足够相似就认为它是同一张图片避免再次执行识别操作。图片相似度算法前面有博文提到，使用的是imagehash。对每张图片生成64bit的标识。比对的时候使用汉明距离检查是否相似。数据库优化汉明距离的方法前面博文也有提到\n优化三:  使用浏览器客户端进行PDF合并如果用户上传的文件为100M，在后台生成文件并提供给用户下载，OSS外网下载的价格大概是1G五毛。嗯。上传几个大文件，来几次恶意下载，等着天价账单吧😀。因此这种应用采取客户端渲染是很有必要的，我先找了一下js的库。号称”任何能够用JavaScript实现的应用系统，最终都必将用JavaScript实现”~~,然并卵，我并没有找到允许修改PDF文件的开源js库，关于PDF的要么是渲染用，要么就是从0生成一个新的PDF文件。后来我找到了商业的js库pspdfkit(也有一些其他的，当然它们价格都不菲)，它让我知道了有webassembly这个东东的存在，它允许c/c++/rust代码再浏览器端执行。虽然c/c++/rust我一个都不会, 但是我还是找到了一个c++的库PDF-Writer，看到了希望的曙光内心是激动的。然后我去刷C的教程，再刷了一遍C++的教程，知道了Hello World怎么写。参照了几个webassembly的项目(大多数都是用C写的)。重点参照了这个wasm-image-compressor。最终还真给折腾出来了(前端耗费的时间占据了整个开发的一大半)。结果是编译后大小为1.5M，实现了两个功能。验证PDF文件是否有效(可以正常解析，页数是否符合要求，每页大小是否符合要求)，传入PDF文件和json结果，生成一个新的文件。别说效率还真不错，生成文件过程比python快很多\n该项目提供了两种生成PDF的方式，浏览器端 和python脚本,这两种方式生成的PDF文件方式是不一样的。python的方式是合并两个图层，新的canvas图层透明度为完全透明.c++的方式是采取追加的方式，设置每个元素的可见性为不可见\n其次是字体的问题，写入文字的时候都需要指明字体。然而附带一个完整的字体会浪费巨大的空间。我找了一个比较小一点的中文字体，大小是1.5M。感觉这些文字不需要真正的显示出来，所以自己制作一个最小的字体带她这个中文字体是有可能的，但是我失败了。制作出来后电脑能够正常识别，C++库结果无法正常打开该字体\n优化四: 采用msgpack进行传输直接对结果进行json编码传输还是很不划算的,因此本项目数据存储以及前后端传输采用msgpack进行压缩后传输。需要注意的是websocket对二进制流需要特殊指定\n123456const socket = new WebSocket(url);socket.binaryType = 'arraybuffer';socket.onmessage = function (event) &#123;    let raw_data = new Uint8Array(event.data);    ret = msgpack.decode(raw_data);&#125;\n\n\n改进方向\n目前20页的限制让网页端几乎没有作用,提供一个稍有质量的本地OCR,对于数百页的PDF选择在本地识别\n解决中文字体过大的问题，同时优化前端大小，尽量让压缩后的页面加载大小到1M以内\n后台对PDF进行预处理,如果发现可直接读取文字表示该页不需要被OCR\n改进前端发布逻辑，每次变动文件名让CDN缓存很尴尬\n\n参考Faster conversions from PDF to PNG/JPEG, imagemagick vs ghostscript\n","dateCreated":"2018-04-01T14:34:38+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2018-04-01T14:34:38+08:00","description":"因为个人需求，写了一个很小众的作品，https://ocr.ficapy.com，我给它起的项目名是pdfaddtext，用途是给扫描版本的PDF文件加上搜索功能。使用场景是我有几本扫描版本的PDF书籍(网上有特别多的扫描版书籍)，有时候想搜索书中有没有提到某个知识点，纯图片是无法搜索的，你只能凭记忆去找。本项目作用就是将PDF的文本内容识别出来，然后写入一层隐藏的文字层，这样PDF阅读器就能够搜索这些文字了，同时尽量保证将识别出来的文字写到原图片对应的位置,类似的工具有OCRmyPDF，它的缺点很明显，使用Tesseract OCR引擎，对比识别效果，简直被商用OCR吊打。\n最开始有了这个想法，我大概花费了一个下午的时间用python写出了基本的demo。将每一页PDF转换成图片，然后用免费的OCR服务去识别，得到结果，最后合并出一个新的pdf出来。过程算是比较顺利。本着独乐乐不如众乐乐的心态。我计划将它转变成一项web服务，于是挖坑之旅就此开始了\nTLDR","headline":"ocr.ficapy.com 后台实现","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"}</script>
     <meta name="description" content="因为个人需求，写了一个很小众的作品，https://ocr.ficapy.com，我给它起的项目名是pdfaddtext，用途是给扫描版本的PDF文件加上搜索功能。使用场景是我有几本扫描版本的PDF书籍(网上有特别多的扫描版书籍)，有时候想搜索书中有没有提到某个知识点，纯图片是无法搜索的，你只能凭记忆去找。本项目作用就是将PDF的文本内容识别出来，然后写入一层隐藏的文字层，这样PDF阅读器就能够搜">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="ocr.ficapy.com 后台实现">
 <meta property="og:url" content="https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="因为个人需求，写了一个很小众的作品，https://ocr.ficapy.com，我给它起的项目名是pdfaddtext，用途是给扫描版本的PDF文件加上搜索功能。使用场景是我有几本扫描版本的PDF书籍(网上有特别多的扫描版书籍)，有时候想搜索书中有没有提到某个知识点，纯图片是无法搜索的，你只能凭记忆去找。本项目作用就是将PDF的文本内容识别出来，然后写入一层隐藏的文字层，这样PDF阅读器就能够搜">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/pdfaddtext_arch1.png">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/pdfaddtext_arch2.png">
-<meta property="og:updated_time" content="2018-04-01T12:19:21.000Z">
+<meta property="og:locale" content="zh-cn">
+<meta property="og:image" content="https://blogimg.ficapy.com/blogimg/pdfaddtext_arch1.png">
+<meta property="og:image" content="https://blogimg.ficapy.com/blogimg/pdfaddtext_arch2.png">
+<meta property="og:updated_time" content="2019-07-26T06:53:30.724Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="ocr.ficapy.com 后台实现">
 <meta name="twitter:description" content="因为个人需求，写了一个很小众的作品，https://ocr.ficapy.com，我给它起的项目名是pdfaddtext，用途是给扫描版本的PDF文件加上搜索功能。使用场景是我有几本扫描版本的PDF书籍(网上有特别多的扫描版书籍)，有时候想搜索书中有没有提到某个知识点，纯图片是无法搜索的，你只能凭记忆去找。本项目作用就是将PDF的文本内容识别出来，然后写入一层隐藏的文字层，这样PDF阅读器就能够搜">
-<meta name="twitter:image" content="https://ficapy.b0.upaiyun.com/blogimg/pdfaddtext_arch1.png">
-<meta name="twitter:creator" content="@aec4d">
+<meta name="twitter:image" content="https://blogimg.ficapy.com/blogimg/pdfaddtext_arch1.png">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -50,23 +54,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -75,23 +82,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -101,9 +93,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -113,9 +106,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -125,9 +119,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -137,9 +132,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -149,9 +145,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -161,9 +158,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -174,27 +172,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -208,9 +245,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -226,17 +264,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             ocr.ficapy.com 后台实现
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2018-04-01T14:34:38+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2018-04-01T14:34:38+08:00">
 	
 		    4月 01, 2018
     	
@@ -250,15 +289,18 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>因为个人需求，写了一个很小众的作品，<a href="https://ocr.ficapy.com">https://ocr.ficapy.com</a>，我给它起的项目名是pdfaddtext，用途是给扫描版本的PDF文件加上搜索功能。使用场景是我有几本扫描版本的PDF书籍(网上有特别多的扫描版书籍)，有时候想搜索书中有没有提到某个知识点，纯图片是无法搜索的，你只能凭记忆去找。<span style="color:red"><strong>本项目作用就是将PDF的文本内容识别出来，然后写入一层隐藏的文字层，这样PDF阅读器就能够搜索这些文字了，同时尽量保证将识别出来的文字写到原图片对应的位置</strong></span>,类似的工具有<a href="https://github.com/jbarlow83/OCRmyPDF">OCRmyPDF</a>，它的缺点很明显，使用Tesseract OCR引擎，对比识别效果，简直被商用OCR吊打。</p>
 <p>最开始有了这个想法，我大概花费了一个下午的时间用python写出了基本的demo。将每一页PDF转换成图片，然后用免费的OCR服务去识别，得到结果，最后合并出一个新的pdf出来。过程算是比较顺利。本着独乐乐不如众乐乐的心态。我计划将它转变成一项web服务，于是挖坑之旅就此开始了</p>
 <p>TLDR</p>
 <a id="more"></a>
-<p>开始的构思是这个样子的<img src="https://ficapy.b0.upaiyun.com/blogimg/pdfaddtext_arch1.png" alt="pdfaddtext1"><br>后台接收到文件进行拆分，依次获取结果最后服务端生成文件返回给客户端。流程完成，是不是特简单😕</p>
+
+<p>开始的构思是这个样子的<img src="https://blogimg.ficapy.com/blogimg/pdfaddtext_arch1.png" alt="pdfaddtext1"><br>后台接收到文件进行拆分，依次获取结果最后服务端生成文件返回给客户端。流程完成，是不是特简单😕</p>
 <h3 id="问题一-pdf转换生成jpg效率过低"><a href="#问题一-pdf转换生成jpg效率过低" class="headerlink" title="问题一: pdf转换生成jpg效率过低"></a>问题一: pdf转换生成jpg效率过低</h3><p>python的生态无需质疑，各种包齐全到你怀疑人生。pdf转换成jpg也都是有的，比如<a href="https://github.com/Belval/pdf2image">pdf2image</a>。它有一个无法忽视的缺点，效率太低。个人处理少量问题可以，但是如果用于web服务。每生成一张照片卡两秒，肯定无法忍受，后来对比imagemagick和ghostscript，ghostscript的效率比imagemagick高一些，当然比python不知道高到哪里去了。注: imagemagick的pdf转图片底层使用的是ghostscript，最后选择了subprocess调用ghostscript</p>
 <h3 id="问题二-OCR效率过低"><a href="#问题二-OCR效率过低" class="headerlink" title="问题二: OCR效率过低"></a>问题二: OCR效率过低</h3><p>目前没有能力搭建一个识别准确度比较高的文字识别引擎，于是使用了免费的OCR。在网上腾讯的免费OCR口碑是很不错的，超高的识别准确率，而且看文档发现不限制识别次数，只是不保证并发(是不是感觉超级良心！)。醒醒了少年，哪里有这么好的事情！！！</p>
 <p>我刚开始用的时候大概四五秒返回结果。识别准确率网上没有瞎吹，对中文的准确率还是很不错的，后来可能该服务用的人太多，效率大幅度降低。降低到10到20秒才会返回结果。而且经常性返回系统繁忙的错误。这也可能和我的需求有关，因为我上传的识别素材都是1000像素以上的图片。里面的文字众多，所以识别效率比较低。但是腾讯提供的免费OCR服务有劣化服务质量的嫌疑，毕竟如果免费的服务提供的过于的好，用户付费的热情肯定大幅度降低。很明显的是你上传一张图片得到结果，之后再次上传依旧是等待十几秒才得到结果，稍微正常的开发肯定都知道将结果缓存一下，再次相同的图片请求直接返回结果。鉴于腾讯OCR的低效，我不得不找其他的OCR服务同时使用，保证系统的可靠性，最终同时使用了以下服务</p>
@@ -269,11 +311,13 @@
 <li><a href="http://ai.sogou.com/ai-docs/api/ocr">搜狗</a></li>
 <li><a href="https://console.faceplusplus.com.cn/documents/7776484">faceplusplus</a></li>
 </ul>
-<p>开发过程中的<span style="color:red"><strong>个人感觉</strong></span>,识别准确率依次是百度&gt;腾讯&gt;搜狗&gt;微软&gt;faceplusplus<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">分别是百度  腾讯  搜狗  微软 face++     对同一张简单图片的识别结果</div><div class="line">[[&apos;这是第一段文字&apos;, 316, 123, 22, 131], [&apos;这个地方是第二段Ohye&apos;, 213, 286, 21, 195]]</div><div class="line">[[&apos;这是第一段文字&apos;, 316, 123, 22, 131], [&apos;这个地方是第二段Ohye&apos;, 213, 286, 21, 195]]</div><div class="line">[[&apos;这是第一段文字&apos;, 309, 122, 24, 149], [&apos;这个地方是第二段Ohye&apos;, 202, 283, 26, 213]]</div><div class="line">[[&apos;这是第一段文字&apos;, 318, 125, 21, 124], [&apos;这个地方是第二段Ohye&apos;, 220, 290, 21, 189]]</div><div class="line">[[&apos;这是第一段文字&apos;, 319, 125, 19, 128], [&apos;个地方是第段Oye&apos;, 232, 286, 22, 176]]</div></pre></td></tr></table></figure></p>
+<p>开发过程中的<span style="color:red"><strong>个人感觉</strong></span>,识别准确率依次是百度&gt;腾讯&gt;搜狗&gt;微软&gt;faceplusplus</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">分别是百度  腾讯  搜狗  微软 face++     对同一张简单图片的识别结果</span><br><span class="line">[[&apos;这是第一段文字&apos;, 316, 123, 22, 131], [&apos;这个地方是第二段Ohye&apos;, 213, 286, 21, 195]]</span><br><span class="line">[[&apos;这是第一段文字&apos;, 316, 123, 22, 131], [&apos;这个地方是第二段Ohye&apos;, 213, 286, 21, 195]]</span><br><span class="line">[[&apos;这是第一段文字&apos;, 309, 122, 24, 149], [&apos;这个地方是第二段Ohye&apos;, 202, 283, 26, 213]]</span><br><span class="line">[[&apos;这是第一段文字&apos;, 318, 125, 21, 124], [&apos;这个地方是第二段Ohye&apos;, 220, 290, 21, 189]]</span><br><span class="line">[[&apos;这是第一段文字&apos;, 319, 125, 19, 128], [&apos;个地方是第段Oye&apos;, 232, 286, 22, 176]]</span><br></pre></td></tr></table></figure>
+
 <p>基本上国内能免费使用的OCR服务我都给想办法整合了，它们的输出都差不多，提供文字在图片中的定位功能，除了腾讯返回很慢，其他服务基本都在四秒左右返回。搜狗的OCR服务很低调，好像知道的人都不多，而且是这些服务里面文档最奇葩的，文档几乎没有，就提供了一个PHP调用服务的demo。</p>
 <p>即便同时使用了五个免费服务，依旧不够用，而且几乎除了腾讯是不限制每日调用次数，其他的服务都会限制每天最多调用多少次。最后预估每天可供识别的图片数量最多不超过3000页。<span style="color:red"><strong>底层OCR服务的限制直接导致了设计复杂度的成倍上升</strong></span>，如果本地能在500毫秒内识别得到一个结果，也就没那么多事儿了。</p>
 <h3 id="问题三：更快的响应"><a href="#问题三：更快的响应" class="headerlink" title="问题三：更快的响应"></a>问题三：更快的响应</h3><p>如果是单人使用,那么一个任务进行完毕之后再进行下一个任务。不存在并发调度的问题。但是它作为一项web服务，势必会存在并发问题，当某个用户正在执行转换操作，此时另外一个用户又提交了一个任务请求。是选择继续将前面的任务执行完毕再执行后续的(先到先服务)，还是采取一定的策略进行乱序执行。本程序选择了<span style="color:red"><strong>短任务优先策略</strong></span>，以pdf中的单页作为最小任务单元，使用优先级队列对任务进行排序。将每一个任务未完成的页数作为比较元素。每次选择任务的时候总是从优先级中选择未完成页数最少的任务优先执行。同时为了避免饥饿，假设存在几百页的大文件，每隔一分钟，按照任务的创建时间来调整任务优先级</p>
-<p>最开始的最简架构几乎是认为不存在并发的。但是不并发是不可能的，所以流程改成了这样<br><img src="https://ficapy.b0.upaiyun.com/blogimg/pdfaddtext_arch2.png" alt="pdfaddtext_arch2"></p>
+<p>最开始的最简架构几乎是认为不存在并发的。但是不并发是不可能的，所以流程改成了这样<br><img src="https://blogimg.ficapy.com/blogimg/pdfaddtext_arch2.png" alt="pdfaddtext_arch2"></p>
 <ol>
 <li>用户将图片上传到阿里云OSS, 后台接收到回调后下载文件。返回给客户端任务id。</li>
 <li>客户端根据此ID创建websocket连接。后台下载文件完毕后发送redis队列消息。</li>
@@ -287,7 +331,9 @@
 <p>为了不浪费系统资源。如果一个用户的任务正在被执行，而此时用户退出了。毫无疑问，这种情况下本着快速响应的原则，我们会直接删掉该文件的所有任务。再删掉任务之前，该文件在优先级队列中排列在最前面，因此，就有可能有的消费者获取了该文件的队列锁。然而{file_md5: Queue}任务队列被删除，意味着获取到锁的消费者永远无法被执行，造成死锁，该消费者再也无法消费任务。亦或者一个文件任务在未完成之前所有的消费者都会去读取这个队列，当任务被完成的时候(该队列会被删除)总有消费者还在持有该锁。避免方法是获取锁设置超时时间(比如五秒)，如果没有获取到任务直接报告异常，捕获异常，返回一个空任务，消费者对空任务忽略处理，等待再次去全局队列获取任务，此时刚才的文件队列应该已经删除了。</p>
 <p>注: 系统重启的时候清空redis优先级队列(后来想了一下优先级队列不必要放在redis当中,直接python实现也是可以的，它并没有持久化的需求)</p>
 <h3 id="问题五-何时触发redis消息，何时将任务加入到优先级队列"><a href="#问题五-何时触发redis消息，何时将任务加入到优先级队列" class="headerlink" title="问题五: 何时触发redis消息，何时将任务加入到优先级队列"></a>问题五: 何时触发redis消息，何时将任务加入到优先级队列</h3><p>这好像不是一个问题。最开始的时候我选择在文件下载完成后发送redis消息并加入到优先级队列。<br>先想这样一个问题，当用户断开后为了节省资源势必会选择立刻删掉优先级队列(同时删掉全局队列的相关项TODO:我好像没有考虑两个用户正在处理同一个PDF一个用户断线的情况)。假设用户是非正常断开(它过几秒后会再次连接，我是不是闲的蛋疼。考虑这种情况😕)。为了更好的体验会选择前端重连机制。我们希望重连后任务能恢复并继续。如果在下载完成后发送redis消息。那么websocket重连就不会发消息了。此时这个任务就没办法继续了</p>
-<p>你会想，前端重连我也可以采用模拟重新上传文件的步骤啊~~~，too navie! 上传的时候添加了google验证码这一步。重新模拟上传自动化是做不到的。所以发送redis这一步再建立websocket连接后发比较合适<br>问题又来了。建立websocket后文件还没有下载完毕，此时发送redis消息到分片进程，分片进程无疑会出错。解决方法就和上面那个锁一样。添加Event事件锁，下载的时候执行set<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">download_event = &#123;&#125;</div><div class="line"><span class="keyword">if</span> self.file_md5 <span class="keyword">in</span> download_event:</div><div class="line">    download_event[self.file_md5].set()</div><div class="line">    IOLoop().instance().call_later(<span class="number">2</span>, <span class="keyword">lambda</span>: download_event.pop(self.file_md5, <span class="number">1</span>))</div></pre></td></tr></table></figure></p>
+<p>你会想，前端重连我也可以采用模拟重新上传文件的步骤啊<del>~</del>，too navie! 上传的时候添加了google验证码这一步。重新模拟上传自动化是做不到的。所以发送redis这一步再建立websocket连接后发比较合适<br>问题又来了。建立websocket后文件还没有下载完毕，此时发送redis消息到分片进程，分片进程无疑会出错。解决方法就和上面那个锁一样。添加Event事件锁，下载的时候执行set</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">download_event = &#123;&#125;</span><br><span class="line"><span class="keyword">if</span> self.file_md5 <span class="keyword">in</span> download_event:</span><br><span class="line">    download_event[self.file_md5].set()</span><br><span class="line">    IOLoop().instance().call_later(<span class="number">2</span>, <span class="keyword">lambda</span>: download_event.pop(self.file_md5, <span class="number">1</span>))</span><br></pre></td></tr></table></figure>
+
 <p>优先级队列可供选择的地方就更多了</p>
 <ol>
 <li>文件下载完成后</li>
@@ -299,7 +345,10 @@
 <h3 id="优化三-使用浏览器客户端进行PDF合并"><a href="#优化三-使用浏览器客户端进行PDF合并" class="headerlink" title="优化三:  使用浏览器客户端进行PDF合并"></a>优化三:  使用浏览器客户端进行PDF合并</h3><p>如果用户上传的文件为100M，在后台生成文件并提供给用户下载，OSS外网下载的价格大概是1G五毛。嗯。上传几个大文件，来几次恶意下载，等着天价账单吧😀。因此这种应用采取客户端渲染是很有必要的，我先找了一下js的库。号称”任何能够用JavaScript实现的应用系统，最终都必将用JavaScript实现”~~,然并卵，我并没有找到允许修改PDF文件的开源js库，关于PDF的要么是渲染用，要么就是从0生成一个新的PDF文件。后来我找到了商业的js库pspdfkit(也有一些其他的，当然它们价格都不菲)，它让我知道了有webassembly这个东东的存在，它允许c/c++/rust代码再浏览器端执行。虽然c/c++/rust我一个都不会, 但是我还是找到了一个c++的库<a href="https://github.com/galkahana/PDF-Writer">PDF-Writer</a>，看到了希望的曙光内心是激动的。然后我去刷C的教程，再刷了一遍C++的教程，知道了Hello World怎么写。参照了几个webassembly的项目(大多数都是用C写的)。重点参照了这个<a href="https://github.com/antelle/wasm-image-compressor">wasm-image-compressor</a>。最终还真给折腾出来了(前端耗费的时间占据了整个开发的一大半)。结果是编译后大小为1.5M，实现了两个功能。验证PDF文件是否有效(可以正常解析，页数是否符合要求，每页大小是否符合要求)，传入PDF文件和json结果，生成一个新的文件。<br>别说效率还真不错，生成文件过程比python快很多</p>
 <p>该项目提供了两种生成PDF的方式，<a href="https://ocr.ficapy.com">浏览器端</a> 和<a href="https://gist.github.com/ficapy/baef42b378685e5853d709f2a69eadd1">python脚本</a>,这两种方式生成的PDF文件方式是不一样的。python的方式是合并两个图层，新的canvas图层透明度为完全透明.c++的方式是采取追加的方式，设置每个元素的可见性为不可见</p>
 <p>其次是字体的问题，写入文字的时候都需要指明字体。然而附带一个完整的字体会浪费巨大的空间。我找了一个比较小一点的中文字体，大小是1.5M。感觉这些文字不需要真正的显示出来，所以自己制作一个最小的字体带她这个中文字体是有可能的，但是我失败了。制作出来后电脑能够正常识别，C++库结果无法正常打开该字体</p>
-<h3 id="优化四-采用msgpack进行传输"><a href="#优化四-采用msgpack进行传输" class="headerlink" title="优化四: 采用msgpack进行传输"></a>优化四: 采用msgpack进行传输</h3><p>直接对结果进行json编码传输还是很不划算的,因此本项目数据存储以及前后端传输采用msgpack进行压缩后传输。需要注意的是websocket对二进制流需要特殊指定<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">const</span> socket = <span class="keyword">new</span> WebSocket(url);</div><div class="line">socket.binaryType = <span class="string">'arraybuffer'</span>;</div><div class="line">socket.onmessage = <span class="function"><span class="keyword">function</span> (<span class="params">event</span>) </span>&#123;</div><div class="line">    <span class="keyword">let</span> raw_data = <span class="keyword">new</span> <span class="built_in">Uint8Array</span>(event.data);</div><div class="line">    ret = msgpack.decode(raw_data);</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h3 id="优化四-采用msgpack进行传输"><a href="#优化四-采用msgpack进行传输" class="headerlink" title="优化四: 采用msgpack进行传输"></a>优化四: 采用msgpack进行传输</h3><p>直接对结果进行json编码传输还是很不划算的,因此本项目数据存储以及前后端传输采用msgpack进行压缩后传输。需要注意的是websocket对二进制流需要特殊指定</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> socket = <span class="keyword">new</span> WebSocket(url);</span><br><span class="line">socket.binaryType = <span class="string">'arraybuffer'</span>;</span><br><span class="line">socket.onmessage = <span class="function"><span class="keyword">function</span> (<span class="params">event</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">let</span> raw_data = <span class="keyword">new</span> <span class="built_in">Uint8Array</span>(event.data);</span><br><span class="line">    ret = msgpack.decode(raw_data);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
 <h3 id="改进方向"><a href="#改进方向" class="headerlink" title="改进方向"></a>改进方向</h3><ol>
 <li>目前20页的限制让网页端几乎没有作用,提供一个稍有质量的本地OCR,对于数百页的PDF选择在本地识别</li>
 <li>解决中文字体过大的问题，同时优化前端大小，尽量让压缩后的页面加载大小到1M以内</li>
@@ -309,64 +358,104 @@
 <h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="http://bertanguven.com/faster-conversions-from-pdf-to-pngjpeg-imagemagick-vs-ghostscript">Faster conversions from PDF to PNG/JPEG, imagemagick vs ghostscript</a></p>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/05/25/mitmproxy_transparent_model_network_capture/"  data-tooltip="mac上使用mitmproxy对ios app进行抓包">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/05/25/mitmproxy_transparent_model_network_capture/"
+                    data-tooltip="mac上使用mitmproxy对ios app进行抓包"
+                    aria-label="上一篇: mac上使用mitmproxy对ios app进行抓包"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/20/Tornado_misc/" data-tooltip="Tornado 杂项">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/20/Tornado_misc/"
+                    data-tooltip="Tornado 杂项"
+                    aria-label="下一篇: Tornado 杂项"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -374,10 +463,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -399,55 +485,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/05/25/mitmproxy_transparent_model_network_capture/"  data-tooltip="mac上使用mitmproxy对ios app进行抓包">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/05/25/mitmproxy_transparent_model_network_capture/"
+                    data-tooltip="mac上使用mitmproxy对ios app进行抓包"
+                    aria-label="上一篇: mac上使用mitmproxy对ios app进行抓包"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/20/Tornado_misc/" data-tooltip="Tornado 杂项">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/20/Tornado_misc/"
+                    data-tooltip="Tornado 杂项"
+                    aria-label="下一篇: Tornado 杂项"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -455,43 +578,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -507,28 +651,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -538,7 +677,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -551,7 +694,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -560,7 +703,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -571,7 +718,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -580,7 +727,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -590,9 +741,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -601,7 +752,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -611,7 +766,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -620,7 +775,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -632,7 +791,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -642,7 +801,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -652,9 +815,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -672,38 +835,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2018/04/01/pdfaddtext_architecture/';
-                 
-                    this.page.identifier = '2018/04/01/pdfaddtext_architecture/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

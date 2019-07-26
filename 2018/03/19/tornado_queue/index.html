@@ -13,31 +13,35 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容易实现生产者消费者模型。Tornado官方的demo中也有一个[爬虫代码(https://github.com/tornadoweb/tornado/blob/master/demos/webspider/webspider.py)]演示如何使用队列(本篇基于v5.0.0)\n\n\n目标理解Queue模块给出的例子就可以了\n12345678910111213141516171819202122232425262728293031from tornado import genfrom tornado.ioloop import IOLoopfrom tornado.queues import Queueq = Queue(maxsize=2)@gen.coroutinedef consumer():    while True:        item = yield q.get()        try:            print('Doing work on %s' % item)            yield gen.sleep(0.01)        finally:            q.task_done()@gen.coroutinedef producer():    for item in range(5):        yield q.put(item)        print('Put %s' % item)@gen.coroutinedef main():    # Start consumer without waiting (since it never finishes).    IOLoop.current().spawn_callback(consumer)    yield producer()  # Wait for producer to put all tasks.    yield q.join()  # Wait for consumer to finish all tasks.    print('Done')IOLoop.current().run_sync(main)\n\n控制权转移在python自带模块里面的queue是给多线程使用的.意味着当队列里面没有元素的时候会阻塞主线程。阻塞主线程这种操作在协程里面当然是不允许的。协程里面需要的是当某事需要进行等待的时候主动让出控制权限，让其他的事件执行。具体来说，如何让出控制权呢。理解上一篇的coroutine就可以发现。yield 一个暂时还没有结果的Future就会导致控制权转移，等Future结果到来yield就会被恢复\n12345678910111213141516from tornado.gen import coroutine,sleepfrom tornado.ioloop import IOLoop@coroutinedef xx():    yield sleep(1)    print(\"xx\")@coroutinedef x():    xx()    print(\"x\")# x()# IOLoop.instance().start()IOLoop.instance().run_sync(x)\n观察这个例子。正常的写法是yield xx()，然后会调用xx(),过一秒之后打印xx再打印x。如果直接使用xx，其实这段代码也没有什么问题。xx返回了一个Future对象。因为没有使用yield，所以它不必等待xx函数执行完再进行下面的操作。xx返回的Future已经开始了运行(它并不会什么都不发生)，它依旧在一秒钟之后被执行然后打印xx。\nQueue的实现思路核心思路是\n\nget、put操作均返回Future对象\n没有被设置值的Future执行yield会有阻塞效果\n\n创建三个队列分别为正常队列_queue、未来get队列_getters，未来put队列_putters。执行get操作的时候创建一个Future对象。优先从_putters里面获取.获得的是一个值和一个Future对象，执行Future.set_result。此时代表put被阻塞，执行set_result取消阻塞。再考虑从_queue里面取，代表正常取值。如果都没有则放入_getters队列(此时因为Futures没有值，取值的地方被阻塞)。\n执行put就是相反的操作，优先从_getters里面取(有值则执行Future.set_result，取消获取过程的阻塞)。再检查正常队列的元素是否超过最大值。否则加入未来队列\n那么队列还有task_done和join操作，前者每一个任务执行完毕都会被调用表示该任务完成，后者表示等待加入到队列的所有任务都完成，否则阻塞。顺便说一下tornado的锁是怎么实现的\n依旧是依靠没有被设置值的Future被yield会造成阻塞。该Future被设置值则会继续执行\n1234567891011121314class Event:    def __init__(self):        self.f = Future()    def set(self):        if not self.f.done():            self.f.set_result(None)    def clear(self):        if self.f.done():            self.f = Future()    def wait(self):        return self.f\n注意。这个地方调用set和clear都是不带yield的，只有当最后调用wait才使用yield。\nQueue的实现1234567891011121314151617181920212223242526272829303132333435363738394041424344454647class Queue:    def __init__(self, maxsize=None):        self.max_size = maxsize or 2 &lt;&lt; 16        self._queue = collections.deque([])        self._getters = collections.deque([])         self._putters = collections.deque([])         self._unfinished_tasks = 0        self._finished = Event()        self._finished.set()    def get(self):        f = Future()        if len(self._queue) &gt; 0:            value = self._queue.popleft()            f.set_result(value)        elif len(self._putters) &gt; 0:            item, future = self._putters.popleft()            f.set_result(item)            future.set_result(None)        else:            self._getters.append(f)        return f    def put(self, value):        self._unfinished_tasks += 1        self._finished.clear()        f = Future()        if  len(self._getters) &gt; 0:            future = self._getters.pop()            f.set_result(None)            future.set_result(value)        elif len(self._queue) &lt; self.max_size:            self._queue.append(value)            f.set_result(None)        else:            self._putters.append((value, f))        return f    def task_done(self):        self._unfinished_tasks -= 1        if self._unfinished_tasks == 0:            self._finished.set()    def join(self):        return self._finished.wait()\n\n源码做了更多的适配将_get和_put独立出来。然后使用优先级队列，先进后出队列满足不同的出入顺序要求\n","dateCreated":"2018-03-19T14:24:05+08:00","dateModified":"2018-03-20T14:44:46+08:00","datePublished":"2018-03-19T14:24:05+08:00","description":"介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容易实现生产者消费者模型。Tornado官方的demo中也有一个[爬虫代码(https://github.com/tornadoweb/tornado/blob/master/demos/webspider/webspider.py)]演示如何使用队列(本篇基于v5.0.0)","headline":"Tornado 之queue","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/19/tornado_queue/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/19/tornado_queue/"}</script>
     <meta name="description" content="介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Tornado 之queue">
 <meta property="og:url" content="https://www.zoulei.net/2018/03/19/tornado_queue/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容">
+<meta property="og:locale" content="zh-cn">
 <meta property="og:updated_time" content="2018-03-20T06:44:46.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Tornado 之queue">
 <meta name="twitter:description" content="介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容">
-<meta name="twitter:creator" content="@aec4d">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -47,23 +51,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -72,23 +79,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -98,9 +90,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -110,9 +103,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -122,9 +116,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -134,9 +129,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -146,9 +142,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -158,9 +155,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -171,27 +169,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -205,9 +242,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -223,17 +261,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             Tornado 之queue
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2018-03-19T14:24:05+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2018-03-19T14:24:05+08:00">
 	
 		    3月 19, 2018
     	
@@ -247,14 +286,21 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
-            <p>介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容易实现生产者消费者模型。Tornado官方的demo中也有一个[爬虫代码(<a href="https://github.com/tornadoweb/tornado/blob/master/demos/webspider/webspider.py)]演示如何使用队列(本篇基于v5.0.0">https://github.com/tornadoweb/tornado/blob/master/demos/webspider/webspider.py)]演示如何使用队列(本篇基于v5.0.0</a>)</p>
+            <p>介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容易实现生产者消费者模型。Tornado官方的demo中也有一个[爬虫代码(<a href="https://github.com/tornadoweb/tornado/blob/master/demos/webspider/webspider.py)]演示如何使用队列(本篇基于v5.0.0)">https://github.com/tornadoweb/tornado/blob/master/demos/webspider/webspider.py)]演示如何使用队列(本篇基于v5.0.0)</a></p>
 <a id="more"></a>
-<h3 id="目标"><a href="#目标" class="headerlink" title="目标"></a>目标</h3><p>理解Queue模块给出的例子就可以了<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> gen</div><div class="line"><span class="keyword">from</span> tornado.ioloop <span class="keyword">import</span> IOLoop</div><div class="line"><span class="keyword">from</span> tornado.queues <span class="keyword">import</span> Queue</div><div class="line"></div><div class="line">q = Queue(maxsize=<span class="number">2</span>)</div><div class="line"></div><div class="line"><span class="meta">@gen.coroutine</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">consumer</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">while</span> <span class="keyword">True</span>:</div><div class="line">        item = <span class="keyword">yield</span> q.get()</div><div class="line">        <span class="keyword">try</span>:</div><div class="line">            print(<span class="string">'Doing work on %s'</span> % item)</div><div class="line">            <span class="keyword">yield</span> gen.sleep(<span class="number">0.01</span>)</div><div class="line">        <span class="keyword">finally</span>:</div><div class="line">            q.task_done()</div><div class="line"></div><div class="line"><span class="meta">@gen.coroutine</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">producer</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">for</span> item <span class="keyword">in</span> range(<span class="number">5</span>):</div><div class="line">        <span class="keyword">yield</span> q.put(item)</div><div class="line">        print(<span class="string">'Put %s'</span> % item)</div><div class="line"></div><div class="line"><span class="meta">@gen.coroutine</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></div><div class="line">    <span class="comment"># Start consumer without waiting (since it never finishes).</span></div><div class="line">    IOLoop.current().spawn_callback(consumer)</div><div class="line">    <span class="keyword">yield</span> producer()  <span class="comment"># Wait for producer to put all tasks.</span></div><div class="line">    <span class="keyword">yield</span> q.join()  <span class="comment"># Wait for consumer to finish all tasks.</span></div><div class="line">    print(<span class="string">'Done'</span>)</div><div class="line"></div><div class="line">IOLoop.current().run_sync(main)</div></pre></td></tr></table></figure></p>
-<h3 id="控制权转移"><a href="#控制权转移" class="headerlink" title="控制权转移"></a>控制权转移</h3><p>在python自带模块里面的queue是给多线程使用的.意味着当队列里面没有元素的时候会阻塞主线程。阻塞主线程这种操作在协程里面当然是不允许的。协程里面需要的是当某事需要进行等待的时候主动让出控制权限，让其他的事件执行。具体来说，如何让出控制权呢。理解上一篇的coroutine就可以发现。<span style="color:red"><strong>yield 一个暂时还没有结果的Future就会导致控制权转移，等Future结果到来yield就会被恢复</strong></span><br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> tornado.gen <span class="keyword">import</span> coroutine,sleep</div><div class="line"><span class="keyword">from</span> tornado.ioloop <span class="keyword">import</span> IOLoop</div><div class="line"></div><div class="line"><span class="meta">@coroutine</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">xx</span><span class="params">()</span>:</span></div><div class="line">    <span class="keyword">yield</span> sleep(<span class="number">1</span>)</div><div class="line">    print(<span class="string">"xx"</span>)</div><div class="line"></div><div class="line"><span class="meta">@coroutine</span></div><div class="line"><span class="function"><span class="keyword">def</span> <span class="title">x</span><span class="params">()</span>:</span></div><div class="line">    xx()</div><div class="line">    print(<span class="string">"x"</span>)</div><div class="line"></div><div class="line"><span class="comment"># x()</span></div><div class="line"><span class="comment"># IOLoop.instance().start()</span></div><div class="line">IOLoop.instance().run_sync(x)</div></pre></td></tr></table></figure><br>观察这个例子。正常的写法是<code>yield xx()</code>，然后会调用xx(),过一秒之后打印xx再打印x。如果直接使用xx，其实这段代码也没有什么问题。xx返回了一个Future对象。因为没有使用yield，所以它不必等待xx函数执行完再进行下面的操作。xx返回的Future已经开始了运行(它并不会什么都不发生)，它依旧在一秒钟之后被执行然后打印xx。</p>
+
+<h3 id="目标"><a href="#目标" class="headerlink" title="目标"></a>目标</h3><p>理解Queue模块给出的例子就可以了</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tornado <span class="keyword">import</span> gen</span><br><span class="line"><span class="keyword">from</span> tornado.ioloop <span class="keyword">import</span> IOLoop</span><br><span class="line"><span class="keyword">from</span> tornado.queues <span class="keyword">import</span> Queue</span><br><span class="line"></span><br><span class="line">q = Queue(maxsize=<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line"><span class="meta">@gen.coroutine</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">consumer</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">        item = <span class="keyword">yield</span> q.get()</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            print(<span class="string">'Doing work on %s'</span> % item)</span><br><span class="line">            <span class="keyword">yield</span> gen.sleep(<span class="number">0.01</span>)</span><br><span class="line">        <span class="keyword">finally</span>:</span><br><span class="line">            q.task_done()</span><br><span class="line"></span><br><span class="line"><span class="meta">@gen.coroutine</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">producer</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">for</span> item <span class="keyword">in</span> range(<span class="number">5</span>):</span><br><span class="line">        <span class="keyword">yield</span> q.put(item)</span><br><span class="line">        print(<span class="string">'Put %s'</span> % item)</span><br><span class="line"></span><br><span class="line"><span class="meta">@gen.coroutine</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="comment"># Start consumer without waiting (since it never finishes).</span></span><br><span class="line">    IOLoop.current().spawn_callback(consumer)</span><br><span class="line">    <span class="keyword">yield</span> producer()  <span class="comment"># Wait for producer to put all tasks.</span></span><br><span class="line">    <span class="keyword">yield</span> q.join()  <span class="comment"># Wait for consumer to finish all tasks.</span></span><br><span class="line">    print(<span class="string">'Done'</span>)</span><br><span class="line"></span><br><span class="line">IOLoop.current().run_sync(main)</span><br></pre></td></tr></table></figure>
+
+<h3 id="控制权转移"><a href="#控制权转移" class="headerlink" title="控制权转移"></a>控制权转移</h3><p>在python自带模块里面的queue是给多线程使用的.意味着当队列里面没有元素的时候会阻塞主线程。阻塞主线程这种操作在协程里面当然是不允许的。协程里面需要的是当某事需要进行等待的时候主动让出控制权限，让其他的事件执行。具体来说，如何让出控制权呢。理解上一篇的coroutine就可以发现。<span style="color:red"><strong>yield 一个暂时还没有结果的Future就会导致控制权转移，等Future结果到来yield就会被恢复</strong></span></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tornado.gen <span class="keyword">import</span> coroutine,sleep</span><br><span class="line"><span class="keyword">from</span> tornado.ioloop <span class="keyword">import</span> IOLoop</span><br><span class="line"></span><br><span class="line"><span class="meta">@coroutine</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">xx</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">yield</span> sleep(<span class="number">1</span>)</span><br><span class="line">    print(<span class="string">"xx"</span>)</span><br><span class="line"></span><br><span class="line"><span class="meta">@coroutine</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">x</span><span class="params">()</span>:</span></span><br><span class="line">    xx()</span><br><span class="line">    print(<span class="string">"x"</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># x()</span></span><br><span class="line"><span class="comment"># IOLoop.instance().start()</span></span><br><span class="line">IOLoop.instance().run_sync(x)</span><br></pre></td></tr></table></figure>
+<p>观察这个例子。正常的写法是<code>yield xx()</code>，然后会调用xx(),过一秒之后打印xx再打印x。如果直接使用xx，其实这段代码也没有什么问题。xx返回了一个Future对象。因为没有使用yield，所以它不必等待xx函数执行完再进行下面的操作。xx返回的Future已经开始了运行(它并不会什么都不发生)，它依旧在一秒钟之后被执行然后打印xx。</p>
 <h3 id="Queue的实现思路"><a href="#Queue的实现思路" class="headerlink" title="Queue的实现思路"></a>Queue的实现思路</h3><p>核心思路是</p>
 <ul>
 <li>get、put操作均返回Future对象</li>
@@ -263,69 +309,112 @@
 <p>创建三个队列分别为正常队列_queue、未来get队列_getters，未来put队列_putters。<br>执行get操作的时候创建一个Future对象。优先从_putters里面获取.获得的是一个值和一个Future对象，执行Future.set_result。此时代表put被阻塞，执行set_result取消阻塞。再考虑从_queue里面取，代表正常取值。如果都没有则放入_getters队列(此时因为Futures没有值，取值的地方被阻塞)。</p>
 <p>执行put就是相反的操作，优先从_getters里面取(有值则执行Future.set_result，取消获取过程的阻塞)。再检查正常队列的元素是否超过最大值。否则加入未来队列</p>
 <p>那么队列还有task_done和join操作，前者每一个任务执行完毕都会被调用表示该任务完成，后者表示等待加入到队列的所有任务都完成，否则阻塞。顺便说一下tornado的锁是怎么实现的</p>
-<p>依旧是依靠没有被设置值的Future被yield会造成阻塞。该Future被设置值则会继续执行<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Event</span>:</span></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></div><div class="line">        self.f = Future()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">set</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">if</span> <span class="keyword">not</span> self.f.done():</div><div class="line">            self.f.set_result(<span class="keyword">None</span>)</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">clear</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">if</span> self.f.done():</div><div class="line">            self.f = Future()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">wait</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self.f</div></pre></td></tr></table></figure><br>注意。这个地方调用set和clear都是不带yield的，只有当最后调用wait才使用yield。</p>
-<h3 id="Queue的实现"><a href="#Queue的实现" class="headerlink" title="Queue的实现"></a>Queue的实现</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div></pre></td><td class="code"><pre><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">Queue</span>:</span></div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, maxsize=None)</span>:</span></div><div class="line">        self.max_size = maxsize <span class="keyword">or</span> <span class="number">2</span> &lt;&lt; <span class="number">16</span></div><div class="line">        self._queue = collections.deque([])</div><div class="line">        self._getters = collections.deque([]) </div><div class="line">        self._putters = collections.deque([]) </div><div class="line">        self._unfinished_tasks = <span class="number">0</span></div><div class="line">        self._finished = Event()</div><div class="line">        self._finished.set()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get</span><span class="params">(self)</span>:</span></div><div class="line">        f = Future()</div><div class="line">        <span class="keyword">if</span> len(self._queue) &gt; <span class="number">0</span>:</div><div class="line">            value = self._queue.popleft()</div><div class="line">            f.set_result(value)</div><div class="line">        <span class="keyword">elif</span> len(self._putters) &gt; <span class="number">0</span>:</div><div class="line">            item, future = self._putters.popleft()</div><div class="line">            f.set_result(item)</div><div class="line">            future.set_result(<span class="keyword">None</span>)</div><div class="line">        <span class="keyword">else</span>:</div><div class="line">            self._getters.append(f)</div><div class="line">        <span class="keyword">return</span> f</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">put</span><span class="params">(self, value)</span>:</span></div><div class="line">        self._unfinished_tasks += <span class="number">1</span></div><div class="line">        self._finished.clear()</div><div class="line"></div><div class="line">        f = Future()</div><div class="line">        <span class="keyword">if</span>  len(self._getters) &gt; <span class="number">0</span>:</div><div class="line">            future = self._getters.pop()</div><div class="line">            f.set_result(<span class="keyword">None</span>)</div><div class="line">            future.set_result(value)</div><div class="line">        <span class="keyword">elif</span> len(self._queue) &lt; self.max_size:</div><div class="line">            self._queue.append(value)</div><div class="line">            f.set_result(<span class="keyword">None</span>)</div><div class="line">        <span class="keyword">else</span>:</div><div class="line">            self._putters.append((value, f))</div><div class="line">        <span class="keyword">return</span> f</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">task_done</span><span class="params">(self)</span>:</span></div><div class="line">        self._unfinished_tasks -= <span class="number">1</span></div><div class="line">        <span class="keyword">if</span> self._unfinished_tasks == <span class="number">0</span>:</div><div class="line">            self._finished.set()</div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">def</span> <span class="title">join</span><span class="params">(self)</span>:</span></div><div class="line">        <span class="keyword">return</span> self._finished.wait()</div></pre></td></tr></table></figure>
+<p>依旧是依靠没有被设置值的Future被yield会造成阻塞。该Future被设置值则会继续执行</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Event</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.f = Future()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">set</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> self.f.done():</span><br><span class="line">            self.f.set_result(<span class="literal">None</span>)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">clear</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> self.f.done():</span><br><span class="line">            self.f = Future()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">wait</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self.f</span><br></pre></td></tr></table></figure>
+<p>注意。这个地方调用set和clear都是不带yield的，只有当最后调用wait才使用yield。</p>
+<h3 id="Queue的实现"><a href="#Queue的实现" class="headerlink" title="Queue的实现"></a>Queue的实现</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Queue</span>:</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, maxsize=None)</span>:</span></span><br><span class="line">        self.max_size = maxsize <span class="keyword">or</span> <span class="number">2</span> &lt;&lt; <span class="number">16</span></span><br><span class="line">        self._queue = collections.deque([])</span><br><span class="line">        self._getters = collections.deque([]) </span><br><span class="line">        self._putters = collections.deque([]) </span><br><span class="line">        self._unfinished_tasks = <span class="number">0</span></span><br><span class="line">        self._finished = Event()</span><br><span class="line">        self._finished.set()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get</span><span class="params">(self)</span>:</span></span><br><span class="line">        f = Future()</span><br><span class="line">        <span class="keyword">if</span> len(self._queue) &gt; <span class="number">0</span>:</span><br><span class="line">            value = self._queue.popleft()</span><br><span class="line">            f.set_result(value)</span><br><span class="line">        <span class="keyword">elif</span> len(self._putters) &gt; <span class="number">0</span>:</span><br><span class="line">            item, future = self._putters.popleft()</span><br><span class="line">            f.set_result(item)</span><br><span class="line">            future.set_result(<span class="literal">None</span>)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            self._getters.append(f)</span><br><span class="line">        <span class="keyword">return</span> f</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">put</span><span class="params">(self, value)</span>:</span></span><br><span class="line">        self._unfinished_tasks += <span class="number">1</span></span><br><span class="line">        self._finished.clear()</span><br><span class="line"></span><br><span class="line">        f = Future()</span><br><span class="line">        <span class="keyword">if</span>  len(self._getters) &gt; <span class="number">0</span>:</span><br><span class="line">            future = self._getters.pop()</span><br><span class="line">            f.set_result(<span class="literal">None</span>)</span><br><span class="line">            future.set_result(value)</span><br><span class="line">        <span class="keyword">elif</span> len(self._queue) &lt; self.max_size:</span><br><span class="line">            self._queue.append(value)</span><br><span class="line">            f.set_result(<span class="literal">None</span>)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            self._putters.append((value, f))</span><br><span class="line">        <span class="keyword">return</span> f</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">task_done</span><span class="params">(self)</span>:</span></span><br><span class="line">        self._unfinished_tasks -= <span class="number">1</span></span><br><span class="line">        <span class="keyword">if</span> self._unfinished_tasks == <span class="number">0</span>:</span><br><span class="line">            self._finished.set()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">join</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self._finished.wait()</span><br></pre></td></tr></table></figure>
+
 <p>源码做了更多的适配将_get和_put独立出来。然后使用优先级队列，先进后出队列满足不同的出入顺序要求</p>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/20/Tornado_misc/"  data-tooltip="Tornado 杂项">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/20/Tornado_misc/"
+                    data-tooltip="Tornado 杂项"
+                    aria-label="上一篇: Tornado 杂项"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/17/Tornado_gen_coroutine/" data-tooltip="Tornado 之gen.coroutine">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/17/Tornado_gen_coroutine/"
+                    data-tooltip="Tornado 之gen.coroutine"
+                    aria-label="下一篇: Tornado 之gen.coroutine"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/19/tornado_queue/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/19/tornado_queue/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/19/tornado_queue/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/19/tornado_queue/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/19/tornado_queue/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/19/tornado_queue/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -333,10 +422,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -358,55 +444,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/20/Tornado_misc/"  data-tooltip="Tornado 杂项">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/20/Tornado_misc/"
+                    data-tooltip="Tornado 杂项"
+                    aria-label="上一篇: Tornado 杂项"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/03/17/Tornado_gen_coroutine/" data-tooltip="Tornado 之gen.coroutine">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/03/17/Tornado_gen_coroutine/"
+                    data-tooltip="Tornado 之gen.coroutine"
+                    aria-label="下一篇: Tornado 之gen.coroutine"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/19/tornado_queue/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/19/tornado_queue/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/19/tornado_queue/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/19/tornado_queue/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/19/tornado_queue/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/19/tornado_queue/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -414,43 +537,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/19/tornado_queue/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/19/tornado_queue/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/19/tornado_queue/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/03/19/tornado_queue/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/03/19/tornado_queue/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2018/03/19/tornado_queue/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -466,28 +610,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -497,7 +636,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -510,7 +653,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -519,7 +662,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -530,7 +677,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -539,7 +686,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -549,9 +700,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -560,7 +711,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -570,7 +725,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -579,7 +734,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -591,7 +750,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -601,7 +760,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -611,9 +774,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -631,38 +794,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2018/03/19/tornado_queue/';
-                 
-                    this.page.identifier = '2018/03/19/tornado_queue/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

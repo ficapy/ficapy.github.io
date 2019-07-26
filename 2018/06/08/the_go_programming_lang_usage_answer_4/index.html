@@ -13,31 +13,35 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"第四章\n数组\nslice\nmap\n结构体\njson\n文本和HTML模板\n\n\n\n练习4.1编写一个函数,计算两个SHA256哈希中不同的bit的数目\n\n得到两个字符串的sha256结果,为[32]byte类型,然而需要对比bit\n暂时没有得到很好的操作bit的方法,因此采用了格式化字符串的’%08b’这种奇葩的方案\n使用了bufio和bytes.Buffer,最后需要强制Flush\n\n123456789101112131415161718192021222324252627282930package mainimport (\t\"bytes\"\t\"bufio\"\t\"fmt\"\t\"crypto/sha256\")func main() &#123;\tvar r1 bytes.Buffer\twriter := bufio.NewWriter(&amp;r1)\tfmt.Fprintf(writer, \"%08b\", sha256.Sum256([]byte(\"1\")))\twriter.Flush()\tr1Str := r1.String()\tvar r2 bytes.Buffer\twriter2 := bufio.NewWriter(&amp;r2)\tfmt.Fprintf(writer2, \"%08b\", sha256.Sum256([]byte(\"2\")))\twriter2.Flush()\tr2Str := r2.String()\tcount := 0\tfor i, _ := range r1Str &#123;\t\tif r1Str[i] != r2Str[i] &#123;\t\t\tcount += 1\t\t&#125;\t&#125;\tfmt.Println(count)&#125;\n\n\n练习4.2编写一个程序,默认情况下打印标准输入的SHA256编码,并支持通过命令行flag定制,输出SHA384或SHA512哈希算法\n\n这个问题看起来是一个命令行参数解析的问题,flag模块\n针对多个不同的case使用switch语句\n\n123456789101112131415161718192021222324package mainimport (\t\"flag\"\t\"fmt\"\t\"crypto/sha512\"\t\"crypto/sha256\")func main() &#123;\tmethod := flag.String(\"method\", \"sha256\", \"select hash method(sha256,sha384,sha512)\")\ttext := flag.String(\"text\", \"\", \"input the string your want to hash\")\tflag.Parse()\tswitch *method &#123;\tcase \"sha256\":\t\tfmt.Printf(\"%x\\n\", sha256.Sum256([]byte(*text)))\tcase \"sha384\":\t\tfmt.Printf(\"%x\\n\", sha512.Sum384([]byte(*text)))\tcase \"sha512\":\t\tfmt.Printf(\"%x\\n\", sha512.Sum512([]byte(*text)))\tdefault:\t\tpanic(\"not support hash method\")\t&#125;&#125;\n\n练习4.3重写函数reverse,使用数组指针作为参数而不是slice\n\n使用指针避免值拷贝\n使用的时候注意运算优先级\n\n1234567package mainfunc Reverse(s *[]int)  &#123;\tfor i,j := 0,len(*s)-1;i&lt;j;i,j =i+1,j-1&#123;\t\t(*s)[i],(*s)[j] = (*s)[j],(*s)[i]\t&#125;&#125;\n\n练习4.4编写一个函数rorate,实现一次遍历就可以完成元素旋转\n\n找到位置当做起始位置，对起始位置前面的数据进行倒序append\n\n123456789package mainfunc Rotate(s []int, position int) []int &#123;\tr := s[position:]\tfor i := position-1 ; i &gt;= 0; i-- &#123;\t\tr = append(r, s[i])\t&#125;\treturn r&#125;\n\n练习4.5编写一个就地处理函数,用于去除[]string slice中相邻的重复字符串元素\n\n设置标记为和当前位置两个参数\n\n1234567891011121314151617package mainfunc DeleteRepet(s []string) []string &#123;\tif len(s) &lt; 1 &#123;\t\treturn s\t&#125;\tcurrent := s[0]\tposition := 0\tfor i := 1; i &lt; len(s); i++ &#123;\t\tif s[i] != current &#123;\t\t\tposition += 1\t\t\ts[position] = s[i]\t\t\tcurrent = s[i]\t\t&#125;\t&#125;\treturn s[:position+1]&#125;\n\n\n练习4.6编写一个就地处理函数,用于将一个UTF-8编码的字节slice中所有相邻的Unicode空白字符(查看unicode.IsSpace)缩减为一个ASCII空白字符\n\n将多个连续的空格转换成单个空格，和上面差不多，设置标志位和当前位置，另外判断的条件会稍微多一些\n\n12345678910111213141516171819202122package mainimport \"unicode\"func DeleteEmpty(s []rune) []rune &#123;\tposition := 0\ttag := unicode.IsSpace(s[0])\tfor i := 1; i &lt; len(s); i++ &#123;\t\tif unicode.IsSpace(s[i]) &#123;\t\t\tif tag != true &#123;\t\t\t\tposition += 1\t\t\t\ts[position] = s[i]\t\t\t\ttag = true\t\t\t&#125;\t\t&#125; else &#123;\t\t\ttag = false\t\t\tposition += 1\t\t\ts[position] = s[i]\t\t&#125;\t&#125;\treturn s[:position+1]&#125;\n\n\n练习4.7修改函数reverse,来翻转一个UTF-8编码的字符串中的字符元素,传入参数是该字符串对应的字节slice类型([]byte).你可以做到不需要重新分配内存就实现该功能吗\n\n这个感觉有点难,类型转换会导致内存重新分配\n我的思路是对每个byte读取前面有几个1，有几个1则表示有多少个byte是连续的。至于翻转，感觉不好翻…..但是能够转换类型就好办了，直接转换成rune\n\n12345678func Reverse() &#123;\ta := []byte(\"我要搞Golang\")\tb := []rune(string(a))\tfor i, j := 0, len(b)-1; i &lt; j; i, j = i+1, j-1 &#123;\t\tb[i], b[j] = b[j], b[i]\t&#125;\t_ = []byte(string(b))&#125;\n\n\n练习4.8修改charcount的代码来统计字母,数字和其他Unicode分类中的字符数量,可以使用函数unicode.IsLetter等\n\n就是稍微改一下，你可以看到unicode上有各种区分isXXX\nunicode还是分为很多类的Number,Mark,Letter啥的，听都没听过，挺张姿势的https://www.fileformat.info/info/unicode/category/index.htm\n\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172package mainimport (\t\"bufio\"\t\"os\"\t\"io\"\t\"unicode\"\t\"fmt\")func main() &#123;\tin := bufio.NewReader(os.Stdin)\tvar control, digit, graphic, letter, lower, mark, number, print, punct, space, symbol, title, upper int\tfor &#123;\t\tr, _, err := in.ReadRune()\t\tif err == io.EOF &#123;\t\t\tbreak\t\t&#125;\t\tif unicode.IsControl(r) &#123;\t\t\tcontrol ++\t\t&#125;\t\tif unicode.IsDigit(r) &#123;\t\t\tdigit++\t\t&#125;\t\tif unicode.IsGraphic(r) &#123;\t\t\tgraphic++\t\t&#125;\t\tif unicode.IsLetter(r) &#123;\t\t\tletter++\t\t&#125;\t\tif unicode.IsLower(r) &#123;\t\t\tlower++\t\t&#125;\t\tif unicode.IsMark(r) &#123;\t\t\tmark++\t\t&#125;\t\tif unicode.IsNumber(r) &#123;\t\t\tnumber++\t\t&#125;\t\tif unicode.IsPrint(r) &#123;\t\t\tprint++\t\t&#125;\t\tif unicode.IsPunct(r) &#123;\t\t\tpunct ++\t\t&#125;\t\tif unicode.IsSpace(r) &#123;\t\t\tspace ++\t\t&#125;\t\tif unicode.IsSpace(r) &#123;\t\t\tsymbol ++\t\t&#125;\t\tif unicode.IsTitle(r) &#123;\t\t\ttitle ++\t\t&#125;\t\tif unicode.IsUpper(r) &#123;\t\t\tupper ++\t\t&#125;\t&#125;\tfmt.Printf(\"control: %d\\n\", control)\tfmt.Printf(\"digit: %d\\n\", digit)\tfmt.Printf(\"graphic: %d\\n\", graphic)\tfmt.Printf(\"letter: %d\\n\", letter)\tfmt.Printf(\"lower: %d\\n\", lower)\tfmt.Printf(\"mark: %d\\n\", mark)\tfmt.Printf(\"number: %d\\n\", number)\tfmt.Printf(\"print: %d\\n\", print)\tfmt.Printf(\"punct: %d\\n\", punct)\tfmt.Printf(\"space: %d\\n\", space)\tfmt.Printf(\"symbol: %d\\n\", symbol)\tfmt.Printf(\"title: %d\\n\", title)\tfmt.Printf(\"upper: %d\\n\", upper)&#125;\n\n\n练习4.9编写一个程序wordfreq来汇总输入文本文件中每个单词出现的次数.在第一次调用scan之前,需要使用input.Split(bufio.ScanWords)来将文本行按照单词分割而不是行分割\n\n写法感觉还是有点奇怪的，bufio.ScanWords使用参考了这篇文章https://medium.com/golangspec/in-depth-introduction-to-bufio-scanner-in-golang-55483bb689b4\n\n1234567891011121314151617181920212223package mainimport (\t\"bufio\"\t\"os\"\t\"fmt\")func main() &#123;\tscanner := bufio.NewScanner(bufio.NewReader(os.Stdin))\tscanner.Split(bufio.ScanWords)\trecord := map[string]int&#123;&#125;\tfor scanner.Scan() &#123;\t\trecord[scanner.Text()]++\t&#125;\tif err := scanner.Err(); err != nil &#123;\t\tfmt.Fprintln(os.Stderr, \"Reading input:\", err)\t&#125;\tfor k, v := range record &#123;\t\tfmt.Printf(\"%s\\t%d\\n\", k, v)\t&#125;&#125;\n\n练习4.10修改issues实例,按照时间来输出结果,比如一个月以内,一年以内或者超过一年\n\n对获得的结果使用sort排序\n将所有结果依照一个月、一年、超过一年的放入三个slice当中\n最后输出\n\n12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970717273747576777879808182838485868788899091929394959697package mainimport (\t\"time\"\t\"net/url\"\t\"strings\"\t\"net/http\"\t\"fmt\"\t\"encoding/json\"\t\"os\"\t\"log\"\t\"sort\")const IssuesURL = \"https://api.github.com/search/issues\"type IssuesSearchResult struct &#123;\tTotalCount int `json:\"total_count\"`\tItems      []*Issue&#125;type Issue struct &#123;\tNumber    int\tHTMLURL   string    `json:\"html_url\"`\tTitle     string\tState     string\tUser      *User\tCreatedAt time.Time `json:\"created_at\"`\tBody      string&#125;type User struct &#123;\tLogin   string\tHTMLURL string `json:\"html_url\"`&#125;func SearchIssues(terms []string) (*IssuesSearchResult, error) &#123;\tq := url.QueryEscape(strings.Join(terms, \" \"))\tresp, err := http.Get(IssuesURL + \"?q=\" + q)\tif err != nil &#123;\t\treturn nil, err\t&#125;\tif resp.StatusCode != http.StatusOK &#123;\t\tresp.Body.Close()\t\treturn nil, fmt.Errorf(\"search query failed: %s\", resp.Status)\t&#125;\tvar result IssuesSearchResult\tif err := json.NewDecoder(resp.Body).Decode(&amp;result); err != nil &#123;\t\tresp.Body.Close()\t\treturn nil, err\t&#125;\tresp.Body.Close()\treturn &amp;result, nil&#125;func SortResult(result *IssuesSearchResult) &#123;\tsort.Slice(result.Items, func(i, j int) bool &#123;\t\treturn result.Items[i].CreatedAt.Before(result.Items[j].CreatedAt)\t&#125;)&#125;func main() &#123;\tresult, err := SearchIssues(os.Args[1:])\tif err != nil &#123;\t\tlog.Fatal(err)\t&#125;\tSortResult(result)\tvar month, year, distant []*Issue\tfor v, i := range result.Items &#123;\t\tif i.CreatedAt.After(time.Now().Add(time.Hour * 24 * 30 * -1)) &#123;\t\t\tmonth = append(month, result.Items[v])\t\t&#125; else if i.CreatedAt.After(time.Now().Add(time.Hour * 24 * 365 * -1)) &#123;\t\t\tyear = append(year, result.Items[v])\t\t&#125; else &#123;\t\t\tdistant = append(distant, result.Items[v])\t\t&#125;\t&#125;\tfmt.Printf(\"%d issues:\\n\", result.TotalCount)\tfmt.Printf(\"with in a month\\n\")\tfor _, item := range month &#123;\t\tfmt.Printf(\"#%-5d %9.9s %.55s %s\\n\", item.Number, item.User.Login, item.Title, item.CreatedAt)\t&#125;\tfmt.Printf(\"with in a year\\n\")\tfor _, item := range year &#123;\t\tfmt.Printf(\"#%-5d %9.9s %.55s %s\\n\", item.Number, item.User.Login, item.Title, item.CreatedAt)\t&#125;\tfmt.Printf(\"long long ago\\n\")\tfor _, item := range distant &#123;\t\tfmt.Printf(\"#%-5d %9.9s %.55s %s\\n\", item.Number, item.User.Login, item.Title, item.CreatedAt)\t&#125;&#125;\n\n\n练习4.11开发一个工具让用户可以通过命令行创建、读取、更新或者关闭Github的issues,当需要额外输入的时候,调用他们喜欢的文本编辑器\n\n啊，感觉这个题目很无聊~\n\n练习4.12流行web漫画xkcd有一个JSON接口.例如,调用https://xkcd.com/571/info.0.json输出漫画571的详细描述,这个是很多人最喜欢的之一.下载每一个URL并且构建一个离线索引.编写xkcd来使用这个索引,可以通过命令行指定的搜索条件来查找并输出符合条件的每个漫画的URL和剧本\n\n感觉这条超纲了啊，构建离线索引…….是写到sqlite里面吗？查找的时候正则匹配？\n\n练习4.13基于JSON开发的web服务,开放电影数据库让你可以在https://omdbapi.com/上通过名字来搜索电影并下载海报图片.开发一个poster工具以通过命令行指定的电影名称来下载海报\n\n没什么兴趣，就一个JSON解析\n\n练习4.14:创建一个web服务器,可以通过查询github并缓存信息,然后可以浏览bug列表、里程碑信息以及用户参与的信息\n\n这题应该意图就是编写模板了\n至于缓存大概用Redis吧\n我很懒，就随便搞了个模板测试了下用法\n\n1234567891011121314151617181920212223242526package mainimport (\t\"html/template\"\t\"net/http\")func main() &#123;\tconst templ = `&lt;p&gt;A: &#123;.A&#125;&lt;/p&gt;&lt;p&gt;B: &#123;.B&#125;&lt;/p&gt;`  (换&#123;&#125;,因为hexo渲染问题)\tt := template.Must(template.New(\"escape\").Parse(templ))\thttp.HandleFunc(\"/\", func(w http.ResponseWriter, r *http.Request) &#123;\t\tvar data struct &#123;\t\t\tA string\t\t\tB template.HTML\t\t&#125;\t\tdata.A = \"&lt;b&gt;Hello!&lt;/b&gt;\"\t\tdata.B = \"&lt;b&gt;Hello!&lt;/b&gt;\"\t\tt.Execute(w, data)\t&#125;)\thttp.ListenAndServe(\":8888\", nil)&#125;\n\n\n\n\n\n\n\n\n","dateCreated":"2018-06-08T23:48:32+08:00","dateModified":"2018-06-13T23:14:49+08:00","datePublished":"2018-06-08T23:48:32+08:00","description":"第四章\n数组\nslice\nmap\n结构体\njson\n文本和HTML模板\n","headline":"Go程序设计语言课后习题答案-第四章(基本数据)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"}</script>
     <meta name="description" content="第四章 数组 slice map 结构体 json 文本和HTML模板">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Go程序设计语言课后习题答案-第四章(基本数据)">
 <meta property="og:url" content="https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="第四章 数组 slice map 结构体 json 文本和HTML模板">
+<meta property="og:locale" content="zh-cn">
 <meta property="og:updated_time" content="2018-06-13T15:14:49.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Go程序设计语言课后习题答案-第四章(基本数据)">
 <meta name="twitter:description" content="第四章 数组 slice map 结构体 json 文本和HTML模板">
-<meta name="twitter:creator" content="@aec4d">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -47,23 +51,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -72,23 +79,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -98,9 +90,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -110,9 +103,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -122,9 +116,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -134,9 +129,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -146,9 +142,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -158,9 +155,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -171,27 +169,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -205,9 +242,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -223,17 +261,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             Go程序设计语言课后习题答案-第四章(基本数据)
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2018-06-08T23:48:32+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2018-06-08T23:48:32+08:00">
 	
 		    6月 08, 2018
     	
@@ -247,9 +286,11 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
             <h3 id="第四章"><a href="#第四章" class="headerlink" title="第四章"></a>第四章</h3><ul>
 <li>数组</li>
@@ -260,67 +301,84 @@
 <li>文本和HTML模板</li>
 </ul>
 <a id="more"></a>
+
 <h4 id="练习4-1"><a href="#练习4-1" class="headerlink" title="练习4.1"></a>练习4.1</h4><p>编写一个函数,计算两个SHA256哈希中不同的bit的数目</p>
 <ul>
 <li>得到两个字符串的sha256结果,为[32]byte类型,然而需要对比bit</li>
 <li>暂时没有得到很好的操作bit的方法,因此采用了格式化字符串的’%08b’这种奇葩的方案</li>
 <li>使用了bufio和bytes.Buffer,最后需要强制Flush</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"bytes"</span></div><div class="line">	<span class="string">"bufio"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"crypto/sha256"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	<span class="keyword">var</span> r1 bytes.Buffer</div><div class="line">	writer := bufio.NewWriter(&amp;r1)</div><div class="line">	fmt.Fprintf(writer, <span class="string">"%08b"</span>, sha256.Sum256([]<span class="keyword">byte</span>(<span class="string">"1"</span>)))</div><div class="line">	writer.Flush()</div><div class="line">	r1Str := r1.String()</div><div class="line"></div><div class="line">	<span class="keyword">var</span> r2 bytes.Buffer</div><div class="line">	writer2 := bufio.NewWriter(&amp;r2)</div><div class="line">	fmt.Fprintf(writer2, <span class="string">"%08b"</span>, sha256.Sum256([]<span class="keyword">byte</span>(<span class="string">"2"</span>)))</div><div class="line">	writer2.Flush()</div><div class="line">	r2Str := r2.String()</div><div class="line"></div><div class="line">	count := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> i, _ := <span class="keyword">range</span> r1Str &#123;</div><div class="line">		<span class="keyword">if</span> r1Str[i] != r2Str[i] &#123;</div><div class="line">			count += <span class="number">1</span></div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	fmt.Println(count)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"bytes"</span></span><br><span class="line">	<span class="string">"bufio"</span></span><br><span class="line">	<span class="string">"fmt"</span></span><br><span class="line">	<span class="string">"crypto/sha256"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">var</span> r1 bytes.Buffer</span><br><span class="line">	writer := bufio.NewWriter(&amp;r1)</span><br><span class="line">	fmt.Fprintf(writer, <span class="string">"%08b"</span>, sha256.Sum256([]<span class="keyword">byte</span>(<span class="string">"1"</span>)))</span><br><span class="line">	writer.Flush()</span><br><span class="line">	r1Str := r1.String()</span><br><span class="line"></span><br><span class="line">	<span class="keyword">var</span> r2 bytes.Buffer</span><br><span class="line">	writer2 := bufio.NewWriter(&amp;r2)</span><br><span class="line">	fmt.Fprintf(writer2, <span class="string">"%08b"</span>, sha256.Sum256([]<span class="keyword">byte</span>(<span class="string">"2"</span>)))</span><br><span class="line">	writer2.Flush()</span><br><span class="line">	r2Str := r2.String()</span><br><span class="line"></span><br><span class="line">	count := <span class="number">0</span></span><br><span class="line">	<span class="keyword">for</span> i, _ := <span class="keyword">range</span> r1Str &#123;</span><br><span class="line">		<span class="keyword">if</span> r1Str[i] != r2Str[i] &#123;</span><br><span class="line">			count += <span class="number">1</span></span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	fmt.Println(count)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
 <h4 id="练习4-2"><a href="#练习4-2" class="headerlink" title="练习4.2"></a>练习4.2</h4><p>编写一个程序,默认情况下打印标准输入的SHA256编码,并支持通过命令行flag定制,输出SHA384或SHA512哈希算法</p>
 <ul>
 <li>这个问题看起来是一个命令行参数解析的问题,<code>flag</code>模块</li>
 <li>针对多个不同的case使用switch语句</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"flag"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"crypto/sha512"</span></div><div class="line">	<span class="string">"crypto/sha256"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	method := flag.String(<span class="string">"method"</span>, <span class="string">"sha256"</span>, <span class="string">"select hash method(sha256,sha384,sha512)"</span>)</div><div class="line">	text := flag.String(<span class="string">"text"</span>, <span class="string">""</span>, <span class="string">"input the string your want to hash"</span>)</div><div class="line">	flag.Parse()</div><div class="line">	<span class="keyword">switch</span> *method &#123;</div><div class="line">	<span class="keyword">case</span> <span class="string">"sha256"</span>:</div><div class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha256.Sum256([]<span class="keyword">byte</span>(*text)))</div><div class="line">	<span class="keyword">case</span> <span class="string">"sha384"</span>:</div><div class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha512.Sum384([]<span class="keyword">byte</span>(*text)))</div><div class="line">	<span class="keyword">case</span> <span class="string">"sha512"</span>:</div><div class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha512.Sum512([]<span class="keyword">byte</span>(*text)))</div><div class="line">	<span class="keyword">default</span>:</div><div class="line">		<span class="built_in">panic</span>(<span class="string">"not support hash method"</span>)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"flag"</span></span><br><span class="line">	<span class="string">"fmt"</span></span><br><span class="line">	<span class="string">"crypto/sha512"</span></span><br><span class="line">	<span class="string">"crypto/sha256"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	method := flag.String(<span class="string">"method"</span>, <span class="string">"sha256"</span>, <span class="string">"select hash method(sha256,sha384,sha512)"</span>)</span><br><span class="line">	text := flag.String(<span class="string">"text"</span>, <span class="string">""</span>, <span class="string">"input the string your want to hash"</span>)</span><br><span class="line">	flag.Parse()</span><br><span class="line">	<span class="keyword">switch</span> *method &#123;</span><br><span class="line">	<span class="keyword">case</span> <span class="string">"sha256"</span>:</span><br><span class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha256.Sum256([]<span class="keyword">byte</span>(*text)))</span><br><span class="line">	<span class="keyword">case</span> <span class="string">"sha384"</span>:</span><br><span class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha512.Sum384([]<span class="keyword">byte</span>(*text)))</span><br><span class="line">	<span class="keyword">case</span> <span class="string">"sha512"</span>:</span><br><span class="line">		fmt.Printf(<span class="string">"%x\n"</span>, sha512.Sum512([]<span class="keyword">byte</span>(*text)))</span><br><span class="line">	<span class="keyword">default</span>:</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">"not support hash method"</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h4 id="练习4-3"><a href="#练习4-3" class="headerlink" title="练习4.3"></a>练习4.3</h4><p>重写函数reverse,使用数组指针作为参数而不是slice</p>
 <ul>
 <li>使用指针避免值拷贝</li>
 <li>使用的时候注意运算优先级</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">Reverse</span><span class="params">(s *[]<span class="keyword">int</span>)</span></span>  &#123;</div><div class="line">	<span class="keyword">for</span> i,j := <span class="number">0</span>,<span class="built_in">len</span>(*s)<span class="number">-1</span>;i&lt;j;i,j =i+<span class="number">1</span>,j<span class="number">-1</span>&#123;</div><div class="line">		(*s)[i],(*s)[j] = (*s)[j],(*s)[i]</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Reverse</span><span class="params">(s *[]<span class="keyword">int</span>)</span></span>  &#123;</span><br><span class="line">	<span class="keyword">for</span> i,j := <span class="number">0</span>,<span class="built_in">len</span>(*s)<span class="number">-1</span>;i&lt;j;i,j =i+<span class="number">1</span>,j<span class="number">-1</span>&#123;</span><br><span class="line">		(*s)[i],(*s)[j] = (*s)[j],(*s)[i]</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h4 id="练习4-4"><a href="#练习4-4" class="headerlink" title="练习4.4"></a>练习4.4</h4><p>编写一个函数rorate,实现一次遍历就可以完成元素旋转</p>
 <ul>
 <li>找到位置当做起始位置，对起始位置前面的数据进行倒序append</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">Rotate</span><span class="params">(s []<span class="keyword">int</span>, position <span class="keyword">int</span>)</span> []<span class="title">int</span></span> &#123;</div><div class="line">	r := s[position:]</div><div class="line">	<span class="keyword">for</span> i := position<span class="number">-1</span> ; i &gt;= <span class="number">0</span>; i-- &#123;</div><div class="line">		r = <span class="built_in">append</span>(r, s[i])</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> r</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Rotate</span><span class="params">(s []<span class="keyword">int</span>, position <span class="keyword">int</span>)</span> []<span class="title">int</span></span> &#123;</span><br><span class="line">	r := s[position:]</span><br><span class="line">	<span class="keyword">for</span> i := position<span class="number">-1</span> ; i &gt;= <span class="number">0</span>; i-- &#123;</span><br><span class="line">		r = <span class="built_in">append</span>(r, s[i])</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> r</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h4 id="练习4-5"><a href="#练习4-5" class="headerlink" title="练习4.5"></a>练习4.5</h4><p>编写一个就地处理函数,用于去除[]string slice中相邻的重复字符串元素</p>
 <ul>
 <li>设置标记为和当前位置两个参数</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">DeleteRepet</span><span class="params">(s []<span class="keyword">string</span>)</span> []<span class="title">string</span></span> &#123;</div><div class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(s) &lt; <span class="number">1</span> &#123;</div><div class="line">		<span class="keyword">return</span> s</div><div class="line">	&#125;</div><div class="line">	current := s[<span class="number">0</span>]</div><div class="line">	position := <span class="number">0</span></div><div class="line">	<span class="keyword">for</span> i := <span class="number">1</span>; i &lt; <span class="built_in">len</span>(s); i++ &#123;</div><div class="line">		<span class="keyword">if</span> s[i] != current &#123;</div><div class="line">			position += <span class="number">1</span></div><div class="line">			s[position] = s[i]</div><div class="line">			current = s[i]</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> s[:position+<span class="number">1</span>]</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">DeleteRepet</span><span class="params">(s []<span class="keyword">string</span>)</span> []<span class="title">string</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(s) &lt; <span class="number">1</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> s</span><br><span class="line">	&#125;</span><br><span class="line">	current := s[<span class="number">0</span>]</span><br><span class="line">	position := <span class="number">0</span></span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">1</span>; i &lt; <span class="built_in">len</span>(s); i++ &#123;</span><br><span class="line">		<span class="keyword">if</span> s[i] != current &#123;</span><br><span class="line">			position += <span class="number">1</span></span><br><span class="line">			s[position] = s[i]</span><br><span class="line">			current = s[i]</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> s[:position+<span class="number">1</span>]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
 <h4 id="练习4-6"><a href="#练习4-6" class="headerlink" title="练习4.6"></a>练习4.6</h4><p>编写一个就地处理函数,用于将一个UTF-8编码的字节slice中所有相邻的Unicode空白字符(查看unicode.IsSpace)缩减为一个ASCII空白字符</p>
 <ul>
 <li>将多个连续的空格转换成单个空格，和上面差不多，设置标志位和当前位置，另外判断的条件会稍微多一些</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> <span class="string">"unicode"</span></div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">DeleteEmpty</span><span class="params">(s []<span class="keyword">rune</span>)</span> []<span class="title">rune</span></span> &#123;</div><div class="line">	position := <span class="number">0</span></div><div class="line">	tag := unicode.IsSpace(s[<span class="number">0</span>])</div><div class="line">	<span class="keyword">for</span> i := <span class="number">1</span>; i &lt; <span class="built_in">len</span>(s); i++ &#123;</div><div class="line">		<span class="keyword">if</span> unicode.IsSpace(s[i]) &#123;</div><div class="line">			<span class="keyword">if</span> tag != <span class="literal">true</span> &#123;</div><div class="line">				position += <span class="number">1</span></div><div class="line">				s[position] = s[i]</div><div class="line">				tag = <span class="literal">true</span></div><div class="line">			&#125;</div><div class="line">		&#125; <span class="keyword">else</span> &#123;</div><div class="line">			tag = <span class="literal">false</span></div><div class="line">			position += <span class="number">1</span></div><div class="line">			s[position] = s[i]</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">return</span> s[:position+<span class="number">1</span>]</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="string">"unicode"</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">DeleteEmpty</span><span class="params">(s []<span class="keyword">rune</span>)</span> []<span class="title">rune</span></span> &#123;</span><br><span class="line">	position := <span class="number">0</span></span><br><span class="line">	tag := unicode.IsSpace(s[<span class="number">0</span>])</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">1</span>; i &lt; <span class="built_in">len</span>(s); i++ &#123;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsSpace(s[i]) &#123;</span><br><span class="line">			<span class="keyword">if</span> tag != <span class="literal">true</span> &#123;</span><br><span class="line">				position += <span class="number">1</span></span><br><span class="line">				s[position] = s[i]</span><br><span class="line">				tag = <span class="literal">true</span></span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			tag = <span class="literal">false</span></span><br><span class="line">			position += <span class="number">1</span></span><br><span class="line">			s[position] = s[i]</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> s[:position+<span class="number">1</span>]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
 <h4 id="练习4-7"><a href="#练习4-7" class="headerlink" title="练习4.7"></a>练习4.7</h4><p>修改函数reverse,来翻转一个UTF-8编码的字符串中的字符元素,传入参数是该字符串对应的字节slice类型([]byte).你可以做到不需要重新分配内存就实现该功能吗</p>
 <ul>
 <li>这个感觉有点难,类型转换会导致内存重新分配</li>
 <li>我的思路是对每个byte读取前面有几个1，有几个1则表示有多少个byte是连续的。至于翻转，感觉不好翻…..但是能够转换类型就好办了，直接转换成rune</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">Reverse</span><span class="params">()</span></span> &#123;</div><div class="line">	a := []<span class="keyword">byte</span>(<span class="string">"我要搞Golang"</span>)</div><div class="line">	b := []<span class="keyword">rune</span>(<span class="keyword">string</span>(a))</div><div class="line">	<span class="keyword">for</span> i, j := <span class="number">0</span>, <span class="built_in">len</span>(b)<span class="number">-1</span>; i &lt; j; i, j = i+<span class="number">1</span>, j<span class="number">-1</span> &#123;</div><div class="line">		b[i], b[j] = b[j], b[i]</div><div class="line">	&#125;</div><div class="line">	_ = []<span class="keyword">byte</span>(<span class="keyword">string</span>(b))</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">Reverse</span><span class="params">()</span></span> &#123;</span><br><span class="line">	a := []<span class="keyword">byte</span>(<span class="string">"我要搞Golang"</span>)</span><br><span class="line">	b := []<span class="keyword">rune</span>(<span class="keyword">string</span>(a))</span><br><span class="line">	<span class="keyword">for</span> i, j := <span class="number">0</span>, <span class="built_in">len</span>(b)<span class="number">-1</span>; i &lt; j; i, j = i+<span class="number">1</span>, j<span class="number">-1</span> &#123;</span><br><span class="line">		b[i], b[j] = b[j], b[i]</span><br><span class="line">	&#125;</span><br><span class="line">	_ = []<span class="keyword">byte</span>(<span class="keyword">string</span>(b))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
 <h4 id="练习4-8"><a href="#练习4-8" class="headerlink" title="练习4.8"></a>练习4.8</h4><p>修改charcount的代码来统计字母,数字和其他Unicode分类中的字符数量,可以使用函数unicode.IsLetter等</p>
 <ul>
 <li>就是稍微改一下，你可以看到unicode上有各种区分isXXX</li>
 <li>unicode还是分为很多类的Number,Mark,Letter啥的，听都没听过，挺张姿势的<a href="https://www.fileformat.info/info/unicode/category/index.htm">https://www.fileformat.info/info/unicode/category/index.htm</a></li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"bufio"</span></div><div class="line">	<span class="string">"os"</span></div><div class="line">	<span class="string">"io"</span></div><div class="line">	<span class="string">"unicode"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	in := bufio.NewReader(os.Stdin)</div><div class="line">	<span class="keyword">var</span> control, digit, graphic, letter, lower, mark, number, <span class="built_in">print</span>, punct, space, symbol, title, upper <span class="keyword">int</span></div><div class="line">	<span class="keyword">for</span> &#123;</div><div class="line">		r, _, err := in.ReadRune()</div><div class="line">		<span class="keyword">if</span> err == io.EOF &#123;</div><div class="line">			<span class="keyword">break</span></div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsControl(r) &#123;</div><div class="line">			control ++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsDigit(r) &#123;</div><div class="line">			digit++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsGraphic(r) &#123;</div><div class="line">			graphic++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsLetter(r) &#123;</div><div class="line">			letter++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsLower(r) &#123;</div><div class="line">			lower++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsMark(r) &#123;</div><div class="line">			mark++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsNumber(r) &#123;</div><div class="line">			number++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsPrint(r) &#123;</div><div class="line">			<span class="built_in">print</span>++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsPunct(r) &#123;</div><div class="line">			punct ++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsSpace(r) &#123;</div><div class="line">			space ++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsSpace(r) &#123;</div><div class="line">			symbol ++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsTitle(r) &#123;</div><div class="line">			title ++</div><div class="line">		&#125;</div><div class="line">		<span class="keyword">if</span> unicode.IsUpper(r) &#123;</div><div class="line">			upper ++</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line">	fmt.Printf(<span class="string">"control: %d\n"</span>, control)</div><div class="line">	fmt.Printf(<span class="string">"digit: %d\n"</span>, digit)</div><div class="line">	fmt.Printf(<span class="string">"graphic: %d\n"</span>, graphic)</div><div class="line">	fmt.Printf(<span class="string">"letter: %d\n"</span>, letter)</div><div class="line">	fmt.Printf(<span class="string">"lower: %d\n"</span>, lower)</div><div class="line">	fmt.Printf(<span class="string">"mark: %d\n"</span>, mark)</div><div class="line">	fmt.Printf(<span class="string">"number: %d\n"</span>, number)</div><div class="line">	fmt.Printf(<span class="string">"print: %d\n"</span>, <span class="built_in">print</span>)</div><div class="line">	fmt.Printf(<span class="string">"punct: %d\n"</span>, punct)</div><div class="line">	fmt.Printf(<span class="string">"space: %d\n"</span>, space)</div><div class="line">	fmt.Printf(<span class="string">"symbol: %d\n"</span>, symbol)</div><div class="line">	fmt.Printf(<span class="string">"title: %d\n"</span>, title)</div><div class="line">	fmt.Printf(<span class="string">"upper: %d\n"</span>, upper)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"bufio"</span></span><br><span class="line">	<span class="string">"os"</span></span><br><span class="line">	<span class="string">"io"</span></span><br><span class="line">	<span class="string">"unicode"</span></span><br><span class="line">	<span class="string">"fmt"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	in := bufio.NewReader(os.Stdin)</span><br><span class="line">	<span class="keyword">var</span> control, digit, graphic, letter, lower, mark, number, <span class="built_in">print</span>, punct, space, symbol, title, upper <span class="keyword">int</span></span><br><span class="line">	<span class="keyword">for</span> &#123;</span><br><span class="line">		r, _, err := in.ReadRune()</span><br><span class="line">		<span class="keyword">if</span> err == io.EOF &#123;</span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsControl(r) &#123;</span><br><span class="line">			control ++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsDigit(r) &#123;</span><br><span class="line">			digit++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsGraphic(r) &#123;</span><br><span class="line">			graphic++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsLetter(r) &#123;</span><br><span class="line">			letter++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsLower(r) &#123;</span><br><span class="line">			lower++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsMark(r) &#123;</span><br><span class="line">			mark++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsNumber(r) &#123;</span><br><span class="line">			number++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsPrint(r) &#123;</span><br><span class="line">			<span class="built_in">print</span>++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsPunct(r) &#123;</span><br><span class="line">			punct ++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsSpace(r) &#123;</span><br><span class="line">			space ++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsSpace(r) &#123;</span><br><span class="line">			symbol ++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsTitle(r) &#123;</span><br><span class="line">			title ++</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> unicode.IsUpper(r) &#123;</span><br><span class="line">			upper ++</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	fmt.Printf(<span class="string">"control: %d\n"</span>, control)</span><br><span class="line">	fmt.Printf(<span class="string">"digit: %d\n"</span>, digit)</span><br><span class="line">	fmt.Printf(<span class="string">"graphic: %d\n"</span>, graphic)</span><br><span class="line">	fmt.Printf(<span class="string">"letter: %d\n"</span>, letter)</span><br><span class="line">	fmt.Printf(<span class="string">"lower: %d\n"</span>, lower)</span><br><span class="line">	fmt.Printf(<span class="string">"mark: %d\n"</span>, mark)</span><br><span class="line">	fmt.Printf(<span class="string">"number: %d\n"</span>, number)</span><br><span class="line">	fmt.Printf(<span class="string">"print: %d\n"</span>, <span class="built_in">print</span>)</span><br><span class="line">	fmt.Printf(<span class="string">"punct: %d\n"</span>, punct)</span><br><span class="line">	fmt.Printf(<span class="string">"space: %d\n"</span>, space)</span><br><span class="line">	fmt.Printf(<span class="string">"symbol: %d\n"</span>, symbol)</span><br><span class="line">	fmt.Printf(<span class="string">"title: %d\n"</span>, title)</span><br><span class="line">	fmt.Printf(<span class="string">"upper: %d\n"</span>, upper)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
 <h4 id="练习4-9"><a href="#练习4-9" class="headerlink" title="练习4.9"></a>练习4.9</h4><p>编写一个程序wordfreq来汇总输入文本文件中每个单词出现的次数.在第一次调用scan之前,需要使用input.Split(bufio.ScanWords)来将文本行按照单词分割而不是行分割</p>
 <ul>
 <li>写法感觉还是有点奇怪的，bufio.ScanWords使用参考了这篇文章<a href="https://medium.com/golangspec/in-depth-introduction-to-bufio-scanner-in-golang-55483bb689b4">https://medium.com/golangspec/in-depth-introduction-to-bufio-scanner-in-golang-55483bb689b4</a></li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"bufio"</span></div><div class="line">	<span class="string">"os"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	scanner := bufio.NewScanner(bufio.NewReader(os.Stdin))</div><div class="line">	scanner.Split(bufio.ScanWords)</div><div class="line">	record := <span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">int</span>&#123;&#125;</div><div class="line">	<span class="keyword">for</span> scanner.Scan() &#123;</div><div class="line">		record[scanner.Text()]++</div><div class="line">	&#125;</div><div class="line">	<span class="keyword">if</span> err := scanner.Err(); err != <span class="literal">nil</span> &#123;</div><div class="line">		fmt.Fprintln(os.Stderr, <span class="string">"Reading input:"</span>, err)</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">for</span> k, v := <span class="keyword">range</span> record &#123;</div><div class="line">		fmt.Printf(<span class="string">"%s\t%d\n"</span>, k, v)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"bufio"</span></span><br><span class="line">	<span class="string">"os"</span></span><br><span class="line">	<span class="string">"fmt"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	scanner := bufio.NewScanner(bufio.NewReader(os.Stdin))</span><br><span class="line">	scanner.Split(bufio.ScanWords)</span><br><span class="line">	record := <span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">int</span>&#123;&#125;</span><br><span class="line">	<span class="keyword">for</span> scanner.Scan() &#123;</span><br><span class="line">		record[scanner.Text()]++</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> err := scanner.Err(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		fmt.Fprintln(os.Stderr, <span class="string">"Reading input:"</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> k, v := <span class="keyword">range</span> record &#123;</span><br><span class="line">		fmt.Printf(<span class="string">"%s\t%d\n"</span>, k, v)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
 <h4 id="练习4-10"><a href="#练习4-10" class="headerlink" title="练习4.10"></a>练习4.10</h4><p>修改issues实例,按照时间来输出结果,比如一个月以内,一年以内或者超过一年</p>
 <ul>
 <li>对获得的结果使用sort排序</li>
 <li>将所有结果依照一个月、一年、超过一年的放入三个slice当中</li>
 <li>最后输出</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"time"</span></div><div class="line">	<span class="string">"net/url"</span></div><div class="line">	<span class="string">"strings"</span></div><div class="line">	<span class="string">"net/http"</span></div><div class="line">	<span class="string">"fmt"</span></div><div class="line">	<span class="string">"encoding/json"</span></div><div class="line">	<span class="string">"os"</span></div><div class="line">	<span class="string">"log"</span></div><div class="line">	<span class="string">"sort"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="keyword">const</span> IssuesURL = <span class="string">"https://api.github.com/search/issues"</span></div><div class="line"></div><div class="line"><span class="keyword">type</span> IssuesSearchResult <span class="keyword">struct</span> &#123;</div><div class="line">	TotalCount <span class="keyword">int</span> <span class="string">`json:"total_count"`</span></div><div class="line">	Items      []*Issue</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">type</span> Issue <span class="keyword">struct</span> &#123;</div><div class="line">	Number    <span class="keyword">int</span></div><div class="line">	HTMLURL   <span class="keyword">string</span>    <span class="string">`json:"html_url"`</span></div><div class="line">	Title     <span class="keyword">string</span></div><div class="line">	State     <span class="keyword">string</span></div><div class="line">	User      *User</div><div class="line">	CreatedAt time.Time <span class="string">`json:"created_at"`</span></div><div class="line">	Body      <span class="keyword">string</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="keyword">type</span> User <span class="keyword">struct</span> &#123;</div><div class="line">	Login   <span class="keyword">string</span></div><div class="line">	HTMLURL <span class="keyword">string</span> <span class="string">`json:"html_url"`</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">SearchIssues</span><span class="params">(terms []<span class="keyword">string</span>)</span> <span class="params">(*IssuesSearchResult, error)</span></span> &#123;</div><div class="line">	q := url.QueryEscape(strings.Join(terms, <span class="string">" "</span>))</div><div class="line">	resp, err := http.Get(IssuesURL + <span class="string">"?q="</span> + q)</div><div class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, err</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">if</span> resp.StatusCode != http.StatusOK &#123;</div><div class="line">		resp.Body.Close()</div><div class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, fmt.Errorf(<span class="string">"search query failed: %s"</span>, resp.Status)</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	<span class="keyword">var</span> result IssuesSearchResult</div><div class="line">	<span class="keyword">if</span> err := json.NewDecoder(resp.Body).Decode(&amp;result); err != <span class="literal">nil</span> &#123;</div><div class="line">		resp.Body.Close()</div><div class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, err</div><div class="line">	&#125;</div><div class="line">	resp.Body.Close()</div><div class="line">	<span class="keyword">return</span> &amp;result, <span class="literal">nil</span></div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">SortResult</span><span class="params">(result *IssuesSearchResult)</span></span> &#123;</div><div class="line">	sort.Slice(result.Items, <span class="function"><span class="keyword">func</span><span class="params">(i, j <span class="keyword">int</span>)</span> <span class="title">bool</span></span> &#123;</div><div class="line">		<span class="keyword">return</span> result.Items[i].CreatedAt.Before(result.Items[j].CreatedAt)</div><div class="line">	&#125;)</div><div class="line">&#125;</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	result, err := SearchIssues(os.Args[<span class="number">1</span>:])</div><div class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</div><div class="line">		log.Fatal(err)</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	SortResult(result)</div><div class="line">	<span class="keyword">var</span> month, year, distant []*Issue</div><div class="line"></div><div class="line">	<span class="keyword">for</span> v, i := <span class="keyword">range</span> result.Items &#123;</div><div class="line">		<span class="keyword">if</span> i.CreatedAt.After(time.Now().Add(time.Hour * <span class="number">24</span> * <span class="number">30</span> * <span class="number">-1</span>)) &#123;</div><div class="line">			month = <span class="built_in">append</span>(month, result.Items[v])</div><div class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> i.CreatedAt.After(time.Now().Add(time.Hour * <span class="number">24</span> * <span class="number">365</span> * <span class="number">-1</span>)) &#123;</div><div class="line">			year = <span class="built_in">append</span>(year, result.Items[v])</div><div class="line">		&#125; <span class="keyword">else</span> &#123;</div><div class="line">			distant = <span class="built_in">append</span>(distant, result.Items[v])</div><div class="line">		&#125;</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	fmt.Printf(<span class="string">"%d issues:\n"</span>, result.TotalCount)</div><div class="line">	fmt.Printf(<span class="string">"with in a month\n"</span>)</div><div class="line">	<span class="keyword">for</span> _, item := <span class="keyword">range</span> month &#123;</div><div class="line">		fmt.Printf(<span class="string">"#%-5d %9.9s %.55s %s\n"</span>, item.Number, item.User.Login, item.Title, item.CreatedAt)</div><div class="line">	&#125;</div><div class="line">	fmt.Printf(<span class="string">"with in a year\n"</span>)</div><div class="line">	<span class="keyword">for</span> _, item := <span class="keyword">range</span> year &#123;</div><div class="line">		fmt.Printf(<span class="string">"#%-5d %9.9s %.55s %s\n"</span>, item.Number, item.User.Login, item.Title, item.CreatedAt)</div><div class="line">	&#125;</div><div class="line"></div><div class="line">	fmt.Printf(<span class="string">"long long ago\n"</span>)</div><div class="line">	<span class="keyword">for</span> _, item := <span class="keyword">range</span> distant &#123;</div><div class="line">		fmt.Printf(<span class="string">"#%-5d %9.9s %.55s %s\n"</span>, item.Number, item.User.Login, item.Title, item.CreatedAt)</div><div class="line">	&#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"time"</span></span><br><span class="line">	<span class="string">"net/url"</span></span><br><span class="line">	<span class="string">"strings"</span></span><br><span class="line">	<span class="string">"net/http"</span></span><br><span class="line">	<span class="string">"fmt"</span></span><br><span class="line">	<span class="string">"encoding/json"</span></span><br><span class="line">	<span class="string">"os"</span></span><br><span class="line">	<span class="string">"log"</span></span><br><span class="line">	<span class="string">"sort"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">const</span> IssuesURL = <span class="string">"https://api.github.com/search/issues"</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> IssuesSearchResult <span class="keyword">struct</span> &#123;</span><br><span class="line">	TotalCount <span class="keyword">int</span> <span class="string">`json:"total_count"`</span></span><br><span class="line">	Items      []*Issue</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> Issue <span class="keyword">struct</span> &#123;</span><br><span class="line">	Number    <span class="keyword">int</span></span><br><span class="line">	HTMLURL   <span class="keyword">string</span>    <span class="string">`json:"html_url"`</span></span><br><span class="line">	Title     <span class="keyword">string</span></span><br><span class="line">	State     <span class="keyword">string</span></span><br><span class="line">	User      *User</span><br><span class="line">	CreatedAt time.Time <span class="string">`json:"created_at"`</span></span><br><span class="line">	Body      <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> User <span class="keyword">struct</span> &#123;</span><br><span class="line">	Login   <span class="keyword">string</span></span><br><span class="line">	HTMLURL <span class="keyword">string</span> <span class="string">`json:"html_url"`</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">SearchIssues</span><span class="params">(terms []<span class="keyword">string</span>)</span> <span class="params">(*IssuesSearchResult, error)</span></span> &#123;</span><br><span class="line">	q := url.QueryEscape(strings.Join(terms, <span class="string">" "</span>))</span><br><span class="line">	resp, err := http.Get(IssuesURL + <span class="string">"?q="</span> + q)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> resp.StatusCode != http.StatusOK &#123;</span><br><span class="line">		resp.Body.Close()</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, fmt.Errorf(<span class="string">"search query failed: %s"</span>, resp.Status)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">var</span> result IssuesSearchResult</span><br><span class="line">	<span class="keyword">if</span> err := json.NewDecoder(resp.Body).Decode(&amp;result); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		resp.Body.Close()</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">	&#125;</span><br><span class="line">	resp.Body.Close()</span><br><span class="line">	<span class="keyword">return</span> &amp;result, <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">SortResult</span><span class="params">(result *IssuesSearchResult)</span></span> &#123;</span><br><span class="line">	sort.Slice(result.Items, <span class="function"><span class="keyword">func</span><span class="params">(i, j <span class="keyword">int</span>)</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">		<span class="keyword">return</span> result.Items[i].CreatedAt.Before(result.Items[j].CreatedAt)</span><br><span class="line">	&#125;)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	result, err := SearchIssues(os.Args[<span class="number">1</span>:])</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatal(err)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	SortResult(result)</span><br><span class="line">	<span class="keyword">var</span> month, year, distant []*Issue</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> v, i := <span class="keyword">range</span> result.Items &#123;</span><br><span class="line">		<span class="keyword">if</span> i.CreatedAt.After(time.Now().Add(time.Hour * <span class="number">24</span> * <span class="number">30</span> * <span class="number">-1</span>)) &#123;</span><br><span class="line">			month = <span class="built_in">append</span>(month, result.Items[v])</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> i.CreatedAt.After(time.Now().Add(time.Hour * <span class="number">24</span> * <span class="number">365</span> * <span class="number">-1</span>)) &#123;</span><br><span class="line">			year = <span class="built_in">append</span>(year, result.Items[v])</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			distant = <span class="built_in">append</span>(distant, result.Items[v])</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	fmt.Printf(<span class="string">"%d issues:\n"</span>, result.TotalCount)</span><br><span class="line">	fmt.Printf(<span class="string">"with in a month\n"</span>)</span><br><span class="line">	<span class="keyword">for</span> _, item := <span class="keyword">range</span> month &#123;</span><br><span class="line">		fmt.Printf(<span class="string">"#%-5d %9.9s %.55s %s\n"</span>, item.Number, item.User.Login, item.Title, item.CreatedAt)</span><br><span class="line">	&#125;</span><br><span class="line">	fmt.Printf(<span class="string">"with in a year\n"</span>)</span><br><span class="line">	<span class="keyword">for</span> _, item := <span class="keyword">range</span> year &#123;</span><br><span class="line">		fmt.Printf(<span class="string">"#%-5d %9.9s %.55s %s\n"</span>, item.Number, item.User.Login, item.Title, item.CreatedAt)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	fmt.Printf(<span class="string">"long long ago\n"</span>)</span><br><span class="line">	<span class="keyword">for</span> _, item := <span class="keyword">range</span> distant &#123;</span><br><span class="line">		fmt.Printf(<span class="string">"#%-5d %9.9s %.55s %s\n"</span>, item.Number, item.User.Login, item.Title, item.CreatedAt)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
 <h4 id="练习4-11"><a href="#练习4-11" class="headerlink" title="练习4.11"></a>练习4.11</h4><p>开发一个工具让用户可以通过命令行创建、读取、更新或者关闭Github的issues,当需要额外输入的时候,调用他们喜欢的文本编辑器</p>
 <ul>
-<li>啊，感觉这个题目很无聊~~~</li>
+<li>啊，感觉这个题目很无聊<del>~</del></li>
 </ul>
 <h4 id="练习4-12"><a href="#练习4-12" class="headerlink" title="练习4.12"></a>练习4.12</h4><p>流行web漫画xkcd有一个JSON接口.例如,调用<a href="https://xkcd.com/571/info.0.json输出漫画571的详细描述,这个是很多人最喜欢的之一.下载每一个URL并且构建一个离线索引.编写xkcd来使用这个索引,可以通过命令行指定的搜索条件来查找并输出符合条件的每个漫画的URL和剧本">https://xkcd.com/571/info.0.json输出漫画571的详细描述,这个是很多人最喜欢的之一.下载每一个URL并且构建一个离线索引.编写xkcd来使用这个索引,可以通过命令行指定的搜索条件来查找并输出符合条件的每个漫画的URL和剧本</a></p>
 <ul>
@@ -336,67 +394,115 @@
 <li>至于缓存大概用Redis吧</li>
 <li>我很懒，就随便搞了个模板测试了下用法</li>
 </ul>
-<figure class="highlight golang"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">package</span> main</div><div class="line"></div><div class="line"><span class="keyword">import</span> (</div><div class="line">	<span class="string">"html/template"</span></div><div class="line">	<span class="string">"net/http"</span></div><div class="line">)</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">	<span class="keyword">const</span> templ = <span class="string">`&lt;p&gt;A: &#123;.A&#125;&lt;/p&gt;&lt;p&gt;B: &#123;.B&#125;&lt;/p&gt;`</span>  (换&#123;&#125;,因为hexo渲染问题)</div><div class="line">	t := template.Must(template.New(<span class="string">"escape"</span>).Parse(templ))</div><div class="line"></div><div class="line">	http.HandleFunc(<span class="string">"/"</span>, <span class="function"><span class="keyword">func</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</div><div class="line">		<span class="keyword">var</span> data <span class="keyword">struct</span> &#123;</div><div class="line">			A <span class="keyword">string</span></div><div class="line">			B template.HTML</div><div class="line">		&#125;</div><div class="line">		data.A = <span class="string">"&lt;b&gt;Hello!&lt;/b&gt;"</span></div><div class="line">		data.B = <span class="string">"&lt;b&gt;Hello!&lt;/b&gt;"</span></div><div class="line"></div><div class="line">		t.Execute(w, data)</div><div class="line">	&#125;)</div><div class="line">	http.ListenAndServe(<span class="string">":8888"</span>, <span class="literal">nil</span>)</div><div class="line"></div><div class="line">&#125;</div><div class="line"></div></pre></td></tr></table></figure>
+<figure class="highlight golang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">"html/template"</span></span><br><span class="line">	<span class="string">"net/http"</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">const</span> templ = <span class="string">`&lt;p&gt;A: &#123;.A&#125;&lt;/p&gt;&lt;p&gt;B: &#123;.B&#125;&lt;/p&gt;`</span>  (换&#123;&#125;,因为hexo渲染问题)</span><br><span class="line">	t := template.Must(template.New(<span class="string">"escape"</span>).Parse(templ))</span><br><span class="line"></span><br><span class="line">	http.HandleFunc(<span class="string">"/"</span>, <span class="function"><span class="keyword">func</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</span><br><span class="line">		<span class="keyword">var</span> data <span class="keyword">struct</span> &#123;</span><br><span class="line">			A <span class="keyword">string</span></span><br><span class="line">			B template.HTML</span><br><span class="line">		&#125;</span><br><span class="line">		data.A = <span class="string">"&lt;b&gt;Hello!&lt;/b&gt;"</span></span><br><span class="line">		data.B = <span class="string">"&lt;b&gt;Hello!&lt;/b&gt;"</span></span><br><span class="line"></span><br><span class="line">		t.Execute(w, data)</span><br><span class="line">	&#125;)</span><br><span class="line">	http.ListenAndServe(<span class="string">":8888"</span>, <span class="literal">nil</span>)</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/13/the_go_programming_lang_usage_answer_5/"  data-tooltip="Go程序设计语言课后习题答案-第五章(函数)">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/06/13/the_go_programming_lang_usage_answer_5/"
+                    data-tooltip="Go程序设计语言课后习题答案-第五章(函数)"
+                    aria-label="上一篇: Go程序设计语言课后习题答案-第五章(函数)"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/06/the_go_programming_lang_usage_answer_3/" data-tooltip="Go程序设计语言课后习题答案-第三章(基本数据)">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/06/06/the_go_programming_lang_usage_answer_3/"
+                    data-tooltip="Go程序设计语言课后习题答案-第三章(基本数据)"
+                    aria-label="下一篇: Go程序设计语言课后习题答案-第三章(基本数据)"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -404,10 +510,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -429,55 +532,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/13/the_go_programming_lang_usage_answer_5/"  data-tooltip="Go程序设计语言课后习题答案-第五章(函数)">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/06/13/the_go_programming_lang_usage_answer_5/"
+                    data-tooltip="Go程序设计语言课后习题答案-第五章(函数)"
+                    aria-label="上一篇: Go程序设计语言课后习题答案-第五章(函数)"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2018/06/06/the_go_programming_lang_usage_answer_3/" data-tooltip="Go程序设计语言课后习题答案-第三章(基本数据)">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2018/06/06/the_go_programming_lang_usage_answer_3/"
+                    data-tooltip="Go程序设计语言课后习题答案-第三章(基本数据)"
+                    aria-label="下一篇: Go程序设计语言课后习题答案-第三章(基本数据)"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -485,43 +625,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -537,28 +698,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -568,7 +724,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -581,7 +741,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -590,7 +750,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -601,7 +765,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -610,7 +774,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -620,9 +788,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -631,7 +799,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -641,7 +813,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -650,7 +822,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -662,7 +838,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -672,7 +848,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -682,9 +862,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -702,38 +882,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2018/06/08/the_go_programming_lang_usage_answer_4/';
-                 
-                    this.page.identifier = '2018/06/08/the_go_programming_lang_usage_answer_4/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 

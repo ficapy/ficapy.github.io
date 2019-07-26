@@ -13,35 +13,39 @@
     
         <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
     
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.\n\n\n基本概念\ntmux分客户端和服务端，这个docker这种是很相似的，我们操作的只是针对客户端，服务端以守护进程运行，这样实现了我们退出后下次再进入依旧保持了运行状态\nsession:比如你在公司有个工作环境，在家里又是另外一个工作环境。这2个环境差别非常大。那么就使用2个不同的session\nwindow:你在工作环境中要打开多个软件，聊天的、BT下载的、听歌的etc\npane:一个软件要分成多个区域输出\n当然一般来说越少是越方便切换的。就个人来说一个session就够了,主要切换来自于window和pane\ntmux主要来说最重要的就是对各个窗口的切换排列管理，各种键位绑定也是用于对窗口的切换\n\nwindows,pane基本设置和vim一样tmux也是使用一个主要的prefix key，先输入prefix key之后再输入绑定的字母执行操作.下面就将我从多个地方copy来的配置解释一番-_-\n设置成C-a,同时解绑原来的C-b,最后的bind a的作用就是:C-a本来是回到行首的快捷键，被tmux使用之后使用此设定变成了C-a-a到行首\n123set -g prefix ^aunbind ^bbind a send-prefix\n\n之后就是对window和pane的快捷键设定，本人使用vim相似的快捷键设定。这个好像没啥好说的，比如hjkl在pane中移动,s、v分屏，使用&lt;、&gt;、+、_对pane进行大小的改变，使用C-u、C-d进行交换，使用q、C-q进行关闭pane和window，举个例子\n1234bind k selectp -Ubind -r &lt; resize-pane -L 10bind ^u swapp -Ubind q killp\n\n使用-r(recursion)就能够输入一次&lt;之后马上多次输入&lt;、&gt;有效,这对于调整大小时是非常有用的。。。,没有被重写的配置基本都是非常好记的单词,c、n、w、d记这些都是毫不费力的\n鼠标、复制及清屏设置如果你不进行其他设置可能用几下动一下鼠标上下翻一下，就会高呼WTF。毕竟完全不动鼠标的大神不多，我还是打开鼠标设置吧,这样也能同时使用鼠标进行上下滑动了，其次复制也和以前不一样了，特别是如果你分了2个竖向的pane,这样和以前一样用鼠标复制就出问题了，当然你可以用z(zoom)全屏当前的pane，然后用鼠标复制。然而一个vim党是不会这样做的T_T。下面是设置\n123456789101112131415setw -g mouse on#set vi mode for copy modesetw -g mode-keys vi# more settings to make copy-mode more vim-likeunbind [bind Escape copy-modeunbind pbind p paste-bufferbind -t vi-copy &apos;v&apos; begin-selectionbind -t vi-copy &apos;y&apos; copy-selection# Buffers to/from Mac clipboard, yay tmux book from pragprogbind C-c run &quot;tmux save-buffer - | reattach-to-user-namespace pbcopy&quot;bind C-v run &quot;tmux set-buffer $(reattach-to-user-namespace pbpaste); tmux paste-buffer&quot;\n\n这样复制好像变得复杂了。。。需要先进入选择模式C-a-ESC-v选择需要复制的内容后再执行y复制到tmux的缓冲区，另外像tmux和vim这种的粘贴板是独立的,和osx系统的粘贴板不共通,如果要再复制到系统粘贴板，此时再使用C-a-C-c,好像是比较复杂啊。。你可以按住option再用鼠标选择也是直接复制到系统粘贴板，要让vim和tmux和系统粘贴板通用，你需要brew install reattach-to-user-namespace安装。另外iterm2其实是可以让他们共用的，下图选中Applications in terminal may access clipboard也能达到同样的效果，不过下面的参考文章有说有缺点-_-我就听了他的了\n再就是配置重载和清屏\n1234#bind -n C-l send-keys &apos;C-l&apos;bind -n C-k send-keys -R \\; send-keys C-l \\; clear-history# reload config (prefix r)bind r source ~/.tmux.conf \\; display &quot;Configuration reloaded!&quot;\n\n就好像command+k完全清屏，tmux也可以，不过需要配置(这个完美清屏命令找了很久),-n表示不需要先按prefix key直接使用C-k就调用了，另外不要将C-l设置为清屏,会让TAB补全失效\n状态栏配置一个好看的状态栏好像还是比较困难的,我比较偷懒就直接使用了tmux-powerlinetmux-colors-solarized,下面是效果注意配置powerline的时候可能需要在~/.zshrc中加入PS1=&quot;$PS1&quot;&#39;$([ -n &quot;$TMUX&quot; ] &amp;&amp; tmux setenv TMUXPWD_$(tmux display -p &quot;#D&quot; | tr -d %) &quot;$PWD&quot;)&#39;有的时候修改配置可能需要tmux kill-server后重新进入才能看到效果\n在状体栏的配置会看到这种set-option -g status-bg colour235,colour235是什么鬼颜色。真是不好猜啊，可以单独开一个pane打印输出所有256种颜色，自己对比修改成喜欢的颜色\n123for i in &#123;0..255&#125; ; do    printf &quot;\\x1b[38;5;$&#123;i&#125;mcolour$&#123;i&#125;\\n&quot;done\n\n其他我们设置好了之后可能需要在打开iterm之后就直接进入tmux,否则岂不是白忙活(≧▽≦)/啦啦啦，很简单,在iterm的设置页profiles→General→Send text at start中填入tmux attach -t init || tmux new -s init,更有用的是在我们远程到vps上的时候直接进入到tmux,设置一个别名如下alias hg=&quot;ssh -t hg \\&quot;bash -c &#39;tmux a -t init || tmux new -s init&#39;\\&quot;&quot;这样我们执行hg的时候就新建一个session或者连接到已有的session\n如果我们本地开一个tmux，然后远程连接vps，vps再运行tmux，这会造成嵌套使用。特别是当你的prefix key还是一样的时候。。。悲催了，你所输入的快捷键只会被本地的tmux处理而不会被远程的tmux响应，要处理这个问题可以将2者的prefix key设置成不一样,比如一个为a另外一个为s。或者使用iterm单独开一个窗口，我更推荐后者,因为设置成不同的prefix key输入快了可能就输入混淆啦。\n另外,使用了tmux显著增加了iterm2的耗电量,估计是我设置的那个状态栏显示上传下载流量导致的，每几秒刷新执行一次shell或许挺耗电.\n我的tmux配置\n参考A tmux Primergotbletu youtube playlistMaking the clipboard work between iTerm2, tmux, vim and OS X.How does the tmux color palette work?\n","dateCreated":"2016-09-02T15:43:22+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-09-02T15:43:22+08:00","description":"自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.","headline":"tmux","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/09/02/tmux_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/09/02/tmux_note/"}</script>
     <meta name="description" content="自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="tmux">
 <meta property="og:url" content="https://www.zoulei.net/2016/09/02/tmux_note/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/gotbletu_tmux.png">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/iterm_access_clipboard.png">
-<meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/tmux_statusbar.png">
-<meta property="og:updated_time" content="2016-09-04T07:33:07.000Z">
+<meta property="og:locale" content="zh-cn">
+<meta property="og:image" content="https://blogimg.ficapy.com/blogimg/gotbletu_tmux.png">
+<meta property="og:image" content="https://blogimg.ficapy.com/blogimg/iterm_access_clipboard.png">
+<meta property="og:image" content="https://blogimg.ficapy.com/blogimg/tmux_statusbar.png">
+<meta property="og:updated_time" content="2019-07-26T06:53:30.748Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="tmux">
 <meta name="twitter:description" content="自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.">
-<meta name="twitter:image" content="https://ficapy.b0.upaiyun.com/blogimg/gotbletu_tmux.png">
-<meta name="twitter:creator" content="@aec4d">
+<meta name="twitter:image" content="https://blogimg.ficapy.com/blogimg/gotbletu_tmux.png">
     
     
         
     
     
-        <meta property="og:image" content="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg"/>
-    
     
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-yrst5vo1nxaxbp2g3v9na2wg1lixlpr3ghbjdvskeixmu79deycecx3rh4bt.min.css">
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
     <!--STYLES END-->
     
+
+    
+
+    
+        
     
 </head>
 
@@ -51,23 +55,26 @@
 
 
     
-        
-            
-        
-    
 
 <header id="header" data-behavior="4">
     <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
     <div class="header-title">
-        <a class="header-title-link" href="/ ">邹雷</a>
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
     </div>
     
         
-            <a  class="header-right-picture "
-                href="#about">
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
         
-        
-            <img class="header-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
         </a>
     
@@ -76,23 +83,8 @@
             <!-- Define author's picture -->
 
 
-
-        
-    
-
 <nav id="sidebar" data-behavior="4">
     <div class="sidebar-container">
-        
-            <div class="sidebar-profile">
-                <a href="/#about">
-                    <img class="sidebar-profile-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
-                </a>
-                <h4 class="sidebar-profile-name">ficapy</h4>
-                
-                    <h5 class="sidebar-profile-bio"><p>author.bio</p>
-</h5>
-                
-            </div>
         
         
             <ul class="sidebar-buttons">
@@ -102,9 +94,10 @@
                         <a  class="sidebar-button-link "
                              href="/ "
                             
+                            title="首页"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-home"></i>
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
             </li>
@@ -114,9 +107,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-categories"
                             
+                            title="分类"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-bookmark"></i>
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
             </li>
@@ -126,9 +120,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-tags"
                             
+                            title="标签"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-tags"></i>
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
             </li>
@@ -138,9 +133,10 @@
                         <a  class="sidebar-button-link "
                              href="/all-archives"
                             
+                            title="归档"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-archive"></i>
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
             </li>
@@ -150,9 +146,10 @@
                         <a  class="sidebar-button-link open-algolia-search"
                              href="#search"
                             
+                            title="搜索"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-search"></i>
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
             </li>
@@ -162,9 +159,10 @@
                         <a  class="sidebar-button-link "
                              href="#about"
                             
+                            title="关于"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-question"></i>
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
             </li>
@@ -175,27 +173,66 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/ficapy" target="_blank">
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-github"></i>
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/c4dae" target="_blank">
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-twitter"></i>
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
             </li>
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="mailto:c4d@outlook.com" target="_blank">
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-envelope-o"></i>
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
             </li>
@@ -209,9 +246,10 @@
                         <a  class="sidebar-button-link "
                              href="/atom.xml"
                             
+                            title="RSS"
                         >
                     
-                        <i class="sidebar-button-icon fa fa-lg fa-rss"></i>
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
             </li>
@@ -227,17 +265,18 @@
                         hasCoverMetaIn
                         ">
                 
-<article class="post" itemscope itemType="http://schema.org/BlogPosting">
+<article class="post">
     
     
         <div class="post-header main-content-wrap text-left">
     
-        <h1 class="post-title" itemprop="headline">
+        <h1 class="post-title">
             tmux
         </h1>
     
-    <div class="post-meta">
-    <time itemprop="datePublished" datetime="2016-09-02T15:43:22+08:00">
+    
+        <div class="post-meta">
+    <time datetime="2016-09-02T15:43:22+08:00">
 	
 		    9月 02, 2016
     	
@@ -251,12 +290,15 @@
     
 </div>
 
-</div>
     
-    <div class="post-content markdown" itemprop="articleBody">
+</div>
+
+    
+    <div class="post-content markdown">
         <div class="main-content-wrap">
-            <p>自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)<br><img src="https://ficapy.b0.upaiyun.com/blogimg/gotbletu_tmux.png" alt="gotbletu_tmux"><br>我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.</p>
+            <p>自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)<br><img src="https://blogimg.ficapy.com/blogimg/gotbletu_tmux.png" alt="gotbletu_tmux"><br>我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.</p>
 <a id="more"></a>
+
 <h2 id="基本概念"><a href="#基本概念" class="headerlink" title="基本概念"></a>基本概念</h2><ul>
 <li>tmux分客户端和服务端，这个docker这种是很相似的，我们操作的只是针对客户端，服务端以守护进程运行，这样实现了我们退出后下次再进入依旧保持了运行状态</li>
 <li>session:比如你在公司有个工作环境，在家里又是另外一个工作环境。这2个环境差别非常大。那么就使用2个不同的session</li>
@@ -267,84 +309,129 @@
 </ul>
 <h2 id="windows-pane基本设置"><a href="#windows-pane基本设置" class="headerlink" title="windows,pane基本设置"></a>windows,pane基本设置</h2><p>和vim一样tmux也是使用一个主要的prefix key，先输入prefix key之后再输入绑定的字母执行操作.下面就将我从多个地方copy来的配置解释一番-_-</p>
 <p>设置成C-a,同时解绑原来的C-b,最后的bind a的作用就是:C-a本来是回到行首的快捷键，被tmux使用之后使用此设定变成了C-a-a到行首</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">set -g prefix ^a</div><div class="line">unbind ^b</div><div class="line">bind a send-prefix</div></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">set -g prefix ^a</span><br><span class="line">unbind ^b</span><br><span class="line">bind a send-prefix</span><br></pre></td></tr></table></figure>
+
 <p>之后就是对window和pane的快捷键设定，本人使用vim相似的快捷键设定。这个好像没啥好说的，比如hjkl在pane中移动,s、v分屏，使用&lt;、&gt;、+、_对pane进行大小的改变，使用C-u、C-d进行交换，使用q、C-q进行关闭pane和window，举个例子</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">bind k selectp -U</div><div class="line">bind -r &lt; resize-pane -L 10</div><div class="line">bind ^u swapp -U</div><div class="line">bind q killp</div></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">bind k selectp -U</span><br><span class="line">bind -r &lt; resize-pane -L 10</span><br><span class="line">bind ^u swapp -U</span><br><span class="line">bind q killp</span><br></pre></td></tr></table></figure>
+
 <p>使用-r(recursion)就能够输入一次&lt;之后马上多次输入&lt;、&gt;有效,这对于调整大小时是非常有用的。。。,没有被重写的配置基本都是非常好记的单词,c、n、w、d记这些都是毫不费力的</p>
 <h2 id="鼠标、复制及清屏设置"><a href="#鼠标、复制及清屏设置" class="headerlink" title="鼠标、复制及清屏设置"></a>鼠标、复制及清屏设置</h2><p>如果你不进行其他设置可能用几下动一下鼠标上下翻一下，就会高呼WTF。毕竟完全不动鼠标的大神不多，我还是打开鼠标设置吧,这样也能同时使用鼠标进行上下滑动了，其次复制也和以前不一样了，特别是如果你分了2个竖向的pane,这样和以前一样用鼠标复制就出问题了，当然你可以用z(zoom)全屏当前的pane，然后用鼠标复制。然而一个vim党是不会这样做的T_T。下面是设置</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">setw -g mouse on</div><div class="line">#set vi mode for copy mode</div><div class="line">setw -g mode-keys vi</div><div class="line"></div><div class="line"># more settings to make copy-mode more vim-like</div><div class="line">unbind [</div><div class="line">bind Escape copy-mode</div><div class="line">unbind p</div><div class="line">bind p paste-buffer</div><div class="line">bind -t vi-copy &apos;v&apos; begin-selection</div><div class="line">bind -t vi-copy &apos;y&apos; copy-selection</div><div class="line"></div><div class="line"># Buffers to/from Mac clipboard, yay tmux book from pragprog</div><div class="line">bind C-c run &quot;tmux save-buffer - | reattach-to-user-namespace pbcopy&quot;</div><div class="line">bind C-v run &quot;tmux set-buffer $(reattach-to-user-namespace pbpaste); tmux paste-buffer&quot;</div></pre></td></tr></table></figure>
-<p>这样复制好像变得复杂了。。。需要先进入选择模式C-a-ESC-v选择需要复制的内容后再执行y复制到tmux的缓冲区，另外像tmux和vim这种的粘贴板是独立的,和osx系统的粘贴板不共通,如果要再复制到系统粘贴板，此时再使用C-a-C-c,好像是比较复杂啊。。你可以按住option再用鼠标选择也是直接复制到系统粘贴板，要让vim和tmux和系统粘贴板通用，你需要<code>brew install reattach-to-user-namespace</code>安装。另外iterm2其实是可以让他们共用的，下图选中Applications in terminal may access clipboard也能达到同样的效果，不过下面的参考文章有说有缺点-_-我就听了他的了<br><img src="https://ficapy.b0.upaiyun.com/blogimg/iterm_access_clipboard.png" alt="iterm_access_clipboard"></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">setw -g mouse on</span><br><span class="line">#set vi mode for copy mode</span><br><span class="line">setw -g mode-keys vi</span><br><span class="line"></span><br><span class="line"># more settings to make copy-mode more vim-like</span><br><span class="line">unbind [</span><br><span class="line">bind Escape copy-mode</span><br><span class="line">unbind p</span><br><span class="line">bind p paste-buffer</span><br><span class="line">bind -t vi-copy &apos;v&apos; begin-selection</span><br><span class="line">bind -t vi-copy &apos;y&apos; copy-selection</span><br><span class="line"></span><br><span class="line"># Buffers to/from Mac clipboard, yay tmux book from pragprog</span><br><span class="line">bind C-c run &quot;tmux save-buffer - | reattach-to-user-namespace pbcopy&quot;</span><br><span class="line">bind C-v run &quot;tmux set-buffer $(reattach-to-user-namespace pbpaste); tmux paste-buffer&quot;</span><br></pre></td></tr></table></figure>
+
+<p>这样复制好像变得复杂了。。。需要先进入选择模式C-a-ESC-v选择需要复制的内容后再执行y复制到tmux的缓冲区，另外像tmux和vim这种的粘贴板是独立的,和osx系统的粘贴板不共通,如果要再复制到系统粘贴板，此时再使用C-a-C-c,好像是比较复杂啊。。你可以按住option再用鼠标选择也是直接复制到系统粘贴板，要让vim和tmux和系统粘贴板通用，你需要<code>brew install reattach-to-user-namespace</code>安装。另外iterm2其实是可以让他们共用的，下图选中Applications in terminal may access clipboard也能达到同样的效果，不过下面的参考文章有说有缺点-_-我就听了他的了<br><img src="https://blogimg.ficapy.com/blogimg/iterm_access_clipboard.png" alt="iterm_access_clipboard"></p>
 <p>再就是配置重载和清屏</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">#bind -n C-l send-keys &apos;C-l&apos;</div><div class="line">bind -n C-k send-keys -R \; send-keys C-l \; clear-history</div><div class="line"># reload config (prefix r)</div><div class="line">bind r source ~/.tmux.conf \; display &quot;Configuration reloaded!&quot;</div></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">#bind -n C-l send-keys &apos;C-l&apos;</span><br><span class="line">bind -n C-k send-keys -R \; send-keys C-l \; clear-history</span><br><span class="line"># reload config (prefix r)</span><br><span class="line">bind r source ~/.tmux.conf \; display &quot;Configuration reloaded!&quot;</span><br></pre></td></tr></table></figure>
+
 <p>就好像command+k完全清屏，tmux也可以，不过需要配置(这个完美清屏命令找了很久),-n表示不需要先按prefix key直接使用C-k就调用了，另外不要将C-l设置为清屏,会让TAB补全失效</p>
-<h2 id="状态栏"><a href="#状态栏" class="headerlink" title="状态栏"></a>状态栏</h2><p>配置一个好看的状态栏好像还是比较困难的,我比较偷懒就直接使用了<a href="https://github.com/erikw/tmux-powerline">tmux-powerline</a>和<a href="https://github.com/seebi/tmux-colors-solarized/blob/master/tmuxcolors-256.conf">tmux-colors-solarized</a>,下面是效果<br><img src="https://ficapy.b0.upaiyun.com/blogimg/tmux_statusbar.png" alt="tmux_statusbar"><br>注意配置powerline的时候可能需要在~/.zshrc中加入<code>PS1=&quot;$PS1&quot;&#39;$([ -n &quot;$TMUX&quot; ] &amp;&amp; tmux setenv TMUXPWD_$(tmux display -p &quot;#D&quot; | tr -d %) &quot;$PWD&quot;)&#39;</code>有的时候修改配置可能需要tmux kill-server后重新进入才能看到效果</p>
+<h2 id="状态栏"><a href="#状态栏" class="headerlink" title="状态栏"></a>状态栏</h2><p>配置一个好看的状态栏好像还是比较困难的,我比较偷懒就直接使用了<a href="https://github.com/erikw/tmux-powerline">tmux-powerline</a><a href="https://github.com/seebi/tmux-colors-solarized/blob/master/tmuxcolors-256.conf">tmux-colors-solarized</a>,下面是效果<br><img src="https://blogimg.ficapy.com/blogimg/tmux_statusbar.png" alt="tmux_statusbar"><br>注意配置powerline的时候可能需要在~/.zshrc中加入<code>PS1=&quot;$PS1&quot;&#39;$([ -n &quot;$TMUX&quot; ] &amp;&amp; tmux setenv TMUXPWD_$(tmux display -p &quot;#D&quot; | tr -d %) &quot;$PWD&quot;)&#39;</code>有的时候修改配置可能需要tmux kill-server后重新进入才能看到效果</p>
 <p>在状体栏的配置会看到这种<code>set-option -g status-bg colour235</code>,colour235是什么鬼颜色。真是不好猜啊，可以单独开一个pane打印输出所有256种颜色，自己对比修改成喜欢的颜色</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">for i in &#123;0..255&#125; ; do</div><div class="line">    printf &quot;\x1b[38;5;$&#123;i&#125;mcolour$&#123;i&#125;\n&quot;</div><div class="line">done</div></pre></td></tr></table></figure>
-<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p>我们设置好了之后可能需要在打开iterm之后就直接进入tmux,否则岂不是白忙活~(≧▽≦)/~啦啦啦，很简单,在iterm的设置页profiles→General→Send text at start中填入<code>tmux attach -t init || tmux new -s init</code>,更有用的是在我们远程到vps上的时候直接进入到tmux,设置一个别名如下<code>alias hg=&quot;ssh -t hg \&quot;bash -c &#39;tmux a -t init || tmux new -s init&#39;\&quot;&quot;</code>这样我们执行hg的时候就新建一个session或者连接到已有的session</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">for i in &#123;0..255&#125; ; do</span><br><span class="line">    printf &quot;\x1b[38;5;$&#123;i&#125;mcolour$&#123;i&#125;\n&quot;</span><br><span class="line">done</span><br></pre></td></tr></table></figure>
+
+<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p>我们设置好了之后可能需要在打开iterm之后就直接进入tmux,否则岂不是白忙活<del>(≧▽≦)/</del>啦啦啦，很简单,在iterm的设置页profiles→General→Send text at start中填入<code>tmux attach -t init || tmux new -s init</code>,更有用的是在我们远程到vps上的时候直接进入到tmux,设置一个别名如下<code>alias hg=&quot;ssh -t hg \&quot;bash -c &#39;tmux a -t init || tmux new -s init&#39;\&quot;&quot;</code>这样我们执行hg的时候就新建一个session或者连接到已有的session</p>
 <p>如果我们本地开一个tmux，然后远程连接vps，vps再运行tmux，这会造成嵌套使用。特别是当你的prefix key还是一样的时候。。。悲催了，你所输入的快捷键只会被本地的tmux处理而不会被远程的tmux响应，要处理这个问题可以将2者的prefix key设置成不一样,比如一个为a另外一个为s。或者使用iterm单独开一个窗口，我更推荐后者,因为设置成不同的prefix key输入快了可能就输入混淆啦。</p>
 <p>另外,使用了tmux显著增加了iterm2的耗电量,估计是我设置的那个状态栏显示上传下载流量导致的，每几秒刷新执行一次shell或许挺耗电.</p>
 <p><a href="https://github.com/ficapy/dotfiles/blob/master/.tmux.conf">我的tmux配置</a></p>
 <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://danielmiessler.com/study/tmux/">A tmux Primer</a><br><a href="https://www.youtube.com/playlist?list=PL5BE1545D8486D66D">gotbletu youtube playlist</a><br><a href="https://evertpot.com/osx-tmux-vim-copy-paste-clipboard/">Making the clipboard work between iTerm2, tmux, vim and OS X.</a><br><a href="http://superuser.com/questions/285381/how-does-the-tmux-color-palette-work">How does the tmux color palette work?</a></p>
 
             
+
+
         </div>
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-        <div class="post-actions-wrap">
+        
+            <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/05/flask_plugin_note/"  data-tooltip="Flask插件原理">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/09/05/flask_plugin_note/"
+                    data-tooltip="Flask插件原理"
+                    aria-label="上一篇: Flask插件原理"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/29/fasd&fzf/" data-tooltip="fasd和fzf">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/08/29/fasd&fzf/"
+                    data-tooltip="fasd和fzf"
+                    aria-label="下一篇: fasd和fzf"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/02/tmux_note/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/02/tmux_note/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/02/tmux_note/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/02/tmux_note/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/02/tmux_note/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/02/tmux_note/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -352,10 +439,7 @@
 
 
         
-            
-                <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-</div>
+        
             
         
     </div>
@@ -377,55 +461,92 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/09/05/flask_plugin_note/"  data-tooltip="Flask插件原理">
-                
-                    <i class="fa fa-angle-left"></i>
-                    <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/09/05/flask_plugin_note/"
+                    data-tooltip="Flask插件原理"
+                    aria-label="上一篇: Flask插件原理"
+                >
+                    
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
             </li>
             <li class="post-action">
                 
-                    <a class="post-action-btn btn btn--default tooltip--top" href="/2016/08/29/fasd&fzf/" data-tooltip="fasd和fzf">
-                
-                    <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
-                    <i class="fa fa-angle-right"></i>
-                </a>
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2016/08/29/fasd&fzf/"
+                    data-tooltip="fasd和fzf"
+                    aria-label="下一篇: fasd和fzf"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
             </li>
         </ul>
     </nav>
     <ul class="post-actions post-action-share">
         <li class="post-action hide-lg hide-md hide-sm">
-            <a class="post-action-btn btn btn--default btn-open-shareoptions"  href="#btn-open-shareoptions">
-                <i class="fa fa-share-alt"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/02/tmux_note/">
-                <i class="fa fa-google-plus"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/02/tmux_note/">
-                <i class="fa fa-facebook-official"></i>
-            </a>
-        </li>
-        <li class="post-action hide-xs">
-            <a class="post-action-btn btn btn--default" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/02/tmux_note/">
-                <i class="fa fa-twitter"></i>
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
         </li>
         
-            <li class="post-action">
-                <a class="post-action-btn btn btn--default" href="#disqus_thread">
-                    <i class="fa fa-comment-o"></i>
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/02/tmux_note/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
                 </a>
             </li>
         
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/02/tmux_note/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/02/tmux_note/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
-                <i class="fa fa-list"></i>
+                <i class="fa fa-list" aria-hidden="true"></i>
             </a>
         </li>
     </ul>
@@ -433,43 +554,64 @@
 
 
                 </div>
-                <div id="share-options-bar" class="share-options-bar" data-behavior="4">
-    <ul class="share-options">
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/02/tmux_note/">
-                <i class="fa fa-google-plus"></i><span>分享到 Google+</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/02/tmux_note/">
-                <i class="fa fa-facebook-official"></i><span>分享到 Facebook</span>
-            </a>
-        </li>
-        <li class="share-option">
-            <a class="share-option-btn" target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/02/tmux_note/">
-                <i class="fa fa-twitter"></i><span>分享到 Twitter</span>
-            </a>
-        </li>
-    </ul>
-</div>
-<div id="share-options-mask" class="share-options-mask"></div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2016/09/02/tmux_note/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2016/09/02/tmux_note/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2016/09/02/tmux_note/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
 
             
         </div>
         
 
 
-    
-        
-    
-
 <div id="about">
     <div id="about-card">
         <div id="about-btn-close">
-            <i class="fa fa-remove"></i>
+            <i class="fa fa-times"></i>
         </div>
-        
-            <img id="about-card-picture" src="https://ficapy.b0.upaiyun.com/blogimg/logo.jpg" alt="作者的图片"/>
         
             <h4 id="about-card-name">ficapy</h4>
         
@@ -485,28 +627,23 @@
             </div>
         
         
-            <div id="about-card-location">
-                <i class="fa fa-map-marker"></i>
-                <br/>
-                广东深圳
-            </div>
-        
     </div>
 </div>
 
-        <div id="algolia-search-modal" class="modal-container">
+        
+            <div id="algolia-search-modal" class="modal-container">
     <div class="modal">
         <div class="modal-header">
-            <span class="close-button"><i class="fa fa-close"></i></span>
-            <a href="https://algolia.com" target="_blank" class="searchby-algolia text-color-light link-unstyled">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
                 <span class="searchby-algolia-text text-color-light text-small">by</span>
-                <img class="searchby-algolia-logo" src="https://www.algolia.com/static_assets/images/press/downloads/algolia-light.svg">
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
             </a>
             <i class="search-icon fa fa-search"></i>
             <form id="algolia-search-form">
                 <input type="text" id="algolia-search-input" name="search"
                     class="form-control input--large search-input" placeholder="Search "
-                    autofocus="autofocus"/>
+                    />
             </form>
         </div>
         <div class="modal-body">
@@ -516,7 +653,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/29/hello_world/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
                             <h3 class="media-heading">博客起航</h3>
                         </a>
                         <span class="media-meta">
@@ -529,7 +670,7 @@
                         <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
 <p>：</p>
 <p>为了占行此处无耻的掠过N个字</p>
-<p>:<br></div>
+<p>:</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -538,7 +679,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
                             <h3 class="media-heading">IDM-Internet Download Manager</h3>
                         </a>
                         <span class="media-meta">
@@ -549,7 +694,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。<br></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -558,7 +703,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
                             <h3 class="media-heading">everything--文件搜索神器</h3>
                         </a>
                         <span class="media-meta">
@@ -568,9 +717,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/everything.jpg" alt="everything"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
 <p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
-<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！<br></div>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -579,7 +728,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/06/everything_tutorial/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
                             <h3 class="media-heading">everything进阶教程</h3>
                         </a>
                         <span class="media-meta">
@@ -589,7 +742,7 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。<br></div>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -598,7 +751,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
                             <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
                         </a>
                         <span class="media-meta">
@@ -610,7 +767,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://ficapy.b0.upaiyun.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -620,7 +777,11 @@
                 <div class="media">
                     
                     <div class="media-body">
-                        <a class="link-unstyled" href="https://www.zoulei.net/2013/10/25/xnview_image_view/">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
                             <h3 class="media-heading">xnview-图片查看</h3>
                         </a>
                         <span class="media-meta">
@@ -630,9 +791,9 @@
                                 
                             </span>
                         </span>
-                        <div class="media-content hide-xs font-merryweather"><p><img src="https://ficapy.b0.upaiyun.com/blogimg/xnview.jpg" alt="xnview"></p>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
 <p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a><br></div>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -650,38 +811,24 @@
         </div>
     </div>
 </div>
+
+        
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-rt08quwts7iav5x0cfd2ym0gb5qkd1lvrsmwrakxtkhefmaaes4ywkmnjnwf.min.js"></script>
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
 <!--SCRIPTS END-->
 
-    
-        <script>
-             var disqus_config = function () {
-                 this.page.url = 'https://www.zoulei.net/2016/09/02/tmux_note/';
-                 
-                    this.page.identifier = '2016/09/02/tmux_note/';
-                 
-             };
-            (function() {
-                var d = document, s = d.createElement('script');
-                var disqus_shortname = 'ficapy';
-                s.src = '//' + disqus_shortname + '.disqus.com/embed.js';
 
-                s.setAttribute('data-timestamp', +new Date());
-                (d.head || d.body).appendChild(s);
-            })();
-        </script>
     
 
 
 
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/moment-with-locales.min.js"></script>
-    <script src="https://ficapy.b0.upaiyun.com/blogimg/algoliasearch.min.js"></script>
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
     <script>
-        var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-        var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
     </script>
 
 
