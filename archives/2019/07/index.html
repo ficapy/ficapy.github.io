@@ -291,7 +291,7 @@
             </div>
             
                 <div class="postShorten-excerpt">
-                    <p>今天有15G的资料需要先传递到服务器上，琢磨着怎么能更快的上传完成，最后总结了一下方法，确实别直接scp传递效率高很多,从直接scp速度是40M/s，到使用参考文章使用lz4变成93M，最后换成zstd变成了152M,效果很棒，语句如下</p>
+                    <p>今天有15G的资料需要先传递到服务器上，琢磨着怎么能更快的上传完成，最后总结了一下方法，确实比直接scp传递效率高很多,从直接scp速度是40M/s，到参照参考文章利用lz4变成93M，最后换成zstd变成了152M,效果很棒，语句如下</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tar -c gh/ |pv| zstd -9 -T0 |ssh -c chacha20-poly1305@openssh.com  </span><br><span class="line">-o &quot;MACs umac-64@openssh.com&quot; clickhouse &quot;zstd -d | tar -xC /tmp/xx&quot;</span><br></pre></td></tr></table></figure>
                     
                         <a
