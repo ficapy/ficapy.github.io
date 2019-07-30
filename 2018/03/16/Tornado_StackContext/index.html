@@ -299,7 +299,7 @@
 <li>tornado的1.0.0版根本和yield没有一毛钱关系</li>
 <li>tornado最先引入yield居然并不是实现了gen</li>
 </ol>
-<p>yield最先在tornado里面展露头角是在<span style="color:red"><strong><a href="https://github.com/tornadoweb/tornado/commit/721e25d0acc68d751073261bec150ac12a9f88ab">这个commit</a></strong></span>里面。大神就是大神，虽然这个代码仅仅只有几十行。可是我觉得思路很新奇，膜拜😀(代码基于v1.0.0和v1.1.0)</p>
+<p>yield最先在tornado里面展露头角是在<span style="color:red"><strong><a href="https://github.com/tornadoweb/tornado/commit/721e25d0acc68d751073261bec150ac12a9f88ab" target="_blank" rel="noopener">这个commit</a></strong></span>里面。大神就是大神，虽然这个代码仅仅只有几十行。可是我觉得思路很新奇，膜拜😀(代码基于v1.0.0和v1.1.0)</p>
 <a id="more"></a>
 
 <p>建议打开该commit，先看一看它做了什么事情。除去测试用例，它改动的地方可谓非常少了</p>
@@ -319,7 +319,7 @@
 <li>send(value)返回的是yield右边的值，同时value赋值给yield左边的对象，<span style="color:red"><strong>千万不要被第一次的send(None)误导，认为经过第一次send(None)后result的值为None</strong></span>,你可以在心目中将没一个yield划上竖线，运行到那里就返回，然后下一次send的值被赋值给yield左边</li>
 <li>上例中<code>we are done</code>没有被打印，因为不断的被send后生成器会触发StopIteration异常。最终被except StopIteration所捕获。可是他并没有将捕获的值输出，因而没有被显示处理。同时python2不允许在生成器执行return，所以在tornado中经常看到raise gen.Return(value)这种写法，它实质就是触发StopIteration异常，然后被except捕获后得到值，完成传递过程，到了python3语法就直接允许执行return了</li>
 </ol>
-<h3 id="预备知识-with"><a href="#预备知识-with" class="headerlink" title="预备知识 with"></a>预备知识 with</h3><p>python有很多魔术方法(可以参考<a href="https://pycoders-weekly-chinese.readthedocs.io/en/latest/issue6/a-guide-to-pythons-magic-methods.html">这篇文章</a>)。其中如果一个类存在<code>__enter__</code>和<code>__exit__</code>方法。那么当使用with语句之后。会执行<code>__enter__</code>后得到对象返回给<code>with as</code>后面的变量。在退出的时候执行<code>__exit__</code>方法，最常见的就是我们使用<code>with open() as f</code>去打开一个文件了，处理完成后自动关闭文件，避免了内存泄漏。仔细想一下，其实用装饰器是很容易实现的。可是with语句还有以一个很大的优点，Python的编码是基于缩进来决定代码块的，装饰器是作用在函数上，而with是当跳出它的缩进则执行<code>__exit__</code>(可能描述的不太好)，很多情况下with要比装饰器的写法优美很多。</p>
+<h3 id="预备知识-with"><a href="#预备知识-with" class="headerlink" title="预备知识 with"></a>预备知识 with</h3><p>python有很多魔术方法(可以参考<a href="https://pycoders-weekly-chinese.readthedocs.io/en/latest/issue6/a-guide-to-pythons-magic-methods.html" target="_blank" rel="noopener">这篇文章</a>)。其中如果一个类存在<code>__enter__</code>和<code>__exit__</code>方法。那么当使用with语句之后。会执行<code>__enter__</code>后得到对象返回给<code>with as</code>后面的变量。在退出的时候执行<code>__exit__</code>方法，最常见的就是我们使用<code>with open() as f</code>去打开一个文件了，处理完成后自动关闭文件，避免了内存泄漏。仔细想一下，其实用装饰器是很容易实现的。可是with语句还有以一个很大的优点，Python的编码是基于缩进来决定代码块的，装饰器是作用在函数上，而with是当跳出它的缩进则执行<code>__exit__</code>(可能描述的不太好)，很多情况下with要比装饰器的写法优美很多。</p>
 <p>将with和yield联合起来使用还真的是挺神奇的。from contextlib import contextmanager，该模块将with语句做到了装饰器的效果。比如计算一个with语句下面的执行时间</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> time</span><br><span class="line"><span class="keyword">from</span> contextlib <span class="keyword">import</span> contextmanager</span><br><span class="line"></span><br><span class="line"><span class="meta">@contextmanager</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">timeit</span><span class="params">()</span>:</span></span><br><span class="line">    start = time.time()</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="keyword">yield</span></span><br><span class="line">    <span class="keyword">finally</span>:</span><br><span class="line">        print(<span class="string">"elapsed time: &#123;&#125;"</span>.format(time.time() - start))</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> timeit():</span><br><span class="line">    time.sleep(<span class="number">1</span>)</span><br></pre></td></tr></table></figure>
 <p>作为不明白它实现的人，也能够很容易看出来。yield将timeit划分为了两部分。前面的相当于执行<code>__enter__</code>动作，后面的相当于执行<code>__exit__</code>动作。</p>
@@ -342,7 +342,7 @@
 <h3 id="改进"><a href="#改进" class="headerlink" title="改进"></a>改进</h3><p>当然以上只是为了表述原理讲解的最简代码，实际上源码中略有不同。首先考虑多线程的情况，在单线程中_state的改动是很显然的，执行<code>with StackContext</code>即允许改动。在多线程中就不太一样了。多线程中如果也执行了<code>with StackContext</code>操作，那么有可能造成_state被改动。因此，_state被继承自thread.local对象。那么不同线程内的修改是互相独立的<br>其次如果一个函数已经被wrapped包装，那么就不必要再次进行包装了(想象一下递归调用add_callback)。对于不存在的<code>with StackContext</code>也需要考虑，如果执行contextlib.nested的参数为空，无疑是会报错的。<br>其他有的独立的运行的模块不希望被已存在的_state影响，因此独立设置了NullContext</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@contextlib.contextmanager</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">NullContext</span><span class="params">()</span>:</span></span><br><span class="line">    old_contexts = _state.contexts</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        _state.contexts = ()</span><br><span class="line">        <span class="keyword">yield</span></span><br><span class="line">    <span class="keyword">finally</span>:</span><br><span class="line">        _state.contexts = old_contexts</span><br></pre></td></tr></table></figure>
 <p>如果不希望被_state干扰，那么在前面加上<code>with StackContext(NullContext)</code>。_state即被置为空。显然add_callback传入的contexts为空。在它被执行的时候，也和with语句没什么事情了</p>
-<h3 id="应用"><a href="#应用" class="headerlink" title="应用"></a>应用</h3><p>我最开始看到的应用是这个,<a href="https://gist.github.com/Hackforid/7130a5d59463186e217e">在Tornado里面使用Sqlalchemy</a>。默认Sqlalchemy存在sessionmaker一个工厂函数，它会确定如何生成一个session会话对象以供使用。默认的情况是使用线程id，这对于多线程环境非常非常方便。因为多线程web框架中每一个HTTP请求的处理都是在独立的线程内进行的，那么一个http处理生命周期对应一个sqlalchemy的session生命周期非常完美。<br>可是在Tornado这种单线程的框架中发生了变化，因为它不好确定每一个http的生命周期标识。StackContext给了我们方法，虽然起因是callback的异常处理，可是我们一样可以参照它的套路，在_execute执行期间写入变量，在单个http生命周期均可以访问变量，http完结后清除它。代码可以参考给出的gist链接</p>
+<h3 id="应用"><a href="#应用" class="headerlink" title="应用"></a>应用</h3><p>我最开始看到的应用是这个,<a href="https://gist.github.com/Hackforid/7130a5d59463186e217e" target="_blank" rel="noopener">在Tornado里面使用Sqlalchemy</a>。默认Sqlalchemy存在sessionmaker一个工厂函数，它会确定如何生成一个session会话对象以供使用。默认的情况是使用线程id，这对于多线程环境非常非常方便。因为多线程web框架中每一个HTTP请求的处理都是在独立的线程内进行的，那么一个http处理生命周期对应一个sqlalchemy的session生命周期非常完美。<br>可是在Tornado这种单线程的框架中发生了变化，因为它不好确定每一个http的生命周期标识。StackContext给了我们方法，虽然起因是callback的异常处理，可是我们一样可以参照它的套路，在_execute执行期间写入变量，在单个http生命周期均可以访问变量，http完结后清除它。代码可以参考给出的gist链接</p>
 <h3 id="用例"><a href="#用例" class="headerlink" title="用例"></a>用例</h3><p>下面给一个整篇文章的代码总结</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    <span class="keyword">from</span> contextlib <span class="keyword">import</span> nested</span><br><span class="line"><span class="keyword">except</span> ImportError:</span><br><span class="line">    <span class="keyword">from</span> contextlib <span class="keyword">import</span> ExitStack, contextmanager</span><br><span class="line"></span><br><span class="line"><span class="meta">    @contextmanager</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">nested</span><span class="params">(*contexts)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> ExitStack() <span class="keyword">as</span> stack:</span><br><span class="line">            <span class="keyword">for</span> ctx <span class="keyword">in</span> contexts:</span><br><span class="line">                stack.enter_context(ctx)</span><br><span class="line">            <span class="keyword">yield</span> contexts</span><br><span class="line"><span class="keyword">import</span> functools</span><br><span class="line"></span><br><span class="line"><span class="meta">@contextmanager</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">StackContext</span><span class="params">(context_factory)</span>:</span></span><br><span class="line">    <span class="keyword">global</span> _state</span><br><span class="line">    old_contexts = _state</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        _state = old_contexts + (context_factory,)</span><br><span class="line">        <span class="keyword">with</span> context_factory():</span><br><span class="line">            <span class="keyword">yield</span></span><br><span class="line">    <span class="keyword">finally</span>:</span><br><span class="line">        _state = old_contexts</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@contextmanager</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">ErrorCapture</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="keyword">yield</span></span><br><span class="line">    <span class="keyword">except</span> Exception:</span><br><span class="line">        <span class="keyword">pass</span></span><br><span class="line"></span><br><span class="line">_state = ()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">wrap</span><span class="params">(fn)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">wrapped</span><span class="params">(callback, contexts)</span>:</span></span><br><span class="line">        <span class="keyword">with</span> nested(*[i() <span class="keyword">for</span> i <span class="keyword">in</span> contexts]):</span><br><span class="line">            callback()</span><br><span class="line"></span><br><span class="line">    contexts = _state</span><br><span class="line">    result = functools.partial(wrapped, fn, contexts)</span><br><span class="line">    <span class="keyword">return</span> result</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">loop_list = []</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">call_back</span><span class="params">()</span>:</span></span><br><span class="line">    print(<span class="string">"WTF"</span>)</span><br><span class="line">    print(get_current_request_id())</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">g = &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@contextmanager</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">ThreadRequestContext</span><span class="params">(**data)</span>:</span></span><br><span class="line">    <span class="keyword">global</span> g</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        g = data</span><br><span class="line">        <span class="keyword">yield</span></span><br><span class="line">    <span class="keyword">finally</span>:</span><br><span class="line">        g.clear()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_current_request_id</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">return</span> g[<span class="string">'request_id'</span>]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">global_data = &#123;<span class="string">"request_id"</span>: <span class="number">12</span>&#125;</span><br><span class="line"><span class="keyword">with</span> StackContext(functools.partial(ThreadRequestContext, **global_data)):</span><br><span class="line">    <span class="keyword">with</span> StackContext(ErrorCapture):</span><br><span class="line">        loop_list.append(wrap(call_back))</span><br><span class="line">        print(get_current_request_id())</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> loop_list:</span><br><span class="line">    i()</span><br></pre></td></tr></table></figure>
 
@@ -708,7 +708,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -732,7 +732,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -781,7 +781,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -806,8 +806,102 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/05/deskpins_top_window/"
+                            aria-label=": DeskPins-窗口置顶"
+                        >
+                            <h3 class="media-heading">DeskPins-窗口置顶</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月5日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/28/disktool_recommend/"
+                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
+                        >
+                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月28日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
+                            aria-label=": excel数字递增批量打印"
+                        >
+                            <h3 class="media-heading">excel数字递增批量打印</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月20日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
+<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
+                            aria-label=": pip使用国内镜像"
+                        >
+                            <h3 class="media-heading">pip使用国内镜像</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月27日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
+<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -820,7 +914,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 87 篇文章
+                找到 88 篇文章
             </p>
         </div>
     </div>

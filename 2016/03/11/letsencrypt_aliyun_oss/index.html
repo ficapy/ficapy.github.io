@@ -296,18 +296,18 @@
 <a id="more"></a>
 
 <h2 id="关于RSA的那些事儿"><a href="#关于RSA的那些事儿" class="headerlink" title="关于RSA的那些事儿"></a>关于RSA的那些事儿</h2><p>web安全离不开RSA非对称加密算法，说真的数学原理我没看明白。仅仅知道最后生成的公钥和私钥其实都是一对数字。可是我们经常看到生成的公私钥是字符串。其实它只是经过了一些编码(下见参考)。然后一个密钥用来加密一个密钥用来解密（意味着公私钥都能加密）。其次是签名，签名就是将需要签名的信息使用信息摘要算法（比如sha256）获取摘要。然后使用私钥进行加密，对方使用相同的步骤算出摘要，然后使用公钥对你加密的信息进行解密。如果解密的信息和算出摘要的信息相同则证明该信息完整且为对方发出。其实和HMAC相当的相似，只不过HMAC使用对称密钥。再其实。签名算法都差不多这样OVER</p>
-<h2 id="关于letsencrypt的内部流程"><a href="#关于letsencrypt的内部流程" class="headerlink" title="关于letsencrypt的内部流程"></a>关于letsencrypt的内部流程</h2><p>本节参考<a href="https://github.com/diafygi/acme-tiny/blob/master/acme_tiny.py">acme-tiny脚本</a>。过程中最重要的为用户认证流程。普遍的用户认证流程为获取token，即用户登录获取token，后续的API请求和该token关联。然而letsencrypt的流程非常不同(主要因为它不需要去letsencrypt网站进行注册)。一个独立的账户依靠本地生成证书来认证<code>openssl genrsa 4096 &gt; account.key</code>，该证书为PEM证书。即文件中含有公钥和私钥。对于所有的API请求都会要求签名。<br>签名代码如下：</p>
+<h2 id="关于letsencrypt的内部流程"><a href="#关于letsencrypt的内部流程" class="headerlink" title="关于letsencrypt的内部流程"></a>关于letsencrypt的内部流程</h2><p>本节参考<a href="https://github.com/diafygi/acme-tiny/blob/master/acme_tiny.py" target="_blank" rel="noopener">acme-tiny脚本</a>。过程中最重要的为用户认证流程。普遍的用户认证流程为获取token，即用户登录获取token，后续的API请求和该token关联。然而letsencrypt的流程非常不同(主要因为它不需要去letsencrypt网站进行注册)。一个独立的账户依靠本地生成证书来认证<code>openssl genrsa 4096 &gt; account.key</code>，该证书为PEM证书。即文件中含有公钥和私钥。对于所有的API请求都会要求签名。<br>签名代码如下：</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">_send_signed_request</span><span class="params">(url, payload)</span>:</span></span><br><span class="line">    payload64 = _b64(json.dumps(payload).encode(<span class="string">'utf8'</span>))</span><br><span class="line">    protected = copy.deepcopy(header)</span><br><span class="line">    protected[<span class="string">"nonce"</span>] = urlopen(CA + <span class="string">"/directory"</span>).headers[<span class="string">'Replay-Nonce'</span>]</span><br><span class="line">    protected64 = _b64(json.dumps(protected).encode(<span class="string">'utf8'</span>))</span><br><span class="line">    proc = subprocess.Popen([<span class="string">"openssl"</span>, <span class="string">"dgst"</span>, <span class="string">"-sha256"</span>, <span class="string">"-sign"</span>, account_key],</span><br><span class="line">        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)</span><br><span class="line">    out, err = proc.communicate(<span class="string">"&#123;0&#125;.&#123;1&#125;"</span>.format(protected64, payload64).encode(<span class="string">'utf8'</span>))</span><br><span class="line">    <span class="keyword">if</span> proc.returncode != <span class="number">0</span>:</span><br><span class="line">        <span class="keyword">raise</span> IOError(<span class="string">"OpenSSL Error: &#123;0&#125;"</span>.format(err))</span><br><span class="line">    data = json.dumps(&#123;</span><br><span class="line">        <span class="string">"header"</span>: header, <span class="string">"protected"</span>: protected64,</span><br><span class="line">        <span class="string">"payload"</span>: payload64, <span class="string">"signature"</span>: _b64(out),</span><br><span class="line">    &#125;)</span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        resp = urlopen(url, data.encode(<span class="string">'utf8'</span>))</span><br><span class="line">        <span class="keyword">return</span> resp.getcode(), resp.read()</span><br><span class="line">    <span class="keyword">except</span> IOError <span class="keyword">as</span> e:</span><br><span class="line">        <span class="keyword">return</span> getattr(e, <span class="string">"code"</span>, <span class="literal">None</span>), getattr(e, <span class="string">"read"</span>, e.__str__)()</span><br></pre></td></tr></table></figure>
 
 <p>可以看出从证书中取出公钥。然后依照<code>公钥+(公钥+服务器随机数+信息)+第二部分的签名</code>证明自己的身份。即：一个公钥对应一个身份。<br>后续的流程就是：①身份注册→→→→②获取域名列表→→→→(③发送http挑战请求→→→→④根据返回内容建立文件→→→→⑤自身测试下载→→→→⑥发送挑战测试请求)→→→→⑦提交csr文件返回签名证书</p>
-<h2 id="移植到OSS上"><a href="#移植到OSS上" class="headerlink" title="移植到OSS上"></a>移植到OSS上</h2><p>网上大多数教程都是部署到服务器。和部署到OSS最大的差别在于上面的划括号的部分。部署在服务器上是在服务器生成文件，如果部署到阿里云OSS，则应该上传文件到阿里云。没有别的区别。另外还可以使用DNS挑战。如果你使用cloudxns作DNS解析。也可以使用它，从而通过验证，另外一点。生成的证书文件需要在阿里云CDN设置页面设置。<code>然而！！！阿里云并没有提供API接口！！！</code>，意味着需要手工操作。然而至少每3个月更新一次还是很频繁的。。。。。。所以，要真用在上面还得三思<br><a href="https://gist.github.com/ficapy/2cef398fc4ee18013836">这是我参照acme-tiny改写的证书脚本</a></p>
+<h2 id="移植到OSS上"><a href="#移植到OSS上" class="headerlink" title="移植到OSS上"></a>移植到OSS上</h2><p>网上大多数教程都是部署到服务器。和部署到OSS最大的差别在于上面的划括号的部分。部署在服务器上是在服务器生成文件，如果部署到阿里云OSS，则应该上传文件到阿里云。没有别的区别。另外还可以使用DNS挑战。如果你使用cloudxns作DNS解析。也可以使用它，从而通过验证，另外一点。生成的证书文件需要在阿里云CDN设置页面设置。<code>然而！！！阿里云并没有提供API接口！！！</code>，意味着需要手工操作。然而至少每3个月更新一次还是很频繁的。。。。。。所以，要真用在上面还得三思<br><a href="https://gist.github.com/ficapy/2cef398fc4ee18013836" target="_blank" rel="noopener">这是我参照acme-tiny改写的证书脚本</a></p>
 <h2 id="hexo使用的一些建议"><a href="#hexo使用的一些建议" class="headerlink" title="hexo使用的一些建议"></a>hexo使用的一些建议</h2><ol>
 <li>将图片文件进行压缩放到CDN上面。压缩工具灰常之多。笔者就不例举了</li>
 <li>引用的国外JS文件能换成国内镜像源的全部替换(先查看有浏览器端有什么请求然后，比如这个模板会使用谷歌字体,直接使用<code>sed -i -- &#39;s/fonts.gstatic.com/fonts-gstatic.lug.ustc.edu.cn/g&#39; **/*(D.)</code>替换成中科大的,zsh专用)</li>
-<li>上传图片不如试试我写的脚本<a href="https://gist.github.com/ficapy/8c57998d14c434ab5df3">https://gist.github.com/ficapy/8c57998d14c434ab5df3</a></li>
+<li>上传图片不如试试我写的脚本<a href="https://gist.github.com/ficapy/8c57998d14c434ab5df3" target="_blank" rel="noopener">https://gist.github.com/ficapy/8c57998d14c434ab5df3</a></li>
 <li>swiftype加载真的好慢好慢。如果为了加载速度绝对要替换掉(😄，现在不免费了留你何用，替换成algolia了)</li>
 </ol>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://www.ruanyifeng.com/blog/2013/06/rsa_algorithm_part_one.html">RSA算法原理</a><br><a href="https://zh.wikipedia.org/wiki/%E9%87%91%E9%91%B0%E9%9B%9C%E6%B9%8A%E8%A8%8A%E6%81%AF%E9%91%91%E5%88%A5%E7%A2%BC">HMAC中文维基</a><br><a href="http://blog.sina.com.cn/s/blog_4fcd1ea30100yh4s.html">pem格式</a><br><a href="https://imququ.com/post/letsencrypt-certificate.html">letsencrypt部署</a><br><a href="http://unix.stackexchange.com/questions/112023/how-can-i-replace-a-string-in-a-files">How can I replace a string in a file(s)?</a></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="http://www.ruanyifeng.com/blog/2013/06/rsa_algorithm_part_one.html" target="_blank" rel="noopener">RSA算法原理</a><br><a href="https://zh.wikipedia.org/wiki/%E9%87%91%E9%91%B0%E9%9B%9C%E6%B9%8A%E8%A8%8A%E6%81%AF%E9%91%91%E5%88%A5%E7%A2%BC" target="_blank" rel="noopener">HMAC中文维基</a><br><a href="http://blog.sina.com.cn/s/blog_4fcd1ea30100yh4s.html" target="_blank" rel="noopener">pem格式</a><br><a href="https://imququ.com/post/letsencrypt-certificate.html" target="_blank" rel="noopener">letsencrypt部署</a><br><a href="http://unix.stackexchange.com/questions/112023/how-can-i-replace-a-string-in-a-files" target="_blank" rel="noopener">How can I replace a string in a file(s)?</a></p>
 
             
 
@@ -670,7 +670,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -694,7 +694,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -743,7 +743,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -768,8 +768,102 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/05/deskpins_top_window/"
+                            aria-label=": DeskPins-窗口置顶"
+                        >
+                            <h3 class="media-heading">DeskPins-窗口置顶</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月5日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/28/disktool_recommend/"
+                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
+                        >
+                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月28日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
+                            aria-label=": excel数字递增批量打印"
+                        >
+                            <h3 class="media-heading">excel数字递增批量打印</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月20日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
+<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
+                            aria-label=": pip使用国内镜像"
+                        >
+                            <h3 class="media-heading">pip使用国内镜像</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月27日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
+<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -782,7 +876,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 87 篇文章
+                找到 88 篇文章
             </p>
         </div>
     </div>

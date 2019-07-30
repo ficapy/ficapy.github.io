@@ -295,21 +295,21 @@
     
     <div class="post-content markdown">
         <div class="main-content-wrap">
-            <p>因为个人需求，写了一个很小众的作品，<a href="https://ocr.ficapy.com">https://ocr.ficapy.com</a>，我给它起的项目名是pdfaddtext，用途是给扫描版本的PDF文件加上搜索功能。使用场景是我有几本扫描版本的PDF书籍(网上有特别多的扫描版书籍)，有时候想搜索书中有没有提到某个知识点，纯图片是无法搜索的，你只能凭记忆去找。<span style="color:red"><strong>本项目作用就是将PDF的文本内容识别出来，然后写入一层隐藏的文字层，这样PDF阅读器就能够搜索这些文字了，同时尽量保证将识别出来的文字写到原图片对应的位置</strong></span>,类似的工具有<a href="https://github.com/jbarlow83/OCRmyPDF">OCRmyPDF</a>，它的缺点很明显，使用Tesseract OCR引擎，对比识别效果，简直被商用OCR吊打。</p>
+            <p>因为个人需求，写了一个很小众的作品，<a href="https://ocr.ficapy.com" target="_blank" rel="noopener">https://ocr.ficapy.com</a>，我给它起的项目名是pdfaddtext，用途是给扫描版本的PDF文件加上搜索功能。使用场景是我有几本扫描版本的PDF书籍(网上有特别多的扫描版书籍)，有时候想搜索书中有没有提到某个知识点，纯图片是无法搜索的，你只能凭记忆去找。<span style="color:red"><strong>本项目作用就是将PDF的文本内容识别出来，然后写入一层隐藏的文字层，这样PDF阅读器就能够搜索这些文字了，同时尽量保证将识别出来的文字写到原图片对应的位置</strong></span>,类似的工具有<a href="https://github.com/jbarlow83/OCRmyPDF" target="_blank" rel="noopener">OCRmyPDF</a>，它的缺点很明显，使用Tesseract OCR引擎，对比识别效果，简直被商用OCR吊打。</p>
 <p>最开始有了这个想法，我大概花费了一个下午的时间用python写出了基本的demo。将每一页PDF转换成图片，然后用免费的OCR服务去识别，得到结果，最后合并出一个新的pdf出来。过程算是比较顺利。本着独乐乐不如众乐乐的心态。我计划将它转变成一项web服务，于是挖坑之旅就此开始了</p>
 <p>TLDR</p>
 <a id="more"></a>
 
 <p>开始的构思是这个样子的<img src="https://blogimg.ficapy.com/blogimg/pdfaddtext_arch1.png" alt="pdfaddtext1"><br>后台接收到文件进行拆分，依次获取结果最后服务端生成文件返回给客户端。流程完成，是不是特简单😕</p>
-<h3 id="问题一-pdf转换生成jpg效率过低"><a href="#问题一-pdf转换生成jpg效率过低" class="headerlink" title="问题一: pdf转换生成jpg效率过低"></a>问题一: pdf转换生成jpg效率过低</h3><p>python的生态无需质疑，各种包齐全到你怀疑人生。pdf转换成jpg也都是有的，比如<a href="https://github.com/Belval/pdf2image">pdf2image</a>。它有一个无法忽视的缺点，效率太低。个人处理少量问题可以，但是如果用于web服务。每生成一张照片卡两秒，肯定无法忍受，后来对比imagemagick和ghostscript，ghostscript的效率比imagemagick高一些，当然比python不知道高到哪里去了。注: imagemagick的pdf转图片底层使用的是ghostscript，最后选择了subprocess调用ghostscript</p>
+<h3 id="问题一-pdf转换生成jpg效率过低"><a href="#问题一-pdf转换生成jpg效率过低" class="headerlink" title="问题一: pdf转换生成jpg效率过低"></a>问题一: pdf转换生成jpg效率过低</h3><p>python的生态无需质疑，各种包齐全到你怀疑人生。pdf转换成jpg也都是有的，比如<a href="https://github.com/Belval/pdf2image" target="_blank" rel="noopener">pdf2image</a>。它有一个无法忽视的缺点，效率太低。个人处理少量问题可以，但是如果用于web服务。每生成一张照片卡两秒，肯定无法忍受，后来对比imagemagick和ghostscript，ghostscript的效率比imagemagick高一些，当然比python不知道高到哪里去了。注: imagemagick的pdf转图片底层使用的是ghostscript，最后选择了subprocess调用ghostscript</p>
 <h3 id="问题二-OCR效率过低"><a href="#问题二-OCR效率过低" class="headerlink" title="问题二: OCR效率过低"></a>问题二: OCR效率过低</h3><p>目前没有能力搭建一个识别准确度比较高的文字识别引擎，于是使用了免费的OCR。在网上腾讯的免费OCR口碑是很不错的，超高的识别准确率，而且看文档发现不限制识别次数，只是不保证并发(是不是感觉超级良心！)。醒醒了少年，哪里有这么好的事情！！！</p>
 <p>我刚开始用的时候大概四五秒返回结果。识别准确率网上没有瞎吹，对中文的准确率还是很不错的，后来可能该服务用的人太多，效率大幅度降低。降低到10到20秒才会返回结果。而且经常性返回系统繁忙的错误。这也可能和我的需求有关，因为我上传的识别素材都是1000像素以上的图片。里面的文字众多，所以识别效率比较低。但是腾讯提供的免费OCR服务有劣化服务质量的嫌疑，毕竟如果免费的服务提供的过于的好，用户付费的热情肯定大幅度降低。很明显的是你上传一张图片得到结果，之后再次上传依旧是等待十几秒才得到结果，稍微正常的开发肯定都知道将结果缓存一下，再次相同的图片请求直接返回结果。鉴于腾讯OCR的低效，我不得不找其他的OCR服务同时使用，保证系统的可靠性，最终同时使用了以下服务</p>
 <ul>
-<li><a href="https://ai.qq.com/doc/ocridcardocr.shtml">腾讯</a></li>
-<li><a href="https://cloud.baidu.com/doc/OCR/OCR-API.html#.E8.BF.94.E5.9B.9E.E6.A0.BC.E5.BC.8F">百度</a></li>
-<li><a href="https://azure.microsoft.com/zh-cn/services/cognitive-services/computer-vision/">微软</a></li>
-<li><a href="http://ai.sogou.com/ai-docs/api/ocr">搜狗</a></li>
-<li><a href="https://console.faceplusplus.com.cn/documents/7776484">faceplusplus</a></li>
+<li><a href="https://ai.qq.com/doc/ocridcardocr.shtml" target="_blank" rel="noopener">腾讯</a></li>
+<li><a href="https://cloud.baidu.com/doc/OCR/OCR-API.html#.E8.BF.94.E5.9B.9E.E6.A0.BC.E5.BC.8F" target="_blank" rel="noopener">百度</a></li>
+<li><a href="https://azure.microsoft.com/zh-cn/services/cognitive-services/computer-vision/" target="_blank" rel="noopener">微软</a></li>
+<li><a href="http://ai.sogou.com/ai-docs/api/ocr" target="_blank" rel="noopener">搜狗</a></li>
+<li><a href="https://console.faceplusplus.com.cn/documents/7776484" target="_blank" rel="noopener">faceplusplus</a></li>
 </ul>
 <p>开发过程中的<span style="color:red"><strong>个人感觉</strong></span>,识别准确率依次是百度&gt;腾讯&gt;搜狗&gt;微软&gt;faceplusplus</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">分别是百度  腾讯  搜狗  微软 face++     对同一张简单图片的识别结果</span><br><span class="line">[[&apos;这是第一段文字&apos;, 316, 123, 22, 131], [&apos;这个地方是第二段Ohye&apos;, 213, 286, 21, 195]]</span><br><span class="line">[[&apos;这是第一段文字&apos;, 316, 123, 22, 131], [&apos;这个地方是第二段Ohye&apos;, 213, 286, 21, 195]]</span><br><span class="line">[[&apos;这是第一段文字&apos;, 309, 122, 24, 149], [&apos;这个地方是第二段Ohye&apos;, 202, 283, 26, 213]]</span><br><span class="line">[[&apos;这是第一段文字&apos;, 318, 125, 21, 124], [&apos;这个地方是第二段Ohye&apos;, 220, 290, 21, 189]]</span><br><span class="line">[[&apos;这是第一段文字&apos;, 319, 125, 19, 128], [&apos;个地方是第段Oye&apos;, 232, 286, 22, 176]]</span><br></pre></td></tr></table></figure>
@@ -341,9 +341,9 @@
 <li>生产者添加任务后<br>这里最重要的是不要在多个地方插入同一个事件，出了问题不好debug。下载完成前标志着第一次建立连接，websocket有可能标志着断线重连。它们最终都会走向生产者这个地方，所以我选择在生产者这里添加。先检测该file_md5是否存在对应的websocket连接，如果存在则加入全局队列，同时加入优先级队列</li>
 </ol>
 <h3 id="优化一：重复文件直接得到结果"><a href="#优化一：重复文件直接得到结果" class="headerlink" title="优化一：重复文件直接得到结果"></a>优化一：重复文件直接得到结果</h3><p>如果文件在后台数据库存在记录，如果该文件全部结果都正确存在则直接返回结果。如果正在被执行或者有部分内容没有被OCR。则后台新建任务，总而言之，避免用户再次上传文件到阿里云OSS</p>
-<h3 id="优化二：减少OCR次数"><a href="#优化二：减少OCR次数" class="headerlink" title="优化二：减少OCR次数"></a>优化二：减少OCR次数</h3><p>OCR的机会很宝贵,所以应该尽量减少OCR的次数，首先想到的是同一个文件如果得到了结果就不需要再次去调用OCR接口，再其次，一个PDF文件由N张图片组成。对每一张图片进行相似度判断，如果足够相似就认为它是同一张图片避免再次执行识别操作。图片相似度算法前面有博文提到，使用的是<a href="https://github.com/JohannesBuchner/imagehash">imagehash</a>。对每张图片生成64bit的标识。比对的时候使用汉明距离检查是否相似。数据库优化汉明距离的方法前面博文也有提到</p>
-<h3 id="优化三-使用浏览器客户端进行PDF合并"><a href="#优化三-使用浏览器客户端进行PDF合并" class="headerlink" title="优化三:  使用浏览器客户端进行PDF合并"></a>优化三:  使用浏览器客户端进行PDF合并</h3><p>如果用户上传的文件为100M，在后台生成文件并提供给用户下载，OSS外网下载的价格大概是1G五毛。嗯。上传几个大文件，来几次恶意下载，等着天价账单吧😀。因此这种应用采取客户端渲染是很有必要的，我先找了一下js的库。号称”任何能够用JavaScript实现的应用系统，最终都必将用JavaScript实现”~~,然并卵，我并没有找到允许修改PDF文件的开源js库，关于PDF的要么是渲染用，要么就是从0生成一个新的PDF文件。后来我找到了商业的js库pspdfkit(也有一些其他的，当然它们价格都不菲)，它让我知道了有webassembly这个东东的存在，它允许c/c++/rust代码再浏览器端执行。虽然c/c++/rust我一个都不会, 但是我还是找到了一个c++的库<a href="https://github.com/galkahana/PDF-Writer">PDF-Writer</a>，看到了希望的曙光内心是激动的。然后我去刷C的教程，再刷了一遍C++的教程，知道了Hello World怎么写。参照了几个webassembly的项目(大多数都是用C写的)。重点参照了这个<a href="https://github.com/antelle/wasm-image-compressor">wasm-image-compressor</a>。最终还真给折腾出来了(前端耗费的时间占据了整个开发的一大半)。结果是编译后大小为1.5M，实现了两个功能。验证PDF文件是否有效(可以正常解析，页数是否符合要求，每页大小是否符合要求)，传入PDF文件和json结果，生成一个新的文件。<br>别说效率还真不错，生成文件过程比python快很多</p>
-<p>该项目提供了两种生成PDF的方式，<a href="https://ocr.ficapy.com">浏览器端</a> 和<a href="https://gist.github.com/ficapy/baef42b378685e5853d709f2a69eadd1">python脚本</a>,这两种方式生成的PDF文件方式是不一样的。python的方式是合并两个图层，新的canvas图层透明度为完全透明.c++的方式是采取追加的方式，设置每个元素的可见性为不可见</p>
+<h3 id="优化二：减少OCR次数"><a href="#优化二：减少OCR次数" class="headerlink" title="优化二：减少OCR次数"></a>优化二：减少OCR次数</h3><p>OCR的机会很宝贵,所以应该尽量减少OCR的次数，首先想到的是同一个文件如果得到了结果就不需要再次去调用OCR接口，再其次，一个PDF文件由N张图片组成。对每一张图片进行相似度判断，如果足够相似就认为它是同一张图片避免再次执行识别操作。图片相似度算法前面有博文提到，使用的是<a href="https://github.com/JohannesBuchner/imagehash" target="_blank" rel="noopener">imagehash</a>。对每张图片生成64bit的标识。比对的时候使用汉明距离检查是否相似。数据库优化汉明距离的方法前面博文也有提到</p>
+<h3 id="优化三-使用浏览器客户端进行PDF合并"><a href="#优化三-使用浏览器客户端进行PDF合并" class="headerlink" title="优化三:  使用浏览器客户端进行PDF合并"></a>优化三:  使用浏览器客户端进行PDF合并</h3><p>如果用户上传的文件为100M，在后台生成文件并提供给用户下载，OSS外网下载的价格大概是1G五毛。嗯。上传几个大文件，来几次恶意下载，等着天价账单吧😀。因此这种应用采取客户端渲染是很有必要的，我先找了一下js的库。号称”任何能够用JavaScript实现的应用系统，最终都必将用JavaScript实现”~~,然并卵，我并没有找到允许修改PDF文件的开源js库，关于PDF的要么是渲染用，要么就是从0生成一个新的PDF文件。后来我找到了商业的js库pspdfkit(也有一些其他的，当然它们价格都不菲)，它让我知道了有webassembly这个东东的存在，它允许c/c++/rust代码再浏览器端执行。虽然c/c++/rust我一个都不会, 但是我还是找到了一个c++的库<a href="https://github.com/galkahana/PDF-Writer" target="_blank" rel="noopener">PDF-Writer</a>，看到了希望的曙光内心是激动的。然后我去刷C的教程，再刷了一遍C++的教程，知道了Hello World怎么写。参照了几个webassembly的项目(大多数都是用C写的)。重点参照了这个<a href="https://github.com/antelle/wasm-image-compressor" target="_blank" rel="noopener">wasm-image-compressor</a>。最终还真给折腾出来了(前端耗费的时间占据了整个开发的一大半)。结果是编译后大小为1.5M，实现了两个功能。验证PDF文件是否有效(可以正常解析，页数是否符合要求，每页大小是否符合要求)，传入PDF文件和json结果，生成一个新的文件。<br>别说效率还真不错，生成文件过程比python快很多</p>
+<p>该项目提供了两种生成PDF的方式，<a href="https://ocr.ficapy.com" target="_blank" rel="noopener">浏览器端</a> 和<a href="https://gist.github.com/ficapy/baef42b378685e5853d709f2a69eadd1" target="_blank" rel="noopener">python脚本</a>,这两种方式生成的PDF文件方式是不一样的。python的方式是合并两个图层，新的canvas图层透明度为完全透明.c++的方式是采取追加的方式，设置每个元素的可见性为不可见</p>
 <p>其次是字体的问题，写入文字的时候都需要指明字体。然而附带一个完整的字体会浪费巨大的空间。我找了一个比较小一点的中文字体，大小是1.5M。感觉这些文字不需要真正的显示出来，所以自己制作一个最小的字体带她这个中文字体是有可能的，但是我失败了。制作出来后电脑能够正常识别，C++库结果无法正常打开该字体</p>
 <h3 id="优化四-采用msgpack进行传输"><a href="#优化四-采用msgpack进行传输" class="headerlink" title="优化四: 采用msgpack进行传输"></a>优化四: 采用msgpack进行传输</h3><p>直接对结果进行json编码传输还是很不划算的,因此本项目数据存储以及前后端传输采用msgpack进行压缩后传输。需要注意的是websocket对二进制流需要特殊指定</p>
 <figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> socket = <span class="keyword">new</span> WebSocket(url);</span><br><span class="line">socket.binaryType = <span class="string">'arraybuffer'</span>;</span><br><span class="line">socket.onmessage = <span class="function"><span class="keyword">function</span> (<span class="params">event</span>) </span>&#123;</span><br><span class="line">    <span class="keyword">let</span> raw_data = <span class="keyword">new</span> <span class="built_in">Uint8Array</span>(event.data);</span><br><span class="line">    ret = msgpack.decode(raw_data);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -355,7 +355,7 @@
 <li>后台对PDF进行预处理,如果发现可直接读取文字表示该页不需要被OCR</li>
 <li>改进前端发布逻辑，每次变动文件名让CDN缓存很尴尬</li>
 </ol>
-<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="http://bertanguven.com/faster-conversions-from-pdf-to-pngjpeg-imagemagick-vs-ghostscript">Faster conversions from PDF to PNG/JPEG, imagemagick vs ghostscript</a></p>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="http://bertanguven.com/faster-conversions-from-pdf-to-pngjpeg-imagemagick-vs-ghostscript" target="_blank" rel="noopener">Faster conversions from PDF to PNG/JPEG, imagemagick vs ghostscript</a></p>
 
             
 
@@ -718,7 +718,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -742,7 +742,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -791,7 +791,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -816,8 +816,102 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/05/deskpins_top_window/"
+                            aria-label=": DeskPins-窗口置顶"
+                        >
+                            <h3 class="media-heading">DeskPins-窗口置顶</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月5日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/28/disktool_recommend/"
+                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
+                        >
+                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月28日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
+                            aria-label=": excel数字递增批量打印"
+                        >
+                            <h3 class="media-heading">excel数字递增批量打印</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月20日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
+<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
+                            aria-label=": pip使用国内镜像"
+                        >
+                            <h3 class="media-heading">pip使用国内镜像</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月27日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
+<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -830,7 +924,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 87 篇文章
+                找到 88 篇文章
             </p>
         </div>
     </div>

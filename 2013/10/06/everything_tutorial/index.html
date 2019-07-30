@@ -298,20 +298,15 @@
             <p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p>
 <a id="more"></a>
 <p>但是出现了这么一次。我需要确定搜索文件的大小范围和时间范围。问一些使用everything的朋友他们也不知道，在网上也没看到类似的资料，甚至有些网友回答用everything不能做到。很简单的一个问题却困扰了我很久。so，有了这篇文章。本篇博文只是在基础上进行了一些延伸。不建立在修改设置的基础之上。希望能帮到过往的朋友~~</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt=""></p>
-<p><span style="color: #ff0000;">首先你得在<a href="http://www.voidtools.com/"><span
-style="color: #ff0000;">everything官网</span></a>下载最新版（beta版本），不要下载稳定版。因为稳定版没有搜索语法帮助文件，不利于查看语法帮助。</span></p>
-<p><span style="color: #ff0000;">其次看帮助文件最好看<span
-style="color: #0000ff;">英文原版</span>，否则会把你坑的不轻~~~~</span></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt></p>
+<p><span style="color: #ff0000;">首先你得在<a href="http://www.voidtools.com/" target="_blank" rel="noopener"><span style="color: #ff0000;">everything官网</span></a>下载最新版（beta版本），不要下载稳定版。因为稳定版没有搜索语法帮助文件，不利于查看语法帮助。</span></p>
+<p><span style="color: #ff0000;">其次看帮助文件最好看<span style="color: #0000ff;">英文原版</span>，否则会把你坑的不轻~~~~</span></p>
 <p>从截图的帮助文件看出everything提供了3种帮助文件-搜索语法、正则语法、命令行。。。。其中第三种基本可以无视。基本上关于搜索的结果都是调用图形界面。还有些蛋疼的功能估计也没必要听闻~~~例举如下：</p>
 <p>WIN+R 输入CMD                                   #进入命令行界面</p>
 <p>D:<br>#切换到everything安装盘</p>
 <p>cd \Program Files\Everything       #进入安装目录</p>
 <p>everything.exe -search dropbox #其结果是打开everything搜索dropbox</p>
-<p>加强搜索的帮助是搜索语法和正则，其中正则的帮助文件异常简单。用很简单的语言介绍了几个元字符的用法。如果你有正则表达式的基础在everything上面完全没问题。你会知道什么时候使用正则会让你马上找到你需要的结果（目测要用到正则的情况并不多见）。如果没有，推荐你看正则表达式的<span
-style="color: #0000ff;"><a href="http://www.cnblogs.com/deerchao/archive/2006/08/24/zhengzhe30fengzhongjiaocheng.html">入门教程</a>，<span
-style="color: #000000;">呵呵。30分钟入门，绝对超赞的教程额~~~但是everything对正则的支持稍显薄弱。可用元字符不多，另外<span
-style="color: #ff0000;">无法和函数搭配使用</span>也是一大遗憾。</span></span></p>
+<p>加强搜索的帮助是搜索语法和正则，其中正则的帮助文件异常简单。用很简单的语言介绍了几个元字符的用法。如果你有正则表达式的基础在everything上面完全没问题。你会知道什么时候使用正则会让你马上找到你需要的结果（目测要用到正则的情况并不多见）。如果没有，推荐你看正则表达式的<span style="color: #0000ff;"><a href="http://www.cnblogs.com/deerchao/archive/2006/08/24/zhengzhe30fengzhongjiaocheng.html" target="_blank" rel="noopener">入门教程</a>，<span style="color: #000000;">呵呵。30分钟入门，绝对超赞的教程额~~~但是everything对正则的支持稍显薄弱。可用元字符不多，另外<span style="color: #ff0000;">无法和函数搭配使用</span>也是一大遗憾。</span></span></p>
 <p>让你的搜索技巧提升到一个高度，其实用函数才是最简单同时也是最有效的办法。函数是个大杀器。例举如下</p>
 <p>要搜索在13年6到9月创建的一个文件名为某某计划的excel文档，文件大小大概在10到30kb之间，如果你直接用”计划<br>.xls”搜索按时间排序无法确定文件大小。单独按照文件大小排序同理~~~~难道只能用windows自带的搜索，忍受那坑爹的速度么，用它的函数功能异常简单，”*计划<br>.xls file: dm:2013/6-2013/9<br>size:10kb-30kb”（加了些无用的东西，方便下面说明）</p>
 <p>但是初看everything的函数语法帮助文件并不好理解，分为了几大类操作符、通配符、宏、修饰符、函数、函数语法、大小语法、大小常数、日期语法、属性常数~~~~~这介绍的确让人纳闷。用刚才的举例来说明</p>
@@ -321,11 +316,9 @@ style="color: #ff0000;">无法和函数搭配使用</span>也是一大遗憾。<
 <p>修饰符:增加条件，进一步缩小范围，比如文中的file:<br>代表只显示文件，不显示文件夹；</p>
 <p>函数:基本包含了精确搜索的主要功能了，有关日期，大小，类型，文件属性，文件名长度等，其中日期有2种，文件创建日期和修日期。我一般会使用文件修改日期，因为和everything主界面的更新日期含义一致，如果用dc：…….你可能会怀疑是不是软件出错了~~~~；</p>
 <p>函数语法:无它，就是让你确定函数参数的值和范围；</p>
-<p><span
-style="color: #0000ff;"><strong>特别注明</strong></span>：everything搜索文件名超快，但是基于其他的条件未知，搜索条件可能是从左到右，所以尽量先添加一些限定条件把文件限制的一定的范围，比如文件格式”.txt”等，最后添加函数比如”size:&gt;1mb”，如果你输入”size:&gt;1mb<br>A”等格式~~轻则软件提示停止搜索，重则会导致需强制注销</p>
-<p>–引用自:<a href="http://forum.voidtools.com/viewtopic.php?f=2&amp;t=1640#">http://forum.voidtools.com/viewtopic.php?f=2&amp;t=1640#</a></p>
-<p>后面的大小语法等就没说的必要了，就是函数的参数部分内容。<span
-style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中文你会看到比较坑的地方，比如中文关于日期语法是这样的日期语法：<br>year<br>month/year<br>day/month/year</p>
+<p><span style="color: #0000ff;"><strong>特别注明</strong></span>：everything搜索文件名超快，但是基于其他的条件未知，搜索条件可能是从左到右，所以尽量先添加一些限定条件把文件限制的一定的范围，比如文件格式”.txt”等，最后添加函数比如”size:&gt;1mb”，如果你输入”size:&gt;1mb<br>A”等格式~~轻则软件提示停止搜索，重则会导致需强制注销</p>
+<p>–引用自:<a href="http://forum.voidtools.com/viewtopic.php?f=2&amp;t=1640#" target="_blank" rel="noopener">http://forum.voidtools.com/viewtopic.php?f=2&amp;t=1640#</a></p>
+<p>后面的大小语法等就没说的必要了，就是函数的参数部分内容。<span style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中文你会看到比较坑的地方，比如中文关于日期语法是这样的日期语法：<br>year<br>month/year<br>day/month/year</p>
 <p>英文版是这样的,Date Syntax:<br>year<br>month/year or year/month depending on locale settings<br>day/month/year, month/day/year or year/month/day depending on locale<br>settings<br>…看到区别了吗depending on locale<br>settings，中文帮助或许没跟上。这部分是直接略过的，让我纠结了很长时间，甚至发现了年月格式可以用jan/2013等，顺便吐槽下学好英语在实际应用中的重要性&gt;_&lt;~~~</p>
 
             
@@ -696,7 +689,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -720,7 +713,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -769,7 +762,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -794,8 +787,102 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/05/deskpins_top_window/"
+                            aria-label=": DeskPins-窗口置顶"
+                        >
+                            <h3 class="media-heading">DeskPins-窗口置顶</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月5日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/28/disktool_recommend/"
+                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
+                        >
+                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月28日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
+                            aria-label=": excel数字递增批量打印"
+                        >
+                            <h3 class="media-heading">excel数字递增批量打印</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月20日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
+<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
+                            aria-label=": pip使用国内镜像"
+                        >
+                            <h3 class="media-heading">pip使用国内镜像</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月27日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
+<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -808,7 +895,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 87 篇文章
+                找到 88 篇文章
             </p>
         </div>
     </div>

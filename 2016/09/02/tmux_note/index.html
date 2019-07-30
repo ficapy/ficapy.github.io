@@ -323,15 +323,15 @@
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">#bind -n C-l send-keys &apos;C-l&apos;</span><br><span class="line">bind -n C-k send-keys -R \; send-keys C-l \; clear-history</span><br><span class="line"># reload config (prefix r)</span><br><span class="line">bind r source ~/.tmux.conf \; display &quot;Configuration reloaded!&quot;</span><br></pre></td></tr></table></figure>
 
 <p>就好像command+k完全清屏，tmux也可以，不过需要配置(这个完美清屏命令找了很久),-n表示不需要先按prefix key直接使用C-k就调用了，另外不要将C-l设置为清屏,会让TAB补全失效</p>
-<h2 id="状态栏"><a href="#状态栏" class="headerlink" title="状态栏"></a>状态栏</h2><p>配置一个好看的状态栏好像还是比较困难的,我比较偷懒就直接使用了<a href="https://github.com/erikw/tmux-powerline">tmux-powerline</a><a href="https://github.com/seebi/tmux-colors-solarized/blob/master/tmuxcolors-256.conf">tmux-colors-solarized</a>,下面是效果<br><img src="https://blogimg.ficapy.com/blogimg/tmux_statusbar.png" alt="tmux_statusbar"><br>注意配置powerline的时候可能需要在~/.zshrc中加入<code>PS1=&quot;$PS1&quot;&#39;$([ -n &quot;$TMUX&quot; ] &amp;&amp; tmux setenv TMUXPWD_$(tmux display -p &quot;#D&quot; | tr -d %) &quot;$PWD&quot;)&#39;</code>有的时候修改配置可能需要tmux kill-server后重新进入才能看到效果</p>
+<h2 id="状态栏"><a href="#状态栏" class="headerlink" title="状态栏"></a>状态栏</h2><p>配置一个好看的状态栏好像还是比较困难的,我比较偷懒就直接使用了<a href="https://github.com/erikw/tmux-powerline" target="_blank" rel="noopener">tmux-powerline</a><a href="https://github.com/seebi/tmux-colors-solarized/blob/master/tmuxcolors-256.conf" target="_blank" rel="noopener">tmux-colors-solarized</a>,下面是效果<br><img src="https://blogimg.ficapy.com/blogimg/tmux_statusbar.png" alt="tmux_statusbar"><br>注意配置powerline的时候可能需要在~/.zshrc中加入<code>PS1=&quot;$PS1&quot;&#39;$([ -n &quot;$TMUX&quot; ] &amp;&amp; tmux setenv TMUXPWD_$(tmux display -p &quot;#D&quot; | tr -d %) &quot;$PWD&quot;)&#39;</code>有的时候修改配置可能需要tmux kill-server后重新进入才能看到效果</p>
 <p>在状体栏的配置会看到这种<code>set-option -g status-bg colour235</code>,colour235是什么鬼颜色。真是不好猜啊，可以单独开一个pane打印输出所有256种颜色，自己对比修改成喜欢的颜色</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">for i in &#123;0..255&#125; ; do</span><br><span class="line">    printf &quot;\x1b[38;5;$&#123;i&#125;mcolour$&#123;i&#125;\n&quot;</span><br><span class="line">done</span><br></pre></td></tr></table></figure>
 
 <h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p>我们设置好了之后可能需要在打开iterm之后就直接进入tmux,否则岂不是白忙活<del>(≧▽≦)/</del>啦啦啦，很简单,在iterm的设置页profiles→General→Send text at start中填入<code>tmux attach -t init || tmux new -s init</code>,更有用的是在我们远程到vps上的时候直接进入到tmux,设置一个别名如下<code>alias hg=&quot;ssh -t hg \&quot;bash -c &#39;tmux a -t init || tmux new -s init&#39;\&quot;&quot;</code>这样我们执行hg的时候就新建一个session或者连接到已有的session</p>
 <p>如果我们本地开一个tmux，然后远程连接vps，vps再运行tmux，这会造成嵌套使用。特别是当你的prefix key还是一样的时候。。。悲催了，你所输入的快捷键只会被本地的tmux处理而不会被远程的tmux响应，要处理这个问题可以将2者的prefix key设置成不一样,比如一个为a另外一个为s。或者使用iterm单独开一个窗口，我更推荐后者,因为设置成不同的prefix key输入快了可能就输入混淆啦。</p>
 <p>另外,使用了tmux显著增加了iterm2的耗电量,估计是我设置的那个状态栏显示上传下载流量导致的，每几秒刷新执行一次shell或许挺耗电.</p>
-<p><a href="https://github.com/ficapy/dotfiles/blob/master/.tmux.conf">我的tmux配置</a></p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://danielmiessler.com/study/tmux/">A tmux Primer</a><br><a href="https://www.youtube.com/playlist?list=PL5BE1545D8486D66D">gotbletu youtube playlist</a><br><a href="https://evertpot.com/osx-tmux-vim-copy-paste-clipboard/">Making the clipboard work between iTerm2, tmux, vim and OS X.</a><br><a href="http://superuser.com/questions/285381/how-does-the-tmux-color-palette-work">How does the tmux color palette work?</a></p>
+<p><a href="https://github.com/ficapy/dotfiles/blob/master/.tmux.conf" target="_blank" rel="noopener">我的tmux配置</a></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://danielmiessler.com/study/tmux/" target="_blank" rel="noopener">A tmux Primer</a><br><a href="https://www.youtube.com/playlist?list=PL5BE1545D8486D66D" target="_blank" rel="noopener">gotbletu youtube playlist</a><br><a href="https://evertpot.com/osx-tmux-vim-copy-paste-clipboard/" target="_blank" rel="noopener">Making the clipboard work between iTerm2, tmux, vim and OS X.</a><br><a href="http://superuser.com/questions/285381/how-does-the-tmux-color-palette-work" target="_blank" rel="noopener">How does the tmux color palette work?</a></p>
 
             
 
@@ -694,7 +694,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -718,7 +718,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -767,7 +767,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -792,8 +792,102 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/05/deskpins_top_window/"
+                            aria-label=": DeskPins-窗口置顶"
+                        >
+                            <h3 class="media-heading">DeskPins-窗口置顶</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月5日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/28/disktool_recommend/"
+                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
+                        >
+                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月28日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
+                            aria-label=": excel数字递增批量打印"
+                        >
+                            <h3 class="media-heading">excel数字递增批量打印</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月20日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
+<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
+                            aria-label=": pip使用国内镜像"
+                        >
+                            <h3 class="media-heading">pip使用国内镜像</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月27日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
+<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -806,7 +900,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 87 篇文章
+                找到 88 篇文章
             </p>
         </div>
     </div>
