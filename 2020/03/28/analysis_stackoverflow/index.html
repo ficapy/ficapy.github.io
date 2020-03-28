@@ -1,0 +1,1400 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>分析stackoverflow热门问答 - 邹雷</title>
+    <meta name="author" content="ficapy">
+    
+    
+    
+        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"stackoverflow无疑是每个程序员的圣地，里面的问和答不知道解救了多少Copy-Paste党。更难能可贵的是它开放了自己的主要数据库，允许任何人对它的数据进行下载分析。让你用自己的方式去理解数据，实在是太激动人心了。其实类似的还有Github. 本文抛砖引玉。记录了我用它来发现哪些问题和解答是非常有价值的，然后自己可以针对性的查看学习\n\n\n\n数据源\nhttps://archive.org/download/stackexchange\nhttps://empirical-software.engineering/projects/sotorrent/\n\nstackoverflow可能从建站之初就一直开放了自己的数据库。2014年起它将数据库拷贝托管到了archive.org，数据库文件总量极限压缩之后总大小仍然有接近100G。这还真不是一笔小的宽带费用。因此数据是每几个月更新一次。更要命的是archive上只能下载到最新一版的数据。无法得到历史版本数据。这对与有对比需求的人是很伤的，比如要分析语言流行变化趋势，哪项技术流行，哪些衰败就没辙了！！！还好有位老哥(链接二)也对分析SO敢兴趣。于是又找个了分析组织托管历史数据。至此我们分析数据的数据源有了\n数据结构\nhttps://meta.stackexchange.com/questions/2677/database-schema-documentation-for-the-public-data-dump-and-sede\nhttps://sedeschema.github.io/\n\n链接一包含各个字段的解释，链接二有更形象的图表\n我个人目前只需要分析哪些问题和解答是高质量的。所以只有posts表对我有用。因此我下载了2020年3月和2017年12月的posts表\n数据处理选型\nstackoverflow自己的提供的线上数据查询工具. 因为是关系型数据库，我对它的分析性能表示怀疑。没有试用\ngoogle bigquery 试用过你会知道，这查询性能当时就震惊到我了，看起来是关系型数据库的结构，对SQL的兼容可谓是非常好。即使各种表关联也一点不慢。并且可以和bigquery平台上其他的公共数据集关联查询，然而它最大的缺点是:贵贵贵贵贵贵贵！！！！。它提供了试用，你可能进行几次查询就用光免费额度了\nclickhouse 列数据库。极致性能，而且很好上手，即便是笔记本单机也能无压力秒级分析亿级数据(磁盘最好是SSD)，用在本例上是很轻松了\n\n因此本文用了Clickhouse，安装和基础使用就不说了，我个人使用的是DataGrip作为客户端，使用csv格式导入数据库\n数据转换下载得到的数据是压缩的xml格式。很尴尬，基本没有人直接分析xml格式，所以需要先转换一下。而且即使我只下载了Posts表。其中某些字段对我也是没有用的。比如标题和内容表。精简之后能大幅减少文件大小，也有利于数据库存储和分析。下载得到Posts.xml大小15G，解压后73G。 写了个Rust脚本从xml转换到csv，没有用多进程，性能尚可\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374757677787980818283848586878889use quick_xml::events::attributes::Attribute;use csv;use htmlescape::decode_html;use quick_xml::events::Event;use quick_xml::Reader;use std::fs::File;fn get_attribute&lt;'a, 'b&gt;(attributes: &amp;'b [Attribute&lt;'a&gt;], key: &amp;str, default: &amp;'b str) -&gt; &amp;'b str &#123;    let v = attributes        .into_iter()        .find(|a| a.key == key.as_bytes())        .map_or(default.as_bytes(), |a| &amp;a.value);    std::str::from_utf8(v).unwrap()&#125;fn main() &#123;    let mut buf = Vec::new();    let mut reader = Reader::from_file(\"Posts.xml\").unwrap();    let mut csvf = File::create(\"posts.csv\").expect(\"unable to create file\");    let mut wtr = csv::Writer::from_writer(csvf);    wtr.write_record(&amp;[        \"id\",        \"create_date\",        \"post_type\",        \"score\",        \"view_count\",        \"tags\",        \"answer_count\",        \"comment_count\",        \"favorite_count\",    ]);    let mut count = 0;    loop &#123;        match reader.read_event(&amp;mut buf) &#123;            Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e)) =&gt; match e.name() &#123;                b\"row\" =&gt; &#123;                    count += 1;                    let attributes = e.attributes().map(|a| a.unwrap()).collect::&lt;Vec&lt;_&gt;&gt;();                    let id = get_attribute(&amp;attributes, \"Id\", \"0\");                    let create_date =                        get_attribute(&amp;attributes, \"CreationDate\", \"1990-01-01T01:49:46.220\");                    let post_type = get_attribute(&amp;attributes, \"PostTypeId\", \"0\");                    let score = get_attribute(&amp;attributes, \"Score\", \"0\");                    let view_count = get_attribute(&amp;attributes, \"ViewCount\", \"0\");                    let tags = get_attribute(&amp;attributes, \"Tags\", \"\");                    let answer_count = get_attribute(&amp;attributes, \"AnswerCount\", \"0\");                    let comment_count = get_attribute(&amp;attributes, \"CommentCount\", \"0\");                    let favorite_count = get_attribute(&amp;attributes, \"FavoriteCount\", \"0\");                    let create_date = format!(\"&#123;&#125; &#123;&#125;\", &amp;create_date[0..10], &amp;create_date[11..19]);                    let create_date = create_date.as_str();                    let decode_tag = decode_html(tags).unwrap();                    let tag = decode_tag                        .trim_matches('&gt;')                        .trim_matches('&lt;')                        .split(\"&gt;&lt;\")                        .map(|s| format!(\"'&#123;&#125;'\", s))                        .collect::&lt;Vec&lt;String&gt;&gt;()                        .join(\",\");                    let tag = format!(\"[&#123;&#125;]\", tag);                    let tag = tag.as_str();                    wtr.write_record(&amp;[                        id,                        create_date,                        post_type,                        score,                        view_count,                        tag,                        answer_count,                        comment_count,                        favorite_count,                    ]);                &#125;                _ =&gt; println!(\"&#123;:?&#125;\", std::str::from_utf8(e.name()).unwrap()),            &#125;,            Ok(Event::Eof) =&gt; break,            _ =&gt; (),        &#125;    &#125;    wtr.flush();&#125;\n\n以上是转换2020年3月的数据，17年12月的xml类型，减去几个字段\n数据写入数据库建表\n123456789101112131415161718192021222324create table posts(    id             UInt64,    create_date    DateTime,    post_type      Int8,    score          Int32,    view_count     UInt32,    tags           Array(String),    answer_count   UInt16,    comment_count  UInt16,    favorite_count UInt16)    engine = MergeTree PARTITION BY toYear(create_date) ORDER BY create_date;        create table posts2017(    id             UInt64,    score          Int32,    view_count     UInt32,    answer_count   UInt16,    comment_count  UInt16,    favorite_count UInt16)    engine = MergeTree PARTITION BY id % 10 ORDER BY id;\n\n将csv写入clickhouse\n12cat posts.csv | clickhouse-client --query=&quot;INSERT INTO posts2017 Format CSVWithNames&quot;;cat posts.csv | clickhouse-client --query=&quot;INSERT INTO posts Format CSVWithNames&quot;;\n\n将两张表合并到一张表，加速查询\n123456789101112131415161718create table posts_all engine = MergeTree PARTITION BY toYear(create_date) ORDER BY create_date ASselect id,       tags,       create_date,       post_type,       score,       view_count,       answer_count,       comment_count,       favorite_count,       posts2017.score          as _score,       posts2017.view_count     as _view_count,       posts2017.answer_count   as _answer_count,       posts2017.comment_count  as _comment_count,       posts2017.favorite_count as _favorite_countfrom posts         any         left join posts2017 on posts2017.id = posts.id;\n\n开始分析吧一切准备就绪，接下来就是自由分析啦，这个就看个人发挥了。自己写了个仅供参考\n查找C语言中有价值的问题\n12345678910111213141516171819202122232425262728293031323334353637select id, groupArray(t) xfrom (      select arrayJoin(tags) tag, id, 'score' t      from posts_all      where tag = 'c'        and post_type = 1      order by (score - _score) desc      limit 30      union all      select arrayJoin(tags) tag, id, 'view' t      from posts_all      where tag = 'c'        and post_type = 1      order by view_count - _view_count desc      limit 30      union all      select arrayJoin(tags) tag, id, 'answer' t      from posts_all      where tag = 'c'        and post_type = 1      order by answer_count - _answer_count desc      limit 30      union all      select arrayJoin(tags) tag, id, 'comment' t      from posts_all      where tag = 'c'        and post_type = 1      order by comment_count - _comment_count desc      limit 30      union all      select arrayJoin(tags) tag, id, 'favorite' t      from posts_all      where tag = 'c'        and post_type = 1      order by favorite_count - _favorite_count desc      limit 30)group by id order by length(x) desc,x desc ;\n\n结果如下:\n\n\n\nid\nx\n\n\n\n572547\n[‘favorite’,’view’,’score’]\n\n\n1041866\n[‘favorite’,’view’,’score’]\n\n\n47981\n[‘favorite’,’view’,’score’]\n\n\n37538\n[‘favorite’,’view’,’score’]\n\n\n1675351\n[‘favorite’,’view’,’score’]\n\n\n24853\n[‘favorite’,’view’,’score’]\n\n\n58224638\n[‘answer’,’score’,’comment’]\n\n\n612097\n[‘view’,’score’]\n\n\n1921539\n[‘view’,’score’]\n\n\n201101\n[‘view’,’score’]\n\n\n16931770\n[‘view’,’score’]\n\n\n8547778\n[‘favorite’,’score’]\n\n\n840501\n[‘favorite’,’score’]\n\n\n1410563\n[‘favorite’,’score’]\n\n\n1642028\n[‘favorite’,’score’]\n\n\n7825055\n[‘favorite’,’score’]\n\n\n605845\n[‘favorite’,’score’]\n\n\n1143262\n[‘favorite’,’score’]\n\n\n65820\n[‘favorite’,’score’]\n\n\n9229601\n[‘favorite’,’score’]\n\n\n1711631\n[‘favorite’,’score’]\n\n\n21593\n[‘favorite’,’score’]\n\n\n36827659\n[‘favorite’,’score’]\n\n\n1433204\n[‘favorite’,’score’]\n\n\n57842756\n[‘answer’,’score’]\n\n\n52509602\n[‘answer’,’favorite’]\n\n\n4264127\n[‘view’]\n\n\n3501338\n[‘view’]\n\n\n330793\n[‘view’]\n\n\n2279379\n[‘view’]\n\n\n822323\n[‘view’]\n\n\n5029840\n[‘view’]\n\n\n3437404\n[‘view’]\n\n\n38561\n[‘view’]\n\n\n2386772\n[‘view’]\n\n\n1088622\n[‘view’]\n\n\n308695\n[‘view’]\n\n\n111928\n[‘view’]\n\n\n628761\n[‘view’]\n\n\n15004944\n[‘view’]\n\n\n19641597\n[‘view’]\n\n\n27272525\n[‘view’]\n\n\n17307275\n[‘view’]\n\n\n8257714\n[‘view’]\n\n\n7021725\n[‘view’]\n\n\n8440816\n[‘view’]\n\n\n57650895\n[‘score’]\n\n\n1538420\n[‘score’]\n\n\n204476\n[‘score’]\n\n\n2550774\n[‘score’]\n\n\n381542\n[‘score’]\n\n\n5134891\n[‘favorite’]\n\n\n98650\n[‘favorite’]\n\n\n4955198\n[‘favorite’]\n\n\n31162367\n[‘favorite’]\n\n\n5431941\n[‘favorite’]\n\n\n119123\n[‘favorite’]\n\n\n63166\n[‘favorite’]\n\n\n145270\n[‘favorite’]\n\n\n81656\n[‘favorite’]\n\n\n562303\n[‘favorite’]\n\n\n55307892\n[‘comment’]\n\n\n48494733\n[‘comment’]\n\n\n48844198\n[‘comment’]\n\n\n55069186\n[‘comment’]\n\n\n55101427\n[‘comment’]\n\n\n49649253\n[‘comment’]\n\n\n50226598\n[‘comment’]\n\n\n49040259\n[‘comment’]\n\n\n50895849\n[‘comment’]\n\n\n53657018\n[‘comment’]\n\n\n48125683\n[‘comment’]\n\n\n58714944\n[‘comment’]\n\n\n48515115\n[‘comment’]\n\n\n51181037\n[‘comment’]\n\n\n48912653\n[‘comment’]\n\n\n47691216\n[‘comment’]\n\n\n48134447\n[‘comment’]\n\n\n51867939\n[‘comment’]\n\n\n53563600\n[‘comment’]\n\n\n45524284\n[‘comment’]\n\n\n47777205\n[‘comment’]\n\n\n48505911\n[‘comment’]\n\n\n48176305\n[‘comment’]\n\n\n56406841\n[‘comment’]\n\n\n47616508\n[‘comment’]\n\n\n48420442\n[‘comment’]\n\n\n48914413\n[‘comment’]\n\n\n57575599\n[‘comment’]\n\n\n52451184\n[‘comment’]\n\n\n51638803\n[‘answer’]\n\n\n53444743\n[‘answer’]\n\n\n53832063\n[‘answer’]\n\n\n50530113\n[‘answer’]\n\n\n58278260\n[‘answer’]\n\n\n50951261\n[‘answer’]\n\n\n56208872\n[‘answer’]\n\n\n49456599\n[‘answer’]\n\n\n48608993\n[‘answer’]\n\n\n53298646\n[‘answer’]\n\n\n52442415\n[‘answer’]\n\n\n466204\n[‘answer’]\n\n\n53109888\n[‘answer’]\n\n\n50288322\n[‘answer’]\n\n\n59925618\n[‘answer’]\n\n\n52359906\n[‘answer’]\n\n\n48315523\n[‘answer’]\n\n\n48868367\n[‘answer’]\n\n\n122616\n[‘answer’]\n\n\n50822596\n[‘answer’]\n\n\n47906401\n[‘answer’]\n\n\n51548994\n[‘answer’]\n\n\n48226806\n[‘answer’]\n\n\n8487986\n[‘answer’]\n\n\n2602823\n[‘answer’]\n\n\n54025987\n[‘answer’]\n\n\n60113944\n[‘answer’]\n\n\n参考All Stack Exchange data dumps\n","dateCreated":"2020-03-28T21:00:00+08:00","dateModified":"2020-03-28T22:14:16+08:00","datePublished":"2020-03-28T21:00:00+08:00","description":"stackoverflow无疑是每个程序员的圣地，里面的问和答不知道解救了多少Copy-Paste党。更难能可贵的是它开放了自己的主要数据库，允许任何人对它的数据进行下载分析。让你用自己的方式去理解数据，实在是太激动人心了。其实类似的还有Github. 本文抛砖引玉。记录了我用它来发现哪些问题和解答是非常有价值的，然后自己可以针对性的查看学习","headline":"分析stackoverflow热门问答","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"}</script>
+    <meta name="description" content="stackoverflow无疑是每个程序员的圣地，里面的问和答不知道解救了多少Copy-Paste党。更难能可贵的是它开放了自己的主要数据库，允许任何人对它的数据进行下载分析。让你用自己的方式去理解数据，实在是太激动人心了。其实类似的还有Github. 本文抛砖引玉。记录了我用它来发现哪些问题和解答是非常有价值的，然后自己可以针对性的查看学习">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="分析stackoverflow热门问答">
+<meta property="og:url" content="https://www.zoulei.net/2020/03/28/analysis_stackoverflow/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="stackoverflow无疑是每个程序员的圣地，里面的问和答不知道解救了多少Copy-Paste党。更难能可贵的是它开放了自己的主要数据库，允许任何人对它的数据进行下载分析。让你用自己的方式去理解数据，实在是太激动人心了。其实类似的还有Github. 本文抛砖引玉。记录了我用它来发现哪些问题和解答是非常有价值的，然后自己可以针对性的查看学习">
+<meta property="og:locale" content="zh-cn">
+<meta property="og:updated_time" content="2020-03-28T14:14:16.163Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="分析stackoverflow热门问答">
+<meta name="twitter:description" content="stackoverflow无疑是每个程序员的圣地，里面的问和答不知道解救了多少Copy-Paste党。更难能可贵的是它开放了自己的主要数据库，允许任何人对它的数据进行下载分析。让你用自己的方式去理解数据，实在是太激动人心了。其实类似的还有Github. 本文抛砖引玉。记录了我用它来发现哪些问题和解答是非常有价值的，然后自己可以针对性的查看学习">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    <!--STYLES END-->
+    
+
+    
+
+    
+        
+    
+</head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/ "
+            aria-label=""
+        >
+            邹雷
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/ "
+                            
+                            title="首页"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-categories"
+                            
+                            title="分类"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-tags"
+                            
+                            title="标签"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/all-archives"
+                            
+                            title="归档"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link open-algolia-search"
+                             href="#search"
+                            
+                            title="搜索"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="#about"
+                            
+                            title="关于"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
+                    
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
+                    
+                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Stack Overflow</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
+                    
+                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Twitter</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
+                    
+                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Facebook</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
+                    
+                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">Google Plus</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
+                    
+                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">LinkedIn</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/mailto"
+                            title="邮箱"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a  class="sidebar-button-link "
+                             href="/atom.xml"
+                            
+                            title="RSS"
+                        >
+                    
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            分析stackoverflow热门问答
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2020-03-28T21:00:00+08:00">
+	
+		    3月 28, 2020
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/C/">C</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>stackoverflow无疑是每个程序员的圣地，里面的问和答不知道解救了多少Copy-Paste党。更难能可贵的是它开放了自己的主要数据库，允许任何人对它的数据进行下载分析。让你用自己的方式去理解数据，实在是太激动人心了。其实类似的还有Github. 本文抛砖引玉。记录了我用它来发现哪些问题和解答是非常有价值的，然后自己可以针对性的查看学习</p>
+<a id="more"></a>
+
+
+<h3 id="数据源"><a href="#数据源" class="headerlink" title="数据源"></a>数据源</h3><ol>
+<li><a href="https://archive.org/download/stackexchange" target="_blank" rel="noopener">https://archive.org/download/stackexchange</a></li>
+<li><a href="https://empirical-software.engineering/projects/sotorrent/" target="_blank" rel="noopener">https://empirical-software.engineering/projects/sotorrent/</a></li>
+</ol>
+<p>stackoverflow可能从建站之初就一直开放了自己的数据库。2014年起它将数据库拷贝托管到了archive.org，数据库文件总量极限压缩之后总大小仍然有接近100G。这还真不是一笔小的宽带费用。因此数据是每几个月更新一次。更要命的是archive上只能下载到最新一版的数据。无法得到历史版本数据。这对与有对比需求的人是很伤的，比如要分析语言流行变化趋势，哪项技术流行，哪些衰败就没辙了！！！还好有位老哥(链接二)也对分析SO敢兴趣。于是又找个了分析组织托管历史数据。至此我们分析数据的数据源有了</p>
+<h3 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h3><ol>
+<li><a href="https://meta.stackexchange.com/questions/2677/database-schema-documentation-for-the-public-data-dump-and-sede" target="_blank" rel="noopener">https://meta.stackexchange.com/questions/2677/database-schema-documentation-for-the-public-data-dump-and-sede</a></li>
+<li><a href="https://sedeschema.github.io/" target="_blank" rel="noopener">https://sedeschema.github.io/</a></li>
+</ol>
+<p>链接一包含各个字段的解释，链接二有更形象的图表</p>
+<p>我个人目前只需要分析哪些问题和解答是高质量的。所以只有posts表对我有用。因此我下载了2020年3月和2017年12月的posts表</p>
+<h3 id="数据处理选型"><a href="#数据处理选型" class="headerlink" title="数据处理选型"></a>数据处理选型</h3><ol>
+<li>stackoverflow自己的提供的<a href="https://data.stackexchange.com/" target="_blank" rel="noopener">线上数据查询工具</a>. 因为是关系型数据库，我对它的分析性能表示怀疑。没有试用</li>
+<li><a href="https://cloud.google.com/blog/products/gcp/google-bigquery-public-datasets-now-include-stack-overflow-q-a" target="_blank" rel="noopener">google bigquery</a> 试用过你会知道，这查询性能当时就震惊到我了，看起来是关系型数据库的结构，对SQL的兼容可谓是非常好。即使各种表关联也一点不慢。并且可以和bigquery平台上其他的公共数据集关联查询，然而它最大的缺点是:<span style="color:red"><strong>贵贵贵贵贵贵贵！！！！</strong></span>。它提供了试用，你可能进行几次查询就用光免费额度了</li>
+<li><a href="https://clickhouse.tech/" target="_blank" rel="noopener">clickhouse</a> 列数据库。极致性能，而且很好上手，即便是笔记本单机也能无压力秒级分析亿级数据(磁盘最好是SSD)，用在本例上是很轻松了</li>
+</ol>
+<p>因此本文用了Clickhouse，安装和基础使用就不说了，我个人使用的是<a href="https://www.jetbrains.com/datagrip/" target="_blank" rel="noopener">DataGrip</a>作为客户端，使用csv格式导入数据库</p>
+<h3 id="数据转换"><a href="#数据转换" class="headerlink" title="数据转换"></a>数据转换</h3><p>下载得到的数据是压缩的xml格式。很尴尬，基本没有人直接分析xml格式，所以需要先转换一下。而且即使我只下载了Posts表。其中某些字段对我也是没有用的。比如标题和内容表。精简之后能大幅减少文件大小，也有利于数据库存储和分析。下载得到Posts.xml大小15G，解压后73G。 写了个Rust脚本从xml转换到csv，没有用多进程，性能尚可</p>
+<figure class="highlight rust"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">use</span> quick_xml::events::attributes::Attribute;</span><br><span class="line"></span><br><span class="line"><span class="keyword">use</span> csv;</span><br><span class="line"><span class="keyword">use</span> htmlescape::decode_html;</span><br><span class="line"><span class="keyword">use</span> quick_xml::events::Event;</span><br><span class="line"><span class="keyword">use</span> quick_xml::Reader;</span><br><span class="line"><span class="keyword">use</span> std::fs::File;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fn</span> <span class="title">get_attribute</span></span>&lt;<span class="symbol">'a</span>, <span class="symbol">'b</span>&gt;(attributes: &amp;<span class="symbol">'b</span> [Attribute&lt;<span class="symbol">'a</span>&gt;], key: &amp;<span class="built_in">str</span>, <span class="keyword">default</span>: &amp;<span class="symbol">'b</span> <span class="built_in">str</span>) -&gt; &amp;<span class="symbol">'b</span> <span class="built_in">str</span> &#123;</span><br><span class="line">    <span class="keyword">let</span> v = attributes</span><br><span class="line">        .into_iter()</span><br><span class="line">        .find(|a| a.key == key.as_bytes())</span><br><span class="line">        .map_or(<span class="keyword">default</span>.as_bytes(), |a| &amp;a.value);</span><br><span class="line">    std::<span class="built_in">str</span>::from_utf8(v).unwrap()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fn</span> <span class="title">main</span></span>() &#123;</span><br><span class="line">    <span class="keyword">let</span> <span class="keyword">mut</span> buf = <span class="built_in">Vec</span>::new();</span><br><span class="line">    <span class="keyword">let</span> <span class="keyword">mut</span> reader = Reader::from_file(<span class="string">"Posts.xml"</span>).unwrap();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">let</span> <span class="keyword">mut</span> csvf = File::create(<span class="string">"posts.csv"</span>).expect(<span class="string">"unable to create file"</span>);</span><br><span class="line">    <span class="keyword">let</span> <span class="keyword">mut</span> wtr = csv::Writer::from_writer(csvf);</span><br><span class="line">    wtr.write_record(&amp;[</span><br><span class="line">        <span class="string">"id"</span>,</span><br><span class="line">        <span class="string">"create_date"</span>,</span><br><span class="line">        <span class="string">"post_type"</span>,</span><br><span class="line">        <span class="string">"score"</span>,</span><br><span class="line">        <span class="string">"view_count"</span>,</span><br><span class="line">        <span class="string">"tags"</span>,</span><br><span class="line">        <span class="string">"answer_count"</span>,</span><br><span class="line">        <span class="string">"comment_count"</span>,</span><br><span class="line">        <span class="string">"favorite_count"</span>,</span><br><span class="line">    ]);</span><br><span class="line">    <span class="keyword">let</span> <span class="keyword">mut</span> count = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">loop</span> &#123;</span><br><span class="line">        <span class="keyword">match</span> reader.read_event(&amp;<span class="keyword">mut</span> buf) &#123;</span><br><span class="line">            <span class="literal">Ok</span>(Event::Start(<span class="keyword">ref</span> e)) | <span class="literal">Ok</span>(Event::Empty(<span class="keyword">ref</span> e)) =&gt; <span class="keyword">match</span> e.name() &#123;</span><br><span class="line">                <span class="string">b"row"</span> =&gt; &#123;</span><br><span class="line">                    count += <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">let</span> attributes = e.attributes().map(|a| a.unwrap()).collect::&lt;<span class="built_in">Vec</span>&lt;_&gt;&gt;();</span><br><span class="line">                    <span class="keyword">let</span> id = get_attribute(&amp;attributes, <span class="string">"Id"</span>, <span class="string">"0"</span>);</span><br><span class="line">                    <span class="keyword">let</span> create_date =</span><br><span class="line">                        get_attribute(&amp;attributes, <span class="string">"CreationDate"</span>, <span class="string">"1990-01-01T01:49:46.220"</span>);</span><br><span class="line">                    <span class="keyword">let</span> post_type = get_attribute(&amp;attributes, <span class="string">"PostTypeId"</span>, <span class="string">"0"</span>);</span><br><span class="line">                    <span class="keyword">let</span> score = get_attribute(&amp;attributes, <span class="string">"Score"</span>, <span class="string">"0"</span>);</span><br><span class="line">                    <span class="keyword">let</span> view_count = get_attribute(&amp;attributes, <span class="string">"ViewCount"</span>, <span class="string">"0"</span>);</span><br><span class="line">                    <span class="keyword">let</span> tags = get_attribute(&amp;attributes, <span class="string">"Tags"</span>, <span class="string">""</span>);</span><br><span class="line">                    <span class="keyword">let</span> answer_count = get_attribute(&amp;attributes, <span class="string">"AnswerCount"</span>, <span class="string">"0"</span>);</span><br><span class="line">                    <span class="keyword">let</span> comment_count = get_attribute(&amp;attributes, <span class="string">"CommentCount"</span>, <span class="string">"0"</span>);</span><br><span class="line">                    <span class="keyword">let</span> favorite_count = get_attribute(&amp;attributes, <span class="string">"FavoriteCount"</span>, <span class="string">"0"</span>);</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">let</span> create_date = <span class="built_in">format!</span>(<span class="string">"&#123;&#125; &#123;&#125;"</span>, &amp;create_date[<span class="number">0</span>..<span class="number">10</span>], &amp;create_date[<span class="number">11</span>..<span class="number">19</span>]);</span><br><span class="line">                    <span class="keyword">let</span> create_date = create_date.as_str();</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">let</span> decode_tag = decode_html(tags).unwrap();</span><br><span class="line">                    <span class="keyword">let</span> tag = decode_tag</span><br><span class="line">                        .trim_matches(<span class="string">'&gt;'</span>)</span><br><span class="line">                        .trim_matches(<span class="string">'&lt;'</span>)</span><br><span class="line">                        .split(<span class="string">"&gt;&lt;"</span>)</span><br><span class="line">                        .map(|s| <span class="built_in">format!</span>(<span class="string">"'&#123;&#125;'"</span>, s))</span><br><span class="line">                        .collect::&lt;<span class="built_in">Vec</span>&lt;<span class="built_in">String</span>&gt;&gt;()</span><br><span class="line">                        .join(<span class="string">","</span>);</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">let</span> tag = <span class="built_in">format!</span>(<span class="string">"[&#123;&#125;]"</span>, tag);</span><br><span class="line">                    <span class="keyword">let</span> tag = tag.as_str();</span><br><span class="line"></span><br><span class="line">                    wtr.write_record(&amp;[</span><br><span class="line">                        id,</span><br><span class="line">                        create_date,</span><br><span class="line">                        post_type,</span><br><span class="line">                        score,</span><br><span class="line">                        view_count,</span><br><span class="line">                        tag,</span><br><span class="line">                        answer_count,</span><br><span class="line">                        comment_count,</span><br><span class="line">                        favorite_count,</span><br><span class="line">                    ]);</span><br><span class="line">                &#125;</span><br><span class="line">                _ =&gt; <span class="built_in">println!</span>(<span class="string">"&#123;:?&#125;"</span>, std::<span class="built_in">str</span>::from_utf8(e.name()).unwrap()),</span><br><span class="line">            &#125;,</span><br><span class="line">            <span class="literal">Ok</span>(Event::Eof) =&gt; <span class="keyword">break</span>,</span><br><span class="line">            _ =&gt; (),</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    wtr.flush();</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>以上是转换2020年3月的数据，17年12月的xml类型，减去几个字段</p>
+<h3 id="数据写入数据库"><a href="#数据写入数据库" class="headerlink" title="数据写入数据库"></a>数据写入数据库</h3><p>建表</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> posts</span><br><span class="line">(</span><br><span class="line">    <span class="keyword">id</span>             UInt64,</span><br><span class="line">    create_date    DateTime,</span><br><span class="line">    post_type      <span class="built_in">Int8</span>,</span><br><span class="line">    score          Int32,</span><br><span class="line">    view_count     UInt32,</span><br><span class="line">    tags           <span class="built_in">Array</span>(<span class="keyword">String</span>),</span><br><span class="line">    answer_count   UInt16,</span><br><span class="line">    comment_count  UInt16,</span><br><span class="line">    favorite_count UInt16</span><br><span class="line">)</span><br><span class="line">    <span class="keyword">engine</span> = MergeTree <span class="keyword">PARTITION</span> <span class="keyword">BY</span> toYear(create_date) <span class="keyword">ORDER</span> <span class="keyword">BY</span> create_date;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">create</span> <span class="keyword">table</span> posts2017</span><br><span class="line">(</span><br><span class="line">    <span class="keyword">id</span>             UInt64,</span><br><span class="line">    score          Int32,</span><br><span class="line">    view_count     UInt32,</span><br><span class="line">    answer_count   UInt16,</span><br><span class="line">    comment_count  UInt16,</span><br><span class="line">    favorite_count UInt16</span><br><span class="line">)</span><br><span class="line">    <span class="keyword">engine</span> = MergeTree <span class="keyword">PARTITION</span> <span class="keyword">BY</span> <span class="keyword">id</span> % <span class="number">10</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span> <span class="keyword">id</span>;</span><br></pre></td></tr></table></figure>
+
+<p>将csv写入clickhouse</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">cat posts.csv | clickhouse-client --query=&quot;INSERT INTO posts2017 Format CSVWithNames&quot;;</span><br><span class="line">cat posts.csv | clickhouse-client --query=&quot;INSERT INTO posts Format CSVWithNames&quot;;</span><br></pre></td></tr></table></figure>
+
+<p>将两张表合并到一张表，加速查询</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> posts_all <span class="keyword">engine</span> = MergeTree <span class="keyword">PARTITION</span> <span class="keyword">BY</span> toYear(create_date) <span class="keyword">ORDER</span> <span class="keyword">BY</span> create_date <span class="keyword">AS</span></span><br><span class="line"><span class="keyword">select</span> <span class="keyword">id</span>,</span><br><span class="line">       tags,</span><br><span class="line">       create_date,</span><br><span class="line">       post_type,</span><br><span class="line">       score,</span><br><span class="line">       view_count,</span><br><span class="line">       answer_count,</span><br><span class="line">       comment_count,</span><br><span class="line">       favorite_count,</span><br><span class="line">       posts2017.score          <span class="keyword">as</span> _score,</span><br><span class="line">       posts2017.view_count     <span class="keyword">as</span> _view_count,</span><br><span class="line">       posts2017.answer_count   <span class="keyword">as</span> _answer_count,</span><br><span class="line">       posts2017.comment_count  <span class="keyword">as</span> _comment_count,</span><br><span class="line">       posts2017.favorite_count <span class="keyword">as</span> _favorite_count</span><br><span class="line"><span class="keyword">from</span> posts</span><br><span class="line">         <span class="keyword">any</span></span><br><span class="line">         <span class="keyword">left</span> <span class="keyword">join</span> posts2017 <span class="keyword">on</span> posts2017.id = posts.id;</span><br></pre></td></tr></table></figure>
+
+<h3 id="开始分析吧"><a href="#开始分析吧" class="headerlink" title="开始分析吧"></a>开始分析吧</h3><p>一切准备就绪，接下来就是自由分析啦，这个就看个人发挥了。自己写了个仅供参考</p>
+<p>查找C语言中有价值的问题</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="keyword">id</span>, groupArray(t) x</span><br><span class="line"><span class="keyword">from</span> (</span><br><span class="line">      <span class="keyword">select</span> arrayJoin(tags) tag, <span class="keyword">id</span>, <span class="string">'score'</span> t</span><br><span class="line">      <span class="keyword">from</span> posts_all</span><br><span class="line">      <span class="keyword">where</span> tag = <span class="string">'c'</span></span><br><span class="line">        <span class="keyword">and</span> post_type = <span class="number">1</span></span><br><span class="line">      <span class="keyword">order</span> <span class="keyword">by</span> (score - _score) <span class="keyword">desc</span></span><br><span class="line">      <span class="keyword">limit</span> <span class="number">30</span></span><br><span class="line">      <span class="keyword">union</span> <span class="keyword">all</span></span><br><span class="line">      <span class="keyword">select</span> arrayJoin(tags) tag, <span class="keyword">id</span>, <span class="string">'view'</span> t</span><br><span class="line">      <span class="keyword">from</span> posts_all</span><br><span class="line">      <span class="keyword">where</span> tag = <span class="string">'c'</span></span><br><span class="line">        <span class="keyword">and</span> post_type = <span class="number">1</span></span><br><span class="line">      <span class="keyword">order</span> <span class="keyword">by</span> view_count - _view_count <span class="keyword">desc</span></span><br><span class="line">      <span class="keyword">limit</span> <span class="number">30</span></span><br><span class="line">      <span class="keyword">union</span> <span class="keyword">all</span></span><br><span class="line">      <span class="keyword">select</span> arrayJoin(tags) tag, <span class="keyword">id</span>, <span class="string">'answer'</span> t</span><br><span class="line">      <span class="keyword">from</span> posts_all</span><br><span class="line">      <span class="keyword">where</span> tag = <span class="string">'c'</span></span><br><span class="line">        <span class="keyword">and</span> post_type = <span class="number">1</span></span><br><span class="line">      <span class="keyword">order</span> <span class="keyword">by</span> answer_count - _answer_count <span class="keyword">desc</span></span><br><span class="line">      <span class="keyword">limit</span> <span class="number">30</span></span><br><span class="line">      <span class="keyword">union</span> <span class="keyword">all</span></span><br><span class="line">      <span class="keyword">select</span> arrayJoin(tags) tag, <span class="keyword">id</span>, <span class="string">'comment'</span> t</span><br><span class="line">      <span class="keyword">from</span> posts_all</span><br><span class="line">      <span class="keyword">where</span> tag = <span class="string">'c'</span></span><br><span class="line">        <span class="keyword">and</span> post_type = <span class="number">1</span></span><br><span class="line">      <span class="keyword">order</span> <span class="keyword">by</span> comment_count - _comment_count <span class="keyword">desc</span></span><br><span class="line">      <span class="keyword">limit</span> <span class="number">30</span></span><br><span class="line">      <span class="keyword">union</span> <span class="keyword">all</span></span><br><span class="line">      <span class="keyword">select</span> arrayJoin(tags) tag, <span class="keyword">id</span>, <span class="string">'favorite'</span> t</span><br><span class="line">      <span class="keyword">from</span> posts_all</span><br><span class="line">      <span class="keyword">where</span> tag = <span class="string">'c'</span></span><br><span class="line">        <span class="keyword">and</span> post_type = <span class="number">1</span></span><br><span class="line">      <span class="keyword">order</span> <span class="keyword">by</span> favorite_count - _favorite_count <span class="keyword">desc</span></span><br><span class="line">      <span class="keyword">limit</span> <span class="number">30</span>)</span><br><span class="line"><span class="keyword">group</span> <span class="keyword">by</span> <span class="keyword">id</span> <span class="keyword">order</span> <span class="keyword">by</span> <span class="keyword">length</span>(x) <span class="keyword">desc</span>,x <span class="keyword">desc</span> ;</span><br></pre></td></tr></table></figure>
+
+<p>结果如下:</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>x</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="https://stackoverflow.com/questions/572547" target="_blank" rel="noopener">572547</a></td>
+<td>[‘favorite’,’view’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/1041866" target="_blank" rel="noopener">1041866</a></td>
+<td>[‘favorite’,’view’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/47981" target="_blank" rel="noopener">47981</a></td>
+<td>[‘favorite’,’view’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/37538" target="_blank" rel="noopener">37538</a></td>
+<td>[‘favorite’,’view’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/1675351" target="_blank" rel="noopener">1675351</a></td>
+<td>[‘favorite’,’view’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/24853" target="_blank" rel="noopener">24853</a></td>
+<td>[‘favorite’,’view’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/58224638" target="_blank" rel="noopener">58224638</a></td>
+<td>[‘answer’,’score’,’comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/612097" target="_blank" rel="noopener">612097</a></td>
+<td>[‘view’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/1921539" target="_blank" rel="noopener">1921539</a></td>
+<td>[‘view’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/201101" target="_blank" rel="noopener">201101</a></td>
+<td>[‘view’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/16931770" target="_blank" rel="noopener">16931770</a></td>
+<td>[‘view’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/8547778" target="_blank" rel="noopener">8547778</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/840501" target="_blank" rel="noopener">840501</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/1410563" target="_blank" rel="noopener">1410563</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/1642028" target="_blank" rel="noopener">1642028</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/7825055" target="_blank" rel="noopener">7825055</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/605845" target="_blank" rel="noopener">605845</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/1143262" target="_blank" rel="noopener">1143262</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/65820" target="_blank" rel="noopener">65820</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/9229601" target="_blank" rel="noopener">9229601</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/1711631" target="_blank" rel="noopener">1711631</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/21593" target="_blank" rel="noopener">21593</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/36827659" target="_blank" rel="noopener">36827659</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/1433204" target="_blank" rel="noopener">1433204</a></td>
+<td>[‘favorite’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/57842756" target="_blank" rel="noopener">57842756</a></td>
+<td>[‘answer’,’score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/52509602" target="_blank" rel="noopener">52509602</a></td>
+<td>[‘answer’,’favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/4264127" target="_blank" rel="noopener">4264127</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/3501338" target="_blank" rel="noopener">3501338</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/330793" target="_blank" rel="noopener">330793</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/2279379" target="_blank" rel="noopener">2279379</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/822323" target="_blank" rel="noopener">822323</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/5029840" target="_blank" rel="noopener">5029840</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/3437404" target="_blank" rel="noopener">3437404</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/38561" target="_blank" rel="noopener">38561</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/2386772" target="_blank" rel="noopener">2386772</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/1088622" target="_blank" rel="noopener">1088622</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/308695" target="_blank" rel="noopener">308695</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/111928" target="_blank" rel="noopener">111928</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/628761" target="_blank" rel="noopener">628761</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/15004944" target="_blank" rel="noopener">15004944</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/19641597" target="_blank" rel="noopener">19641597</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/27272525" target="_blank" rel="noopener">27272525</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/17307275" target="_blank" rel="noopener">17307275</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/8257714" target="_blank" rel="noopener">8257714</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/7021725" target="_blank" rel="noopener">7021725</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/8440816" target="_blank" rel="noopener">8440816</a></td>
+<td>[‘view’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/57650895" target="_blank" rel="noopener">57650895</a></td>
+<td>[‘score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/1538420" target="_blank" rel="noopener">1538420</a></td>
+<td>[‘score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/204476" target="_blank" rel="noopener">204476</a></td>
+<td>[‘score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/2550774" target="_blank" rel="noopener">2550774</a></td>
+<td>[‘score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/381542" target="_blank" rel="noopener">381542</a></td>
+<td>[‘score’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/5134891" target="_blank" rel="noopener">5134891</a></td>
+<td>[‘favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/98650" target="_blank" rel="noopener">98650</a></td>
+<td>[‘favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/4955198" target="_blank" rel="noopener">4955198</a></td>
+<td>[‘favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/31162367" target="_blank" rel="noopener">31162367</a></td>
+<td>[‘favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/5431941" target="_blank" rel="noopener">5431941</a></td>
+<td>[‘favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/119123" target="_blank" rel="noopener">119123</a></td>
+<td>[‘favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/63166" target="_blank" rel="noopener">63166</a></td>
+<td>[‘favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/145270" target="_blank" rel="noopener">145270</a></td>
+<td>[‘favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/81656" target="_blank" rel="noopener">81656</a></td>
+<td>[‘favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/562303" target="_blank" rel="noopener">562303</a></td>
+<td>[‘favorite’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/55307892" target="_blank" rel="noopener">55307892</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48494733" target="_blank" rel="noopener">48494733</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48844198" target="_blank" rel="noopener">48844198</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/55069186" target="_blank" rel="noopener">55069186</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/55101427" target="_blank" rel="noopener">55101427</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/49649253" target="_blank" rel="noopener">49649253</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/50226598" target="_blank" rel="noopener">50226598</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/49040259" target="_blank" rel="noopener">49040259</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/50895849" target="_blank" rel="noopener">50895849</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/53657018" target="_blank" rel="noopener">53657018</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48125683" target="_blank" rel="noopener">48125683</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/58714944" target="_blank" rel="noopener">58714944</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48515115" target="_blank" rel="noopener">48515115</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/51181037" target="_blank" rel="noopener">51181037</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48912653" target="_blank" rel="noopener">48912653</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/47691216" target="_blank" rel="noopener">47691216</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48134447" target="_blank" rel="noopener">48134447</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/51867939" target="_blank" rel="noopener">51867939</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/53563600" target="_blank" rel="noopener">53563600</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/45524284" target="_blank" rel="noopener">45524284</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/47777205" target="_blank" rel="noopener">47777205</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48505911" target="_blank" rel="noopener">48505911</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48176305" target="_blank" rel="noopener">48176305</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/56406841" target="_blank" rel="noopener">56406841</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/47616508" target="_blank" rel="noopener">47616508</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48420442" target="_blank" rel="noopener">48420442</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48914413" target="_blank" rel="noopener">48914413</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/57575599" target="_blank" rel="noopener">57575599</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/52451184" target="_blank" rel="noopener">52451184</a></td>
+<td>[‘comment’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/51638803" target="_blank" rel="noopener">51638803</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/53444743" target="_blank" rel="noopener">53444743</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/53832063" target="_blank" rel="noopener">53832063</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/50530113" target="_blank" rel="noopener">50530113</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/58278260" target="_blank" rel="noopener">58278260</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/50951261" target="_blank" rel="noopener">50951261</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/56208872" target="_blank" rel="noopener">56208872</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/49456599" target="_blank" rel="noopener">49456599</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48608993" target="_blank" rel="noopener">48608993</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/53298646" target="_blank" rel="noopener">53298646</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/52442415" target="_blank" rel="noopener">52442415</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/466204" target="_blank" rel="noopener">466204</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/53109888" target="_blank" rel="noopener">53109888</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/50288322" target="_blank" rel="noopener">50288322</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/59925618" target="_blank" rel="noopener">59925618</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/52359906" target="_blank" rel="noopener">52359906</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48315523" target="_blank" rel="noopener">48315523</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48868367" target="_blank" rel="noopener">48868367</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/122616" target="_blank" rel="noopener">122616</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/50822596" target="_blank" rel="noopener">50822596</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/47906401" target="_blank" rel="noopener">47906401</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/51548994" target="_blank" rel="noopener">51548994</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/48226806" target="_blank" rel="noopener">48226806</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/8487986" target="_blank" rel="noopener">8487986</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/2602823" target="_blank" rel="noopener">2602823</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/54025987" target="_blank" rel="noopener">54025987</a></td>
+<td>[‘answer’]</td>
+</tr>
+<tr>
+<td><a href="https://stackoverflow.com/questions/60113944" target="_blank" rel="noopener">60113944</a></td>
+<td>[‘answer’]</td>
+</tr>
+</tbody></table>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://meta.stackexchange.com/questions/224873/all-stack-exchange-data-dumps" target="_blank" rel="noopener">All Stack Exchange data dumps</a></p>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2020/03/02/delete_watermark/"
+                    data-tooltip="利用python去除PDF水印"
+                    aria-label="下一篇: 利用python去除PDF水印"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2020/03/02/delete_watermark/"
+                    data-tooltip="利用python去除PDF水印"
+                    aria-label="下一篇: 利用python去除PDF水印"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2020/03/28/analysis_stackoverflow/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">ficapy</h4>
+        
+            <div id="about-card-bio"><p>author.bio</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </div>
+        
+        
+    </div>
+</div>
+
+        
+            <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    />
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">没有找到文章</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
+                            <h3 class="media-heading">博客起航</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月29日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
+<p>：</p>
+<p>为了占行此处无耻的掠过N个字</p>
+<p>:</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
+                            <h3 class="media-heading">IDM-Internet Download Manager</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月30日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
+                            <h3 class="media-heading">everything--文件搜索神器</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月2日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
+<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
+                            <h3 class="media-heading">everything进阶教程</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月6日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
+                            <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月12日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
+<p>今天介绍的是一款据说主打截图的软件-snagit</p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
+                            <h3 class="media-heading">xnview-图片查看</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月25日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
+<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/05/deskpins_top_window/"
+                            aria-label=": DeskPins-窗口置顶"
+                        >
+                            <h3 class="media-heading">DeskPins-窗口置顶</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月5日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/28/disktool_recommend/"
+                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
+                        >
+                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月28日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
+                            aria-label=": excel数字递增批量打印"
+                        >
+                            <h3 class="media-heading">excel数字递增批量打印</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月20日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
+<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
+                            aria-label=": pip使用国内镜像"
+                        >
+                            <h3 class="media-heading">pip使用国内镜像</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月27日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
+<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="没有找到文章"
+                data-message-one="找到 1 篇文章"
+                data-message-other="找到 {n} 篇文章">
+                找到 91 篇文章
+            </p>
+        </div>
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+    <script src="/assets/js/moment-with-locales.js"></script>
+    <script src="/assets/js/algoliasearch.js"></script>
+    <script>
+      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
+      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+    </script>
+
+
+    </body>
+</html>
