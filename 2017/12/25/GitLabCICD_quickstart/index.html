@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"GitLabCI/CD流程gitlab\b如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比\b其他产品Gogs、github\b等它还算可堪一用。\b\b上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下\b如何从零在\bGitlab上完成简单的CI/CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取\b重启容器\n\n\n1. 安装Docker\b这个没什么好说的。\b无脑apt就好了。安装完毕后需要将\b本地用户加入到\bDocker用户组。\b方便命令的执行。\b在生产环境下\b需要注意的是最好修改它的默认\b\b配置，/etc/docker/daemon.json\n12345678&#123;    &quot;data-root&quot;: &quot;&#x2F;data&#x2F;docker&quot;,    &quot;registry-mirrors&quot;: [&quot;https:&#x2F;&#x2F;xxx.mirror.aliyuncs.com&quot;],    &quot;log-opts&quot;: &#123;        &quot;max-size&quot;: &quot;50m&quot;,        &quot;max-file&quot;: &quot;3&quot;    &#125;&#125;\n\n现在云主机都是\b\b低容量系统盘外加高容量挂载盘组成。\b修改一下默认的根目录\b会比较好\n没个镜像源下载dockerhub镜像不明智啊\n限定一下最大日志量总没错。否则时间太长日志\b多了也很烦人\n\n2. 搭建Docker镜像仓库我使用的是Vmware出品的Harbor。\b安装中遇到了以下几个坑\n\n\b按照文档从源码安装失败。\b直接下载八百多兆的离线安装包安装好歹算是成功了\n我将HTTPS放到负载均衡上面。实际请求到后端的是http协议。\b所以我将配置修改为http。但是登陆失败。查了下将common/config/registry/config.yml的token由http改成https可以登陆了。\b\b解决了这个然后还不能\b\bpush…没办法。我将负载均衡改成TCP端口转发。直接将证书放在harbor上。可算是没毛病了\n\b以前配置过一次Harbor。\b\b导致了历史\b遗留文件。\b再次\b安装结果\b并不会覆盖掉以前的配置也不会做任何提示。\n配置文件里面我改了一下secretkey_path地址。结果\b无法使用，无奈又改回来了\n\n总结。\b在Harbor\b作为\b宣称的企业级Docker镜像工具。杀手级功能是异地复制，镜像\b验证。安全扫描啥的。\b如果只是要搞个基础的镜像仓库。最后想了想还不如\b折腾\bGitlab\b的\bDocker仓库。说不定在权限\b\b上和Gitlab结合的更好\n3. 注册Gitlab-runner\b这应该算是CI强大的地方了。它和Gitlab本身\b松\b耦合。\b客户端建立长连接和\bGitlab服务器保持通信。当满足条件的时候由Gitlab对Runner进行调度。Gitlab-runner是使用\bGo编写的，\b便于部署。当\bRunner接收到请求的时候它会执行shell脚本。\b想象一下\bpython界的fabric。依次执行Bash命令。\bRunner也是差不多的套路。\b多条Bash命令间是没有相关性的。比如你上一条执行\bcd demo下一条pwd得到的还是本地用户目录，并不是demo。\n\n启动gitlab-runner \bService\n\n1234docker run -d --name gitlab-runner --restart always \\  -v &#x2F;var&#x2F;gitlab-runner&#x2F;config:&#x2F;etc&#x2F;gitlab-runner \\  -v &#x2F;var&#x2F;run&#x2F;docker.sock:&#x2F;var&#x2F;run&#x2F;docker.sock \\  gitlab&#x2F;gitlab-runner:latest\n顺便说一下。要是执行gitlab-runner看它的命令行参数还挺多。\b其实是自身设计的不太好。显得\b好像很复杂，很多命令需要\b被废弃了.它的使用其实还是很简单的。如果你需要看帮助。那么执行gitlab-runner register -h还有点用\n\n\b添加Runner\n\n1234docker exec -it gitlab-runner gitlab-runner register -n --tag-list &quot;name&quot; \\    -r &quot;token&quot; --name &quot;BigBrother&quot; -u https:&#x2F;&#x2F;gitlab.company.com \\    --executor &quot;docker&quot; --docker-image &quot;default_image&quot; \\    --docker-volumes &#x2F;var&#x2F;run&#x2F;docker.sock:&#x2F;var&#x2F;run&#x2F;docker.sock\n\nn 表示非交互模式\ntag-list\b表示该Runner的标签(单独的项目用单独的tag也挺好。互不干扰)\nr 该项目的token\nname 名称标识\nu Gitlab地址\nexecutor 和上面说的执行bash命令。\b有多种方式。无脑用docker挺好\ndocker-image executor选择了docker之后,需要选择默认的镜像\ndocker-volumes 这个是为了在docker里面使用Docker构建镜像\n\n以上两步完成后就能够在Gitlab后台看到正常状态的\bRunner了\n4. 编写.gitlab-ci.yml文件\b\b如果你有丰富的Docker使用经验，这一步实际上没有太大的问题。本例中我\b只是\b通过docker build构建了镜像。然后上传到仓库。需要部署的时候使用SSH\b连接到远程机器上使用\bdocker-compose up --build -d更新程序Demo项目\b目录如下。正常本地启动执行\bpython main.py\n123456789101112.├── README.md├── conf.py├── deploy│   ├── Dockerfile│   ├── prod_env│   ├── docker-compose.yml│   └── stage_env├── main.py├── .gitlab-ci.yml└── requirements.txt\nDockerfile\b如下\n123456789101112FROM ficapy&#x2F;python35_alpineRUN mkdir &#x2F;appWORKDIR &#x2F;appENV PYTHONPATH&#x3D;&#x2F;appCOPY .&#x2F;requirements.txt &#x2F;app&#x2F;requirements.txtRUN pip install -r requirements.txt -i https:&#x2F;&#x2F;pypi.tuna.tsinghua.edu.cn&#x2F;simpleCOPY . &#x2F;appCMD [&quot;python&quot;, &quot;main.py&quot;]\ndocker-compose.yml如下\n12345678version: &#39;3&#39;services:  Name:    image: registry.company.com&#x2F;repos&#x2F;projectname:$&#123;TAG&#125;    restart: always    env_file:      - $&#123;ENV&#125;_env\n.gitlab-ci.yml如下\n123456789101112131415161718192021222324252627282930313233343536373839404142434445image: ficapy&#x2F;docker:latestvariables:  SSH: &quot;Host xxxxx&quot;stages:  - build  - deploybuild:  stage: build  only:    - master  tags:    - tag  script:      - export DOCKER_TAG&#x3D;$(env TZ&#x3D;&#39;Asia&#x2F;Shanghai&#39; date -d @$(git log -n1 $CI_COMMIT_SHA --format&#x3D;&quot;%at&quot;) +%Y_%m_%d_%H%M%S)      - echo $DOCKER_TAG      - docker login -u deploy -p $DOCKER_PWD registry.company.com      - docker build -t registry.company.com&#x2F;repos&#x2F;must_lower_case:$DOCKER_TAG -f deploy&#x2F;Dockerfile .      - docker push registry.company.com&#x2F;repos&#x2F;must_lower_case:$DOCKER_TAGprod_deploy:  stage: deploy  only:    - master  tags:    - tag  when: manual  variables:    SERVER: ssh_name  before_script:    - export DOCKER_TAG&#x3D;$(env TZ&#x3D;&#39;Asia&#x2F;Shanghai&#39; date -d @$(git log -n1 $CI_COMMIT_SHA --format&#x3D;&quot;%at&quot;) +%Y_%m_%d_%H%M%S)    - echo $DOCKER_TAG    - eval $(ssh-agent -s)    - bash -c &quot;ssh-add &lt;(echo &#39;$SSH_PRIVATE_KEY&#39;)&quot;    - mkdir -p ~&#x2F;.ssh    - &#39;[[ -f &#x2F;.dockerenv ]] &amp;&amp; echo -e &quot;$SSH&quot; &gt; ~&#x2F;.ssh&#x2F;config&#39;  script:    - ssh $SERVER &quot;mkdir -p ~&#x2F;$CI_PROJECT_NAME || true&quot;    - rsync -r deploy $SERVER:~&#x2F;$CI_PROJECT_NAME    - ssh $SERVER &quot;docker login -u deploy -p $DOCKER_PWD registry.company.com&quot;    - ssh $SERVER &quot;cd $CI_PROJECT_NAME&#x2F;deploy &amp;&amp; TAG&#x3D;$DOCKER_TAG ENV&#x3D;prod docker-compose up --build -d&quot;  environment:    name: PROD\n整个过程看配置文件应该还是比较容易理解的。\b如果有些参数不太明白请查看前一篇gitlabci yml笔记。因为它只是个Demo。\b所以我让他在每次master分支提交的时候都进行触发。整个部署流程实际上就是使用了SSH远程连接之后操作docker-compose进行更新。过程中感觉让我比较难以决断的是如何搞一个好的TAG方法\n总结完成上述过程之后我做一个自我总结。所谓CI/CD不过是将我们懒得输入的命令组合形成文件。让它依次执行Test-&gt;Build-&gt;Deploy。该方案几乎使用了全套Docker.从gitlab-runner、build到镜像仓库到生产环境的部署。在项目比较多的时候它是有好处的。比如有十个项目需要更新。每个项目需要更新到多个环境下。那么使用这种自动化还是有优势的。如果就一两个项目，而且只需要更新到测试和生产环境。个人觉得fabric就够了。而且该方案有一个缺点就是部署速度较慢。Gitlab每次执行任务速度并不是想象的那么快。最后生成镜像，上传，再拉取到正式环境。如果镜像过大就更慢了。而如果不使用Docker镜像的方式。直接git pull拉取源码。再supervisorctl更新程序。时间基本是秒级的。在频繁更新的测试环境它可能更高效。\n","dateCreated":"2017-12-25T20:38:35+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2017-12-25T20:38:35+08:00","description":"GitLabCI/CD流程gitlab\b如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比\b其他产品Gogs、github\b等它还算可堪一用。\b\b上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下\b如何从零在\bGitlab上完成简单的CI/CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取\b重启容器","headline":"开始GitLab CI/CD","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/12/25/GitLabCICD_quickstart/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/12/25/GitLabCICD_quickstart/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"GitLabCI/CD流程gitlab\b如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比\b其他产品Gogs、github\b等它还算可堪一用。\b\b上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下\b如何从零在\bGitlab上完成简单的CI/CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取\b重启容器\n\n\n1. 安装Docker\b这个没什么好说的。\b无脑apt就好了。安装完毕后需要将\b本地用户加入到\bDocker用户组。\b方便命令的执行。\b在生产环境下\b需要注意的是最好修改它的默认\b\b配置，/etc/docker/daemon.json\n12345678&#123;    &quot;data-root&quot;: &quot;&#x2F;data&#x2F;docker&quot;,    &quot;registry-mirrors&quot;: [&quot;https:&#x2F;&#x2F;xxx.mirror.aliyuncs.com&quot;],    &quot;log-opts&quot;: &#123;        &quot;max-size&quot;: &quot;50m&quot;,        &quot;max-file&quot;: &quot;3&quot;    &#125;&#125;\n\n现在云主机都是\b\b低容量系统盘外加高容量挂载盘组成。\b修改一下默认的根目录\b会比较好\n没个镜像源下载dockerhub镜像不明智啊\n限定一下最大日志量总没错。否则时间太长日志\b多了也很烦人\n\n2. 搭建Docker镜像仓库我使用的是Vmware出品的Harbor。\b安装中遇到了以下几个坑\n\n\b按照文档从源码安装失败。\b直接下载八百多兆的离线安装包安装好歹算是成功了\n我将HTTPS放到负载均衡上面。实际请求到后端的是http协议。\b所以我将配置修改为http。但是登陆失败。查了下将common/config/registry/config.yml的token由http改成https可以登陆了。\b\b解决了这个然后还不能\b\bpush…没办法。我将负载均衡改成TCP端口转发。直接将证书放在harbor上。可算是没毛病了\n\b以前配置过一次Harbor。\b\b导致了历史\b遗留文件。\b再次\b安装结果\b并不会覆盖掉以前的配置也不会做任何提示。\n配置文件里面我改了一下secretkey_path地址。结果\b无法使用，无奈又改回来了\n\n总结。\b在Harbor\b作为\b宣称的企业级Docker镜像工具。杀手级功能是异地复制，镜像\b验证。安全扫描啥的。\b如果只是要搞个基础的镜像仓库。最后想了想还不如\b折腾\bGitlab\b的\bDocker仓库。说不定在权限\b\b上和Gitlab结合的更好\n3. 注册Gitlab-runner\b这应该算是CI强大的地方了。它和Gitlab本身\b松\b耦合。\b客户端建立长连接和\bGitlab服务器保持通信。当满足条件的时候由Gitlab对Runner进行调度。Gitlab-runner是使用\bGo编写的，\b便于部署。当\bRunner接收到请求的时候它会执行shell脚本。\b想象一下\bpython界的fabric。依次执行Bash命令。\bRunner也是差不多的套路。\b多条Bash命令间是没有相关性的。比如你上一条执行\bcd demo下一条pwd得到的还是本地用户目录，并不是demo。\n\n启动gitlab-runner \bService\n\n1234docker run -d --name gitlab-runner --restart always \\  -v &#x2F;var&#x2F;gitlab-runner&#x2F;config:&#x2F;etc&#x2F;gitlab-runner \\  -v &#x2F;var&#x2F;run&#x2F;docker.sock:&#x2F;var&#x2F;run&#x2F;docker.sock \\  gitlab&#x2F;gitlab-runner:latest\n顺便说一下。要是执行gitlab-runner看它的命令行参数还挺多。\b其实是自身设计的不太好。显得\b好像很复杂，很多命令需要\b被废弃了.它的使用其实还是很简单的。如果你需要看帮助。那么执行gitlab-runner register -h还有点用\n\n\b添加Runner\n\n1234docker exec -it gitlab-runner gitlab-runner register -n --tag-list &quot;name&quot; \\    -r &quot;token&quot; --name &quot;BigBrother&quot; -u https:&#x2F;&#x2F;gitlab.company.com \\    --executor &quot;docker&quot; --docker-image &quot;default_image&quot; \\    --docker-volumes &#x2F;var&#x2F;run&#x2F;docker.sock:&#x2F;var&#x2F;run&#x2F;docker.sock\n\nn 表示非交互模式\ntag-list\b表示该Runner的标签(单独的项目用单独的tag也挺好。互不干扰)\nr 该项目的token\nname 名称标识\nu Gitlab地址\nexecutor 和上面说的执行bash命令。\b有多种方式。无脑用docker挺好\ndocker-image executor选择了docker之后,需要选择默认的镜像\ndocker-volumes 这个是为了在docker里面使用Docker构建镜像\n\n以上两步完成后就能够在Gitlab后台看到正常状态的\bRunner了\n4. 编写.gitlab-ci.yml文件\b\b如果你有丰富的Docker使用经验，这一步实际上没有太大的问题。本例中我\b只是\b通过docker build构建了镜像。然后上传到仓库。需要部署的时候使用SSH\b连接到远程机器上使用\bdocker-compose up --build -d更新程序Demo项目\b目录如下。正常本地启动执行\bpython main.py\n123456789101112.├── README.md├── conf.py├── deploy│   ├── Dockerfile│   ├── prod_env│   ├── docker-compose.yml│   └── stage_env├── main.py├── .gitlab-ci.yml└── requirements.txt\nDockerfile\b如下\n123456789101112FROM ficapy&#x2F;python35_alpineRUN mkdir &#x2F;appWORKDIR &#x2F;appENV PYTHONPATH&#x3D;&#x2F;appCOPY .&#x2F;requirements.txt &#x2F;app&#x2F;requirements.txtRUN pip install -r requirements.txt -i https:&#x2F;&#x2F;pypi.tuna.tsinghua.edu.cn&#x2F;simpleCOPY . &#x2F;appCMD [&quot;python&quot;, &quot;main.py&quot;]\ndocker-compose.yml如下\n12345678version: &#39;3&#39;services:  Name:    image: registry.company.com&#x2F;repos&#x2F;projectname:$&#123;TAG&#125;    restart: always    env_file:      - $&#123;ENV&#125;_env\n.gitlab-ci.yml如下\n123456789101112131415161718192021222324252627282930313233343536373839404142434445image: ficapy&#x2F;docker:latestvariables:  SSH: &quot;Host xxxxx&quot;stages:  - build  - deploybuild:  stage: build  only:    - master  tags:    - tag  script:      - export DOCKER_TAG&#x3D;$(env TZ&#x3D;&#39;Asia&#x2F;Shanghai&#39; date -d @$(git log -n1 $CI_COMMIT_SHA --format&#x3D;&quot;%at&quot;) +%Y_%m_%d_%H%M%S)      - echo $DOCKER_TAG      - docker login -u deploy -p $DOCKER_PWD registry.company.com      - docker build -t registry.company.com&#x2F;repos&#x2F;must_lower_case:$DOCKER_TAG -f deploy&#x2F;Dockerfile .      - docker push registry.company.com&#x2F;repos&#x2F;must_lower_case:$DOCKER_TAGprod_deploy:  stage: deploy  only:    - master  tags:    - tag  when: manual  variables:    SERVER: ssh_name  before_script:    - export DOCKER_TAG&#x3D;$(env TZ&#x3D;&#39;Asia&#x2F;Shanghai&#39; date -d @$(git log -n1 $CI_COMMIT_SHA --format&#x3D;&quot;%at&quot;) +%Y_%m_%d_%H%M%S)    - echo $DOCKER_TAG    - eval $(ssh-agent -s)    - bash -c &quot;ssh-add &lt;(echo &#39;$SSH_PRIVATE_KEY&#39;)&quot;    - mkdir -p ~&#x2F;.ssh    - &#39;[[ -f &#x2F;.dockerenv ]] &amp;&amp; echo -e &quot;$SSH&quot; &gt; ~&#x2F;.ssh&#x2F;config&#39;  script:    - ssh $SERVER &quot;mkdir -p ~&#x2F;$CI_PROJECT_NAME || true&quot;    - rsync -r deploy $SERVER:~&#x2F;$CI_PROJECT_NAME    - ssh $SERVER &quot;docker login -u deploy -p $DOCKER_PWD registry.company.com&quot;    - ssh $SERVER &quot;cd $CI_PROJECT_NAME&#x2F;deploy &amp;&amp; TAG&#x3D;$DOCKER_TAG ENV&#x3D;prod docker-compose up --build -d&quot;  environment:    name: PROD\n整个过程看配置文件应该还是比较容易理解的。\b如果有些参数不太明白请查看前一篇gitlabci yml笔记。因为它只是个Demo。\b所以我让他在每次master分支提交的时候都进行触发。整个部署流程实际上就是使用了SSH远程连接之后操作docker-compose进行更新。过程中感觉让我比较难以决断的是如何搞一个好的TAG方法\n总结完成上述过程之后我做一个自我总结。所谓CI/CD不过是将我们懒得输入的命令组合形成文件。让它依次执行Test-&gt;Build-&gt;Deploy。该方案几乎使用了全套Docker.从gitlab-runner、build到镜像仓库到生产环境的部署。在项目比较多的时候它是有好处的。比如有十个项目需要更新。每个项目需要更新到多个环境下。那么使用这种自动化还是有优势的。如果就一两个项目，而且只需要更新到测试和生产环境。个人觉得fabric就够了。而且该方案有一个缺点就是部署速度较慢。Gitlab每次执行任务速度并不是想象的那么快。最后生成镜像，上传，再拉取到正式环境。如果镜像过大就更慢了。而如果不使用Docker镜像的方式。直接git pull拉取源码。再supervisorctl更新程序。时间基本是秒级的。在频繁更新的测试环境它可能更高效。\n","dateCreated":"2017-12-25T20:38:35+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2017-12-25T20:38:35+08:00","description":"GitLabCI/CD流程gitlab\b如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比\b其他产品Gogs、github\b等它还算可堪一用。\b\b上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下\b如何从零在\bGitlab上完成简单的CI/CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取\b重启容器","headline":"开始GitLab CI/CD","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/12/25/GitLabCICD_quickstart/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/12/25/GitLabCICD_quickstart/"}</script>
     <meta name="description" content="GitLabCI&#x2F;CD流程gitlab如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比其他产品Gogs、github等它还算可堪一用。上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下如何从零在Gitlab上完成简单的CI&#x2F;CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="开始GitLab CI&#x2F;CD">
@@ -179,7 +179,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -195,87 +195,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -689,6 +611,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -989,8 +917,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"明天都儿童节了，要和五月份说再见了。这个月居然一篇博文都没有写，甚是惭愧&gt;_&lt;赶紧写一篇补上python通常使用pip安装第三方库，如果你安装的库比较多总会遇到一些恼人的安装问题（如果安装了VC2008或许会好很多），所以像我等小白安装一些比较复杂的库的时候甚是喜欢用exe包进行安装~~~~~~谁让从小就习惯了windows的下一步这种操作呢附上大名鼎鼎的python第三方哭二进制包下载地址：www.lfd.uci.edu/~gohlke/pythonlibs/当项目越来越多的时候，我们一定会使用虚拟环境virtualenv来管理我们的包（可以见reddit上的讨论），让各项目间的第三方库不至于混乱发生不兼容之类的悲剧\n但是当你想将打包好的二进制exe包安装到你的虚拟环境的时候可能你会遇到问题了，因为它不提供安装到哪个虚拟环境，只会安装到你的主环境中~~~~~~~好吧，这也算是一种悲剧，方便的exe打包文件居然无法配合virtualenv使用，难道只能在我大中华局域网使用蛋疼的pip。不知道是否火星了没，下面就是答案→_→照搬别人的\n\n\n使用winrar打开下载的exe文件会发现有2个文件夹PLATLIB和SCRIPTS\n将PLATLIB文件夹里面的内容全部复制到虚拟环境XXXX\\Lib\\site-packages中，将SCRIPTS文件夹的全部内容复制到XXXX\\Scripts文件夹下，最后试试导入库看是否成功~bingo就是这么简单\n \n参考：http://www.laurivan.com/install-numpy-in-a-virtual-environment-on-windows/\n","dateCreated":"2014-05-31T23:40:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2014-05-31T23:40:00+08:00","description":"明天都儿童节了，要和五月份说再见了。这个月居然一篇博文都没有写，甚是惭愧&gt;_&lt;赶紧写一篇补上python通常使用pip安装第三方库，如果你安装的库比较多总会遇到一些恼人的安装问题（如果安装了VC2008或许会好很多），所以像我等小白安装一些比较复杂的库的时候甚是喜欢用exe包进行安装~~~~~~谁让从小就习惯了windows的下一步这种操作呢附上大名鼎鼎的python第三方哭二进制包下载地址：www.lfd.uci.edu/~gohlke/pythonlibs/当项目越来越多的时候，我们一定会使用虚拟环境virtualenv来管理我们的包（可以见reddit上的讨论），让各项目间的第三方库不至于混乱发生不兼容之类的悲剧\n但是当你想将打包好的二进制exe包安装到你的虚拟环境的时候可能你会遇到问题了，因为它不提供安装到哪个虚拟环境，只会安装到你的主环境中~~~~~~~好吧，这也算是一种悲剧，方便的exe打包文件居然无法配合virtualenv使用，难道只能在我大中华局域网使用蛋疼的pip。不知道是否火星了没，下面就是答案→_→照搬别人的","headline":"python安装exe包到虚拟环境","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/","keywords":"python, exe, virtualenv, 虚拟环境"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"明天都儿童节了，要和五月份说再见了。这个月居然一篇博文都没有写，甚是惭愧&gt;_&lt;赶紧写一篇补上python通常使用pip安装第三方库，如果你安装的库比较多总会遇到一些恼人的安装问题（如果安装了VC2008或许会好很多），所以像我等小白安装一些比较复杂的库的时候甚是喜欢用exe包进行安装~~~~~~谁让从小就习惯了windows的下一步这种操作呢附上大名鼎鼎的python第三方哭二进制包下载地址：www.lfd.uci.edu/~gohlke/pythonlibs/当项目越来越多的时候，我们一定会使用虚拟环境virtualenv来管理我们的包（可以见reddit上的讨论），让各项目间的第三方库不至于混乱发生不兼容之类的悲剧\n但是当你想将打包好的二进制exe包安装到你的虚拟环境的时候可能你会遇到问题了，因为它不提供安装到哪个虚拟环境，只会安装到你的主环境中~~~~~~~好吧，这也算是一种悲剧，方便的exe打包文件居然无法配合virtualenv使用，难道只能在我大中华局域网使用蛋疼的pip。不知道是否火星了没，下面就是答案→_→照搬别人的\n\n\n使用winrar打开下载的exe文件会发现有2个文件夹PLATLIB和SCRIPTS\n将PLATLIB文件夹里面的内容全部复制到虚拟环境XXXX\\Lib\\site-packages中，将SCRIPTS文件夹的全部内容复制到XXXX\\Scripts文件夹下，最后试试导入库看是否成功~bingo就是这么简单\n \n参考：http://www.laurivan.com/install-numpy-in-a-virtual-environment-on-windows/\n","dateCreated":"2014-05-31T23:40:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2014-05-31T23:40:00+08:00","description":"明天都儿童节了，要和五月份说再见了。这个月居然一篇博文都没有写，甚是惭愧&gt;_&lt;赶紧写一篇补上python通常使用pip安装第三方库，如果你安装的库比较多总会遇到一些恼人的安装问题（如果安装了VC2008或许会好很多），所以像我等小白安装一些比较复杂的库的时候甚是喜欢用exe包进行安装~~~~~~谁让从小就习惯了windows的下一步这种操作呢附上大名鼎鼎的python第三方哭二进制包下载地址：www.lfd.uci.edu/~gohlke/pythonlibs/当项目越来越多的时候，我们一定会使用虚拟环境virtualenv来管理我们的包（可以见reddit上的讨论），让各项目间的第三方库不至于混乱发生不兼容之类的悲剧\n但是当你想将打包好的二进制exe包安装到你的虚拟环境的时候可能你会遇到问题了，因为它不提供安装到哪个虚拟环境，只会安装到你的主环境中~~~~~~~好吧，这也算是一种悲剧，方便的exe打包文件居然无法配合virtualenv使用，难道只能在我大中华局域网使用蛋疼的pip。不知道是否火星了没，下面就是答案→_→照搬别人的","headline":"python安装exe包到虚拟环境","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2014/05/31/python_install_exe_package_to_virtualenv/","keywords":"python, exe, virtualenv, 虚拟环境"}</script>
     <meta name="description" content="明天都儿童节了，要和五月份说再见了。这个月居然一篇博文都没有写，甚是惭愧&gt;_&lt;赶紧写一篇补上python通常使用pip安装第三方库，如果你安装的库比较多总会遇到一些恼人的安装问题（如果安装了VC2008或许会好很多），所以像我等小白安装一些比较复杂的库的时候甚是喜欢用exe包进行安装~~~~~~谁让从小就习惯了windows的下一步这种操作呢附上大名鼎鼎的python第三方哭二进制包下">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="python安装exe包到虚拟环境">
@@ -183,7 +183,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -199,87 +199,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -664,6 +586,12 @@ style="font-size: 15px !important; line-height: 17px !important;">\Scripts</span
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -964,8 +892,8 @@ style="font-size: 15px !important; line-height: 17px !important;">\Scripts</span
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

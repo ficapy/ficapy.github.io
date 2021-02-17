@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月13号正式被移出支持了，已经直接发出不建议使用的警告。本文还是来炒一下现饭，看看它背后的逻辑\n\n\n比如flask-sqlalchemy原本是使用from flask_sqlalchemy import [anything]使用的，被变成了from flask.ext.sqlalchemy import [anything]。这是一种对于import的hook。我们知道要导入一个模块，不使用import声明也是可以的，可以使用__import__函数，返回得到的也是一个模块对象 \nimport hook下文简述，如果需要了解比较详细的资料可以查看后文给出的参考链接(python2和3的import机制是略有区别的)import声明主要做了2件事情，查找模块，加载模块。我们说的hook发生在第一步查找模块。查找模块的步骤是\n\n查找sys.modules缓存\n在sys.meta_path中依次执行finder对象,找到就返回自身,所有的都没有找到则会报错注意:sys.path_hooks中的finder会被sys.meta_path调用执行(sys.meta_path和sys.path_hook都可以参与import hooks步骤)\n\n精简版本实现1234567891011121314151617181920212223242526272829import sysclass ExtensionImporter(object):    def install(self):        sys.meta_path[:] = [x for x in sys.meta_path if self != x] + [self]        def find_module(self, fullname, path=None):        if fullname.startswith(&#x27;flask.ext.&#x27;):            return self        def load_module(self, fullname):        if fullname in sys.modules:            return sys.modules[fullname]            modname = fullname.split(&#x27;.&#x27;)[-1]        realname = &#x27;flask_&#x27; +  modname        try:            __import__(realname)        except ImportError:            raise ImportError(&#x27;No module named %s&#x27; % fullname)            module = sys.modules[fullname] = sys.modules[realname]        if &#x27;.&#x27; not in modname:            setattr(sys.modules[&#x27;flask.ext&#x27;], modname, module)            return module\nExtensionImporter是一个finder对象,当执行import flask.ext时会把它加入到sys.meta_path列表，后续的import都会先执行它，判断满足要求后就会使用__import__导入然后加入到sys.modules，这样就实现了flask.ext.sqlalchemy导入\n为什么会被废除呢。下面是我猜测的。首先本来这个东西没有实质的作用，就是看着炫酷而已。我们可以认为所有的扩展导入都会使用flask.ext.xxx，但是这对第三方扩展库是有要求的，那就是包名必须为flask_xxx才行，我猜测有的第三方库未必遵守这个规则(否则exthook.py中也不会出现['flask_%s', 'flaskext.%s'flaskext.另外一种形式)，这就说明了有的作者使用了flaskextxxx这种包名。出现了第二种难免就会出现另外的。当使用者发现并非所有的第三方扩展都使用flask.ext导入的时候。社区也觉得没必要维持了，毕竟第一个写这个代码的人是不是因为刚刚了解了import机制，觉得很炫酷写上去的呢-_-,另外这种花哨的设计也可能对代码自动补全功能产生了负面影响。so，最后还是回到了原来的位置，直接使用import flask_sqlalchemy导入吧\n参考官方import hook文档pycon2015 import演讲flask-sqlalchemy\n","dateCreated":"2016-09-05T07:38:32+08:00","dateModified":"2021-02-17T13:23:26+08:00","datePublished":"2016-09-05T07:38:32+08:00","description":"Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月13号正式被移出支持了，已经直接发出不建议使用的警告。本文还是来炒一下现饭，看看它背后的逻辑","headline":"Flask插件原理","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/09/05/flask_plugin_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/09/05/flask_plugin_note/","keywords":"Flask"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月13号正式被移出支持了，已经直接发出不建议使用的警告。本文还是来炒一下现饭，看看它背后的逻辑\n\n\n比如flask-sqlalchemy原本是使用from flask_sqlalchemy import [anything]使用的，被变成了from flask.ext.sqlalchemy import [anything]。这是一种对于import的hook。我们知道要导入一个模块，不使用import声明也是可以的，可以使用__import__函数，返回得到的也是一个模块对象 \nimport hook下文简述，如果需要了解比较详细的资料可以查看后文给出的参考链接(python2和3的import机制是略有区别的)import声明主要做了2件事情，查找模块，加载模块。我们说的hook发生在第一步查找模块。查找模块的步骤是\n\n查找sys.modules缓存\n在sys.meta_path中依次执行finder对象,找到就返回自身,所有的都没有找到则会报错注意:sys.path_hooks中的finder会被sys.meta_path调用执行(sys.meta_path和sys.path_hook都可以参与import hooks步骤)\n\n精简版本实现1234567891011121314151617181920212223242526272829import sysclass ExtensionImporter(object):    def install(self):        sys.meta_path[:] = [x for x in sys.meta_path if self != x] + [self]        def find_module(self, fullname, path=None):        if fullname.startswith(&#x27;flask.ext.&#x27;):            return self        def load_module(self, fullname):        if fullname in sys.modules:            return sys.modules[fullname]            modname = fullname.split(&#x27;.&#x27;)[-1]        realname = &#x27;flask_&#x27; +  modname        try:            __import__(realname)        except ImportError:            raise ImportError(&#x27;No module named %s&#x27; % fullname)            module = sys.modules[fullname] = sys.modules[realname]        if &#x27;.&#x27; not in modname:            setattr(sys.modules[&#x27;flask.ext&#x27;], modname, module)            return module\nExtensionImporter是一个finder对象,当执行import flask.ext时会把它加入到sys.meta_path列表，后续的import都会先执行它，判断满足要求后就会使用__import__导入然后加入到sys.modules，这样就实现了flask.ext.sqlalchemy导入\n为什么会被废除呢。下面是我猜测的。首先本来这个东西没有实质的作用，就是看着炫酷而已。我们可以认为所有的扩展导入都会使用flask.ext.xxx，但是这对第三方扩展库是有要求的，那就是包名必须为flask_xxx才行，我猜测有的第三方库未必遵守这个规则(否则exthook.py中也不会出现['flask_%s', 'flaskext.%s'flaskext.另外一种形式)，这就说明了有的作者使用了flaskextxxx这种包名。出现了第二种难免就会出现另外的。当使用者发现并非所有的第三方扩展都使用flask.ext导入的时候。社区也觉得没必要维持了，毕竟第一个写这个代码的人是不是因为刚刚了解了import机制，觉得很炫酷写上去的呢-_-,另外这种花哨的设计也可能对代码自动补全功能产生了负面影响。so，最后还是回到了原来的位置，直接使用import flask_sqlalchemy导入吧\n参考官方import hook文档pycon2015 import演讲flask-sqlalchemy\n","dateCreated":"2016-09-05T07:38:32+08:00","dateModified":"2021-02-17T13:23:26+08:00","datePublished":"2016-09-05T07:38:32+08:00","description":"Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月13号正式被移出支持了，已经直接发出不建议使用的警告。本文还是来炒一下现饭，看看它背后的逻辑","headline":"Flask插件原理","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/09/05/flask_plugin_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/09/05/flask_plugin_note/","keywords":"Flask"}</script>
     <meta name="description" content="Flask的插件还挺多,用过的都知道比如flask-sqlalchemy,安装的时候是使用pip install flask-sqlalchemy，使用的时候就成了from flask.ext.sqlalchemy import SQLAlchemy。使用的是flask.ext而不是flask_sqlalchemy。感觉还有点牛掰啊-_-，不过仅仅是看起来高大上，并没有什么卵用。在2016年4月1">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Flask插件原理">
@@ -178,7 +178,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -194,87 +194,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -659,6 +581,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -959,8 +887,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

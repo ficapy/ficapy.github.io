@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"使用pyenv install 3.5.0的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个pyenv镜像项目的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理\n如果安装2.7.6你可以选择使用国内七牛的镜像。项目地址http://pyenv.qiniudn.com/pythons/。执行\n12export PYTHON_BUILD_MIRROR_URL&#x3D;&quot;http:&#x2F;&#x2F;pyenv.qiniudn.com&#x2F;pythons&#x2F;&quot;pyenv install 2.7.6\n就会使用七牛镜像进行下载速度非常快。缺点就是除了网页上的一些版本。其他的都不支持了。七牛没有对这个项目进行更新\n我们可以用迅雷或者其他可用的快速的方法把python源码下载到本地。自己开启一个镜像给自己用。这样就好了。比如执行\n123ficapy@L ~&gt; pyenv install 3.5.0                                                                                                                                                                           Downloading Python-3.5.0.tgz...-&gt; https:&#x2F;&#x2F;www.python.org&#x2F;ftp&#x2F;python&#x2F;3.5.0&#x2F;Python-3.5.0.tgz\n然后把https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tgz下载到本地。再设置镜像地址export PYTHON_BUILD_MIRROR_URL=&quot;http://127.0.0.1:8000/&quot;到下载地址执行python3 -m http.server再次执行pyenv install 3.5.0发现还是从官网下载。不过此时查看http.server上有一条HEAD请求日志。-_-发现不是直接请问的文件名，而是一个64位的字符。将下载的文件名修改成那64位字符。在执行就ok了~~\n","dateCreated":"2016-07-15T08:57:02+08:00","dateModified":"2016-07-15T09:42:56+08:00","datePublished":"2016-07-15T08:57:02+08:00","description":"","headline":"pyenv使用镜像加速","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/07/15/pyenv_use_mirror/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/07/15/pyenv_use_mirror/","keywords":"python"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"使用pyenv install 3.5.0的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个pyenv镜像项目的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理\n如果安装2.7.6你可以选择使用国内七牛的镜像。项目地址http://pyenv.qiniudn.com/pythons/。执行\n12export PYTHON_BUILD_MIRROR_URL&#x3D;&quot;http:&#x2F;&#x2F;pyenv.qiniudn.com&#x2F;pythons&#x2F;&quot;pyenv install 2.7.6\n就会使用七牛镜像进行下载速度非常快。缺点就是除了网页上的一些版本。其他的都不支持了。七牛没有对这个项目进行更新\n我们可以用迅雷或者其他可用的快速的方法把python源码下载到本地。自己开启一个镜像给自己用。这样就好了。比如执行\n123ficapy@L ~&gt; pyenv install 3.5.0                                                                                                                                                                           Downloading Python-3.5.0.tgz...-&gt; https:&#x2F;&#x2F;www.python.org&#x2F;ftp&#x2F;python&#x2F;3.5.0&#x2F;Python-3.5.0.tgz\n然后把https://www.python.org/ftp/python/3.5.0/Python-3.5.0.tgz下载到本地。再设置镜像地址export PYTHON_BUILD_MIRROR_URL=&quot;http://127.0.0.1:8000/&quot;到下载地址执行python3 -m http.server再次执行pyenv install 3.5.0发现还是从官网下载。不过此时查看http.server上有一条HEAD请求日志。-_-发现不是直接请问的文件名，而是一个64位的字符。将下载的文件名修改成那64位字符。在执行就ok了~~\n","dateCreated":"2016-07-15T08:57:02+08:00","dateModified":"2016-07-15T09:42:56+08:00","datePublished":"2016-07-15T08:57:02+08:00","description":"","headline":"pyenv使用镜像加速","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/07/15/pyenv_use_mirror/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/07/15/pyenv_use_mirror/","keywords":"python"}</script>
     <meta name="description" content="使用pyenv install 3.5.0的时候直接去python.org官网下载源码进行编译。速度几kb每秒慢到无法自理。无奈用代理速度也不怎么样。再其次该项目的作者是自己写了一个pyenv镜像项目的，只可惜更新频率远不如pyenv。导致安装一些新的版本无法使用公共代理 如果安装2.7.6你可以选择使用国内七牛的镜像。项目地址http:&#x2F;&#x2F;pyenv.qiniudn.com&#x2F;pythons&#x2F;。执">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="pyenv使用镜像加速">
@@ -178,7 +178,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -194,87 +194,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -647,6 +569,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -947,8 +875,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

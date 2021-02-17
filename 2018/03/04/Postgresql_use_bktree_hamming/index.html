@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"上一篇 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍\n\n\n获得图片的simhash我们直接使用python的第三方库imagehash。代码如下\n123456789from PIL import Imageimport imagehashdef get_phash(file_path):    img = Image.open(file_path)    phash = imagehash.phash(img).hash.flatten()    phash_list = list(map(bool, phash))    return sum((2 ** k) * v for k, v in enumerate(phash_list[1:][::-1]))\n\n需要注意的是。默认得到的phash是一个经过hex编码的字符串。这样会很长，而我们需要保存到数据库的数据是一个bigint类型。因此我们直接获得64位的np.array，将它转换成数字。因为int64中第一位是符号位。后63位是补码。如果直接将64位都转成正整数，很有可能会保存出错。从最方便的角度来说我们可以去掉第一位(实际上我测试了好多个。发现第一位基本都是1)。这样转换得到的数字就能直接存储到数据库了。\n如果真的要模拟转换成bigint的效果。可以看我写的这个\n数据库优化\n来个示例\n\n12345678910111213141516171819202122232425262728--  创建表create table if not exists int8tmp_2(\ta bigint);-- 写入一百万条数据INSERT INTO int8tmp_2 SELECT val                      FROM (SELECT sqrt(random()) :: NUMERIC * 9223372036854775807 * 2 -                                   9223372036854775807 :: NUMERIC AS val                            FROM generate_series(1, 1000000)) t;-- 创建一个查询函数CREATE OR REPLACE FUNCTION bit_count(value BIGINT)  RETURNS NUMERICAS $$ SELECT SUM((value &gt;&gt; bit) &amp; 1)      FROM generate_series(0, 63) bit $$LANGUAGE SQL IMMUTABLE STRICT;-- 查询SELECT  a,  bit_count(a # 8192711222023195111) AS hdFROM int8tmp_2WHERE bit_count(a # 8192711222023195111) &lt; 4ORDER BY hd;    -- 结果大概这样-- [2018-03-04 11:06:56] 1 row retrieved starting from 1 in 25s 403ms (execution: 25s 383ms, fetching: 20ms)\n\n\n使用BK树创建索引\n\n我选择了这个扩展fake-name/pg-spgist_hamming. 安装的套路是这样的(只支持PG9.6以上版本)\n1234git clone .......cd bktreeUSE_PGXS&#x3D;1 makeUSE_PGXS&#x3D;1 make install\n注意这个库同时提供了bktree和vptree,但是我没搞懂vptree,vptree的表现很奇怪,另外不能同时使用bktree和vptree。因为它们有一些重载的操作符重复了\n\n使用流程\n\n12345678910111213-- 启用扩展CREATE EXTENSION bktree;-- 创建CREATE INDEX IF NOT EXISTS int8idx_2 ON int8tmp_2 USING spgist ( a bktree_ops );-- 查询( &lt;-&gt; 运算符表示计算汉明距离, &lt;@()表示符合汉明距离小于N)SELECT  a,  a &lt;-&gt; 8192711222023195111 AS hdFROM int8tmp_2WHERE a &lt;@ (8192711222023195111, 4)ORDER BY hd;-- 结果大概是这样的[2018-03-04 11:18:25] 1 row retrieved starting from 1 in 44ms (execution: 31ms, fetching: 13ms)\n\n世界真美妙┑(￣Д ￣)┍\n参考资料海量数据,海明(simhash)距离高效检索(smlar) - 阿里云RDS PosgreSQL最佳实践bit_count function in PostgreSQL\n","dateCreated":"2018-03-04T10:45:47+08:00","dateModified":"2018-03-04T11:22:06+08:00","datePublished":"2018-03-04T10:45:47+08:00","description":"上一篇 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍","headline":"利用BK树优化汉明距离查询","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"上一篇 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍\n\n\n获得图片的simhash我们直接使用python的第三方库imagehash。代码如下\n123456789from PIL import Imageimport imagehashdef get_phash(file_path):    img = Image.open(file_path)    phash = imagehash.phash(img).hash.flatten()    phash_list = list(map(bool, phash))    return sum((2 ** k) * v for k, v in enumerate(phash_list[1:][::-1]))\n\n需要注意的是。默认得到的phash是一个经过hex编码的字符串。这样会很长，而我们需要保存到数据库的数据是一个bigint类型。因此我们直接获得64位的np.array，将它转换成数字。因为int64中第一位是符号位。后63位是补码。如果直接将64位都转成正整数，很有可能会保存出错。从最方便的角度来说我们可以去掉第一位(实际上我测试了好多个。发现第一位基本都是1)。这样转换得到的数字就能直接存储到数据库了。\n如果真的要模拟转换成bigint的效果。可以看我写的这个\n数据库优化\n来个示例\n\n12345678910111213141516171819202122232425262728--  创建表create table if not exists int8tmp_2(\ta bigint);-- 写入一百万条数据INSERT INTO int8tmp_2 SELECT val                      FROM (SELECT sqrt(random()) :: NUMERIC * 9223372036854775807 * 2 -                                   9223372036854775807 :: NUMERIC AS val                            FROM generate_series(1, 1000000)) t;-- 创建一个查询函数CREATE OR REPLACE FUNCTION bit_count(value BIGINT)  RETURNS NUMERICAS $$ SELECT SUM((value &gt;&gt; bit) &amp; 1)      FROM generate_series(0, 63) bit $$LANGUAGE SQL IMMUTABLE STRICT;-- 查询SELECT  a,  bit_count(a # 8192711222023195111) AS hdFROM int8tmp_2WHERE bit_count(a # 8192711222023195111) &lt; 4ORDER BY hd;    -- 结果大概这样-- [2018-03-04 11:06:56] 1 row retrieved starting from 1 in 25s 403ms (execution: 25s 383ms, fetching: 20ms)\n\n\n使用BK树创建索引\n\n我选择了这个扩展fake-name/pg-spgist_hamming. 安装的套路是这样的(只支持PG9.6以上版本)\n1234git clone .......cd bktreeUSE_PGXS&#x3D;1 makeUSE_PGXS&#x3D;1 make install\n注意这个库同时提供了bktree和vptree,但是我没搞懂vptree,vptree的表现很奇怪,另外不能同时使用bktree和vptree。因为它们有一些重载的操作符重复了\n\n使用流程\n\n12345678910111213-- 启用扩展CREATE EXTENSION bktree;-- 创建CREATE INDEX IF NOT EXISTS int8idx_2 ON int8tmp_2 USING spgist ( a bktree_ops );-- 查询( &lt;-&gt; 运算符表示计算汉明距离, &lt;@()表示符合汉明距离小于N)SELECT  a,  a &lt;-&gt; 8192711222023195111 AS hdFROM int8tmp_2WHERE a &lt;@ (8192711222023195111, 4)ORDER BY hd;-- 结果大概是这样的[2018-03-04 11:18:25] 1 row retrieved starting from 1 in 44ms (execution: 31ms, fetching: 13ms)\n\n世界真美妙┑(￣Д ￣)┍\n参考资料海量数据,海明(simhash)距离高效检索(smlar) - 阿里云RDS PosgreSQL最佳实践bit_count function in PostgreSQL\n","dateCreated":"2018-03-04T10:45:47+08:00","dateModified":"2018-03-04T11:22:06+08:00","datePublished":"2018-03-04T10:45:47+08:00","description":"上一篇 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍","headline":"利用BK树优化汉明距离查询","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/03/04/Postgresql_use_bktree_hamming/"}</script>
     <meta name="description" content="上一篇 介绍了BK树和VP树，并说明用它可以优化汉明距离的查询。用来处理重复图片的问题。本篇我们做出示例演示如何使用，最终的结果是100万条数据。相对于全表遍历的31秒下降到54毫秒。使用了正确的索引速度提升了五百多倍">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="利用BK树优化汉明距离查询">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -664,6 +586,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -964,8 +892,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

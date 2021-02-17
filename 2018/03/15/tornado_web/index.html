@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"上一篇文章讲解了httpserver。它最终传入的是一个函数，接受的是Request对象，这和Tornado所展示的Hello World有一些差距。tornado的web模块就是将它从一个函数变化成一个类对象，并且包含了基础的路由功能，最终实现类似与这样的Hello World(代码基于1.0.0版本)\n123456789101112131415from tornado import webfrom tornado import httpserverfrom tornado import ioloopclass MainHandler(web.RequestHandler):    def get(self):        self.write(b&quot;Hello World&quot;)application = web.Application([    (r&quot;/&quot;, MainHandler)])http_server = httpserver.HTTPServer(application)http_server.listen(8888)ioloop.IOLoop.instance().start()\n\n\n\n将handler_request回调封装为RequestHandler类和Application和上一篇的httpserver并没有太大的变动，传入的对象由单个函数变成了application对象，并且web模块有RequestHandler和Application类，能猜想到web模块提供了路由功能，对请求的HTTP。它先得到请求路径和HTTP方法。找到对应的类。调用对应的方法。由此写出以下最简代码\n1234567891011121314151617181920212223242526272829class RequestHandler:    def __init__(self, request, application):        self.request = request        self.application = application        self._write_chunk = b&quot;&quot;    def get(self):        raise NotImplementedError()    def write(self, chunk):        self._write_chunk += chunk    def finish(self):        self.request.write(b&quot;HTTP/1.0 200 OK\\r\\nContent-Length: %d\\r\\n\\r\\n%s&quot; % (            len(self._write_chunk), self._write_chunk))    def _execute(self):        self.get()        self.finish()class Application:    def __init__(self, handlers):        self.handlers = handlers    def __call__(self, request):        # 先从request得到访问host、url和method对handlers进行匹配        handler = self.handlers[0][1](request, self)        handler._execute()\n\n将所有的RequestHandler类均放置到Application下面。当它被tornado.httpserver调用传入request对象的时候会调用Application的__call__函数。因为self.handlers中，每一个handler均有对应的路由地址，毫无疑问，这个地方会存在一个匹配过程。因为调用__call__的时候request对象已经可以提取到host、port、url、header、body等各种信息，最常用的只需要使用host和url即可确定调用哪一个RequestHandler。匹配后对RestsHandler进行初始化,此时传入了request对象和Application对象本身，最后调用_execute完成整个过程的执行\n路由功能路由功能的实现主要依靠正则匹配。比如实现对博客地址的匹配/(\\d&#123;4&#125;)/(\\d&#123;2&#125;)/(\\d&#123;2&#125;)/(.+?)。分别表示年、月、日、主题，或者使用正则命名分组/(?P&lt;year&gt;\\d&#123;4&#125;)/(?P&lt;month&gt;\\d&#123;2&#125;)/(?P&lt;day&gt;\\d&#123;2&#125;)/(?P&lt;theme&gt;.+?)。那么我们只需要再添加的时候执行re.compile。在匹配的时候执行re.match即可。对于普通的不存在正则分组的情况，就不需要传入正则分组匹配的内容。否则像以下这样\n123class BlogHandler(RequestHandler):        def get(self,year,month,day):                pass\n在Tornado里面它使用了URLSpec类来封装这个事情\n其他和上一篇的httpserver中使用handler_request函数不同。本篇的web模块对它进行了进一步的封装。我们面对的编写主要的业务逻辑均是继承自RequestHandler对象。在上一章基本面对的还是直接对iostream进行写操作，写入header、写入cookies、写入etag、模板渲染这些都是没有直接提供的。web模块作为它的更高级别封装，它提供了这些功能。\n\n路由匹配\n给RequestHandler对象暴露Application对象和Request对象\n提供状态码、跳转、url参数、header、cookies、缓存头、模板渲染、CSRF、日志记录等功能\n提供http请求生命周期内的各项hook事件prepare、on_finish、on_connection_close\n提供最常用的辅助函数get_login_url、get_current_user等\n基于RequestHandler继承出了一些其他对象，比如ErrorHandler、StaticFileHandler、RedirectHandler等。注意，这一些和Flask等web框架的用法不一样。在Flask中是直接return ErrorHandler()等等。可是在Tornado中最后执行的是RequestHandler._execute，它是不支持直接返回这一些对象的。比如跳转直接执行self.redirect即可。这一些继承对象应该使用Application.add_handler进行调用。配合url匹配规则，然后最终被调用ErrorHandler._execute等等\n\nweb里面还存在一个装饰器函数asynchronous，这个装饰器在Tornado存在了很长时间，只是现在基本可以不使用它了。可是依旧很多人喜欢一言不合就带上它。用法是这样\n123456789class MyRequestHandler(web.RequestHandler):    @web.asynchronous    def get(self):        http = httpclient.AsyncHTTPClient()        http.fetch(&quot;http://friendfeed.com/&quot;, self._on_download)    def _on_download(self, response):        self.write(&quot;Downloaded!&quot;)        self.finish()\n产生的原因是最终web.RequestHandler._execute调用了get函数。get执行完http.fetch整个过程就完成了。只是http.fetch它并没有阻塞，最终的结果是加入了IOLoop的回调，_execute的默认逻辑是当get函数执行完毕后会立即调用self.finish表示请求流程结束。明显这不是我们需要的逻辑，正常逻辑是等待网页下载完毕后再返回内容，因此web.asynchronous的逻辑很简单。将get函数设置一个标志位self._auto_finish = False表明该函数不需要调用self.finish()操作，自然最后再手动调用finish就好了\n","dateCreated":"2018-03-15T17:23:07+08:00","dateModified":"2018-03-16T11:25:03+08:00","datePublished":"2018-03-15T17:23:07+08:00","description":"上一篇文章讲解了httpserver。它最终传入的是一个函数，接受的是Request对象，这和Tornado所展示的Hello World有一些差距。tornado的web模块就是将它从一个函数变化成一个类对象，并且包含了基础的路由功能，最终实现类似与这样的Hello World(代码基于1.0.0版本)\n123456789101112131415from tornado import webfrom tornado import httpserverfrom tornado import ioloopclass MainHandler(web.RequestHandler):    def get(self):        self.write(b&quot;Hello World&quot;)application = web.Application([    (r&quot;/&quot;, MainHandler)])http_server = httpserver.HTTPServer(application)http_server.listen(8888)ioloop.IOLoop.instance().start()","headline":"Tornado 之web","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/15/tornado_web/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/15/tornado_web/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"上一篇文章讲解了httpserver。它最终传入的是一个函数，接受的是Request对象，这和Tornado所展示的Hello World有一些差距。tornado的web模块就是将它从一个函数变化成一个类对象，并且包含了基础的路由功能，最终实现类似与这样的Hello World(代码基于1.0.0版本)\n123456789101112131415from tornado import webfrom tornado import httpserverfrom tornado import ioloopclass MainHandler(web.RequestHandler):    def get(self):        self.write(b&quot;Hello World&quot;)application = web.Application([    (r&quot;/&quot;, MainHandler)])http_server = httpserver.HTTPServer(application)http_server.listen(8888)ioloop.IOLoop.instance().start()\n\n\n\n将handler_request回调封装为RequestHandler类和Application和上一篇的httpserver并没有太大的变动，传入的对象由单个函数变成了application对象，并且web模块有RequestHandler和Application类，能猜想到web模块提供了路由功能，对请求的HTTP。它先得到请求路径和HTTP方法。找到对应的类。调用对应的方法。由此写出以下最简代码\n1234567891011121314151617181920212223242526272829class RequestHandler:    def __init__(self, request, application):        self.request = request        self.application = application        self._write_chunk = b&quot;&quot;    def get(self):        raise NotImplementedError()    def write(self, chunk):        self._write_chunk += chunk    def finish(self):        self.request.write(b&quot;HTTP/1.0 200 OK\\r\\nContent-Length: %d\\r\\n\\r\\n%s&quot; % (            len(self._write_chunk), self._write_chunk))    def _execute(self):        self.get()        self.finish()class Application:    def __init__(self, handlers):        self.handlers = handlers    def __call__(self, request):        # 先从request得到访问host、url和method对handlers进行匹配        handler = self.handlers[0][1](request, self)        handler._execute()\n\n将所有的RequestHandler类均放置到Application下面。当它被tornado.httpserver调用传入request对象的时候会调用Application的__call__函数。因为self.handlers中，每一个handler均有对应的路由地址，毫无疑问，这个地方会存在一个匹配过程。因为调用__call__的时候request对象已经可以提取到host、port、url、header、body等各种信息，最常用的只需要使用host和url即可确定调用哪一个RequestHandler。匹配后对RestsHandler进行初始化,此时传入了request对象和Application对象本身，最后调用_execute完成整个过程的执行\n路由功能路由功能的实现主要依靠正则匹配。比如实现对博客地址的匹配/(\\d&#123;4&#125;)/(\\d&#123;2&#125;)/(\\d&#123;2&#125;)/(.+?)。分别表示年、月、日、主题，或者使用正则命名分组/(?P&lt;year&gt;\\d&#123;4&#125;)/(?P&lt;month&gt;\\d&#123;2&#125;)/(?P&lt;day&gt;\\d&#123;2&#125;)/(?P&lt;theme&gt;.+?)。那么我们只需要再添加的时候执行re.compile。在匹配的时候执行re.match即可。对于普通的不存在正则分组的情况，就不需要传入正则分组匹配的内容。否则像以下这样\n123class BlogHandler(RequestHandler):        def get(self,year,month,day):                pass\n在Tornado里面它使用了URLSpec类来封装这个事情\n其他和上一篇的httpserver中使用handler_request函数不同。本篇的web模块对它进行了进一步的封装。我们面对的编写主要的业务逻辑均是继承自RequestHandler对象。在上一章基本面对的还是直接对iostream进行写操作，写入header、写入cookies、写入etag、模板渲染这些都是没有直接提供的。web模块作为它的更高级别封装，它提供了这些功能。\n\n路由匹配\n给RequestHandler对象暴露Application对象和Request对象\n提供状态码、跳转、url参数、header、cookies、缓存头、模板渲染、CSRF、日志记录等功能\n提供http请求生命周期内的各项hook事件prepare、on_finish、on_connection_close\n提供最常用的辅助函数get_login_url、get_current_user等\n基于RequestHandler继承出了一些其他对象，比如ErrorHandler、StaticFileHandler、RedirectHandler等。注意，这一些和Flask等web框架的用法不一样。在Flask中是直接return ErrorHandler()等等。可是在Tornado中最后执行的是RequestHandler._execute，它是不支持直接返回这一些对象的。比如跳转直接执行self.redirect即可。这一些继承对象应该使用Application.add_handler进行调用。配合url匹配规则，然后最终被调用ErrorHandler._execute等等\n\nweb里面还存在一个装饰器函数asynchronous，这个装饰器在Tornado存在了很长时间，只是现在基本可以不使用它了。可是依旧很多人喜欢一言不合就带上它。用法是这样\n123456789class MyRequestHandler(web.RequestHandler):    @web.asynchronous    def get(self):        http = httpclient.AsyncHTTPClient()        http.fetch(&quot;http://friendfeed.com/&quot;, self._on_download)    def _on_download(self, response):        self.write(&quot;Downloaded!&quot;)        self.finish()\n产生的原因是最终web.RequestHandler._execute调用了get函数。get执行完http.fetch整个过程就完成了。只是http.fetch它并没有阻塞，最终的结果是加入了IOLoop的回调，_execute的默认逻辑是当get函数执行完毕后会立即调用self.finish表示请求流程结束。明显这不是我们需要的逻辑，正常逻辑是等待网页下载完毕后再返回内容，因此web.asynchronous的逻辑很简单。将get函数设置一个标志位self._auto_finish = False表明该函数不需要调用self.finish()操作，自然最后再手动调用finish就好了\n","dateCreated":"2018-03-15T17:23:07+08:00","dateModified":"2018-03-16T11:25:03+08:00","datePublished":"2018-03-15T17:23:07+08:00","description":"上一篇文章讲解了httpserver。它最终传入的是一个函数，接受的是Request对象，这和Tornado所展示的Hello World有一些差距。tornado的web模块就是将它从一个函数变化成一个类对象，并且包含了基础的路由功能，最终实现类似与这样的Hello World(代码基于1.0.0版本)\n123456789101112131415from tornado import webfrom tornado import httpserverfrom tornado import ioloopclass MainHandler(web.RequestHandler):    def get(self):        self.write(b&quot;Hello World&quot;)application = web.Application([    (r&quot;/&quot;, MainHandler)])http_server = httpserver.HTTPServer(application)http_server.listen(8888)ioloop.IOLoop.instance().start()","headline":"Tornado 之web","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/15/tornado_web/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/03/15/tornado_web/"}</script>
     <meta name="description" content="上一篇文章讲解了httpserver。它最终传入的是一个函数，接受的是Request对象，这和Tornado所展示的Hello World有一些差距。tornado的web模块就是将它从一个函数变化成一个类对象，并且包含了基础的路由功能，最终实现类似与这样的Hello World(代码基于1.0.0版本) 123456789101112131415from tornado import webfr">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Tornado 之web">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -662,6 +584,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -962,8 +890,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

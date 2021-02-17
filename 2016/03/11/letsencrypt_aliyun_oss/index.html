@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。\n\n\n关于RSA的那些事儿web安全离不开RSA非对称加密算法，说真的数学原理我没看明白。仅仅知道最后生成的公钥和私钥其实都是一对数字。可是我们经常看到生成的公私钥是字符串。其实它只是经过了一些编码(下见参考)。然后一个密钥用来加密一个密钥用来解密（意味着公私钥都能加密）。其次是签名，签名就是将需要签名的信息使用信息摘要算法（比如sha256）获取摘要。然后使用私钥进行加密，对方使用相同的步骤算出摘要，然后使用公钥对你加密的信息进行解密。如果解密的信息和算出摘要的信息相同则证明该信息完整且为对方发出。其实和HMAC相当的相似，只不过HMAC使用对称密钥。再其实。签名算法都差不多这样OVER\n关于letsencrypt的内部流程本节参考acme-tiny脚本。过程中最重要的为用户认证流程。普遍的用户认证流程为获取token，即用户登录获取token，后续的API请求和该token关联。然而letsencrypt的流程非常不同(主要因为它不需要去letsencrypt网站进行注册)。一个独立的账户依靠本地生成证书来认证openssl genrsa 4096 &gt; account.key，该证书为PEM证书。即文件中含有公钥和私钥。对于所有的API请求都会要求签名。签名代码如下：\n12345678910111213141516171819def _send_signed_request(url, payload):    payload64 = _b64(json.dumps(payload).encode(&#x27;utf8&#x27;))    protected = copy.deepcopy(header)    protected[&quot;nonce&quot;] = urlopen(CA + &quot;/directory&quot;).headers[&#x27;Replay-Nonce&#x27;]    protected64 = _b64(json.dumps(protected).encode(&#x27;utf8&#x27;))    proc = subprocess.Popen([&quot;openssl&quot;, &quot;dgst&quot;, &quot;-sha256&quot;, &quot;-sign&quot;, account_key],        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)    out, err = proc.communicate(&quot;&#123;0&#125;.&#123;1&#125;&quot;.format(protected64, payload64).encode(&#x27;utf8&#x27;))    if proc.returncode != 0:        raise IOError(&quot;OpenSSL Error: &#123;0&#125;&quot;.format(err))    data = json.dumps(&#123;        &quot;header&quot;: header, &quot;protected&quot;: protected64,        &quot;payload&quot;: payload64, &quot;signature&quot;: _b64(out),    &#125;)    try:        resp = urlopen(url, data.encode(&#x27;utf8&#x27;))        return resp.getcode(), resp.read()    except IOError as e:        return getattr(e, &quot;code&quot;, None), getattr(e, &quot;read&quot;, e.__str__)()\n\n可以看出从证书中取出公钥。然后依照公钥+(公钥+服务器随机数+信息)+第二部分的签名证明自己的身份。即：一个公钥对应一个身份。后续的流程就是：①身份注册→→→→②获取域名列表→→→→(③发送http挑战请求→→→→④根据返回内容建立文件→→→→⑤自身测试下载→→→→⑥发送挑战测试请求)→→→→⑦提交csr文件返回签名证书\n移植到OSS上网上大多数教程都是部署到服务器。和部署到OSS最大的差别在于上面的划括号的部分。部署在服务器上是在服务器生成文件，如果部署到阿里云OSS，则应该上传文件到阿里云。没有别的区别。另外还可以使用DNS挑战。如果你使用cloudxns作DNS解析。也可以使用它，从而通过验证，另外一点。生成的证书文件需要在阿里云CDN设置页面设置。然而！！！阿里云并没有提供API接口！！！，意味着需要手工操作。然而至少每3个月更新一次还是很频繁的。。。。。。所以，要真用在上面还得三思这是我参照acme-tiny改写的证书脚本\nhexo使用的一些建议\n将图片文件进行压缩放到CDN上面。压缩工具灰常之多。笔者就不例举了\n引用的国外JS文件能换成国内镜像源的全部替换(先查看有浏览器端有什么请求然后，比如这个模板会使用谷歌字体,直接使用sed -i -- &#39;s/fonts.gstatic.com/fonts-gstatic.lug.ustc.edu.cn/g&#39; **/*(D.)替换成中科大的,zsh专用)\n上传图片不如试试我写的脚本https://gist.github.com/ficapy/8c57998d14c434ab5df3\nswiftype加载真的好慢好慢。如果为了加载速度绝对要替换掉(😄，现在不免费了留你何用，替换成algolia了)\n\n参考RSA算法原理HMAC中文维基pem格式letsencrypt部署How can I replace a string in a file(s)?\n","dateCreated":"2016-03-11T18:28:34+08:00","dateModified":"2016-08-29T16:09:25+08:00","datePublished":"2016-03-11T18:28:34+08:00","description":"继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。","headline":"阿里云OSS绑定letsencrypt证书","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。\n\n\n关于RSA的那些事儿web安全离不开RSA非对称加密算法，说真的数学原理我没看明白。仅仅知道最后生成的公钥和私钥其实都是一对数字。可是我们经常看到生成的公私钥是字符串。其实它只是经过了一些编码(下见参考)。然后一个密钥用来加密一个密钥用来解密（意味着公私钥都能加密）。其次是签名，签名就是将需要签名的信息使用信息摘要算法（比如sha256）获取摘要。然后使用私钥进行加密，对方使用相同的步骤算出摘要，然后使用公钥对你加密的信息进行解密。如果解密的信息和算出摘要的信息相同则证明该信息完整且为对方发出。其实和HMAC相当的相似，只不过HMAC使用对称密钥。再其实。签名算法都差不多这样OVER\n关于letsencrypt的内部流程本节参考acme-tiny脚本。过程中最重要的为用户认证流程。普遍的用户认证流程为获取token，即用户登录获取token，后续的API请求和该token关联。然而letsencrypt的流程非常不同(主要因为它不需要去letsencrypt网站进行注册)。一个独立的账户依靠本地生成证书来认证openssl genrsa 4096 &gt; account.key，该证书为PEM证书。即文件中含有公钥和私钥。对于所有的API请求都会要求签名。签名代码如下：\n12345678910111213141516171819def _send_signed_request(url, payload):    payload64 = _b64(json.dumps(payload).encode(&#x27;utf8&#x27;))    protected = copy.deepcopy(header)    protected[&quot;nonce&quot;] = urlopen(CA + &quot;/directory&quot;).headers[&#x27;Replay-Nonce&#x27;]    protected64 = _b64(json.dumps(protected).encode(&#x27;utf8&#x27;))    proc = subprocess.Popen([&quot;openssl&quot;, &quot;dgst&quot;, &quot;-sha256&quot;, &quot;-sign&quot;, account_key],        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)    out, err = proc.communicate(&quot;&#123;0&#125;.&#123;1&#125;&quot;.format(protected64, payload64).encode(&#x27;utf8&#x27;))    if proc.returncode != 0:        raise IOError(&quot;OpenSSL Error: &#123;0&#125;&quot;.format(err))    data = json.dumps(&#123;        &quot;header&quot;: header, &quot;protected&quot;: protected64,        &quot;payload&quot;: payload64, &quot;signature&quot;: _b64(out),    &#125;)    try:        resp = urlopen(url, data.encode(&#x27;utf8&#x27;))        return resp.getcode(), resp.read()    except IOError as e:        return getattr(e, &quot;code&quot;, None), getattr(e, &quot;read&quot;, e.__str__)()\n\n可以看出从证书中取出公钥。然后依照公钥+(公钥+服务器随机数+信息)+第二部分的签名证明自己的身份。即：一个公钥对应一个身份。后续的流程就是：①身份注册→→→→②获取域名列表→→→→(③发送http挑战请求→→→→④根据返回内容建立文件→→→→⑤自身测试下载→→→→⑥发送挑战测试请求)→→→→⑦提交csr文件返回签名证书\n移植到OSS上网上大多数教程都是部署到服务器。和部署到OSS最大的差别在于上面的划括号的部分。部署在服务器上是在服务器生成文件，如果部署到阿里云OSS，则应该上传文件到阿里云。没有别的区别。另外还可以使用DNS挑战。如果你使用cloudxns作DNS解析。也可以使用它，从而通过验证，另外一点。生成的证书文件需要在阿里云CDN设置页面设置。然而！！！阿里云并没有提供API接口！！！，意味着需要手工操作。然而至少每3个月更新一次还是很频繁的。。。。。。所以，要真用在上面还得三思这是我参照acme-tiny改写的证书脚本\nhexo使用的一些建议\n将图片文件进行压缩放到CDN上面。压缩工具灰常之多。笔者就不例举了\n引用的国外JS文件能换成国内镜像源的全部替换(先查看有浏览器端有什么请求然后，比如这个模板会使用谷歌字体,直接使用sed -i -- &#39;s/fonts.gstatic.com/fonts-gstatic.lug.ustc.edu.cn/g&#39; **/*(D.)替换成中科大的,zsh专用)\n上传图片不如试试我写的脚本https://gist.github.com/ficapy/8c57998d14c434ab5df3\nswiftype加载真的好慢好慢。如果为了加载速度绝对要替换掉(😄，现在不免费了留你何用，替换成algolia了)\n\n参考RSA算法原理HMAC中文维基pem格式letsencrypt部署How can I replace a string in a file(s)?\n","dateCreated":"2016-03-11T18:28:34+08:00","dateModified":"2016-08-29T16:09:25+08:00","datePublished":"2016-03-11T18:28:34+08:00","description":"继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。","headline":"阿里云OSS绑定letsencrypt证书","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/03/11/letsencrypt_aliyun_oss/"}</script>
     <meta name="description" content="继上篇文章之后，讲解阿里云OSS绑定letsencrypt。其实网上讲述letencrypt使用方法的文章非常之多。本篇文章笔者将会讲解一些其他的比较浅显的原理。即为什么要这样做。该步骤到底发生了什么，对于实际操作步骤，请参照最后的参考链接。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="阿里云OSS绑定letsencrypt证书">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -654,6 +576,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -954,8 +882,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

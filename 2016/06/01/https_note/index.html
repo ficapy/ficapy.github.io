@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"这年头网络劫持如此普遍，作为搞web开发的说不了解点https都不好意思。简单理解https可以非常简单，可是一旦上升到密码学。ヾ(｡｀Д´｡)牵扯到的概念真是太多了太特么复杂了。鄙人还是从个人实用角度出发。简洁记录一下https相关内容,另外本文作为回顾尚可，不适合作为初次了解https的参考。\n\n\n从最简单的角度来说。简单理解HTTPS理解以下字段就好了TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256.任何稍有常识的程序员一定对RSA公私钥体系有所耳闻。以小白的眼光从最简单的角度来看。第一个请求向服务器请求公匙，服务器返回公匙。客户端验证公匙。客户端使用公匙加密一个密钥传递给服务器，然后就用这个密匙使用AES加密传输数据就完事儿了。妈蛋多好理解啊，可是现实环境总是灰常复杂的T_T。不过总体而言也差不了多少。上图2张。\nwireshark中总体给出了灰常重要的几个关键词\n\n①Client Hello(发送客户端随机数，支持clipher，一些Extension，最知名的Extension应该是SNI，灰常好理解，就是表明是请求的哪个域名，这样就能够一个IP上放置N个证书哒，然后还有个有趣的东东sniproxy)\n②Server Hello(发送服务端随机数，返回商量好的clipher) \n③Certificate(服务端返回公钥链)\n④Client Key Exchange(就是传递一个密匙哒)Change Cipher Spec(没啥用TLS1.3已被移出)Finished(发送一段加密的验证数据让服务端验证，包含前面几步的一些信息)\n⑤New Session Ticket(你看上面那么多流程，这里缓存一下结果哒，想要快一点下次直接传ticket就可以省掉好多步骤哒，https优化第一事项)Change Cipher Spec(同上没啥用)Finished(发送一段加密的验证数据让客户端验证)\n⑥Over，开始用AES加密传输\n\n上面的步骤协商的clipher suite是TLS_RSA_WITH_AES_128_GCM_SHA256，事实上现在只要你自己不做死，是绝不可能出现这种不安全的clipher suite。因为执行openssl cliphers将会看到所有的RSA都会搭配DH算法一起使用，不会单独存在RSA(鄙人开始自己想看看没有DH交换的https交互是怎样的配置了好半天没成功，因为要自己编译openssl，如果不是灰常了解真做不了这个死。后来偶然发现阿里云CDN配置的https符合试验要求)\n为什么不安全，因为想想看啊，wireshark作为一个嗅探抓包工具，导入个证书就能解密传输数据哒。这就意味着只要别人捕获了你的数据那么有朝一日搞到了你的证书私钥就能解密数据。其实也很好理解，因为这里最终协商的密匙是由3个部分组成2个随机数和使用公钥加密的那个字段，只要别人有了私匙就能用同样的办法计算得到最终的AES加密密匙。由此引入了一个DH密匙交换体系\n介个DH交换咱就不说原理了，可以参照后文参考链接，大意就是双方共有一个key，然后我给你发一个随机明文，你给我发一个随机明文。最后双方就灰常神奇了拥有了同样的密匙，达到了密匙交换的目的。可是密匙交换体系有个脆弱的地方。如果第三方知道了共有的那个key，就能够被中间人(自己想一下为什么)~~~,引入密匙交换，握手交互就成了下图的样子这样上面的RSA密匙交换变成了DH交换，就有了PSF(向前安全性,即使有了私钥，那么别人也无法解密以前捕获的数据，因为DH交换的那个密匙算不出来嘛)。可是有了证书之后是可以用来中间人的(想想DH的弱项，要不为何叫向前安全性呢23333)\nHSTS,HPKPHSTS:想一想你在地址栏输入一个网址你会去完全输入http://www.taobao.com吗，当然不会！！好多人都会直接输入taobao.com（当然更多的人会去百毒淘宝）,那么浏览器怎么知道你要访问http://taobao.com还是https://taobao.com呢。毕竟https如此安全肯定是首选，然后就有了个http请求头类似下面这个样子Strict-Transport-Security: max-age=31536000; includeSubDomains; preload客户端第一次收到这种请求就知道了下次要是再访问，那么将直接使用https不再使用http协议，增加安全性避免降级攻击（可以看到凡是开了https的大站点都必定开了此字段并且设置的很长）\nHPKP:相反这个东西就没多大用了╮(╯▽╰)╭，可以试试效果，用chrome或者firefox先访问https://scotthelme.co.uk/ 再访问https://hpkp.scotthelme.co.uk/ 会报隐私设置错误。为毛呢，因为有一个header字段是这样的Public-Key-Pins: pin-sha256=&quot;X3pGTSOuJeEVw989IJ/cEtXUEmy52zs1TZQrU06KUKg=&quot;; pin-sha256=&quot;MHJYVThihUrJcxW6wcqyOISTXIsInsdj3xK8QrZbHec=&quot;; pin-sha256=&quot;isi41AizREkLvvft0IRW4u3XMFR2Yg7bvrF7padyCJg=&quot;; pin-sha256=&quot;I/bAACUzdYEFNw2ZKRaypOyYvvOtqBzg21g9a5WVClg=&quot;; pin-sha256=&quot;Y4/Gxyck5JLLnC/zWHtSHfNljuMbOJi6dRQuRJTgYdo=&quot;; pin-sha256=&quot;/oCVQg3nP3DroGpFdAbaiYzenycUftqrH3LAyaIal2g=&quot;; pin-sha256=&quot;0PiItvsnLZy1slbsVPGky8YnDsJavMNtxD0TPwsCdC8=&quot;; pin-sha256=&quot;t3EPvqF+7XoKypCPHyN1b5uey7zTfIGDHn4oBWz2pds=&quot;; pin-sha256=&quot;zqbcEslrpiH0bA9uhNyl2ovpLEfGJQM/QvZSVumMFJ8=&quot;; pin-sha256=&quot;V+J+7lHvE6X0pqGKVqLtxuvk+0f+xowyr3obtq8tbSw=&quot;; pin-sha256=&quot;Myokb3mG16eRkVBE+ZmFSKSpYQzWHKMY1MZbXgA8BkQ=&quot;; pin-sha256=&quot;WSg/oQliyMYyP6yZ0CzDdQ8PHmtUkoUsOsa5svxxXxo=&quot;; pin-sha256=&quot;9lBW+k9EF6yyG9413/fPiHhQy5Ok4UI5sBpBTuOaa/U=&quot;; pin-sha256=&quot;ipMu2Xu72A086/35thucbjLfrPaSjuw4HIjSWsxqkb8=&quot;; pin-sha256=&quot;6OnjvIKf0SxyerXzg9N0RvQ2sgaL6niV+MLn9wBrh+s=&quot;; pin-sha256=&quot;9dNiZZueNZmyaf3pTkXxDgOzLkjKvI+Nza0ACF5IDwg=&quot;; max-age=2592000; includeSubDomains; report-uri=&quot;https://scotthelme.report-uri.io/r/default/hpkp/enforce&quot;它里面包含了公钥信息，如果和服务端返回的公钥不合那么会报错，为什么会有这个字段嘞，想想CA机制，任何一个可信根证书都能给任意域名提供签名证书然后能骗过浏览器进行中间人(类似实现比如sslsplit)，该情况就能防止这种情况发生。理想很丰满，现实很骨感，这个字段根本没什么人用，仅有有限的几个网站对此进行了设置，原因就是ヾ(｡｀Д´｡)CA跑去伪造你的域名的概率实在太特么小了，另外HSTS和HPKP都有一个特点那就是第一次访问没有被劫持，只有客户端收到了一个正确的HSTS设置才能对后面的请求发生作用。另外HKPK在浏览器设置代理的情况下是不启用的(应该是为了方便调试)，虽然HPKP如此的废柴。可是在另外一个地方实施却是不错的选择，如果你在APP上添加HPKP验证就能防止那些用fiddler抓包的小白，让抓包失效。如果要抓包请反编译APP去掉HPKP逻辑→_→\n相关资料https原理简版见过最完整的https中文博文国外讲解https比较多的博客国内讲解https比较多的博客TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256Diffie-Hellman中文维基ios public key pinning\n","dateCreated":"2016-06-01T21:54:21+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-06-01T21:54:21+08:00","description":"这年头网络劫持如此普遍，作为搞web开发的说不了解点https都不好意思。简单理解https可以非常简单，可是一旦上升到密码学。ヾ(｡｀Д´｡)牵扯到的概念真是太多了太特么复杂了。鄙人还是从个人实用角度出发。简洁记录一下https相关内容,另外本文作为回顾尚可，不适合作为初次了解https的参考。","headline":"https笔记","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/06/01/https_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/06/01/https_note/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"这年头网络劫持如此普遍，作为搞web开发的说不了解点https都不好意思。简单理解https可以非常简单，可是一旦上升到密码学。ヾ(｡｀Д´｡)牵扯到的概念真是太多了太特么复杂了。鄙人还是从个人实用角度出发。简洁记录一下https相关内容,另外本文作为回顾尚可，不适合作为初次了解https的参考。\n\n\n从最简单的角度来说。简单理解HTTPS理解以下字段就好了TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256.任何稍有常识的程序员一定对RSA公私钥体系有所耳闻。以小白的眼光从最简单的角度来看。第一个请求向服务器请求公匙，服务器返回公匙。客户端验证公匙。客户端使用公匙加密一个密钥传递给服务器，然后就用这个密匙使用AES加密传输数据就完事儿了。妈蛋多好理解啊，可是现实环境总是灰常复杂的T_T。不过总体而言也差不了多少。上图2张。\nwireshark中总体给出了灰常重要的几个关键词\n\n①Client Hello(发送客户端随机数，支持clipher，一些Extension，最知名的Extension应该是SNI，灰常好理解，就是表明是请求的哪个域名，这样就能够一个IP上放置N个证书哒，然后还有个有趣的东东sniproxy)\n②Server Hello(发送服务端随机数，返回商量好的clipher) \n③Certificate(服务端返回公钥链)\n④Client Key Exchange(就是传递一个密匙哒)Change Cipher Spec(没啥用TLS1.3已被移出)Finished(发送一段加密的验证数据让服务端验证，包含前面几步的一些信息)\n⑤New Session Ticket(你看上面那么多流程，这里缓存一下结果哒，想要快一点下次直接传ticket就可以省掉好多步骤哒，https优化第一事项)Change Cipher Spec(同上没啥用)Finished(发送一段加密的验证数据让客户端验证)\n⑥Over，开始用AES加密传输\n\n上面的步骤协商的clipher suite是TLS_RSA_WITH_AES_128_GCM_SHA256，事实上现在只要你自己不做死，是绝不可能出现这种不安全的clipher suite。因为执行openssl cliphers将会看到所有的RSA都会搭配DH算法一起使用，不会单独存在RSA(鄙人开始自己想看看没有DH交换的https交互是怎样的配置了好半天没成功，因为要自己编译openssl，如果不是灰常了解真做不了这个死。后来偶然发现阿里云CDN配置的https符合试验要求)\n为什么不安全，因为想想看啊，wireshark作为一个嗅探抓包工具，导入个证书就能解密传输数据哒。这就意味着只要别人捕获了你的数据那么有朝一日搞到了你的证书私钥就能解密数据。其实也很好理解，因为这里最终协商的密匙是由3个部分组成2个随机数和使用公钥加密的那个字段，只要别人有了私匙就能用同样的办法计算得到最终的AES加密密匙。由此引入了一个DH密匙交换体系\n介个DH交换咱就不说原理了，可以参照后文参考链接，大意就是双方共有一个key，然后我给你发一个随机明文，你给我发一个随机明文。最后双方就灰常神奇了拥有了同样的密匙，达到了密匙交换的目的。可是密匙交换体系有个脆弱的地方。如果第三方知道了共有的那个key，就能够被中间人(自己想一下为什么)~~~,引入密匙交换，握手交互就成了下图的样子这样上面的RSA密匙交换变成了DH交换，就有了PSF(向前安全性,即使有了私钥，那么别人也无法解密以前捕获的数据，因为DH交换的那个密匙算不出来嘛)。可是有了证书之后是可以用来中间人的(想想DH的弱项，要不为何叫向前安全性呢23333)\nHSTS,HPKPHSTS:想一想你在地址栏输入一个网址你会去完全输入http://www.taobao.com吗，当然不会！！好多人都会直接输入taobao.com（当然更多的人会去百毒淘宝）,那么浏览器怎么知道你要访问http://taobao.com还是https://taobao.com呢。毕竟https如此安全肯定是首选，然后就有了个http请求头类似下面这个样子Strict-Transport-Security: max-age=31536000; includeSubDomains; preload客户端第一次收到这种请求就知道了下次要是再访问，那么将直接使用https不再使用http协议，增加安全性避免降级攻击（可以看到凡是开了https的大站点都必定开了此字段并且设置的很长）\nHPKP:相反这个东西就没多大用了╮(╯▽╰)╭，可以试试效果，用chrome或者firefox先访问https://scotthelme.co.uk/ 再访问https://hpkp.scotthelme.co.uk/ 会报隐私设置错误。为毛呢，因为有一个header字段是这样的Public-Key-Pins: pin-sha256=&quot;X3pGTSOuJeEVw989IJ/cEtXUEmy52zs1TZQrU06KUKg=&quot;; pin-sha256=&quot;MHJYVThihUrJcxW6wcqyOISTXIsInsdj3xK8QrZbHec=&quot;; pin-sha256=&quot;isi41AizREkLvvft0IRW4u3XMFR2Yg7bvrF7padyCJg=&quot;; pin-sha256=&quot;I/bAACUzdYEFNw2ZKRaypOyYvvOtqBzg21g9a5WVClg=&quot;; pin-sha256=&quot;Y4/Gxyck5JLLnC/zWHtSHfNljuMbOJi6dRQuRJTgYdo=&quot;; pin-sha256=&quot;/oCVQg3nP3DroGpFdAbaiYzenycUftqrH3LAyaIal2g=&quot;; pin-sha256=&quot;0PiItvsnLZy1slbsVPGky8YnDsJavMNtxD0TPwsCdC8=&quot;; pin-sha256=&quot;t3EPvqF+7XoKypCPHyN1b5uey7zTfIGDHn4oBWz2pds=&quot;; pin-sha256=&quot;zqbcEslrpiH0bA9uhNyl2ovpLEfGJQM/QvZSVumMFJ8=&quot;; pin-sha256=&quot;V+J+7lHvE6X0pqGKVqLtxuvk+0f+xowyr3obtq8tbSw=&quot;; pin-sha256=&quot;Myokb3mG16eRkVBE+ZmFSKSpYQzWHKMY1MZbXgA8BkQ=&quot;; pin-sha256=&quot;WSg/oQliyMYyP6yZ0CzDdQ8PHmtUkoUsOsa5svxxXxo=&quot;; pin-sha256=&quot;9lBW+k9EF6yyG9413/fPiHhQy5Ok4UI5sBpBTuOaa/U=&quot;; pin-sha256=&quot;ipMu2Xu72A086/35thucbjLfrPaSjuw4HIjSWsxqkb8=&quot;; pin-sha256=&quot;6OnjvIKf0SxyerXzg9N0RvQ2sgaL6niV+MLn9wBrh+s=&quot;; pin-sha256=&quot;9dNiZZueNZmyaf3pTkXxDgOzLkjKvI+Nza0ACF5IDwg=&quot;; max-age=2592000; includeSubDomains; report-uri=&quot;https://scotthelme.report-uri.io/r/default/hpkp/enforce&quot;它里面包含了公钥信息，如果和服务端返回的公钥不合那么会报错，为什么会有这个字段嘞，想想CA机制，任何一个可信根证书都能给任意域名提供签名证书然后能骗过浏览器进行中间人(类似实现比如sslsplit)，该情况就能防止这种情况发生。理想很丰满，现实很骨感，这个字段根本没什么人用，仅有有限的几个网站对此进行了设置，原因就是ヾ(｡｀Д´｡)CA跑去伪造你的域名的概率实在太特么小了，另外HSTS和HPKP都有一个特点那就是第一次访问没有被劫持，只有客户端收到了一个正确的HSTS设置才能对后面的请求发生作用。另外HKPK在浏览器设置代理的情况下是不启用的(应该是为了方便调试)，虽然HPKP如此的废柴。可是在另外一个地方实施却是不错的选择，如果你在APP上添加HPKP验证就能防止那些用fiddler抓包的小白，让抓包失效。如果要抓包请反编译APP去掉HPKP逻辑→_→\n相关资料https原理简版见过最完整的https中文博文国外讲解https比较多的博客国内讲解https比较多的博客TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256Diffie-Hellman中文维基ios public key pinning\n","dateCreated":"2016-06-01T21:54:21+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-06-01T21:54:21+08:00","description":"这年头网络劫持如此普遍，作为搞web开发的说不了解点https都不好意思。简单理解https可以非常简单，可是一旦上升到密码学。ヾ(｡｀Д´｡)牵扯到的概念真是太多了太特么复杂了。鄙人还是从个人实用角度出发。简洁记录一下https相关内容,另外本文作为回顾尚可，不适合作为初次了解https的参考。","headline":"https笔记","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/06/01/https_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/06/01/https_note/"}</script>
     <meta name="description" content="这年头网络劫持如此普遍，作为搞web开发的说不了解点https都不好意思。简单理解https可以非常简单，可是一旦上升到密码学。ヾ(｡｀Д´｡)牵扯到的概念真是太多了太特么复杂了。鄙人还是从个人实用角度出发。简洁记录一下https相关内容,另外本文作为回顾尚可，不适合作为初次了解https的参考。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="https笔记">
@@ -181,7 +181,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -197,87 +197,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -661,6 +583,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -961,8 +889,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

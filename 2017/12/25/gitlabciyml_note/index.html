@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"以下内容来自GitlabCI官方文档\n最基础的\njobs\b\b作为\b最顶级的\b元素。每个\bjob至少包含一个\bscript\n  12job1:    script1: pwd\n  每个job的执行都是完全独立于其他的\bjob\n\n\n\n关于Docker Image和Service的使用\nUsing Docker Build。\b主要讲述\b怎么在Docker里面使用Docker构建镜像。(最简单的是在注册Runner的时候共享/var/run/docker.sock)\n\nUsing Docker images。\n\n注册的时候可以同时运行Services。这样\b\b在任务执行期间可以访问services\n  12345678sudo gitlab-runner register \\    --url &quot;https:&#x2F;&#x2F;gitlab.example.com&#x2F;&quot; \\    --registration-token &quot;PROJECT_REGISTRATION_TOKEN&quot; \\    --description &quot;docker-ruby-2.1&quot; \\    --executor &quot;docker&quot; \\    --docker-image ruby:2.1 \\    --docker-postgres latest \\    --docker-mysql latest\nservice就是任务执行的时候能够访问到别的容器。比如Mysql、Postgresql、Redis、Rabbitmq\b啥的\n\n访问service就和我们使用docker-compose差不多\n\n\n其他的一些Top-Level设置\n\bbefore_script: 在每个任务执行前执行.\b比如配置好ssh config\nafter_script: 在每个任务执行完成后执行.好像用处不大\n\bstages: ** 每个任务都可以属于一个stage.同一个stage的job是并行的.但是只有一个stage所有都执行完毕才会执行下一个stage**\nvariables: 每个job都\b可以使用的环境变量。\b\b此处只能进行很简单的设置。\b比如我希望将\b当前\b日期用一个固定的格式\b表达(需要用date命令进行转换),在这里是行不通的\ncache: \n\n可选项最多的Jobs配置来了\njobs: 必须要有独立的名称\n\n\n\n\nKeyword\nDescription\n\n\n\nscript\n定义shell脚本\n\n\nimage\n\b使用的image.可以覆盖掉全局的\n\n\nservices\n使用docker services,\b\b覆盖\b掉全局\n\n\nstage\n\b属于哪个阶段\n\n\nvariables\n定义job的环境变量\n\n\nonly\n\b只有满足某条件的时候才会被执行\n\n\nexcept\n满足某条件的时候不执行\n\n\ntags\n哪些Runners能够执行该任务\n\n\n\ballow_failure\n允许任务失败。正常情况下失败则会不进行后续\b步骤\n\n\nwhen\n定义任务什么时候执行。manual手动还挺有用┑(￣Д ￣)┍\n\n\nartifacts\n将构建生成的文件上传到gitlab。允许从gitlab后台\b进行下载\n\n\n\bdependencies\n配合artifacts使用。将生成的artifacts文件\b跨job使用\n\n\ncache\n缓存文件给后续job使用\n\n\nbefore_script\n\b覆盖全局\n\n\nafter_script\n覆盖全局\n\n\nenvironment\n文档\n\n\ncoverage\n代码覆盖率\b设置\n\n\nretry\n如果失败\b则重试几次\n\n\n额外说明:\n\nenvironment配合deploy使用.部署的时候人为标记是部署到了哪个环境。方便在gitlab后台查看历史记录。同时方便错误的时候可以直接在gitlab后台回滚\b部署。其实这个参数不要也是可以的。添加上去只是更方便一点\nartifacts和cache的区别.\ncache可以在全局使用也可以在job内部使用.但是artifacts只能在job内部使用\n\n特别注意 cache跨越该项目的整个生命周期。跨越\b不同的pipeline.job开始之前会先解压已有的cache.而artifacts\b只会再\b单个\bpipeline周期。且某个stage创建之后。在后续的stage中才能够使用。\bartifacts\b会同时上传文件到gitlab(上传步骤还是必须的)。\b\b\n\bYAML\b特殊语法\n\n\n\n\n用anchors(&amp;)、aliases(*)、merging(&lt;&lt;) 来简化\b\b编写(大多数情况下应该没啥用)\n  12345678910111213141516.job_template: &amp;job_definition  # Hidden key that defines an anchor named &#39;job_definition&#39;image: ruby:2.1services:    - postgres    - redistest1:&lt;&lt;: *job_definition           # Merge the contents of the &#39;job_definition&#39; aliasscript:    - test1 projecttest2:&lt;&lt;: *job_definition           # Merge the contents of the &#39;job_definition&#39; aliasscript:    - test2 project\n\n\n\n参考文档Configuration of your jobs with .gitlab-ci.yml Using Docker images\n","dateCreated":"2017-12-25T12:17:56+08:00","dateModified":"2021-02-17T13:25:52+08:00","datePublished":"2017-12-25T12:17:56+08:00","description":"以下内容来自GitlabCI官方文档\n最基础的\njobs\b\b作为\b最顶级的\b元素。每个\bjob至少包含一个\bscript\n  12job1:    script1: pwd\n  每个job的执行都是完全独立于其他的\bjob\n\n","headline":"gitlabci yml 笔记","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/12/25/gitlabciyml_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/12/25/gitlabciyml_note/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"以下内容来自GitlabCI官方文档\n最基础的\njobs\b\b作为\b最顶级的\b元素。每个\bjob至少包含一个\bscript\n  12job1:    script1: pwd\n  每个job的执行都是完全独立于其他的\bjob\n\n\n\n关于Docker Image和Service的使用\nUsing Docker Build。\b主要讲述\b怎么在Docker里面使用Docker构建镜像。(最简单的是在注册Runner的时候共享/var/run/docker.sock)\n\nUsing Docker images。\n\n注册的时候可以同时运行Services。这样\b\b在任务执行期间可以访问services\n  12345678sudo gitlab-runner register \\    --url &quot;https:&#x2F;&#x2F;gitlab.example.com&#x2F;&quot; \\    --registration-token &quot;PROJECT_REGISTRATION_TOKEN&quot; \\    --description &quot;docker-ruby-2.1&quot; \\    --executor &quot;docker&quot; \\    --docker-image ruby:2.1 \\    --docker-postgres latest \\    --docker-mysql latest\nservice就是任务执行的时候能够访问到别的容器。比如Mysql、Postgresql、Redis、Rabbitmq\b啥的\n\n访问service就和我们使用docker-compose差不多\n\n\n其他的一些Top-Level设置\n\bbefore_script: 在每个任务执行前执行.\b比如配置好ssh config\nafter_script: 在每个任务执行完成后执行.好像用处不大\n\bstages: ** 每个任务都可以属于一个stage.同一个stage的job是并行的.但是只有一个stage所有都执行完毕才会执行下一个stage**\nvariables: 每个job都\b可以使用的环境变量。\b\b此处只能进行很简单的设置。\b比如我希望将\b当前\b日期用一个固定的格式\b表达(需要用date命令进行转换),在这里是行不通的\ncache: \n\n可选项最多的Jobs配置来了\njobs: 必须要有独立的名称\n\n\n\n\nKeyword\nDescription\n\n\n\nscript\n定义shell脚本\n\n\nimage\n\b使用的image.可以覆盖掉全局的\n\n\nservices\n使用docker services,\b\b覆盖\b掉全局\n\n\nstage\n\b属于哪个阶段\n\n\nvariables\n定义job的环境变量\n\n\nonly\n\b只有满足某条件的时候才会被执行\n\n\nexcept\n满足某条件的时候不执行\n\n\ntags\n哪些Runners能够执行该任务\n\n\n\ballow_failure\n允许任务失败。正常情况下失败则会不进行后续\b步骤\n\n\nwhen\n定义任务什么时候执行。manual手动还挺有用┑(￣Д ￣)┍\n\n\nartifacts\n将构建生成的文件上传到gitlab。允许从gitlab后台\b进行下载\n\n\n\bdependencies\n配合artifacts使用。将生成的artifacts文件\b跨job使用\n\n\ncache\n缓存文件给后续job使用\n\n\nbefore_script\n\b覆盖全局\n\n\nafter_script\n覆盖全局\n\n\nenvironment\n文档\n\n\ncoverage\n代码覆盖率\b设置\n\n\nretry\n如果失败\b则重试几次\n\n\n额外说明:\n\nenvironment配合deploy使用.部署的时候人为标记是部署到了哪个环境。方便在gitlab后台查看历史记录。同时方便错误的时候可以直接在gitlab后台回滚\b部署。其实这个参数不要也是可以的。添加上去只是更方便一点\nartifacts和cache的区别.\ncache可以在全局使用也可以在job内部使用.但是artifacts只能在job内部使用\n\n特别注意 cache跨越该项目的整个生命周期。跨越\b不同的pipeline.job开始之前会先解压已有的cache.而artifacts\b只会再\b单个\bpipeline周期。且某个stage创建之后。在后续的stage中才能够使用。\bartifacts\b会同时上传文件到gitlab(上传步骤还是必须的)。\b\b\n\bYAML\b特殊语法\n\n\n\n\n用anchors(&amp;)、aliases(*)、merging(&lt;&lt;) 来简化\b\b编写(大多数情况下应该没啥用)\n  12345678910111213141516.job_template: &amp;job_definition  # Hidden key that defines an anchor named &#39;job_definition&#39;image: ruby:2.1services:    - postgres    - redistest1:&lt;&lt;: *job_definition           # Merge the contents of the &#39;job_definition&#39; aliasscript:    - test1 projecttest2:&lt;&lt;: *job_definition           # Merge the contents of the &#39;job_definition&#39; aliasscript:    - test2 project\n\n\n\n参考文档Configuration of your jobs with .gitlab-ci.yml Using Docker images\n","dateCreated":"2017-12-25T12:17:56+08:00","dateModified":"2021-02-17T13:25:52+08:00","datePublished":"2017-12-25T12:17:56+08:00","description":"以下内容来自GitlabCI官方文档\n最基础的\njobs\b\b作为\b最顶级的\b元素。每个\bjob至少包含一个\bscript\n  12job1:    script1: pwd\n  每个job的执行都是完全独立于其他的\bjob\n\n","headline":"gitlabci yml 笔记","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/12/25/gitlabciyml_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/12/25/gitlabciyml_note/"}</script>
     <meta name="description" content="以下内容来自GitlabCI官方文档 最基础的 jobs作为最顶级的元素。每个job至少包含一个script   12job1:    script1: pwd   每个job的执行都是完全独立于其他的job">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="gitlabci yml 笔记">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -766,6 +688,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -1066,8 +994,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)\n\n\n类继承关系不说别的，单单看到这张图就能唬住好多人，感觉很高大上有没有\n12345678910111213+------------+| BaseServer |+------------+      |      v+-----------+        +------------------+| TCPServer |-------&gt;| UnixStreamServer |+-----------+        +------------------+      |      v+-----------+        +--------------------+| UDPServer |-------&gt;| UnixDatagramServer |+-----------+        +--------------------+\n\n\n同步处理类比服务端嘛，请允许我污一下，就像古装剧里面的怡红院，都有个门口接客的老鸨，有客户来就引进去然后交给失足少女。老鸨就是服务端的监听socket，失足少女就是具体处理的业务逻辑。可以写成如下伪代码\n1234567import sockets = socket.socket()s.bind((&#x27;localhost&#x27;,9999))s.listen(2048)while True:    client,addr = s.accept()    handle(client,addr,s)    \n\n可以说socketserver就是由上面最基本的步骤，为了扩展性而写的代码。上面的伪代码handle(client,addr,s)是一部分，上面的分为另外一部分。\nsocketserver因为是同步的，所以理解起来比asyncore要简单许多。而且注释写的非常详尽，我就不详述BaseServer/BaseRequestHandler的类方法了，说一下几个有点意思的地方。\n\nBaseServer部分基本就代表了监听套接字，然而还是提供了2个对连接套接字的方法，就是处理完成之后关闭啦~~shutdown_request/close_request\nhandle_request方法和server_forever是非常相似的，区别就是handler_request只相应一个请求。大概是用来调试吧。该函数还调起了一个特别垃圾的handle_timeout函数。看名字是不是以为是对连接套接字的超时处理函数-_-，实际上是等多久还没来一个新连接会触发，可是这个需求基本没有。所以我非常认为这个handle_request仅仅用来调试一次而已\n上面的伪代码并没有用到select，为什么socketserver就用到了，其实如果只是为了处理tcp那么此处是没有必要用select的，因为tcp需要accept而udp是直接recvfrom就好了。用select只是为了通知有数据来了。都是为了适应多种情况才用的select。另外需要注意的是它不是用的文件描述符，是直接用的self，这里只要self实现了file_no方法就可以了(参照官方文档)。还有select另外套了一个_eintr_retry函数。这里是因为某些情况下select会被操作系统中断而引发异常(比如使用single)\n可以很明显的看到实现的ThreadingTCPServer是通过继承的方式实现的，实质就是处理连接套接字的时候使用多线程或者多进程,可以想到要实现相同的效果用装饰器同样是可以的\nStreamRequestHandler中使用了socket.makefile将连接套接字分成了读和写2个类文件对象(只能是阻塞socket)。可以感受到的优势就是read(num)返回的长度是准确的，recv就没有这个优势\n用到了threading.Event,这个地方我是没多搞明白。调用shutdown方法会中断循环从而关闭服务。一般会在处理线程调用这个。如果不是在处理线程调用那么会发生死锁。。。我能想到的只有这里socks5 DEMO(引用自http://xiaoxia.org/2011/03/29/written-by-python-socks5-server/)1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556import socket, select, SocketServer, structclass Socks5Handle(SocketServer.StreamRequestHandler):    def tcprelay(self, sock, remote):        fdset = [sock, remote]        while True:            r, w, e = select.select(fdset, [], [])            if sock in r:                if remote.send(sock.recv(4096)) &lt;= 0: break            if remote in r:                if sock.send(remote.recv(4096)) &lt;= 0: break    def handle(self):        try:            print(&#x27;socks connection from &#x27;, self.client_address)            sock = self.connection            # 1. Version            sock.recv(262)            sock.send(b&quot;\\x05\\x00&quot;)            # 2. Request            data = self.rfile.read(4)            mode = ord(data[1])            addrtype = ord(data[3])            if addrtype == 1:  # IPv4                addr = socket.inet_ntoa(self.rfile.read(4))            elif addrtype == 3:  # Domain name                addr = self.rfile.read(ord(sock.recv(1)[0]))            port = struct.unpack(&#x27;&gt;H&#x27;, self.rfile.read(2))            reply = b&quot;\\x05\\x00\\x00\\x01&quot;            try:                if mode == 1:  # 1. Tcp connect                    remote = socket.socket(socket.AF_INET, socket.SOCK_STREAM)                    remote.connect((addr, port[0]))                    print(&#x27;Tcp connect to&#x27;, addr, port[0])                else:                    reply = b&quot;\\x05\\x07\\x00\\x01&quot;  # Command not supported                local = remote.getsockname()                reply += socket.inet_aton(local[0]) + struct.pack(&quot;&gt;H&quot;, local[1])            except socket.error:                # Connection refused                reply = &#x27;\\x05\\x05\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00&#x27;            sock.send(reply)            # 3. Transfering            if reply[1] == &#x27;\\x00&#x27;:  # Success                self.tcprelay(sock, remote)        except socket.error:            print(&#x27;socket error&#x27;)def main():    server = SocketServer.ThreadingTCPServer((&#x27;&#x27;, 1081), Socks5Handle)    server.serve_forever()if __name__ == &#x27;__main__&#x27;:    main()\n\n\n\n和asyncore对比asyncore和socketserver同样实现了并发。对比一下1.从名字都可以看出来server。socketserver只能用来实现server，而asyncore还可以实现客户端2.socketserver实现了多线程和多进程，asyncore框架是单线程事件循环\n相关资料SocketServer – Creating network servers.\n","dateCreated":"2016-06-29T11:53:14+08:00","dateModified":"2016-07-02T18:24:36+08:00","datePublished":"2016-06-29T11:53:14+08:00","description":"SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)","headline":"SocketServer源码阅读","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/06/29/socketserver_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/06/29/socketserver_note/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)\n\n\n类继承关系不说别的，单单看到这张图就能唬住好多人，感觉很高大上有没有\n12345678910111213+------------+| BaseServer |+------------+      |      v+-----------+        +------------------+| TCPServer |-------&gt;| UnixStreamServer |+-----------+        +------------------+      |      v+-----------+        +--------------------+| UDPServer |-------&gt;| UnixDatagramServer |+-----------+        +--------------------+\n\n\n同步处理类比服务端嘛，请允许我污一下，就像古装剧里面的怡红院，都有个门口接客的老鸨，有客户来就引进去然后交给失足少女。老鸨就是服务端的监听socket，失足少女就是具体处理的业务逻辑。可以写成如下伪代码\n1234567import sockets = socket.socket()s.bind((&#x27;localhost&#x27;,9999))s.listen(2048)while True:    client,addr = s.accept()    handle(client,addr,s)    \n\n可以说socketserver就是由上面最基本的步骤，为了扩展性而写的代码。上面的伪代码handle(client,addr,s)是一部分，上面的分为另外一部分。\nsocketserver因为是同步的，所以理解起来比asyncore要简单许多。而且注释写的非常详尽，我就不详述BaseServer/BaseRequestHandler的类方法了，说一下几个有点意思的地方。\n\nBaseServer部分基本就代表了监听套接字，然而还是提供了2个对连接套接字的方法，就是处理完成之后关闭啦~~shutdown_request/close_request\nhandle_request方法和server_forever是非常相似的，区别就是handler_request只相应一个请求。大概是用来调试吧。该函数还调起了一个特别垃圾的handle_timeout函数。看名字是不是以为是对连接套接字的超时处理函数-_-，实际上是等多久还没来一个新连接会触发，可是这个需求基本没有。所以我非常认为这个handle_request仅仅用来调试一次而已\n上面的伪代码并没有用到select，为什么socketserver就用到了，其实如果只是为了处理tcp那么此处是没有必要用select的，因为tcp需要accept而udp是直接recvfrom就好了。用select只是为了通知有数据来了。都是为了适应多种情况才用的select。另外需要注意的是它不是用的文件描述符，是直接用的self，这里只要self实现了file_no方法就可以了(参照官方文档)。还有select另外套了一个_eintr_retry函数。这里是因为某些情况下select会被操作系统中断而引发异常(比如使用single)\n可以很明显的看到实现的ThreadingTCPServer是通过继承的方式实现的，实质就是处理连接套接字的时候使用多线程或者多进程,可以想到要实现相同的效果用装饰器同样是可以的\nStreamRequestHandler中使用了socket.makefile将连接套接字分成了读和写2个类文件对象(只能是阻塞socket)。可以感受到的优势就是read(num)返回的长度是准确的，recv就没有这个优势\n用到了threading.Event,这个地方我是没多搞明白。调用shutdown方法会中断循环从而关闭服务。一般会在处理线程调用这个。如果不是在处理线程调用那么会发生死锁。。。我能想到的只有这里socks5 DEMO(引用自http://xiaoxia.org/2011/03/29/written-by-python-socks5-server/)1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556import socket, select, SocketServer, structclass Socks5Handle(SocketServer.StreamRequestHandler):    def tcprelay(self, sock, remote):        fdset = [sock, remote]        while True:            r, w, e = select.select(fdset, [], [])            if sock in r:                if remote.send(sock.recv(4096)) &lt;= 0: break            if remote in r:                if sock.send(remote.recv(4096)) &lt;= 0: break    def handle(self):        try:            print(&#x27;socks connection from &#x27;, self.client_address)            sock = self.connection            # 1. Version            sock.recv(262)            sock.send(b&quot;\\x05\\x00&quot;)            # 2. Request            data = self.rfile.read(4)            mode = ord(data[1])            addrtype = ord(data[3])            if addrtype == 1:  # IPv4                addr = socket.inet_ntoa(self.rfile.read(4))            elif addrtype == 3:  # Domain name                addr = self.rfile.read(ord(sock.recv(1)[0]))            port = struct.unpack(&#x27;&gt;H&#x27;, self.rfile.read(2))            reply = b&quot;\\x05\\x00\\x00\\x01&quot;            try:                if mode == 1:  # 1. Tcp connect                    remote = socket.socket(socket.AF_INET, socket.SOCK_STREAM)                    remote.connect((addr, port[0]))                    print(&#x27;Tcp connect to&#x27;, addr, port[0])                else:                    reply = b&quot;\\x05\\x07\\x00\\x01&quot;  # Command not supported                local = remote.getsockname()                reply += socket.inet_aton(local[0]) + struct.pack(&quot;&gt;H&quot;, local[1])            except socket.error:                # Connection refused                reply = &#x27;\\x05\\x05\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00&#x27;            sock.send(reply)            # 3. Transfering            if reply[1] == &#x27;\\x00&#x27;:  # Success                self.tcprelay(sock, remote)        except socket.error:            print(&#x27;socket error&#x27;)def main():    server = SocketServer.ThreadingTCPServer((&#x27;&#x27;, 1081), Socks5Handle)    server.serve_forever()if __name__ == &#x27;__main__&#x27;:    main()\n\n\n\n和asyncore对比asyncore和socketserver同样实现了并发。对比一下1.从名字都可以看出来server。socketserver只能用来实现server，而asyncore还可以实现客户端2.socketserver实现了多线程和多进程，asyncore框架是单线程事件循环\n相关资料SocketServer – Creating network servers.\n","dateCreated":"2016-06-29T11:53:14+08:00","dateModified":"2016-07-02T18:24:36+08:00","datePublished":"2016-06-29T11:53:14+08:00","description":"SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)","headline":"SocketServer源码阅读","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/06/29/socketserver_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/06/29/socketserver_note/"}</script>
     <meta name="description" content="SocketServer.py这个文件700来行，除去注释大概300来行左右，据网友称该模块实乃学习类继承之典范。要理解这个模块真的非常的简单，也让人体会到同步编程的简单性。另外我现在比较关注web编程，所以会比较关注tcp部分忽略掉udp(源码版本Python2.7.11)">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="SocketServer源码阅读">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -662,6 +584,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -962,8 +890,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

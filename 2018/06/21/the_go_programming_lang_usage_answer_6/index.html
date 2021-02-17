@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"第六章\n方法声明\n指针接收者的方法\n通过结构体内嵌组成类型\n方法变量与表达式\n示例: 位向量\n封装\n\n这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多\n\n\n\n练习6.1:实现这些附加的方法\n1234func (*InSet) Len() intfunc (*InSet) Remove(x int)func (*InSet) Clear()func (*InSet) Copy() *InSet\n\n首先需要注意的是，在该实现中位向量并不是完整的从左往右，在slice中每个元素是从右向左的\n书本上给出了稍微复杂的string实现,Len参照string就可以了\nRemove就是将某二进制位置为0,比置为1稍微复杂一点，方案为左移后取反再求与运算\nClear实行slice的清空，slice[:0]即可\nCopy，使用make新建一个同等长度的slice，再copy完全拷贝\n\n1234567891011121314151617181920212223242526272829func (s *IntSet) Len() int &#123;\tret := 0\tfor _, word := range s.words &#123;\t\tif word == 0 &#123;\t\t\tcontinue\t\t&#125;\t\tfor j := 0; j &lt; 64; j++ &#123;\t\t\tif word&amp;(1&lt;&lt;uint(j)) != 0 &#123;\t\t\t\tret += 1\t\t\t&#125;\t\t&#125;\t&#125;\treturn ret&#125;func (s *IntSet) Remove(x int) &#123;\tword, bit := x/64, uint(x%64)\ts.words[word] &amp;= (^(1 &lt;&lt; bit))&#125;func (s *IntSet) Clear() &#123;\ts.words = s.words[:0]&#125;func (s *IntSet) Copy() *IntSet &#123;\tnewWords := make([]uint64, len(s.words))\tcopy(newWords, s.words)\treturn &amp;IntSet&#123;newWords&#125;&#125;\n\n\n练习6.2:定义一个变长方法(*InSet).AddAll(…int),它允许接受一串整型值作为参数,比如s.AddAll(1,2,3)\n\n因为已经实现了Add方法，此处直接内部调用Add就可以了\n\n12345func (s *IntSet) AddALL(values ...int) &#123;\tfor _, v := range values &#123;\t\ts.Add(v)\t&#125;&#125;\n\n练习6.3:(*InSet).UnionWith计算了两个集合的并集,使用|操作符对每个字符进行按位或操作.实现交集、差集和对称差运算(两个集合的对称差只包含某个集合中存在的元素)\n\n额~~~，搞个最简单的求并集好了….,最后得到结果覆盖一下原有的slice\n\n1234567func (s *IntSet) And(t *IntSet) &#123;\tmin := math.Min(len(s.words), len(t.words))\tfor i := 0; i &lt; min; i++ &#123;\t\ts.words[i] &amp;= t.words[i]\t&#125;\ts.words = s.words[:min]&#125;\n\n\n练习6.4:添加方法Elems返回包含集合元素的slice,这适合在range循环中使用\n\n同Len方法,都是遍历,因此，从设计角度上说，应该string和len方法都直接依赖Elems的实现\n\n1234567891011121314func (s *IntSet) Elems() []int &#123;\tvar ret []int\tfor i, word := range s.words &#123;\t\tif word == 0 &#123;\t\t\tcontinue\t\t&#125;\t\tfor j := 0; j &lt; 64; j++ &#123;\t\t\tif word&amp;(1&lt;&lt;uint(j)) != 0 &#123;\t\t\t\tret = append(ret, 64*i+j)\t\t\t&#125;\t\t&#125;\t&#125;\treturn ret&#125;\n\n练习6.5:InSet使用的每个字符类型都是int64,但是64位的计算在32位平台上的效率不高.改写程序以使用uint类型,这是适应平台的无符号整型.除以64的操作可以使用一个常量来表示32位或者64位.你或许可以使用一个讨巧的表达式32&lt;&lt;(^uint(0)&gt;&gt;63)来表示除数\n\n该题只是从效率角度来提供了一种思路，顺便给了你一个trick，uint在32位平台使用32位长度,64位使用64长度,32&lt;&lt;(^uint(0)&gt;&gt;63), 当为32位的时候后面为0,得到32,为64的时候，后面为1得到64\n\n","dateCreated":"2018-06-21T23:24:50+08:00","dateModified":"2018-06-21T23:40:08+08:00","datePublished":"2018-06-21T23:24:50+08:00","description":"第六章\n方法声明\n指针接收者的方法\n通过结构体内嵌组成类型\n方法变量与表达式\n示例: 位向量\n封装\n\n这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多","headline":"Go程序设计语言课后习题答案-第六章(方法)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"第六章\n方法声明\n指针接收者的方法\n通过结构体内嵌组成类型\n方法变量与表达式\n示例: 位向量\n封装\n\n这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多\n\n\n\n练习6.1:实现这些附加的方法\n1234func (*InSet) Len() intfunc (*InSet) Remove(x int)func (*InSet) Clear()func (*InSet) Copy() *InSet\n\n首先需要注意的是，在该实现中位向量并不是完整的从左往右，在slice中每个元素是从右向左的\n书本上给出了稍微复杂的string实现,Len参照string就可以了\nRemove就是将某二进制位置为0,比置为1稍微复杂一点，方案为左移后取反再求与运算\nClear实行slice的清空，slice[:0]即可\nCopy，使用make新建一个同等长度的slice，再copy完全拷贝\n\n1234567891011121314151617181920212223242526272829func (s *IntSet) Len() int &#123;\tret := 0\tfor _, word := range s.words &#123;\t\tif word == 0 &#123;\t\t\tcontinue\t\t&#125;\t\tfor j := 0; j &lt; 64; j++ &#123;\t\t\tif word&amp;(1&lt;&lt;uint(j)) != 0 &#123;\t\t\t\tret += 1\t\t\t&#125;\t\t&#125;\t&#125;\treturn ret&#125;func (s *IntSet) Remove(x int) &#123;\tword, bit := x/64, uint(x%64)\ts.words[word] &amp;= (^(1 &lt;&lt; bit))&#125;func (s *IntSet) Clear() &#123;\ts.words = s.words[:0]&#125;func (s *IntSet) Copy() *IntSet &#123;\tnewWords := make([]uint64, len(s.words))\tcopy(newWords, s.words)\treturn &amp;IntSet&#123;newWords&#125;&#125;\n\n\n练习6.2:定义一个变长方法(*InSet).AddAll(…int),它允许接受一串整型值作为参数,比如s.AddAll(1,2,3)\n\n因为已经实现了Add方法，此处直接内部调用Add就可以了\n\n12345func (s *IntSet) AddALL(values ...int) &#123;\tfor _, v := range values &#123;\t\ts.Add(v)\t&#125;&#125;\n\n练习6.3:(*InSet).UnionWith计算了两个集合的并集,使用|操作符对每个字符进行按位或操作.实现交集、差集和对称差运算(两个集合的对称差只包含某个集合中存在的元素)\n\n额~~~，搞个最简单的求并集好了….,最后得到结果覆盖一下原有的slice\n\n1234567func (s *IntSet) And(t *IntSet) &#123;\tmin := math.Min(len(s.words), len(t.words))\tfor i := 0; i &lt; min; i++ &#123;\t\ts.words[i] &amp;= t.words[i]\t&#125;\ts.words = s.words[:min]&#125;\n\n\n练习6.4:添加方法Elems返回包含集合元素的slice,这适合在range循环中使用\n\n同Len方法,都是遍历,因此，从设计角度上说，应该string和len方法都直接依赖Elems的实现\n\n1234567891011121314func (s *IntSet) Elems() []int &#123;\tvar ret []int\tfor i, word := range s.words &#123;\t\tif word == 0 &#123;\t\t\tcontinue\t\t&#125;\t\tfor j := 0; j &lt; 64; j++ &#123;\t\t\tif word&amp;(1&lt;&lt;uint(j)) != 0 &#123;\t\t\t\tret = append(ret, 64*i+j)\t\t\t&#125;\t\t&#125;\t&#125;\treturn ret&#125;\n\n练习6.5:InSet使用的每个字符类型都是int64,但是64位的计算在32位平台上的效率不高.改写程序以使用uint类型,这是适应平台的无符号整型.除以64的操作可以使用一个常量来表示32位或者64位.你或许可以使用一个讨巧的表达式32&lt;&lt;(^uint(0)&gt;&gt;63)来表示除数\n\n该题只是从效率角度来提供了一种思路，顺便给了你一个trick，uint在32位平台使用32位长度,64位使用64长度,32&lt;&lt;(^uint(0)&gt;&gt;63), 当为32位的时候后面为0,得到32,为64的时候，后面为1得到64\n\n","dateCreated":"2018-06-21T23:24:50+08:00","dateModified":"2018-06-21T23:40:08+08:00","datePublished":"2018-06-21T23:24:50+08:00","description":"第六章\n方法声明\n指针接收者的方法\n通过结构体内嵌组成类型\n方法变量与表达式\n示例: 位向量\n封装\n\n这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多","headline":"Go程序设计语言课后习题答案-第六章(方法)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/06/21/the_go_programming_lang_usage_answer_6/"}</script>
     <meta name="description" content="第六章 方法声明 指针接收者的方法 通过结构体内嵌组成类型 方法变量与表达式 示例: 位向量 封装  这应该是整本书包含内容最少的章节了,因为和函数差不多，该章习题整个也是扩充位向量这个练习，比第五章练习简单太多">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Go程序设计语言课后习题答案-第六章(方法)">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -685,6 +607,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -985,8 +913,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

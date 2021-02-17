@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）\n经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：\n\n①打漏或者打重复；\n②打印机出差错（卡纸神马的），很可能将原本的栋号打乱影响后面的进展；\n③某些错误的方法方式会人为降低打印速度；\n④机械的重复心里说不好有一万只草泥马飘过吧，so。影响心情，不利于身心\n当然，以上综述4种情况在我身上都出现过。其他三种都应该是很容易体会到的，略讲一下我深有感悟的第三种情况。造成这种情况的主要原因是打印机的打印过程是以文件为主的，打印机也在重复着一件事情—-对每一个传入到打印机的文件进行打印处理。据我粗略理解每个文件打印都有三个过程，文件传送到打印机的微处理器→打印机准备→打印机打印。如果你要打印非常多的文件前2个步骤所花费的时间不能忽略。所造成的影响就是如果你要打印1000张纸，你每次打印1张打印1000次，和你一次性打印1000张所花费的时间有天壤之别。我以前就用1次打印1张的方式打印过（晚上加班）。每张打印时间大约15秒，一分钟打印4张。但是打印机上的参数20ppm（每分钟打印20张）···········其主要原因就是打印机对单个文件传送和打印机预热耗费了大量时间\n所以，不用别的办法，**想要打印速度快，第一重要的就是将所有需要打印的文件合成一份文件打印**\n\n以下是我采用的办法(03版本无法使用，要求excel有另存为pdf功能)：  \n\n\n代 码会将每个栋号的文档输出成一个PDF（及其适合打印），最后用adobeacrobat将所有pdf合并成单个pdf（试着合并了1000页纸，pdf大小之后9M，打印机完成能够应付）。快速打印不在话下，而且由于是单个文件打印机卡纸之类的错误也不会出现上述问题②。所以，你需要做的只是打印机没纸的时候换纸&amp;解决卡纸~~~~~~~~\n","dateCreated":"2013-12-20T20:07:00+08:00","dateModified":"2016-03-03T17:14:42+08:00","datePublished":"2013-12-20T20:07:00+08:00","description":"工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）\n经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：","headline":"excel数字递增批量打印","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2013/12/20/excel_batch_print/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2013/12/20/excel_batch_print/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）\n经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：\n\n①打漏或者打重复；\n②打印机出差错（卡纸神马的），很可能将原本的栋号打乱影响后面的进展；\n③某些错误的方法方式会人为降低打印速度；\n④机械的重复心里说不好有一万只草泥马飘过吧，so。影响心情，不利于身心\n当然，以上综述4种情况在我身上都出现过。其他三种都应该是很容易体会到的，略讲一下我深有感悟的第三种情况。造成这种情况的主要原因是打印机的打印过程是以文件为主的，打印机也在重复着一件事情—-对每一个传入到打印机的文件进行打印处理。据我粗略理解每个文件打印都有三个过程，文件传送到打印机的微处理器→打印机准备→打印机打印。如果你要打印非常多的文件前2个步骤所花费的时间不能忽略。所造成的影响就是如果你要打印1000张纸，你每次打印1张打印1000次，和你一次性打印1000张所花费的时间有天壤之别。我以前就用1次打印1张的方式打印过（晚上加班）。每张打印时间大约15秒，一分钟打印4张。但是打印机上的参数20ppm（每分钟打印20张）···········其主要原因就是打印机对单个文件传送和打印机预热耗费了大量时间\n所以，不用别的办法，**想要打印速度快，第一重要的就是将所有需要打印的文件合成一份文件打印**\n\n以下是我采用的办法(03版本无法使用，要求excel有另存为pdf功能)：  \n\n\n代 码会将每个栋号的文档输出成一个PDF（及其适合打印），最后用adobeacrobat将所有pdf合并成单个pdf（试着合并了1000页纸，pdf大小之后9M，打印机完成能够应付）。快速打印不在话下，而且由于是单个文件打印机卡纸之类的错误也不会出现上述问题②。所以，你需要做的只是打印机没纸的时候换纸&amp;解决卡纸~~~~~~~~\n","dateCreated":"2013-12-20T20:07:00+08:00","dateModified":"2016-03-03T17:14:42+08:00","datePublished":"2013-12-20T20:07:00+08:00","description":"工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）\n经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：","headline":"excel数字递增批量打印","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2013/12/20/excel_batch_print/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2013/12/20/excel_batch_print/"}</script>
     <meta name="description" content="工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4） 经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="excel数字递增批量打印">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -653,6 +575,12 @@ style="color: #ff0000;">想要打印速度快，第一重要的就是将所有�
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -953,8 +881,8 @@ style="color: #ff0000;">想要打印速度快，第一重要的就是将所有�
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

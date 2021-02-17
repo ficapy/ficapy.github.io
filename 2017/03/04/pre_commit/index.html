@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"很早就使用过autopep8来自动格式化代码，使用IDE的时候也会经常使用格式化代码功能让代码更符合规范一点。可是这都不是自动化的，或者说是强制的。为了保持团队的良好代码风格感觉每个同事在提交代码之前都自动进行格式化或者风格检查是一个不错的主意，于是找到了pre-commit\n原理也还是很简单的，git自身提供了一些hook功能，查看git/hooks目录下会发现有一些sample文件，这样在执行commit、push、merge的时候都是可以进行一些简单的检查等功能的。然而这个设定有一个缺点。没一个hook只能执行一个文件的内容，所以要么将各种功能放在一个文件里面，或者每个功能都放置在各自的文件里面。最后由一个文件一起执行。pre-commit就解决了我们的这个文件。将不同的任务分割成单个文件。然后只需要添加别人共享的脚本就能够很快的进行commit hook了，简要使用方法例举如下\n\n在项目根目录下编写配置文件(.pre-commit-config.yaml)\n 12345-   repo: git:&#x2F;&#x2F;github.com&#x2F;pre-commit&#x2F;pre-commit-hooks    sha: v0.7.1    hooks:    -   id: trailing-whitespace    -   id: autopep8-wrapper\n进行初始化pre-commit install就可以了，以后每次执行commit的时候就会执行检查。配置文件的repo地址即为符合pre-commit框架的地址，id即为提供的功能~~，还是很好理解的。例如以上提供的autopep8-wrapper就可能够配置pep8规范进行一些代码风格检查，如果不符合风格就会自动格式化。pep8工具的默认配置文件是~/.config/pep8\n\n\n参考About style guide of python and linter tool. pep8, pyflakes, flake8, haking, Pyling.\n","dateCreated":"2017-03-04T12:52:37+08:00","dateModified":"2017-03-04T18:44:07+08:00","datePublished":"2017-03-04T12:52:37+08:00","description":"","headline":"使用pre-commit改进代码风格","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/03/04/pre_commit/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/03/04/pre_commit/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"很早就使用过autopep8来自动格式化代码，使用IDE的时候也会经常使用格式化代码功能让代码更符合规范一点。可是这都不是自动化的，或者说是强制的。为了保持团队的良好代码风格感觉每个同事在提交代码之前都自动进行格式化或者风格检查是一个不错的主意，于是找到了pre-commit\n原理也还是很简单的，git自身提供了一些hook功能，查看git/hooks目录下会发现有一些sample文件，这样在执行commit、push、merge的时候都是可以进行一些简单的检查等功能的。然而这个设定有一个缺点。没一个hook只能执行一个文件的内容，所以要么将各种功能放在一个文件里面，或者每个功能都放置在各自的文件里面。最后由一个文件一起执行。pre-commit就解决了我们的这个文件。将不同的任务分割成单个文件。然后只需要添加别人共享的脚本就能够很快的进行commit hook了，简要使用方法例举如下\n\n在项目根目录下编写配置文件(.pre-commit-config.yaml)\n 12345-   repo: git:&#x2F;&#x2F;github.com&#x2F;pre-commit&#x2F;pre-commit-hooks    sha: v0.7.1    hooks:    -   id: trailing-whitespace    -   id: autopep8-wrapper\n进行初始化pre-commit install就可以了，以后每次执行commit的时候就会执行检查。配置文件的repo地址即为符合pre-commit框架的地址，id即为提供的功能~~，还是很好理解的。例如以上提供的autopep8-wrapper就可能够配置pep8规范进行一些代码风格检查，如果不符合风格就会自动格式化。pep8工具的默认配置文件是~/.config/pep8\n\n\n参考About style guide of python and linter tool. pep8, pyflakes, flake8, haking, Pyling.\n","dateCreated":"2017-03-04T12:52:37+08:00","dateModified":"2017-03-04T18:44:07+08:00","datePublished":"2017-03-04T12:52:37+08:00","description":"","headline":"使用pre-commit改进代码风格","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/03/04/pre_commit/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/03/04/pre_commit/"}</script>
     <meta name="description" content="很早就使用过autopep8来自动格式化代码，使用IDE的时候也会经常使用格式化代码功能让代码更符合规范一点。可是这都不是自动化的，或者说是强制的。为了保持团队的良好代码风格感觉每个同事在提交代码之前都自动进行格式化或者风格检查是一个不错的主意，于是找到了pre-commit 原理也还是很简单的，git自身提供了一些hook功能，查看git&#x2F;hooks目录下会发现有一些sample文件，这样在执行">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="使用pre-commit改进代码风格">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -647,6 +569,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -947,8 +875,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

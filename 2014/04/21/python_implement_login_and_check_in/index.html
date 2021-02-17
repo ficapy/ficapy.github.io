@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试http://bbs.hshy.net/  p.s. 该网站已关闭注册\n\n至于实现原理，就是先使用fiddler抓取登陆和打卡的网址及参数，用python的requests模块实现构造请求网址以及对网址进行POST和GET操作\n\n中间需要注意的一些小细节：\n①fiddler搜索功能很强大，在所有会话中快速找到某个参数是如何来的很有用；\n②进行登陆POST操作的时候如果用户名是中文，需要先解码，这个例子里面是GBK（当初困扰了我一些时间），密码进行了MD5加密；\n③针对签到失败的处理，本例可选使用nexmo发送短信提醒  \n \n\n在ubuntu远程VPS下的使用：\n先安装python-pip\n1apt-get install python-pip\n安装python第三方模块requests\n1pip install requests\n设置定时任务(路径改成放置文件的路径)\n12crontab -e  0 12 \\* \\* \\* python /root/XXX/hshy_checkin.py\nok，大功告成~~~~~~从此妈妈再也不担心我天天惦记着签到打卡了\n","dateCreated":"2014-04-21T22:07:00+08:00","dateModified":"2021-02-17T10:51:25+08:00","datePublished":"2014-04-21T22:07:00+08:00","description":"断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试http://bbs.hshy.net/  p.s. 该网站已关闭注册","headline":"python简单实现网站打卡签到","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/","keywords":"python签到, 打卡"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试http://bbs.hshy.net/  p.s. 该网站已关闭注册\n\n至于实现原理，就是先使用fiddler抓取登陆和打卡的网址及参数，用python的requests模块实现构造请求网址以及对网址进行POST和GET操作\n\n中间需要注意的一些小细节：\n①fiddler搜索功能很强大，在所有会话中快速找到某个参数是如何来的很有用；\n②进行登陆POST操作的时候如果用户名是中文，需要先解码，这个例子里面是GBK（当初困扰了我一些时间），密码进行了MD5加密；\n③针对签到失败的处理，本例可选使用nexmo发送短信提醒  \n \n\n在ubuntu远程VPS下的使用：\n先安装python-pip\n1apt-get install python-pip\n安装python第三方模块requests\n1pip install requests\n设置定时任务(路径改成放置文件的路径)\n12crontab -e  0 12 \\* \\* \\* python /root/XXX/hshy_checkin.py\nok，大功告成~~~~~~从此妈妈再也不担心我天天惦记着签到打卡了\n","dateCreated":"2014-04-21T22:07:00+08:00","dateModified":"2021-02-17T10:51:25+08:00","datePublished":"2014-04-21T22:07:00+08:00","description":"断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试http://bbs.hshy.net/  p.s. 该网站已关闭注册","headline":"python简单实现网站打卡签到","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/","keywords":"python签到, 打卡"}</script>
     <meta name="description" content="断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="python简单实现网站打卡签到">
@@ -181,7 +181,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -197,87 +197,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -667,6 +589,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -967,8 +895,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。\n\n\n首先是将wtforms嵌入tornado。做法可以参考https://github.com/truemped/tornadotools/blob/master/tornadotools/forms.py，我的做法类似，可以看最下面的代码。这样继承一下就能够使用wtforms的表单验证了。能够使用的结果是很多人写这样的代码\n12345self.xx1 &#x3D; self.form.xx1.dataself.xx2 &#x3D; self.form.xx2.dataself.xx3 &#x3D; self.form.xx3.data:\u0010:\n然后这样写了20行(不黑，项目里真有这样的)。写的人也确实是很认真啊！，改进的方法很简单。调用self.xx1的时候自动取值self.form.xx1.data。能做成这样的方法挺多。很多时候会导致self.xxx使用IDE无法补全。我个人认为好的代码肯定能够方便的补全和提示，毕竟这样能实打实的提升码代码的心情，试想一下你要输入20个单词，很可能一不小心就输入错误了。改进的方法就是使用__getattribute__,配合类继承，兼顾自动补全也不用跑去写self.form.xxx.data了\n\n__getattr__，当属性不存在的时候会调用\n__getattribute__,无论属性是否存在都会被调用\n\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960import tornado.ioloopimport tornado.webfrom wtforms import validators, fieldsfrom wtforms import Formfrom wtforms.fields.core import UnboundFieldclass MultiDict(dict):    def getlist(self, key):        return self[key]    def setlist(self, key, value):        self[key] &#x3D; valueclass BaseForm(Form):    def __init__(self, handler&#x3D;None, obj&#x3D;None, prefix&#x3D;&#39;&#39;, **kwargs):        if handler is None:            return        formdata &#x3D; MultiDict()        if handler.request.method &#x3D;&#x3D; &#39;POST&#39;:            for name in handler.request.arguments.keys():                formdata.setlist(name, handler.get_arguments(name))        else:            for name in handler.request.query_arguments.keys():                formdata.setlist(name, handler.request.query_arguments[name])        Form.__init__(self, formdata, obj&#x3D;obj, prefix&#x3D;prefix, **kwargs)class LoginForm(BaseForm):    email &#x3D; fields.StringField(        validators&#x3D;[validators.Email(), validators.required(), validators.length(min&#x3D;5, max&#x3D;64)])    password &#x3D; fields.PasswordField(validators&#x3D;[validators.required()])class MainHandler(tornado.web.RequestHandler, LoginForm):    def __getattribute__(self, item):        ret &#x3D; object.__getattribute__(self, item)        if isinstance(ret, UnboundField):            form &#x3D; object.__getattribute__(self, &#39;form&#39;)            return getattr(form, item).data        return ret    def post(self):        self.form &#x3D; LoginForm(self)        print(self.email)        self.write(&quot;Hello, world&quot;)def make_app():    return tornado.web.Application([        (r&quot;&#x2F;&quot;, MainHandler),    ])if __name__ &#x3D;&#x3D; &quot;__main__&quot;:    app &#x3D; make_app()    app.listen(8888)    tornado.ioloop.IOLoop.current().start()\n完美解决问题,心情瞬间舒畅了┑(￣Д ￣)┍\n","dateCreated":"2017-03-23T20:17:29+08:00","dateModified":"2017-03-23T20:41:33+08:00","datePublished":"2017-03-23T20:17:29+08:00","description":"工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。","headline":"tornado表单验证","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/03/23/tornado_wtforms/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/03/23/tornado_wtforms/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。\n\n\n首先是将wtforms嵌入tornado。做法可以参考https://github.com/truemped/tornadotools/blob/master/tornadotools/forms.py，我的做法类似，可以看最下面的代码。这样继承一下就能够使用wtforms的表单验证了。能够使用的结果是很多人写这样的代码\n12345self.xx1 &#x3D; self.form.xx1.dataself.xx2 &#x3D; self.form.xx2.dataself.xx3 &#x3D; self.form.xx3.data:\u0010:\n然后这样写了20行(不黑，项目里真有这样的)。写的人也确实是很认真啊！，改进的方法很简单。调用self.xx1的时候自动取值self.form.xx1.data。能做成这样的方法挺多。很多时候会导致self.xxx使用IDE无法补全。我个人认为好的代码肯定能够方便的补全和提示，毕竟这样能实打实的提升码代码的心情，试想一下你要输入20个单词，很可能一不小心就输入错误了。改进的方法就是使用__getattribute__,配合类继承，兼顾自动补全也不用跑去写self.form.xxx.data了\n\n__getattr__，当属性不存在的时候会调用\n__getattribute__,无论属性是否存在都会被调用\n\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960import tornado.ioloopimport tornado.webfrom wtforms import validators, fieldsfrom wtforms import Formfrom wtforms.fields.core import UnboundFieldclass MultiDict(dict):    def getlist(self, key):        return self[key]    def setlist(self, key, value):        self[key] &#x3D; valueclass BaseForm(Form):    def __init__(self, handler&#x3D;None, obj&#x3D;None, prefix&#x3D;&#39;&#39;, **kwargs):        if handler is None:            return        formdata &#x3D; MultiDict()        if handler.request.method &#x3D;&#x3D; &#39;POST&#39;:            for name in handler.request.arguments.keys():                formdata.setlist(name, handler.get_arguments(name))        else:            for name in handler.request.query_arguments.keys():                formdata.setlist(name, handler.request.query_arguments[name])        Form.__init__(self, formdata, obj&#x3D;obj, prefix&#x3D;prefix, **kwargs)class LoginForm(BaseForm):    email &#x3D; fields.StringField(        validators&#x3D;[validators.Email(), validators.required(), validators.length(min&#x3D;5, max&#x3D;64)])    password &#x3D; fields.PasswordField(validators&#x3D;[validators.required()])class MainHandler(tornado.web.RequestHandler, LoginForm):    def __getattribute__(self, item):        ret &#x3D; object.__getattribute__(self, item)        if isinstance(ret, UnboundField):            form &#x3D; object.__getattribute__(self, &#39;form&#39;)            return getattr(form, item).data        return ret    def post(self):        self.form &#x3D; LoginForm(self)        print(self.email)        self.write(&quot;Hello, world&quot;)def make_app():    return tornado.web.Application([        (r&quot;&#x2F;&quot;, MainHandler),    ])if __name__ &#x3D;&#x3D; &quot;__main__&quot;:    app &#x3D; make_app()    app.listen(8888)    tornado.ioloop.IOLoop.current().start()\n完美解决问题,心情瞬间舒畅了┑(￣Д ￣)┍\n","dateCreated":"2017-03-23T20:17:29+08:00","dateModified":"2017-03-23T20:41:33+08:00","datePublished":"2017-03-23T20:17:29+08:00","description":"工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。","headline":"tornado表单验证","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/03/23/tornado_wtforms/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/03/23/tornado_wtforms/"}</script>
     <meta name="description" content="工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="tornado表单验证">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -650,6 +572,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -950,8 +878,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

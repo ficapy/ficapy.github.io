@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下\n\n\n先表明，由于PDF格式的复杂性和水印的多样性。水印情况不一样，处理方式不一样。甚至不同的处理方式对原文件造成的破坏也不一样。如果让一个专家针对特定的文件进行特定的处理肯定可以得到很好的效果，据我记忆所知可以对PDF文件进行追加，给已有对象设置可见性。达到去水印的效果且对文件无任何影响\n在找资料的时候我也看到有些小伙伴通过将PDF转换成图片。再采取图片去水印的方式，最后再转换成PDF文件。可以说这种方式可操作性很强，效果也很好，大多数情况能适用，但是对文件有很大的破坏性。emmm, 废话了这么多，说说我遇到的情况吧。该PDF文件有图片水印，且每个图片长宽都固定。所以我找的方案是，找到所有这些长宽的图片，然后隐藏, 解决思路是我先找到一个能够编辑PDF的软件，查看水印由哪些元素组成，总结发现是一些图片\n使用PyMuPDF使用代码如下\n1234567891011121314151617181920212223242526272829303132import fitzimport osdef delete_watermark(src, dst, width=963, height=215):    doc = fitz.open(src)    for page in range(doc.pageCount):        images = doc.getPageImageList(page)        for content in doc[page]._getContents():            c = doc._getXrefStream(content)            for _, _, width, height, _, _, _, img, _ in images:                if width == width and height == height:                    c = c.replace(&quot;/&#123;&#125; Do&quot;.format(img).encode(), b&quot;&quot;)            doc._updateStream(content, c)    dir = os.path.dirname(dst)    if not os.path.exists(os.path.dirname(dst)):        os.makedirs(dir)    doc.save(dst)SRC = &quot;/Users/ficapy/Downloads/pdf&quot;DST = &quot;/Users/ficapy/Downloads/pdf_handle&quot;for root, dirs, files in os.walk(SRC):    for file in files:        if not file.endswith(&quot;pdf&quot;):            continue        src = os.path.join(root, file)        dst = os.path.join(root.replace(SRC, DST), file)        delete_watermark(src, dst)\n最后再次强调，具体情况具体分析，想要做到PDF去水印，大多数情况下稍微编码都是能够做到的，但是期待一份代码能够处理所有的去水印情况是不现实的\n参考How to remove an image from PDF?\n","dateCreated":"2020-03-02T18:00:00+08:00","dateModified":"2021-02-17T10:47:21+08:00","datePublished":"2020-03-02T18:00:00+08:00","description":"最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下","headline":"利用python去除PDF水印","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2020/03/02/delete_watermark/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2020/03/02/delete_watermark/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下\n\n\n先表明，由于PDF格式的复杂性和水印的多样性。水印情况不一样，处理方式不一样。甚至不同的处理方式对原文件造成的破坏也不一样。如果让一个专家针对特定的文件进行特定的处理肯定可以得到很好的效果，据我记忆所知可以对PDF文件进行追加，给已有对象设置可见性。达到去水印的效果且对文件无任何影响\n在找资料的时候我也看到有些小伙伴通过将PDF转换成图片。再采取图片去水印的方式，最后再转换成PDF文件。可以说这种方式可操作性很强，效果也很好，大多数情况能适用，但是对文件有很大的破坏性。emmm, 废话了这么多，说说我遇到的情况吧。该PDF文件有图片水印，且每个图片长宽都固定。所以我找的方案是，找到所有这些长宽的图片，然后隐藏, 解决思路是我先找到一个能够编辑PDF的软件，查看水印由哪些元素组成，总结发现是一些图片\n使用PyMuPDF使用代码如下\n1234567891011121314151617181920212223242526272829303132import fitzimport osdef delete_watermark(src, dst, width=963, height=215):    doc = fitz.open(src)    for page in range(doc.pageCount):        images = doc.getPageImageList(page)        for content in doc[page]._getContents():            c = doc._getXrefStream(content)            for _, _, width, height, _, _, _, img, _ in images:                if width == width and height == height:                    c = c.replace(&quot;/&#123;&#125; Do&quot;.format(img).encode(), b&quot;&quot;)            doc._updateStream(content, c)    dir = os.path.dirname(dst)    if not os.path.exists(os.path.dirname(dst)):        os.makedirs(dir)    doc.save(dst)SRC = &quot;/Users/ficapy/Downloads/pdf&quot;DST = &quot;/Users/ficapy/Downloads/pdf_handle&quot;for root, dirs, files in os.walk(SRC):    for file in files:        if not file.endswith(&quot;pdf&quot;):            continue        src = os.path.join(root, file)        dst = os.path.join(root.replace(SRC, DST), file)        delete_watermark(src, dst)\n最后再次强调，具体情况具体分析，想要做到PDF去水印，大多数情况下稍微编码都是能够做到的，但是期待一份代码能够处理所有的去水印情况是不现实的\n参考How to remove an image from PDF?\n","dateCreated":"2020-03-02T18:00:00+08:00","dateModified":"2021-02-17T10:47:21+08:00","datePublished":"2020-03-02T18:00:00+08:00","description":"最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下","headline":"利用python去除PDF水印","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2020/03/02/delete_watermark/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2020/03/02/delete_watermark/"}</script>
     <meta name="description" content="最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="利用python去除PDF水印">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -647,6 +569,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -947,8 +875,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

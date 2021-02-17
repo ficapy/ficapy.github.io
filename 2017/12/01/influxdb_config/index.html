@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"开始一个软件,从读懂它的配置文件开始。以下是读取3.1配置文档的笔记总结来说，influxdb的\b配置文件可配置的地方几乎没有。\b\b\b参数性能调优貌似不存在，\b其中是否开启，是否记录日志都占据了\b好多部分。\b\b额外需要关注的是data章节有一些关于fsync的设置默认是0，还有默认的max-series-per-database和max-value-per-tag默认都存在限制。暂时不太清楚原理是什么(更新:因为influxdb最大的软肋就在series的数量上。tag的数据都保存在内存。所以有极大的限制。可以看到官方硬件要求,100万的series需要4-6核心CPU,8-32GB内存，iops要求1000+。对比一下influxdb提供的云服务，100万的series需要每月1500刀!!!)。当保存大量数据的时候肯定会报错,另外默认的慢查询日志是没有打开的。\b\b对于请求。\b默认没有限制最大的返回内容数。以及限制单个查询响应的时间\n\n\n使用配置文件\n使用influxd config查看默认的配置\n\b使用influxd -config config_path或者INFLUXDB_CONFIG_PATH启动\n\n\b环境变量\b配置优先级为: 环境变量 &gt; 文件配置 &gt; 默认设置\n全局选项\n\breporting-disabled  发送数据统计给influxdb\nbind-address        绑定监听地址(RPC)\n\bGOMAXPROCS          \b最大进程数\n\n[meta]\ndir   meta数据保存地址(一般设置一个\bbase_dir)\nretention-autocreate \b自动创建保留策略。\b默认永久保留\nlogging-enabled  \b\b开启meta日志记录\n\n\b[data]\ndir  数据保存地址\nindex-version 决定分片索引保存内存还是磁盘\nwal-dir  \b预写日志保存地址\nwal-fsync-delay  \b预写日志刷新延迟(非ssd磁盘建议0-100ms)\ntrace-logging-enabled TSM引擎和WAL日志\nquery-log-enabled   是否记录查询日志\ncache-max-memory-size    最大缓存容量,占满会拒绝写入\ncache-snapshot-memory-size 缓存快照大小。满后会将内存内容写入到TSM文件\ncache-snapshot-write-cold-duration 如果一个分片没有被写入或者删除会被写入到TSM文件的时间\ncompact-full-write-cold-duration 同上，\b没有写入或者删除的压缩时间\nmax-concurrent-compactions  \b并发\b压缩进程数\nmax-series-per-database   每个数据库最大的series数量。\b超过会500错误。0\b表示无限制(\b为什么需要限制呢？)\n\bmax-values-per-tag 每个tag索引的\b值\b个数(同疑问为什么限制为十万)\n\n[coordinator]\nwrite-timeout    写入超时时间10秒\nmax-concurrent-queries  最大并发查询数默认无限制\nquery-timeout   查询超时时间默认无限制\nlog-queries-after 慢查询检测。为慢查询则记录日志\nmax-select-point \b最大的points数量。默认无限制\nmax-select-series  \b最大的series数量。默认无限制\nmax-select-buckets   \b最大的GROUP BY time()数量。默认无限制\n\n[retention]\nenable  设置为false则禁止删除数据\n\bcheck-interval  检查周期默认三十分钟\n\n[shard-precreation]\nenable \b开启数据到达前先\b创建shard\ncheck-interval  检查周期\nadvance-period  预创建shard的最大时间\n\n[admin]官方完全废弃，不可用。由xx替代(注:还是用grafana吧)\n[monitor]\b\b系统自身监控。默认数据会保存到_internal数据库\n\nstore-enabled  是否存储监控信息\nstore-database \b保存数据库的名称\nstore-interval  记录间隔。默认十秒\n\n[subscriber]\b这个部分是控制Kapacitor如何接收数据。应该没什么用处\n\nenabled\nhttp-timeout\ninsecure-skip-verify\nca-certs\nwrite-concurrency\nwrite-buffer-size\n\n[http]除了RPC调用。就是RESTFUL方式的api读写了\n\nenable  是否打开\nbind-address 绑定地址\nauth-enabled \b打开验证\nrealm  JWT验证相关\nlog-enabled 记录日志\nwrite-tracing 应该是调试使用。会记录写入的payload\npprof-enabled 开启性能记录\nhttps-enabled  开启https\nhttps-certificate https证书\nhttps-private-key  https私钥\nshared-secret  \b用于\b\bJWT的签名。想想单机应该是用不到的\nmax-row-limit  最大单次可以上传的point，默认无限制\nmax-connection-limit 最大可连接数，默认无限制\nunix-socket-enabled  \b开启unix域连接\nbind-socket  绑定socket域\nmax-body-size  最大body长度\b,默认25MB，超过大小返回http413请求实体过大错误\n\n[[graphite]]\b(service plugin)设置一个或多个graphite数据监听器\n\nenabled 启用graphite\ndatabase  \b 数据库名称\n\bretention-policy 保留策略\nbind-address  绑定地址\nprotocol     协议tcp或udp\n\bconsistency-level   一致性级别\nbatch-size\nbatch-pending\nbatch-timeout\nudp-read-buffer\nseparator\n\n[[collectd]]\b\b(service plugin)同上，设置监听collectd数据\n\nenabled\nbind-address\ndatabase\nretention-policy\ntypesdb\nsecurity-level\nauth-file\nbatch-size\nbatch-pending\nbatch-timeout\nread-buffer\n\n[[opentsdb]]\b(service plugin)同上，设置监听opentsdb数据\n\nenabled\nbind-address\ndatabase\nretention-policy\nconsistency-level\ntls-enabled\ncertificate\nlog-point-errors\nbatch-size\nbatch-pending\nbatch-timeout\n\n[[udp]]\b\b(service plugin)除了RPC、HTTP、附带UDP\n\nenabled\nbind-address\ndatabase\nretention-policy\nbatch-size\nbatch-pending\nbatch-timeout\nread-buffer\nprecision\n\n[continuous_queries]\b持续查询\n\nenabled \b 开启\nquery-stats-enabled  默认关闭，将\b执行统计\b写入到默认的监控数据库  \nlog-enabled  \b记录日志\nrun-interval  查找执行间隔\n\n","dateCreated":"2017-12-01T22:38:46+08:00","dateModified":"2017-12-09T07:59:26+08:00","datePublished":"2017-12-01T22:38:46+08:00","description":"开始一个软件,从读懂它的配置文件开始。以下是读取3.1配置文档的笔记总结来说，influxdb的\b配置文件可配置的地方几乎没有。\b\b\b参数性能调优貌似不存在，\b其中是否开启，是否记录日志都占据了\b好多部分。\b\b额外需要关注的是data章节有一些关于fsync的设置默认是0，还有默认的max-series-per-database和max-value-per-tag默认都存在限制。暂时不太清楚原理是什么(更新:因为influxdb最大的软肋就在series的数量上。tag的数据都保存在内存。所以有极大的限制。可以看到官方硬件要求,100万的series需要4-6核心CPU,8-32GB内存，iops要求1000+。对比一下influxdb提供的云服务，100万的series需要每月1500刀!!!)。当保存大量数据的时候肯定会报错,另外默认的慢查询日志是没有打开的。\b\b对于请求。\b默认没有限制最大的返回内容数。以及限制单个查询响应的时间","headline":"influxdb配置文件","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/12/01/influxdb_config/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/12/01/influxdb_config/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"开始一个软件,从读懂它的配置文件开始。以下是读取3.1配置文档的笔记总结来说，influxdb的\b配置文件可配置的地方几乎没有。\b\b\b参数性能调优貌似不存在，\b其中是否开启，是否记录日志都占据了\b好多部分。\b\b额外需要关注的是data章节有一些关于fsync的设置默认是0，还有默认的max-series-per-database和max-value-per-tag默认都存在限制。暂时不太清楚原理是什么(更新:因为influxdb最大的软肋就在series的数量上。tag的数据都保存在内存。所以有极大的限制。可以看到官方硬件要求,100万的series需要4-6核心CPU,8-32GB内存，iops要求1000+。对比一下influxdb提供的云服务，100万的series需要每月1500刀!!!)。当保存大量数据的时候肯定会报错,另外默认的慢查询日志是没有打开的。\b\b对于请求。\b默认没有限制最大的返回内容数。以及限制单个查询响应的时间\n\n\n使用配置文件\n使用influxd config查看默认的配置\n\b使用influxd -config config_path或者INFLUXDB_CONFIG_PATH启动\n\n\b环境变量\b配置优先级为: 环境变量 &gt; 文件配置 &gt; 默认设置\n全局选项\n\breporting-disabled  发送数据统计给influxdb\nbind-address        绑定监听地址(RPC)\n\bGOMAXPROCS          \b最大进程数\n\n[meta]\ndir   meta数据保存地址(一般设置一个\bbase_dir)\nretention-autocreate \b自动创建保留策略。\b默认永久保留\nlogging-enabled  \b\b开启meta日志记录\n\n\b[data]\ndir  数据保存地址\nindex-version 决定分片索引保存内存还是磁盘\nwal-dir  \b预写日志保存地址\nwal-fsync-delay  \b预写日志刷新延迟(非ssd磁盘建议0-100ms)\ntrace-logging-enabled TSM引擎和WAL日志\nquery-log-enabled   是否记录查询日志\ncache-max-memory-size    最大缓存容量,占满会拒绝写入\ncache-snapshot-memory-size 缓存快照大小。满后会将内存内容写入到TSM文件\ncache-snapshot-write-cold-duration 如果一个分片没有被写入或者删除会被写入到TSM文件的时间\ncompact-full-write-cold-duration 同上，\b没有写入或者删除的压缩时间\nmax-concurrent-compactions  \b并发\b压缩进程数\nmax-series-per-database   每个数据库最大的series数量。\b超过会500错误。0\b表示无限制(\b为什么需要限制呢？)\n\bmax-values-per-tag 每个tag索引的\b值\b个数(同疑问为什么限制为十万)\n\n[coordinator]\nwrite-timeout    写入超时时间10秒\nmax-concurrent-queries  最大并发查询数默认无限制\nquery-timeout   查询超时时间默认无限制\nlog-queries-after 慢查询检测。为慢查询则记录日志\nmax-select-point \b最大的points数量。默认无限制\nmax-select-series  \b最大的series数量。默认无限制\nmax-select-buckets   \b最大的GROUP BY time()数量。默认无限制\n\n[retention]\nenable  设置为false则禁止删除数据\n\bcheck-interval  检查周期默认三十分钟\n\n[shard-precreation]\nenable \b开启数据到达前先\b创建shard\ncheck-interval  检查周期\nadvance-period  预创建shard的最大时间\n\n[admin]官方完全废弃，不可用。由xx替代(注:还是用grafana吧)\n[monitor]\b\b系统自身监控。默认数据会保存到_internal数据库\n\nstore-enabled  是否存储监控信息\nstore-database \b保存数据库的名称\nstore-interval  记录间隔。默认十秒\n\n[subscriber]\b这个部分是控制Kapacitor如何接收数据。应该没什么用处\n\nenabled\nhttp-timeout\ninsecure-skip-verify\nca-certs\nwrite-concurrency\nwrite-buffer-size\n\n[http]除了RPC调用。就是RESTFUL方式的api读写了\n\nenable  是否打开\nbind-address 绑定地址\nauth-enabled \b打开验证\nrealm  JWT验证相关\nlog-enabled 记录日志\nwrite-tracing 应该是调试使用。会记录写入的payload\npprof-enabled 开启性能记录\nhttps-enabled  开启https\nhttps-certificate https证书\nhttps-private-key  https私钥\nshared-secret  \b用于\b\bJWT的签名。想想单机应该是用不到的\nmax-row-limit  最大单次可以上传的point，默认无限制\nmax-connection-limit 最大可连接数，默认无限制\nunix-socket-enabled  \b开启unix域连接\nbind-socket  绑定socket域\nmax-body-size  最大body长度\b,默认25MB，超过大小返回http413请求实体过大错误\n\n[[graphite]]\b(service plugin)设置一个或多个graphite数据监听器\n\nenabled 启用graphite\ndatabase  \b 数据库名称\n\bretention-policy 保留策略\nbind-address  绑定地址\nprotocol     协议tcp或udp\n\bconsistency-level   一致性级别\nbatch-size\nbatch-pending\nbatch-timeout\nudp-read-buffer\nseparator\n\n[[collectd]]\b\b(service plugin)同上，设置监听collectd数据\n\nenabled\nbind-address\ndatabase\nretention-policy\ntypesdb\nsecurity-level\nauth-file\nbatch-size\nbatch-pending\nbatch-timeout\nread-buffer\n\n[[opentsdb]]\b(service plugin)同上，设置监听opentsdb数据\n\nenabled\nbind-address\ndatabase\nretention-policy\nconsistency-level\ntls-enabled\ncertificate\nlog-point-errors\nbatch-size\nbatch-pending\nbatch-timeout\n\n[[udp]]\b\b(service plugin)除了RPC、HTTP、附带UDP\n\nenabled\nbind-address\ndatabase\nretention-policy\nbatch-size\nbatch-pending\nbatch-timeout\nread-buffer\nprecision\n\n[continuous_queries]\b持续查询\n\nenabled \b 开启\nquery-stats-enabled  默认关闭，将\b执行统计\b写入到默认的监控数据库  \nlog-enabled  \b记录日志\nrun-interval  查找执行间隔\n\n","dateCreated":"2017-12-01T22:38:46+08:00","dateModified":"2017-12-09T07:59:26+08:00","datePublished":"2017-12-01T22:38:46+08:00","description":"开始一个软件,从读懂它的配置文件开始。以下是读取3.1配置文档的笔记总结来说，influxdb的\b配置文件可配置的地方几乎没有。\b\b\b参数性能调优貌似不存在，\b其中是否开启，是否记录日志都占据了\b好多部分。\b\b额外需要关注的是data章节有一些关于fsync的设置默认是0，还有默认的max-series-per-database和max-value-per-tag默认都存在限制。暂时不太清楚原理是什么(更新:因为influxdb最大的软肋就在series的数量上。tag的数据都保存在内存。所以有极大的限制。可以看到官方硬件要求,100万的series需要4-6核心CPU,8-32GB内存，iops要求1000+。对比一下influxdb提供的云服务，100万的series需要每月1500刀!!!)。当保存大量数据的时候肯定会报错,另外默认的慢查询日志是没有打开的。\b\b对于请求。\b默认没有限制最大的返回内容数。以及限制单个查询响应的时间","headline":"influxdb配置文件","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/12/01/influxdb_config/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/12/01/influxdb_config/"}</script>
     <meta name="description" content="开始一个软件,从读懂它的配置文件开始。以下是读取3.1配置文档的笔记总结来说，influxdb的配置文件可配置的地方几乎没有。参数性能调优貌似不存在，其中是否开启，是否记录日志都占据了好多部分。额外需要关注的是data章节有一些关于fsync的设置默认是0，还有默认的max-series-per-database和max-value-per-tag默认都存在限制。暂时不太清楚原理是">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="influxdb配置文件">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -785,6 +707,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -1085,8 +1013,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

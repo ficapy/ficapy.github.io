@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)\n\n\n目标本文的基本目标是实现这个需求\n123456789101112from tornado import httpserverfrom tornado import ioloopdef handle_request(request):    message = b&quot;Hello World\\n&quot;    request.write(b&quot;HTTP/1.0 200 OK\\r\\nContent-Length: %d\\r\\n\\r\\n%s&quot; % (        len(message), message))    request.finish()http_server = httpserver.HTTPServer(handle_request)http_server.listen(8888)ioloop.IOLoop.instance().start()\n\n最简服务端根据上一篇。我们可以想到当执行listen监听操作的时候，会创建一个监听socket.然后将处理函数添加到事件回调中。不考虑异常因素，最简单的是这样\n12345678910111213141516171819202122import socketfrom tornado import ioloopfrom selectors import EVENT_READ, EVENT_WRITEclass HTTPServer:    def __init__(self, handler):        self.handler = handler        self.io_loop = ioloop.IOLoop.instance()    def listen(self, port):        self.s = socket.socket()        self.s.setblocking(0)        self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)        self.s.bind((&#x27;127.0.0.1&#x27;, port))        self.s.listen(128)        self.io_loop.add_handler(self.s.fileno(), EVENT_READ, self._handle)    def _handle(self):        client_sock, _ = self.s.accept()        client_sock.send(b&quot;HTTP/1.0 200 OK\\r\\nContent-Length: 12\\r\\n\\r\\nHello World\\n&quot;)        client_sock.close()\n对于监听socket,当触发可读的时候意味有新的客户端连接进来了，此时调用回调进行accept得到交互socket连接。简单起见直接send发送一个简易的HTTP消息然后关闭socket\n封装Request对象从上面的示例中可以看到。它没有调用传入的request函数，因为socket对象并没有write和finish方法。此外，即使我们将socket的send和close当做write和finish。它还有一个巨大的缺陷。我们只是进行了发送，而没有对接收到的http报文进行任何处理。一般而言，会从它的行首、头部、消息体得到某一些我们需要的内容，然后对内容进行处理，最终写入信息，过程结束。因此，封装一个Request对象是必须的，最后将封装的对象传入到handler函数以供使用。如何封装呢？我们只需要知道一个完整的HTTP报文即可以得到一个requests对象，而一个http报文又有明显的分隔符.例如下文这个请求报文\n1234567GET &#x2F;docs&#x2F;index.html HTTP&#x2F;1.1Host: www.ipinfo.comAccept: image&#x2F;gif, image&#x2F;jpeg, *&#x2F;*Accept-Language: en-usAccept-Encoding: gzip, deflateUser-Agent: Mozilla&#x2F;4.0 (compatible; MSIE 6.0; Windows NT 5.1)(blank line)\n获取流程如下。当读取到第一个\\r\\n即确定Reques Line部分，当读取到\\r\\n\\r\\n即确定Header部分，如果Header部分存在Content-Length则表示存在body部分，存在则继续读取Content-Length长度。如此下来单个HTTP报文读取完毕。可以构建这个过程，Requests Line读取完毕后—&gt;回调读取Header部分—&gt;回调读取Body部分—&gt;构建Request对象—&gt;回调handler函数，将Request对象传入。另外第一步可以省略,读取Header即包含Requests Line\n可以看到对于一个socket对象,将它根据分隔符以及长度读取就能解析成单个http包，另外对于很多流协议也是如此。我们将socket封装一下。让它提供两个功能read_until、read_bytes。允许读取到分隔符后调用回调函数、读取到固定长度后调用回调函数。最简代码如下\n12345678910111213141516171819202122232425262728293031323334353637383940414243from tornado import ioloopfrom selectors import EVENT_READclass IOStream:    def __init__(self, socket):        self.socket = socket        self.ioloop = ioloop.IOLoop.instance()        self.ioloop.add_handler(self.socket.fileno(), EVENT_READ, self._handler)        self._read_buffer = b&quot;&quot;        self._read_delimiter = None        self._read_bytes = None        self._read_callback = None    def _handler(self):        data = self.socket.recv(1024)        self._read_buffer += data        if self._read_delimiter and self._read_delimiter in self._read_buffer:            result, self._read_buffer = self._read_buffer.split(self._read_delimiter)            self._read_callback(result)            self._read_delimiter = None            self._read_callback = None        elif self._read_bytes and len(self._read_buffer) &gt; self._read_bytes:            result = self._read_buffer[:self._read_bytes]            self._read_buffer = self._read_buffer[self._read_bytes:]            self._read_callback(result)            self._read_bytes = None            self._read_callback = None    def read_until(self, delimiter, callback):        self._read_delimiter = delimiter        self._read_callback = callback    def read_bytes(self, length, callback):        self._read_bytes = length        self._read_callback = callback    def write(self, data):        self.socket.send(data)    def close(self):        self.ioloop.ioloop.unregister(self.socket.fileno())        self.socket.close()\n对于创建的IOStream对象，它添加READ事件，将回调函数设置为self._handler。当使用read_until的时候将历史数据给callback函数调用。再看一下HTTPConnect对象\n1234567891011121314151617class HTTPConnection:    def __init__(self, io_stream, handler_callback):        self.io_loop = ioloop.IOLoop.instance()        self.stream = io_stream        self.handler_callback = handler_callback        self.stream.read_until(b&#x27;\\r\\n\\r\\n&#x27;, self._parse_header)    def _parse_header(self, data):        # 忽略行首，全部当做header        request = Request(connect=self, header=data)        self.handler_callback(request)    def write(self, data):        self.stream.write(data)    def finish(self):        self.stream.close()\n显然，它传入的是IOStream对象，并且在初始化的时候就调用read_until读取HTTP Header部分内容。简单起见，这里只读取并没有解析。最后封装成Request对象。让handle_request函数调用。达到我们文章开头的目的\n12345678910class Request:    def __init__(self, connect, header):        self.connect = connect        self.header = header    def write(self, data):        self.connect.write(data)    def finish(self):        self.connect.finish()\n将最开始的最简服务器部分稍微改动一下\n1234def _handle(self):    client_sock, _ = self.s.accept()    stream = IOStream(client_sock)    HTTPConnection(stream, self.handler)\n\n小结IOStream、HTTPConnection、Request、HTTPServer。其中暴漏给用户的几乎只有Request对象，从上面的分析中应该可以发现。将文件描述符加入事件，等待IOStream的全局_header进行回调，全局_header又针对各种情况(分隔符条件满足、长度条件满足)发起回调。同时如果不调用iostream.read_until等那么全局的_header就没有意义了。搞定IOStream后。立马在HTTPConnection里面调用iostream.read_until。被回调则表明HTTP头部接收完成。组装成Requests然后调用handle_request。\n作用分工:HTTPServer:     创建监听socket,传入http处理回调函数IOStream:   提供通用TCP流解析，最重要的是提供了write、read_until、read_length，且可以传入回调Request:    将字符串解析成一个Request对象。便于简单的获取访问信息。如url、host、port、body等等HTTPConnection:  将前三者联系起来,调用IOStream.read_until开启获取HTTP数据包的流程\n另外本文简单起见，只注册了READ事件。对于send操作。同样是需要进行注册事件。等到WRITE事件触发才执行send操作，希望不要引起误解，另外本例中使用HTTP/1.0的逻辑，处理完成单个链接后直接关闭。对于HTTP/1.1来说要实现keep-alive只需要在finish的使用并不关闭链接，而是继续执行self.read_until(b’\\r\\n\\r\\n’,self._parse_header)继续等待处理下一个HTTP报文\n","dateCreated":"2018-03-15T11:37:29+08:00","dateModified":"2018-03-15T17:14:55+08:00","datePublished":"2018-03-15T11:37:29+08:00","description":"Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)","headline":"Tornado 之httpserver","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/15/tornado_httpserver/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/15/tornado_httpserver/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)\n\n\n目标本文的基本目标是实现这个需求\n123456789101112from tornado import httpserverfrom tornado import ioloopdef handle_request(request):    message = b&quot;Hello World\\n&quot;    request.write(b&quot;HTTP/1.0 200 OK\\r\\nContent-Length: %d\\r\\n\\r\\n%s&quot; % (        len(message), message))    request.finish()http_server = httpserver.HTTPServer(handle_request)http_server.listen(8888)ioloop.IOLoop.instance().start()\n\n最简服务端根据上一篇。我们可以想到当执行listen监听操作的时候，会创建一个监听socket.然后将处理函数添加到事件回调中。不考虑异常因素，最简单的是这样\n12345678910111213141516171819202122import socketfrom tornado import ioloopfrom selectors import EVENT_READ, EVENT_WRITEclass HTTPServer:    def __init__(self, handler):        self.handler = handler        self.io_loop = ioloop.IOLoop.instance()    def listen(self, port):        self.s = socket.socket()        self.s.setblocking(0)        self.s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)        self.s.bind((&#x27;127.0.0.1&#x27;, port))        self.s.listen(128)        self.io_loop.add_handler(self.s.fileno(), EVENT_READ, self._handle)    def _handle(self):        client_sock, _ = self.s.accept()        client_sock.send(b&quot;HTTP/1.0 200 OK\\r\\nContent-Length: 12\\r\\n\\r\\nHello World\\n&quot;)        client_sock.close()\n对于监听socket,当触发可读的时候意味有新的客户端连接进来了，此时调用回调进行accept得到交互socket连接。简单起见直接send发送一个简易的HTTP消息然后关闭socket\n封装Request对象从上面的示例中可以看到。它没有调用传入的request函数，因为socket对象并没有write和finish方法。此外，即使我们将socket的send和close当做write和finish。它还有一个巨大的缺陷。我们只是进行了发送，而没有对接收到的http报文进行任何处理。一般而言，会从它的行首、头部、消息体得到某一些我们需要的内容，然后对内容进行处理，最终写入信息，过程结束。因此，封装一个Request对象是必须的，最后将封装的对象传入到handler函数以供使用。如何封装呢？我们只需要知道一个完整的HTTP报文即可以得到一个requests对象，而一个http报文又有明显的分隔符.例如下文这个请求报文\n1234567GET &#x2F;docs&#x2F;index.html HTTP&#x2F;1.1Host: www.ipinfo.comAccept: image&#x2F;gif, image&#x2F;jpeg, *&#x2F;*Accept-Language: en-usAccept-Encoding: gzip, deflateUser-Agent: Mozilla&#x2F;4.0 (compatible; MSIE 6.0; Windows NT 5.1)(blank line)\n获取流程如下。当读取到第一个\\r\\n即确定Reques Line部分，当读取到\\r\\n\\r\\n即确定Header部分，如果Header部分存在Content-Length则表示存在body部分，存在则继续读取Content-Length长度。如此下来单个HTTP报文读取完毕。可以构建这个过程，Requests Line读取完毕后—&gt;回调读取Header部分—&gt;回调读取Body部分—&gt;构建Request对象—&gt;回调handler函数，将Request对象传入。另外第一步可以省略,读取Header即包含Requests Line\n可以看到对于一个socket对象,将它根据分隔符以及长度读取就能解析成单个http包，另外对于很多流协议也是如此。我们将socket封装一下。让它提供两个功能read_until、read_bytes。允许读取到分隔符后调用回调函数、读取到固定长度后调用回调函数。最简代码如下\n12345678910111213141516171819202122232425262728293031323334353637383940414243from tornado import ioloopfrom selectors import EVENT_READclass IOStream:    def __init__(self, socket):        self.socket = socket        self.ioloop = ioloop.IOLoop.instance()        self.ioloop.add_handler(self.socket.fileno(), EVENT_READ, self._handler)        self._read_buffer = b&quot;&quot;        self._read_delimiter = None        self._read_bytes = None        self._read_callback = None    def _handler(self):        data = self.socket.recv(1024)        self._read_buffer += data        if self._read_delimiter and self._read_delimiter in self._read_buffer:            result, self._read_buffer = self._read_buffer.split(self._read_delimiter)            self._read_callback(result)            self._read_delimiter = None            self._read_callback = None        elif self._read_bytes and len(self._read_buffer) &gt; self._read_bytes:            result = self._read_buffer[:self._read_bytes]            self._read_buffer = self._read_buffer[self._read_bytes:]            self._read_callback(result)            self._read_bytes = None            self._read_callback = None    def read_until(self, delimiter, callback):        self._read_delimiter = delimiter        self._read_callback = callback    def read_bytes(self, length, callback):        self._read_bytes = length        self._read_callback = callback    def write(self, data):        self.socket.send(data)    def close(self):        self.ioloop.ioloop.unregister(self.socket.fileno())        self.socket.close()\n对于创建的IOStream对象，它添加READ事件，将回调函数设置为self._handler。当使用read_until的时候将历史数据给callback函数调用。再看一下HTTPConnect对象\n1234567891011121314151617class HTTPConnection:    def __init__(self, io_stream, handler_callback):        self.io_loop = ioloop.IOLoop.instance()        self.stream = io_stream        self.handler_callback = handler_callback        self.stream.read_until(b&#x27;\\r\\n\\r\\n&#x27;, self._parse_header)    def _parse_header(self, data):        # 忽略行首，全部当做header        request = Request(connect=self, header=data)        self.handler_callback(request)    def write(self, data):        self.stream.write(data)    def finish(self):        self.stream.close()\n显然，它传入的是IOStream对象，并且在初始化的时候就调用read_until读取HTTP Header部分内容。简单起见，这里只读取并没有解析。最后封装成Request对象。让handle_request函数调用。达到我们文章开头的目的\n12345678910class Request:    def __init__(self, connect, header):        self.connect = connect        self.header = header    def write(self, data):        self.connect.write(data)    def finish(self):        self.connect.finish()\n将最开始的最简服务器部分稍微改动一下\n1234def _handle(self):    client_sock, _ = self.s.accept()    stream = IOStream(client_sock)    HTTPConnection(stream, self.handler)\n\n小结IOStream、HTTPConnection、Request、HTTPServer。其中暴漏给用户的几乎只有Request对象，从上面的分析中应该可以发现。将文件描述符加入事件，等待IOStream的全局_header进行回调，全局_header又针对各种情况(分隔符条件满足、长度条件满足)发起回调。同时如果不调用iostream.read_until等那么全局的_header就没有意义了。搞定IOStream后。立马在HTTPConnection里面调用iostream.read_until。被回调则表明HTTP头部接收完成。组装成Requests然后调用handle_request。\n作用分工:HTTPServer:     创建监听socket,传入http处理回调函数IOStream:   提供通用TCP流解析，最重要的是提供了write、read_until、read_length，且可以传入回调Request:    将字符串解析成一个Request对象。便于简单的获取访问信息。如url、host、port、body等等HTTPConnection:  将前三者联系起来,调用IOStream.read_until开启获取HTTP数据包的流程\n另外本文简单起见，只注册了READ事件。对于send操作。同样是需要进行注册事件。等到WRITE事件触发才执行send操作，希望不要引起误解，另外本例中使用HTTP/1.0的逻辑，处理完成单个链接后直接关闭。对于HTTP/1.1来说要实现keep-alive只需要在finish的使用并不关闭链接，而是继续执行self.read_until(b’\\r\\n\\r\\n’,self._parse_header)继续等待处理下一个HTTP报文\n","dateCreated":"2018-03-15T11:37:29+08:00","dateModified":"2018-03-15T17:14:55+08:00","datePublished":"2018-03-15T11:37:29+08:00","description":"Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)","headline":"Tornado 之httpserver","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/15/tornado_httpserver/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/03/15/tornado_httpserver/"}</script>
     <meta name="description" content="Tornado可以当做一个http客户端去发送请求，可以处理需要和客户端建立长连接的请求。可是Tornado最为知名的还是它作为一个HTTP web框架…,上一篇讲述了IOLoop的套路。本篇讲解一下如何将IOLoop和httpserver联系起来(本代码思路依据1.0.0版本)">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Tornado 之httpserver">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -662,6 +584,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -962,8 +890,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

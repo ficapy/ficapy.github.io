@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"有人说flask的上下文机制是整个框架的精华部分，有人说它神奇的g让人费解。werkzeug的local.py就是它的具体实现。这个看似神奇的机制背后加上应用代码也不过两三百行。不过好像坑还是比较深的。另外flask的0.1版本才200多行代码。值得瞅一下\n\n\n直观感受上下文使用wrk进行压测wrk -t300 -c300 -d10s http://127.0.0.1:5000\n123456789101112131415161718192021222324252627282930313233343536373839404142import timeimport randomfrom pprint import pprintfrom flask import Flaskfrom flask.globals import _request_ctx_stack,_app_ctx_stackapp = Flask(__name__)@app.route(&#x27;/&#x27;)def index():    time.sleep(random.random())    pprint(_request_ctx_stack._local.__storage__)    pprint(_app_ctx_stack._local.__storage__)    return &#x27;&#x27;app.run(threaded=True)# 某一时刻状态# &#123;123145360109568: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145391640576: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145407406080: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145417916416: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145428426752: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145459957760: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145480978432: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145496743936: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145512509440: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145538785280: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145549295616: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145601847296: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145638633472: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145680674816: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145743736832: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145764757504: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;&#125;# &#123;123145360109568: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x103f90f60&gt;]&#125;,#  123145391640576: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x103fcdc50&gt;]&#125;,#  123145407406080: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x10402c080&gt;]&#125;,#  123145417916416: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x103fa0668&gt;]&#125;,#  123145428426752: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x104058828&gt;]&#125;,#  123145459957760: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x103fd8470&gt;]&#125;,#  123145480978432: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x1040859e8&gt;]&#125;,#  123145496743936: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x104078cf8&gt;]&#125;,#  123145512509440: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x104036c88&gt;]&#125;,\n为什么会有Local比较抽象的解释叫它线程内共享变量，下面来个例子\n12345678import threadingl = threading.local()l.a = 1threading.Thread(target=lambda: setattr(l, &#x27;a&#x27;, 2) or print(l.a, threading.current_thread())).start()print(l.a)# 2 &lt;Thread(Thread-1, started 123145307557888)&gt;# 1\n可以看出就是一全局对象对它设置的属性在线程间是隔离的。可是这又有什么用。我们作为框架使用者逻辑一般都是写在一起的，没有人会故意去像这样写\n1234l = threading.local()def main():    l.a = 1    l.a  ##进行引用\n可是我们使用的是框架！线程的调起不是我们主动去操作的。框架会有一些第三方扩展。它们依靠此机制给我们提供接口，比如来个官方示例\n1234567891011import sqlite3from flask import gdef get_db():    db = getattr(g, &#x27;_database&#x27;, None)    if db is None:        db = g._database = connect_to_database()    return db#=========================from werkzeug.local import LocalProxydb = LocalProxy(get_db)    \nLocal的实现原理很简单，这里不详述了。就是前一篇博文说的字典的dict[key] = value是线程安全的。其实threading.local也是一样的作用，那么为什么不用它。\n\n支持了greenlet(本博文只会涉及到多线程情况)\n自带的写法太特么恶心了，那个源码我都快看吐了，不如自己写一个(我都没看透自带的为什么要那么写,如果你能轻松看明白，那么你肯定是看魔术方法的大神)简述下自带的逻辑，主要是这几句\n\n123456789101112# python2.7.11代码dict &#x3D; object.__getattribute__(self, &#39;__dict__&#39;)current_thread().__dict__[key] &#x3D; dictkey &#x3D; object.__getattribute__(self, &#39;_local__key&#39;)d &#x3D; current_thread().__dict__.get(key)# import threading# l &#x3D; threading.current_thread()# print(l is threading.current_thread())# threading.Thread(target&#x3D;lambda :print(threading.current_thread() is l)).start()# True# False\n在同一线程内threading.current_thread()是同一对象，有一个_patch函数，该函数在local属性被调用前提前调用，将current_thread().__dict__相关的内容绑定在local.__dict__上。\n为什么会有LocalStack它主要将上面的Local由l.key = value变成了l.push(value)。变成了栈结构。可是从上面的直观感受上下文部分可以看到在多线程环境下任一时刻栈里面都仅有一个内容。那么还为什么要使用栈呢，往下看。\n为什么会有LocalProxy从名字就可以看出来是代理模式。可以看看github上的设计模式，同样是讲的代理模式，flask的实际应用就比这个例子要高明的多\n我们使用代理是为了绕过防火墙访问外面的世界，那么LocalProxy这个代理是干啥子的呢。设想一下。我们使用了l = Local()并且在上面给一个属性赋值了l.key = value。那么当你要调用的时候就使用l.key就好啦。现在我们没有直接用Local用的是l = LocalStack(),l.push(RequestContext()),request这个属性又在RequestContext()这个对象上。那么我们要访问request怎么办！此时你就要执行l.top.request进行访问。可是优雅呢！优雅呢！优雅呢！优雅哪里去了。我们很懒，我们想执行一个request就能代替l.top.request(有人会问为什么不直接写死reques = l.top.request，那是因为它是死！！！的,而l.top.request是随着线程进入退出一直出入栈动态变化的，我们只能在每次使用的时候执行l.top.request得到正确的结果)。→_→这就是这个代理能为我们做的执行repr(current_app)的调用图，请无视pycall那一块\n12345678def _find_app():    top = _app_ctx_stack.top    if top is None:        raise RuntimeError(_app_ctx_err_msg)    return top.app_app_ctx_stack = LocalStack()current_app = LocalProxy(_find_app)\n在LocalProxy里面我们写了一个回调函数，当对LocalProxy属性进行访问的时候，它永远都是先执行_get_current_object,该函数就是执行我们写入的回调函数得到访问对象,比如current_app就是得到_app_ctx_stack.top.app对象。最后再对得到的对象进行属性访问\n对LocalProxy讲3个小细节\n\n_init_中有object.__setattr__(self, &#39;_LocalProxy__local&#39;, local)。如果你要确保对一个对象的__dict__中加入内容，需要使用object.__setattr__，使用self.x、setattr(self,’x’)、self.__dict\\[x]都是不确定的，因为它self这个对象可能会重写自身的_setattr_,其次对于私有变量。执行__setattr__的时候需要变换\n 12345class Foo():    def __init__(self):        self.__a &#x3D; 1print(Foo().__dict__)# &#123;&#39;_Foo__a&#39;: 1&#125;\n\n最下面同时也对所有可列举的魔术方法进行了代理__str__ = lambda x:    str(x._get_current_object())\n\n由于代理的存在原始对象的访问需要通过_get_current_object(其实对于看过代码的这应该是废话O_o)\n 1234567from flask import Flask,current_appfrom flask.globals import _app_ctx_stackwith Flask(__name__).app_context():    print(current_app is _app_ctx_stack.top.app)    print(current_app._get_current_object() is _app_ctx_stack.top.app)# False# True\nrequest、session和g这几个和上下文息息相关,比如离开了对应的上下文它们完全无法使用\n\n\n12345678from flask import request, session, gfor i in [request, session, g]:    try:        i.x = 1    except RuntimeError:        print(&#x27;boom! &#x27;, end=&#x27;&#x27;)# boom! boom! boom! \nflask的0.1版本是只有RequestContext请求上下文，没有应用上下文的。直到0.9版本才用二三十行代码加上AppContext应用上下文为什么要加上应用上下文呢。官方文档我没有找到很详尽的解释，只有一段简要的描述，同时参考了下别人的博客。我个人理解是为了处理单独使用应用上下文不使用请求上下文的情况。另外文档有creating such a request context is an unnecessarily expensive operation在某些情况使用请求上下文是昂贵的没有必要的操作。参考下面的代码\n12345678910111213141516171819202122232425262728293031323334from flask import Flask,current_appfrom flask.globals import _app_ctx_stack, _request_ctx_stackapp1 = Flask(&#x27;a&#x27;)app2 = Flask(&#x27;b&#x27;)with app1.app_context():    with app2.app_context():        print(_request_ctx_stack._local.__storage__)        print(_app_ctx_stack._local.__storage__)# &#123;&#125;# &#123;140735191154688: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x1096c1f60&gt;, &lt;flask.ctx.AppContext object at 0x1096cd048&gt;]&#125;&#125;with app1.test_client() as client1:    with app2.test_client() as client2:        print(_request_ctx_stack._local.__storage__)        print(_app_ctx_stack._local.__storage__)        client2.get(&#x27;/b&#x27;)        print(current_app)        print(_request_ctx_stack._local.__storage__)        client1.get(&#x27;/a&#x27;)        print(current_app)        print(_request_ctx_stack._local.__storage__)    resp = client1.get(&#x27;/a&#x27;)    print(_request_ctx_stack._local.__storage__)    print(current_app)# &#123;&#125;# &#123;&#125;# &lt;Flask &#x27;b&#x27;&gt;# &#123;140735191154688: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://localhost/b&#x27; [GET] of b&gt;]&#125;&#125;# &lt;Flask &#x27;a&#x27;&gt;# &#123;140735191154688: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://localhost/a&#x27; [GET] of a&gt;]&#125;&#125;# &#123;140735191154688: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://localhost/a&#x27; [GET] of a&gt;]&#125;&#125;\n首先可以看到执行app_context()的时候有了应用上下文，和请求上下文一毛钱关系都没有。看下代码就是return AppContext(self),它自己有个__enter__函数执行了push。这有什么用呢。比如你要在命令行调用下你写的数据库函数。很明显它需要数据库的配置app.config。如果没有应用上下文，那么你需要先创建请求上下文。现在你只需要创建应用上下文了(比请求上下文更轻量)。再者当我们一次性进入了多个应用上下文的时候此时栈里面就不止一个元素了。所以。。。。这也是上面问的为什么要用栈\n第二个例子只有当请求发送后应用上下文和请求上下文才会同时入栈。且同时出栈，所以网上有博客写一个应用上下文会包含多个请求上下文这是不对的。并且绝对不能理解为应用上下文的生存周期是一个app从启动到关闭这个过程\n参考资料Flask 的 Context 机制\n","dateCreated":"2016-08-03T08:58:00+08:00","dateModified":"2021-02-17T11:02:28+08:00","datePublished":"2016-08-03T08:58:00+08:00","description":"有人说flask的上下文机制是整个框架的精华部分，有人说它神奇的g让人费解。werkzeug的local.py就是它的具体实现。这个看似神奇的机制背后加上应用代码也不过两三百行。不过好像坑还是比较深的。另外flask的0.1版本才200多行代码。值得瞅一下","headline":"werkzeug源码分析(local.py)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/03/werkzeug_local_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/08/03/werkzeug_local_note/","keywords":"Flask"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"有人说flask的上下文机制是整个框架的精华部分，有人说它神奇的g让人费解。werkzeug的local.py就是它的具体实现。这个看似神奇的机制背后加上应用代码也不过两三百行。不过好像坑还是比较深的。另外flask的0.1版本才200多行代码。值得瞅一下\n\n\n直观感受上下文使用wrk进行压测wrk -t300 -c300 -d10s http://127.0.0.1:5000\n123456789101112131415161718192021222324252627282930313233343536373839404142import timeimport randomfrom pprint import pprintfrom flask import Flaskfrom flask.globals import _request_ctx_stack,_app_ctx_stackapp = Flask(__name__)@app.route(&#x27;/&#x27;)def index():    time.sleep(random.random())    pprint(_request_ctx_stack._local.__storage__)    pprint(_app_ctx_stack._local.__storage__)    return &#x27;&#x27;app.run(threaded=True)# 某一时刻状态# &#123;123145360109568: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145391640576: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145407406080: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145417916416: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145428426752: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145459957760: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145480978432: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145496743936: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145512509440: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145538785280: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145549295616: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145601847296: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145638633472: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145680674816: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145743736832: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;,#  123145764757504: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://127.0.0.1:5000/&#x27; [GET] of temp&gt;]&#125;&#125;# &#123;123145360109568: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x103f90f60&gt;]&#125;,#  123145391640576: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x103fcdc50&gt;]&#125;,#  123145407406080: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x10402c080&gt;]&#125;,#  123145417916416: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x103fa0668&gt;]&#125;,#  123145428426752: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x104058828&gt;]&#125;,#  123145459957760: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x103fd8470&gt;]&#125;,#  123145480978432: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x1040859e8&gt;]&#125;,#  123145496743936: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x104078cf8&gt;]&#125;,#  123145512509440: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x104036c88&gt;]&#125;,\n为什么会有Local比较抽象的解释叫它线程内共享变量，下面来个例子\n12345678import threadingl = threading.local()l.a = 1threading.Thread(target=lambda: setattr(l, &#x27;a&#x27;, 2) or print(l.a, threading.current_thread())).start()print(l.a)# 2 &lt;Thread(Thread-1, started 123145307557888)&gt;# 1\n可以看出就是一全局对象对它设置的属性在线程间是隔离的。可是这又有什么用。我们作为框架使用者逻辑一般都是写在一起的，没有人会故意去像这样写\n1234l = threading.local()def main():    l.a = 1    l.a  ##进行引用\n可是我们使用的是框架！线程的调起不是我们主动去操作的。框架会有一些第三方扩展。它们依靠此机制给我们提供接口，比如来个官方示例\n1234567891011import sqlite3from flask import gdef get_db():    db = getattr(g, &#x27;_database&#x27;, None)    if db is None:        db = g._database = connect_to_database()    return db#=========================from werkzeug.local import LocalProxydb = LocalProxy(get_db)    \nLocal的实现原理很简单，这里不详述了。就是前一篇博文说的字典的dict[key] = value是线程安全的。其实threading.local也是一样的作用，那么为什么不用它。\n\n支持了greenlet(本博文只会涉及到多线程情况)\n自带的写法太特么恶心了，那个源码我都快看吐了，不如自己写一个(我都没看透自带的为什么要那么写,如果你能轻松看明白，那么你肯定是看魔术方法的大神)简述下自带的逻辑，主要是这几句\n\n123456789101112# python2.7.11代码dict &#x3D; object.__getattribute__(self, &#39;__dict__&#39;)current_thread().__dict__[key] &#x3D; dictkey &#x3D; object.__getattribute__(self, &#39;_local__key&#39;)d &#x3D; current_thread().__dict__.get(key)# import threading# l &#x3D; threading.current_thread()# print(l is threading.current_thread())# threading.Thread(target&#x3D;lambda :print(threading.current_thread() is l)).start()# True# False\n在同一线程内threading.current_thread()是同一对象，有一个_patch函数，该函数在local属性被调用前提前调用，将current_thread().__dict__相关的内容绑定在local.__dict__上。\n为什么会有LocalStack它主要将上面的Local由l.key = value变成了l.push(value)。变成了栈结构。可是从上面的直观感受上下文部分可以看到在多线程环境下任一时刻栈里面都仅有一个内容。那么还为什么要使用栈呢，往下看。\n为什么会有LocalProxy从名字就可以看出来是代理模式。可以看看github上的设计模式，同样是讲的代理模式，flask的实际应用就比这个例子要高明的多\n我们使用代理是为了绕过防火墙访问外面的世界，那么LocalProxy这个代理是干啥子的呢。设想一下。我们使用了l = Local()并且在上面给一个属性赋值了l.key = value。那么当你要调用的时候就使用l.key就好啦。现在我们没有直接用Local用的是l = LocalStack(),l.push(RequestContext()),request这个属性又在RequestContext()这个对象上。那么我们要访问request怎么办！此时你就要执行l.top.request进行访问。可是优雅呢！优雅呢！优雅呢！优雅哪里去了。我们很懒，我们想执行一个request就能代替l.top.request(有人会问为什么不直接写死reques = l.top.request，那是因为它是死！！！的,而l.top.request是随着线程进入退出一直出入栈动态变化的，我们只能在每次使用的时候执行l.top.request得到正确的结果)。→_→这就是这个代理能为我们做的执行repr(current_app)的调用图，请无视pycall那一块\n12345678def _find_app():    top = _app_ctx_stack.top    if top is None:        raise RuntimeError(_app_ctx_err_msg)    return top.app_app_ctx_stack = LocalStack()current_app = LocalProxy(_find_app)\n在LocalProxy里面我们写了一个回调函数，当对LocalProxy属性进行访问的时候，它永远都是先执行_get_current_object,该函数就是执行我们写入的回调函数得到访问对象,比如current_app就是得到_app_ctx_stack.top.app对象。最后再对得到的对象进行属性访问\n对LocalProxy讲3个小细节\n\n_init_中有object.__setattr__(self, &#39;_LocalProxy__local&#39;, local)。如果你要确保对一个对象的__dict__中加入内容，需要使用object.__setattr__，使用self.x、setattr(self,’x’)、self.__dict\\[x]都是不确定的，因为它self这个对象可能会重写自身的_setattr_,其次对于私有变量。执行__setattr__的时候需要变换\n 12345class Foo():    def __init__(self):        self.__a &#x3D; 1print(Foo().__dict__)# &#123;&#39;_Foo__a&#39;: 1&#125;\n\n最下面同时也对所有可列举的魔术方法进行了代理__str__ = lambda x:    str(x._get_current_object())\n\n由于代理的存在原始对象的访问需要通过_get_current_object(其实对于看过代码的这应该是废话O_o)\n 1234567from flask import Flask,current_appfrom flask.globals import _app_ctx_stackwith Flask(__name__).app_context():    print(current_app is _app_ctx_stack.top.app)    print(current_app._get_current_object() is _app_ctx_stack.top.app)# False# True\nrequest、session和g这几个和上下文息息相关,比如离开了对应的上下文它们完全无法使用\n\n\n12345678from flask import request, session, gfor i in [request, session, g]:    try:        i.x = 1    except RuntimeError:        print(&#x27;boom! &#x27;, end=&#x27;&#x27;)# boom! boom! boom! \nflask的0.1版本是只有RequestContext请求上下文，没有应用上下文的。直到0.9版本才用二三十行代码加上AppContext应用上下文为什么要加上应用上下文呢。官方文档我没有找到很详尽的解释，只有一段简要的描述，同时参考了下别人的博客。我个人理解是为了处理单独使用应用上下文不使用请求上下文的情况。另外文档有creating such a request context is an unnecessarily expensive operation在某些情况使用请求上下文是昂贵的没有必要的操作。参考下面的代码\n12345678910111213141516171819202122232425262728293031323334from flask import Flask,current_appfrom flask.globals import _app_ctx_stack, _request_ctx_stackapp1 = Flask(&#x27;a&#x27;)app2 = Flask(&#x27;b&#x27;)with app1.app_context():    with app2.app_context():        print(_request_ctx_stack._local.__storage__)        print(_app_ctx_stack._local.__storage__)# &#123;&#125;# &#123;140735191154688: &#123;&#x27;stack&#x27;: [&lt;flask.ctx.AppContext object at 0x1096c1f60&gt;, &lt;flask.ctx.AppContext object at 0x1096cd048&gt;]&#125;&#125;with app1.test_client() as client1:    with app2.test_client() as client2:        print(_request_ctx_stack._local.__storage__)        print(_app_ctx_stack._local.__storage__)        client2.get(&#x27;/b&#x27;)        print(current_app)        print(_request_ctx_stack._local.__storage__)        client1.get(&#x27;/a&#x27;)        print(current_app)        print(_request_ctx_stack._local.__storage__)    resp = client1.get(&#x27;/a&#x27;)    print(_request_ctx_stack._local.__storage__)    print(current_app)# &#123;&#125;# &#123;&#125;# &lt;Flask &#x27;b&#x27;&gt;# &#123;140735191154688: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://localhost/b&#x27; [GET] of b&gt;]&#125;&#125;# &lt;Flask &#x27;a&#x27;&gt;# &#123;140735191154688: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://localhost/a&#x27; [GET] of a&gt;]&#125;&#125;# &#123;140735191154688: &#123;&#x27;stack&#x27;: [&lt;RequestContext &#x27;http://localhost/a&#x27; [GET] of a&gt;]&#125;&#125;\n首先可以看到执行app_context()的时候有了应用上下文，和请求上下文一毛钱关系都没有。看下代码就是return AppContext(self),它自己有个__enter__函数执行了push。这有什么用呢。比如你要在命令行调用下你写的数据库函数。很明显它需要数据库的配置app.config。如果没有应用上下文，那么你需要先创建请求上下文。现在你只需要创建应用上下文了(比请求上下文更轻量)。再者当我们一次性进入了多个应用上下文的时候此时栈里面就不止一个元素了。所以。。。。这也是上面问的为什么要用栈\n第二个例子只有当请求发送后应用上下文和请求上下文才会同时入栈。且同时出栈，所以网上有博客写一个应用上下文会包含多个请求上下文这是不对的。并且绝对不能理解为应用上下文的生存周期是一个app从启动到关闭这个过程\n参考资料Flask 的 Context 机制\n","dateCreated":"2016-08-03T08:58:00+08:00","dateModified":"2021-02-17T11:02:28+08:00","datePublished":"2016-08-03T08:58:00+08:00","description":"有人说flask的上下文机制是整个框架的精华部分，有人说它神奇的g让人费解。werkzeug的local.py就是它的具体实现。这个看似神奇的机制背后加上应用代码也不过两三百行。不过好像坑还是比较深的。另外flask的0.1版本才200多行代码。值得瞅一下","headline":"werkzeug源码分析(local.py)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/03/werkzeug_local_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/08/03/werkzeug_local_note/","keywords":"Flask"}</script>
     <meta name="description" content="有人说flask的上下文机制是整个框架的精华部分，有人说它神奇的g让人费解。werkzeug的local.py就是它的具体实现。这个看似神奇的机制背后加上应用代码也不过两三百行。不过好像坑还是比较深的。另外flask的0.1版本才200多行代码。值得瞅一下">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="werkzeug源码分析(local.py)">
@@ -180,7 +180,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -196,87 +196,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -689,6 +611,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -989,8 +917,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

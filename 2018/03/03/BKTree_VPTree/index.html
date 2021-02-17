@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了BK树。记录一下\n\n\n使用Python的库imageHash 运算后会得到64bit长度的结果(最后使用了hex编码导致结果看起来很长)。如果两张图片的bit进行异或后不同的地方越小。说明两张图片越相似。度量这2个bit不相似程度被称之为汉明距离\n这个距离它又满足以下性质(被称为Levenshtein)\n\nd(x, y) = 0 当且仅当 x=y  （Levenshtein距离为0 &lt;==&gt; 字符串相等）\nd(x, y) = d(y, x)     （从x变到y的最少步数就是从y变到x的最少步数）\nd(x, y) + d(y, z) &gt;= d(x, z)  （从x变到z所需的步数不会超过x先变成y再变成z的步数）\n\nBK树为了加速查找, 构建了这样一种树结构。\n\n任选一个节点当做根节点\n插入节点的时候和根节点对比得到距离。如果该距离不存在则新建一个节点作为根节点的子节点。如果节点存在则获得节点作为根节点进行递归操作\n\n第二步的意义在于任何一个节点下面的元素对于该节点的距离都是相等的。构建就达到了这个效果。别的啥事没做。\n查找过程。查找的原理主要依靠第三条性质d(x, y) + d(y, z) &gt;= d(x, z) .假设我们有这样一个查询要求。需要查找字符串target距离不大于n的所有结果。\n1234设root为x, target为yd(root, target) + d(target, element) &gt;&#x3D; d(root, element)d(target, element)的取值范围是[0, n]得到d(root, element) 的最大值是 n + d(root, target)\n因此我们根据这个不等式实现了剪枝的效果。对于满足条件的元素。将其设置为根元素。递归得到所有满足条件的元素\nVP树VP树和BK树原理差不多。优点是当需要查询的距离N更大的时候效率更高(具体原理我还不太了解。写的时候发现很多时候它的效率甚至是不及BK树的)。\nBK树可以看出是一个多叉树。每个节点下面可以有多个节点。VP树不同，它是一个二叉树。根据我的需求。简单起见。每一个节点我设置了相同的阈值。距离小于阈值则放在左边，大于则放在右边。\n查找的时候还挺尴尬的。根据上面说的d(root, element) &lt;= n + d(root, target)。当节点的阈值小于这个值的时候左右子节点都需要遍历。当节点阈值大于的时候就只需要遍历左边(达到剪枝的效果)\n注意:  以上我都只考虑了添加，没有考虑修改和删除的事情。\nPython版本代码实现如下\n\n\n\n参考资料编辑距离、拼写检查与度量空间：一个有趣的数据结构VP Tree\n","dateCreated":"2018-03-03T17:17:02+08:00","dateModified":"2018-03-04T10:18:38+08:00","datePublished":"2018-03-03T17:17:02+08:00","description":"最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了BK树。记录一下","headline":"BK树和VP树","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/03/BKTree_VPTree/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/03/BKTree_VPTree/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了BK树。记录一下\n\n\n使用Python的库imageHash 运算后会得到64bit长度的结果(最后使用了hex编码导致结果看起来很长)。如果两张图片的bit进行异或后不同的地方越小。说明两张图片越相似。度量这2个bit不相似程度被称之为汉明距离\n这个距离它又满足以下性质(被称为Levenshtein)\n\nd(x, y) = 0 当且仅当 x=y  （Levenshtein距离为0 &lt;==&gt; 字符串相等）\nd(x, y) = d(y, x)     （从x变到y的最少步数就是从y变到x的最少步数）\nd(x, y) + d(y, z) &gt;= d(x, z)  （从x变到z所需的步数不会超过x先变成y再变成z的步数）\n\nBK树为了加速查找, 构建了这样一种树结构。\n\n任选一个节点当做根节点\n插入节点的时候和根节点对比得到距离。如果该距离不存在则新建一个节点作为根节点的子节点。如果节点存在则获得节点作为根节点进行递归操作\n\n第二步的意义在于任何一个节点下面的元素对于该节点的距离都是相等的。构建就达到了这个效果。别的啥事没做。\n查找过程。查找的原理主要依靠第三条性质d(x, y) + d(y, z) &gt;= d(x, z) .假设我们有这样一个查询要求。需要查找字符串target距离不大于n的所有结果。\n1234设root为x, target为yd(root, target) + d(target, element) &gt;&#x3D; d(root, element)d(target, element)的取值范围是[0, n]得到d(root, element) 的最大值是 n + d(root, target)\n因此我们根据这个不等式实现了剪枝的效果。对于满足条件的元素。将其设置为根元素。递归得到所有满足条件的元素\nVP树VP树和BK树原理差不多。优点是当需要查询的距离N更大的时候效率更高(具体原理我还不太了解。写的时候发现很多时候它的效率甚至是不及BK树的)。\nBK树可以看出是一个多叉树。每个节点下面可以有多个节点。VP树不同，它是一个二叉树。根据我的需求。简单起见。每一个节点我设置了相同的阈值。距离小于阈值则放在左边，大于则放在右边。\n查找的时候还挺尴尬的。根据上面说的d(root, element) &lt;= n + d(root, target)。当节点的阈值小于这个值的时候左右子节点都需要遍历。当节点阈值大于的时候就只需要遍历左边(达到剪枝的效果)\n注意:  以上我都只考虑了添加，没有考虑修改和删除的事情。\nPython版本代码实现如下\n\n\n\n参考资料编辑距离、拼写检查与度量空间：一个有趣的数据结构VP Tree\n","dateCreated":"2018-03-03T17:17:02+08:00","dateModified":"2018-03-04T10:18:38+08:00","datePublished":"2018-03-03T17:17:02+08:00","description":"最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了BK树。记录一下","headline":"BK树和VP树","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/03/BKTree_VPTree/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/03/03/BKTree_VPTree/"}</script>
     <meta name="description" content="最近有一个项目需要用到simhash.获取图片的hash值并保存到数据库。在生成新的hash的时候和数据库进行比对。达到去重的效果。假如图片达到了一定数量级，那么每次查询会进行全表扫描，效率是比较低下的，而数据库默认的一些索引又无法达到这个需求，后来看到了BK树。记录一下">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="BK树和VP树">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -666,6 +588,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -966,8 +894,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

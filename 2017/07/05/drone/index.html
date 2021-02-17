@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。\n\n\n说一下第三种方案相对前两种方案的特点。\n\n集中化管理。第一二种方案都需要将脚本放在对应的应用机器上面。第三种不需要，它集中化了。所有的webhook都在可持续集成平台处理。由平台再来操控应用。而且每一次触发操作都有详尽的日志。集中在一起比较容易看出哪里出了什么问题\n不需要在每一台应用机处理webhook(处理意味着每个应用机都需要绑定一个域名)，可能和上面的集中化管理的优点是一个意思吧\n对于一个良好的架构。可持续集成平台比零散的脚本无疑更合适\n算是一个缺点。单独写脚本独立处理webhook相对可持续集成更容易\n\nDrone配置docker-compose我都不大用了，直接用docker stack deploy替代。后者相对前者实际没有什么区别。或者说前者是因为docker网络配置欠发达的产物。docker-compose适合单机部署，docker-swarm适合多主机。开启docker-swarm只需要docker swarm init大概就可以了，更详细的知识请查看官方文档\ndrone.yml 文件大概如下\n12345678910111213141516171819202122232425262728version: &#x27;3&#x27;services:  drone-server:    image: drone/drone:0.7    ports:      - 82:8000    volumes:      - /data/github_drone:/var/lib/drone/    environment:      - DRONE_OPEN=false      - DRONE_ADMIN=ficapy      - DRONE_GITLAB=true      - DRONE_GITHUB_CLIENT=xxxxxxxxx      - DRONE_GITHUB_SECRET=xxxxxxxxxx      - DRONE_SECRET=xxxpwdxxx  drone-agent:    image: drone/drone:0.7    command: agent    depends_on:      - drone-server    volumes:      - /var/run/docker.sock:/var/run/docker.sock    environment:      - DRONE_SERVER=ws://drone-server:8000/ws/broker      - DRONE_SECRET=xxxpwdxxx\n然后执行docker stack deploy --compose-file=drone.yml drone，整个程序就运行起来了。此处是监听81端口。从配置文件中也可以猜一个大概。了解下drone的流程。service主要用来响应浏览器端的请求。接收到请求后使用websocket和agent通信用来下发任务获取结果。agent通过/var/run/docker.sock来和docker daemon进行通信。执行创建容器。执行命令等一系列过程。\n有几点需要注意的\n\n最好指定管理员用户DRONE_ADMIN，因为有些操作需要admin权限\nDRONE_OPEN设置为true的时候所有的用户都能授权后使用你的Drone进行集成测试。这往往是你\u000e不愿意的，个人的诉求往往是私有的\ngithub和gitlab在一个drone不能同时使用，所以我部署了两套，使用了不同的域名\n起码了解OAuth流程和webhook的过程，才能更好的理解整套流程\n其他事宜可以查看Drone的安装文档\n\n之所以监听81端口，是因为我使用的Caddy当做前置web服务器。配置如下Caddyfile\n123456drone.ficapy.com &#123;    proxy &#x2F; dockerhost:81 &#123;        websocket        transparent    &#125;&#125;\n对应的docker-compose文件如下\n12345678910111213version: &quot;3&quot;services:  Caddy:    image: &quot;abiosoft/caddy&quot;    volumes:      - /root/caddy/Caddyfile:/etc/Caddyfile      - /root/.caddy:/root/.caddy    ports:      - &quot;80:80&quot;      - &quot;443:443&quot;    extra_hosts:      - &quot;dockerhost:$&#123;dockerhost&#125;&quot;\n此处使用了环境变量dockerhost，我将它写入了zshrc配置文件中export dockerhost=&quot;172.17.0.1&quot;,不难看出只是为了转发请求, 和drone一样。执行docker stack deploy --compose-file=caddy_compose.yml caddy启动\n持续集成部署当使用Drone，并授权之后。Drone会自动给你的项目加上webhook地址。我们在项目根目录放置.drone.yml文件后会使用docker自动构建\n实现本文开头说的需求.drone.yml文件如下\n123456789101112pipeline:  build:    image: ruby:2.3    commands:      - bundle config mirror.https://rubygems.org https://gems.ruby-china.org      - bundle install      - apt-get update &amp;&amp; apt-get install nodejs rsync -y &amp;&amp; bundle exec middleman build --clean      - rsync -r --rsh=&#x27;ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /data/id_rsa -p 22&#x27; build/* user@host:~/docs --progress --delete    volumes:      - /data:/data    when:      branch: master\n在使用之前。我现在/data目录使用ssh-agent生成了密匙对。在目标主机上放上公钥，让我们能够ssh连接远端主机。然后容器创建的时候将密匙挂载到容器目录(此处需要管理员权限将项目设置为可信)。然后就顺理成章了。搭建环境，生成静态文件，rsync同步就完成了。\n","dateCreated":"2017-07-05T21:51:26+08:00","dateModified":"2021-02-17T11:12:31+08:00","datePublished":"2017-07-05T21:51:26+08:00","description":"最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。","headline":"Docker CD初探-Drone","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/07/05/drone/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/07/05/drone/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。\n\n\n说一下第三种方案相对前两种方案的特点。\n\n集中化管理。第一二种方案都需要将脚本放在对应的应用机器上面。第三种不需要，它集中化了。所有的webhook都在可持续集成平台处理。由平台再来操控应用。而且每一次触发操作都有详尽的日志。集中在一起比较容易看出哪里出了什么问题\n不需要在每一台应用机处理webhook(处理意味着每个应用机都需要绑定一个域名)，可能和上面的集中化管理的优点是一个意思吧\n对于一个良好的架构。可持续集成平台比零散的脚本无疑更合适\n算是一个缺点。单独写脚本独立处理webhook相对可持续集成更容易\n\nDrone配置docker-compose我都不大用了，直接用docker stack deploy替代。后者相对前者实际没有什么区别。或者说前者是因为docker网络配置欠发达的产物。docker-compose适合单机部署，docker-swarm适合多主机。开启docker-swarm只需要docker swarm init大概就可以了，更详细的知识请查看官方文档\ndrone.yml 文件大概如下\n12345678910111213141516171819202122232425262728version: &#x27;3&#x27;services:  drone-server:    image: drone/drone:0.7    ports:      - 82:8000    volumes:      - /data/github_drone:/var/lib/drone/    environment:      - DRONE_OPEN=false      - DRONE_ADMIN=ficapy      - DRONE_GITLAB=true      - DRONE_GITHUB_CLIENT=xxxxxxxxx      - DRONE_GITHUB_SECRET=xxxxxxxxxx      - DRONE_SECRET=xxxpwdxxx  drone-agent:    image: drone/drone:0.7    command: agent    depends_on:      - drone-server    volumes:      - /var/run/docker.sock:/var/run/docker.sock    environment:      - DRONE_SERVER=ws://drone-server:8000/ws/broker      - DRONE_SECRET=xxxpwdxxx\n然后执行docker stack deploy --compose-file=drone.yml drone，整个程序就运行起来了。此处是监听81端口。从配置文件中也可以猜一个大概。了解下drone的流程。service主要用来响应浏览器端的请求。接收到请求后使用websocket和agent通信用来下发任务获取结果。agent通过/var/run/docker.sock来和docker daemon进行通信。执行创建容器。执行命令等一系列过程。\n有几点需要注意的\n\n最好指定管理员用户DRONE_ADMIN，因为有些操作需要admin权限\nDRONE_OPEN设置为true的时候所有的用户都能授权后使用你的Drone进行集成测试。这往往是你\u000e不愿意的，个人的诉求往往是私有的\ngithub和gitlab在一个drone不能同时使用，所以我部署了两套，使用了不同的域名\n起码了解OAuth流程和webhook的过程，才能更好的理解整套流程\n其他事宜可以查看Drone的安装文档\n\n之所以监听81端口，是因为我使用的Caddy当做前置web服务器。配置如下Caddyfile\n123456drone.ficapy.com &#123;    proxy &#x2F; dockerhost:81 &#123;        websocket        transparent    &#125;&#125;\n对应的docker-compose文件如下\n12345678910111213version: &quot;3&quot;services:  Caddy:    image: &quot;abiosoft/caddy&quot;    volumes:      - /root/caddy/Caddyfile:/etc/Caddyfile      - /root/.caddy:/root/.caddy    ports:      - &quot;80:80&quot;      - &quot;443:443&quot;    extra_hosts:      - &quot;dockerhost:$&#123;dockerhost&#125;&quot;\n此处使用了环境变量dockerhost，我将它写入了zshrc配置文件中export dockerhost=&quot;172.17.0.1&quot;,不难看出只是为了转发请求, 和drone一样。执行docker stack deploy --compose-file=caddy_compose.yml caddy启动\n持续集成部署当使用Drone，并授权之后。Drone会自动给你的项目加上webhook地址。我们在项目根目录放置.drone.yml文件后会使用docker自动构建\n实现本文开头说的需求.drone.yml文件如下\n123456789101112pipeline:  build:    image: ruby:2.3    commands:      - bundle config mirror.https://rubygems.org https://gems.ruby-china.org      - bundle install      - apt-get update &amp;&amp; apt-get install nodejs rsync -y &amp;&amp; bundle exec middleman build --clean      - rsync -r --rsh=&#x27;ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /data/id_rsa -p 22&#x27; build/* user@host:~/docs --progress --delete    volumes:      - /data:/data    when:      branch: master\n在使用之前。我现在/data目录使用ssh-agent生成了密匙对。在目标主机上放上公钥，让我们能够ssh连接远端主机。然后容器创建的时候将密匙挂载到容器目录(此处需要管理员权限将项目设置为可信)。然后就顺理成章了。搭建环境，生成静态文件，rsync同步就完成了。\n","dateCreated":"2017-07-05T21:51:26+08:00","dateModified":"2021-02-17T11:12:31+08:00","datePublished":"2017-07-05T21:51:26+08:00","description":"最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。","headline":"Docker CD初探-Drone","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/07/05/drone/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/07/05/drone/"}</script>
     <meta name="description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Docker CD初探-Drone">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -669,6 +591,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -969,8 +897,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

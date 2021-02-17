@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本\n顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫\n凑字数完毕→_→\n哦，情人节！！！\n\n   \n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475// ==UserScript==// @name        V2EX签到// @description V2EX任意页面自动签到// @include     http*://*.v2ex.com/*// @include     http*://v2ex.com/*// @author      ficapy// @grant       GM_getValue// @grant       GM_setValue// @grant       GM_xmlhttpRequest// @version     2014.7.18// @namespace   None// ==/UserScript==// 注：参照 http://www.v2ex.com/t/80927 所修改 //在V2EX搜索框显示需要提示的信息var showInformation = function (text) &#123;    document.getElementById(&quot;q&quot;).value = text;&#125;; //检测是否登录if (document.getElementsByClassName(&quot;bigger&quot;).length)&#123;    var userId = document.getElementsByClassName(&quot;bigger&quot;)[0].textContent;&#125;else&#123;    var userId = 0;&#125; // 间隔上次签到一天并且登陆再进行操作(或者切换了账号)→_→if ((new Date().getUTCDate() != GM_getValue(&quot;sign&quot;, &quot;25:name&quot;).split(&quot;:&quot;)[0] || userId != GM_getValue(&quot;sign&quot;, &quot;25:name&quot;).split(&quot;:&quot;)[1]) &amp;&amp; userId )&#123;    showInformation(&quot;正在检测每日签到状态...&quot;);    GM_xmlhttpRequest(&#123;        &quot;method&quot; : &quot;GET&quot;,        &quot;url&quot; : &quot;/mission/daily&quot;,        &quot;onload&quot; : function(response)&#123;            if (response.responseText.match(&quot;领取 X 铜币&quot;))&#123;                var days = response.responseText.match(/已连续登录.+天/)[0];                showInformation(&quot;正在领取今日签到奖励&quot;);                GM_xmlhttpRequest(&#123;                        &quot;method&quot; : &quot;GET&quot;,                        &quot;url&quot; : response.responseText.match(/(?=\\/).+?(?=\\&#x27;)/g)[1],                        &quot;onload&quot; : function (resp) &#123;                            showInformation(&quot;正在提交&quot;);                            days = &quot;已连续登陆&quot; + (parseInt(days.slice(5,-1)) + 1) + &quot;天&quot;;//返回连续登陆天数                            GM_xmlhttpRequest(&#123;                                &quot;method&quot; : &quot;GET&quot;,                                &quot;url&quot; : &quot;/balance&quot;,                                &quot;onload&quot; : function(res)&#123;                                    //格式化日期，将缺0补齐.网站很坑爹的时间是GTM+8，后面的描述文件却没有加上，凌晨测试发现                                    function p(s) &#123;return s&lt;10 ? &quot;0&quot;+s :s; &#125;                                    var today = new Date().getUTCFullYear() + p(new Date().getUTCMonth()+1) +p(new Date().getUTCDate());                                    if (res.responseText.match(today + &quot; 的每日登录奖励&quot;))&#123;                                        showInformation(days + &quot;，本次领取到&quot; + res.responseText.match(eval(&quot;/&quot;+today+&quot;.+铜币/&quot;))[0].split(&quot;奖励&quot;)[1].replace(/ /g, &quot;&quot;));                                        GM_setValue(&quot;sign&quot;, new Date().getUTCDate() + &quot;:&quot; + userId);                                    &#125;else&#123;                                        showInformation(&quot;自动领取遇到意外，你可以手动领取试试&quot;)                                    &#125;                                &#125;                            &#125;)                        &#125;,                        &quot;onerror&quot; : function () &#123; showInformation(&quot;网络异常&quot;);&#125;                    &#125;                )             &#125;else&#123;                if (response.responseText.match(&quot;已领取&quot;).length)&#123;                    showInformation(&quot;今日已经领取过了&quot;);                    GM_setValue(&quot;sign&quot;, new Date().getUTCDate() + &quot;:&quot; + userId);                &#125;else&#123;                    showInformation(&quot;无法找到领奖按钮，请检查&quot;);                &#125;            &#125;         &#125;,        &quot;onerror&quot; : function()&#123;showInformation(&quot;签到页面无法打开，请手动领取&quot;);&#125;    &#125;);&#125;\n\n","dateCreated":"2014-08-02T22:18:00+08:00","dateModified":"2021-02-17T11:06:37+08:00","datePublished":"2014-08-02T22:18:00+08:00","description":"本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本\n顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫\n凑字数完毕→_→\n哦，情人节！！！","headline":"V2EX签到脚本","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/08/02/v2ex_signin/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/08/02/v2ex_signin/","keywords":"javascript, V2EX, 签到"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本\n顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫\n凑字数完毕→_→\n哦，情人节！！！\n\n   \n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475// ==UserScript==// @name        V2EX签到// @description V2EX任意页面自动签到// @include     http*://*.v2ex.com/*// @include     http*://v2ex.com/*// @author      ficapy// @grant       GM_getValue// @grant       GM_setValue// @grant       GM_xmlhttpRequest// @version     2014.7.18// @namespace   None// ==/UserScript==// 注：参照 http://www.v2ex.com/t/80927 所修改 //在V2EX搜索框显示需要提示的信息var showInformation = function (text) &#123;    document.getElementById(&quot;q&quot;).value = text;&#125;; //检测是否登录if (document.getElementsByClassName(&quot;bigger&quot;).length)&#123;    var userId = document.getElementsByClassName(&quot;bigger&quot;)[0].textContent;&#125;else&#123;    var userId = 0;&#125; // 间隔上次签到一天并且登陆再进行操作(或者切换了账号)→_→if ((new Date().getUTCDate() != GM_getValue(&quot;sign&quot;, &quot;25:name&quot;).split(&quot;:&quot;)[0] || userId != GM_getValue(&quot;sign&quot;, &quot;25:name&quot;).split(&quot;:&quot;)[1]) &amp;&amp; userId )&#123;    showInformation(&quot;正在检测每日签到状态...&quot;);    GM_xmlhttpRequest(&#123;        &quot;method&quot; : &quot;GET&quot;,        &quot;url&quot; : &quot;/mission/daily&quot;,        &quot;onload&quot; : function(response)&#123;            if (response.responseText.match(&quot;领取 X 铜币&quot;))&#123;                var days = response.responseText.match(/已连续登录.+天/)[0];                showInformation(&quot;正在领取今日签到奖励&quot;);                GM_xmlhttpRequest(&#123;                        &quot;method&quot; : &quot;GET&quot;,                        &quot;url&quot; : response.responseText.match(/(?=\\/).+?(?=\\&#x27;)/g)[1],                        &quot;onload&quot; : function (resp) &#123;                            showInformation(&quot;正在提交&quot;);                            days = &quot;已连续登陆&quot; + (parseInt(days.slice(5,-1)) + 1) + &quot;天&quot;;//返回连续登陆天数                            GM_xmlhttpRequest(&#123;                                &quot;method&quot; : &quot;GET&quot;,                                &quot;url&quot; : &quot;/balance&quot;,                                &quot;onload&quot; : function(res)&#123;                                    //格式化日期，将缺0补齐.网站很坑爹的时间是GTM+8，后面的描述文件却没有加上，凌晨测试发现                                    function p(s) &#123;return s&lt;10 ? &quot;0&quot;+s :s; &#125;                                    var today = new Date().getUTCFullYear() + p(new Date().getUTCMonth()+1) +p(new Date().getUTCDate());                                    if (res.responseText.match(today + &quot; 的每日登录奖励&quot;))&#123;                                        showInformation(days + &quot;，本次领取到&quot; + res.responseText.match(eval(&quot;/&quot;+today+&quot;.+铜币/&quot;))[0].split(&quot;奖励&quot;)[1].replace(/ /g, &quot;&quot;));                                        GM_setValue(&quot;sign&quot;, new Date().getUTCDate() + &quot;:&quot; + userId);                                    &#125;else&#123;                                        showInformation(&quot;自动领取遇到意外，你可以手动领取试试&quot;)                                    &#125;                                &#125;                            &#125;)                        &#125;,                        &quot;onerror&quot; : function () &#123; showInformation(&quot;网络异常&quot;);&#125;                    &#125;                )             &#125;else&#123;                if (response.responseText.match(&quot;已领取&quot;).length)&#123;                    showInformation(&quot;今日已经领取过了&quot;);                    GM_setValue(&quot;sign&quot;, new Date().getUTCDate() + &quot;:&quot; + userId);                &#125;else&#123;                    showInformation(&quot;无法找到领奖按钮，请检查&quot;);                &#125;            &#125;         &#125;,        &quot;onerror&quot; : function()&#123;showInformation(&quot;签到页面无法打开，请手动领取&quot;);&#125;    &#125;);&#125;\n\n","dateCreated":"2014-08-02T22:18:00+08:00","dateModified":"2021-02-17T11:06:37+08:00","datePublished":"2014-08-02T22:18:00+08:00","description":"本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本\n顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫\n凑字数完毕→_→\n哦，情人节！！！","headline":"V2EX签到脚本","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/08/02/v2ex_signin/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2014/08/02/v2ex_signin/","keywords":"javascript, V2EX, 签到"}</script>
     <meta name="description" content="本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本 顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫 凑字数完毕→_→ 哦，情人节！！！">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="V2EX签到脚本">
@@ -180,7 +180,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -196,87 +196,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -656,6 +578,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -956,8 +884,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

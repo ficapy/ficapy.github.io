@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"本文仅讨论阻塞socket的情况。在v2ex上看到了2个提问，socket.recv 完整接收数据、python socket 一个很简单的问题把我难住了.主要会有2个方面。怎么判断数据是否传输完成了进行下一步操作。recv什么时候返回数据，返回多少字节\n\n\n从一个读取文件的例子开始说起1234567with open(&#x27;backup.py&#x27;) as f:    data = &#x27;&#x27;    while 1:        buffer = f.read(1024)        if len(buffer) == 0:            break        data += buffer\n\n这个例子中read是一直有数据返回的，文件读取完成就会一直返回空字符，这样就能判断什么时候完成就停止循环进入下一步操作了。\n可能有些人会应用到socket编程中，recv后得到字符串，判断字符串长度。当长度为0的时候就认为传输完成了。惊奇的是这样写大多数时候居然真的能正常使用。看起来没什么问题。下面是一个例子\n1234567891011121314151617181920212223242526import socket, times = socket.socket()s.connect((&#x27;down.sandai.net&#x27;, 80))s.send(&quot;&quot;&quot;GET /thunder7/Thunder_dl_7.9.43.5054.exe HTTP/1.1Host: down.sandai.netUser-Agent: curl/7.43.0Accept: */*&quot;&quot;&quot;)data = &#x27;&#x27;wait_time = 0while 1:    start = time.time()    ret = s.recv(2048)    print(len(ret))    end = time.time()    if end - start &gt; wait_time:        wait_time = end - start    data += ret    if len(ret) == 0:        breakprint(wait_time)\n上面这个例子请求迅雷下载链接获得数据，在网络正常的时候是没有什么问题的。最后的打印的wait_time大概30左右。这其实是数据传输完成到socket关闭的时间(因为服务端设置了Connection: Keep-Alive且为30秒)。从效率来说数据传输完成我们白白等待了30秒，其次更重要的是仅仅对方服务器执行关闭操作s.recv才会返回空。万一对方服务器没有写好一直不关闭连接怎么办(不要以为不关闭不可能，不信可以连一下z.cn试一试)。所以从tcp层面来判断数据传输完成是不可取的，这种需求需要在应用层完成。\n拿应用最广泛的http协议来说。它有明显的传输完成标志。上面的程序改写一下(忽略异常处理，不对chunk进行处理)\n123456789101112131415161718192021222324252627282930313233import socket, time, res = socket.socket()s.connect((&#x27;down.sandai.net&#x27;, 80))s.send(&quot;&quot;&quot;GET /thunder7/Thunder_dl_7.9.43.5054.exe HTTP/1.1Host: down.sandai.netUser-Agent: curl/7.43.0Accept: */*&quot;&quot;&quot;)length_re = re.compile(r&#x27;Content-Length: (\\d+)&#x27;,re.MULTILINE)length, body = -2, -1while 1:    ret = s.recv(2048)    data += ret    if body &gt; 0:        body += len(ret)    if body == length:        break    if length == -1 and &#x27;\\r\\n\\r\\n&#x27; in data:        length = int(length_re.search(data).group(1))        body = len(data.split(&#x27;\\r\\n\\r\\n&#x27;)[-1])        if length == body:            break    if len(ret) == 0:        breakprint(length)print(len(data))print(body)\n根据http应用层协议当服务端返回内容的时候，获取Content-Length头部内容然后recv接收所有需要内容后主动关闭连接,这样就不需要等待服务器关闭连接了。\n另外recv或许还有一个比较容易曲解的地方recv(maxsize)并不是阻塞到直到获取到maxsize长度后才返回。这个地方可以这样理解，把这个IO流当做一个盒子。当盒子里面没有内容的时候recv是阻塞的。某一时刻盒子里面放进了一些内容，不管放进了多少recv会读取最多maxsize内容返回。顺便说一下epoll中边缘触发(edge-triggered)和水平触发(level-triggered)的理解。边缘触发就是当这个盒子中放进数据的时候我通知你一下。水平触发就是当这个盒子中还有数据没有取出的时候我通知你一下。这样就造成了使用边缘触发当通知的时候必须处理完该IO流(试想一下如果你第上一个通知没有处理完，下一个通知的时候也可以处理，依次递推可能造成最后一个通知没有处理完，因为没有下一个通知哒，所以漏处理了一些IO流)\n总结来说就是2个方面。1.recv(maxsize)一有数据就返回并不是积累到maxsize长度再返回。2.判断传输完成不是TCP层面做的事情，应该在应用层处理\n其他的一些keepalivetcp层面的:是表示当没有tcp报文的时候发送tcp报文给对方。实际上TCP协议规范是只有2小时没有tcp交互才会关闭TCP连接的，可是现实中各种NAT设备并没有遵循该规范，毕竟和性能有关联,如果长时间没有tcp包交互那么可能会中断该TCP连接，此时就有了tcp层面的keepalive，当没有tcp包的时候会自动发送。你以为这样就完了，too naive！有的NAT设备会当tcp中长时间没有有效荷载的时候中断该连接。于是乎有的应用在应用层每隔一段时间发送一个echo数据这样子就能够避免这种情况了。下图设置了keepalive同时对socket设置超时的情况\n123456789101112131415def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):    &quot;&quot;&quot;Set TCP keepalive on an open socket.    It activates after 1 second (after_idle_sec) of idleness,    then sends a keepalive ping once every 3 seconds (interval_sec),    and closes the connection after 5 failed ping (max_fails), or 15 seconds    &quot;&quot;&quot;    sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, after_idle_sec)    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)s.settimeout(10)set_keepalive_osx(s)\n下图是抓包结果可以看到数据传输完成后每隔3秒钟发送了一个tcp包。由于同时设置了settimeout，十秒后没有tcp荷载，客户端断开了连接(注意settimeout设置为秒只对阻塞模式有效)\nhttp层面的:这个就简单了，http1.0版本以前是请求→返回模式，请求一次就关闭了。因为tcp建立连接是挺耗时的，于是就有了一次数据来回就并不关闭下一个请求接着用。\n超时检测我觉得一个好的socket程序肯定会有超时机制和断线重连机制。上面的2个示例。测试中途断开网络再次重连接，会一直卡在recv阶段，对于一个死的TCP链接如果程序无法感知一直卡着绝对是无法接受的。如果是阻塞socket的超时我们只需要设置setttimeout就好了。配合应用层的echo也可以实现长连接。如果使用epoll这些那么settimeout就不行了，就需要自己维护状态检查~~~\n相关资料How to change tcp keepalive timer using python script?\n","dateCreated":"2016-06-17T16:06:14+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-06-17T16:06:14+08:00","description":"本文仅讨论阻塞socket的情况。在v2ex上看到了2个提问，socket.recv 完整接收数据、python socket 一个很简单的问题把我难住了.主要会有2个方面。怎么判断数据是否传输完成了进行下一步操作。recv什么时候返回数据，返回多少字节","headline":"socket.recv","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/06/17/socket_recv/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/06/17/socket_recv/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"本文仅讨论阻塞socket的情况。在v2ex上看到了2个提问，socket.recv 完整接收数据、python socket 一个很简单的问题把我难住了.主要会有2个方面。怎么判断数据是否传输完成了进行下一步操作。recv什么时候返回数据，返回多少字节\n\n\n从一个读取文件的例子开始说起1234567with open(&#x27;backup.py&#x27;) as f:    data = &#x27;&#x27;    while 1:        buffer = f.read(1024)        if len(buffer) == 0:            break        data += buffer\n\n这个例子中read是一直有数据返回的，文件读取完成就会一直返回空字符，这样就能判断什么时候完成就停止循环进入下一步操作了。\n可能有些人会应用到socket编程中，recv后得到字符串，判断字符串长度。当长度为0的时候就认为传输完成了。惊奇的是这样写大多数时候居然真的能正常使用。看起来没什么问题。下面是一个例子\n1234567891011121314151617181920212223242526import socket, times = socket.socket()s.connect((&#x27;down.sandai.net&#x27;, 80))s.send(&quot;&quot;&quot;GET /thunder7/Thunder_dl_7.9.43.5054.exe HTTP/1.1Host: down.sandai.netUser-Agent: curl/7.43.0Accept: */*&quot;&quot;&quot;)data = &#x27;&#x27;wait_time = 0while 1:    start = time.time()    ret = s.recv(2048)    print(len(ret))    end = time.time()    if end - start &gt; wait_time:        wait_time = end - start    data += ret    if len(ret) == 0:        breakprint(wait_time)\n上面这个例子请求迅雷下载链接获得数据，在网络正常的时候是没有什么问题的。最后的打印的wait_time大概30左右。这其实是数据传输完成到socket关闭的时间(因为服务端设置了Connection: Keep-Alive且为30秒)。从效率来说数据传输完成我们白白等待了30秒，其次更重要的是仅仅对方服务器执行关闭操作s.recv才会返回空。万一对方服务器没有写好一直不关闭连接怎么办(不要以为不关闭不可能，不信可以连一下z.cn试一试)。所以从tcp层面来判断数据传输完成是不可取的，这种需求需要在应用层完成。\n拿应用最广泛的http协议来说。它有明显的传输完成标志。上面的程序改写一下(忽略异常处理，不对chunk进行处理)\n123456789101112131415161718192021222324252627282930313233import socket, time, res = socket.socket()s.connect((&#x27;down.sandai.net&#x27;, 80))s.send(&quot;&quot;&quot;GET /thunder7/Thunder_dl_7.9.43.5054.exe HTTP/1.1Host: down.sandai.netUser-Agent: curl/7.43.0Accept: */*&quot;&quot;&quot;)length_re = re.compile(r&#x27;Content-Length: (\\d+)&#x27;,re.MULTILINE)length, body = -2, -1while 1:    ret = s.recv(2048)    data += ret    if body &gt; 0:        body += len(ret)    if body == length:        break    if length == -1 and &#x27;\\r\\n\\r\\n&#x27; in data:        length = int(length_re.search(data).group(1))        body = len(data.split(&#x27;\\r\\n\\r\\n&#x27;)[-1])        if length == body:            break    if len(ret) == 0:        breakprint(length)print(len(data))print(body)\n根据http应用层协议当服务端返回内容的时候，获取Content-Length头部内容然后recv接收所有需要内容后主动关闭连接,这样就不需要等待服务器关闭连接了。\n另外recv或许还有一个比较容易曲解的地方recv(maxsize)并不是阻塞到直到获取到maxsize长度后才返回。这个地方可以这样理解，把这个IO流当做一个盒子。当盒子里面没有内容的时候recv是阻塞的。某一时刻盒子里面放进了一些内容，不管放进了多少recv会读取最多maxsize内容返回。顺便说一下epoll中边缘触发(edge-triggered)和水平触发(level-triggered)的理解。边缘触发就是当这个盒子中放进数据的时候我通知你一下。水平触发就是当这个盒子中还有数据没有取出的时候我通知你一下。这样就造成了使用边缘触发当通知的时候必须处理完该IO流(试想一下如果你第上一个通知没有处理完，下一个通知的时候也可以处理，依次递推可能造成最后一个通知没有处理完，因为没有下一个通知哒，所以漏处理了一些IO流)\n总结来说就是2个方面。1.recv(maxsize)一有数据就返回并不是积累到maxsize长度再返回。2.判断传输完成不是TCP层面做的事情，应该在应用层处理\n其他的一些keepalivetcp层面的:是表示当没有tcp报文的时候发送tcp报文给对方。实际上TCP协议规范是只有2小时没有tcp交互才会关闭TCP连接的，可是现实中各种NAT设备并没有遵循该规范，毕竟和性能有关联,如果长时间没有tcp包交互那么可能会中断该TCP连接，此时就有了tcp层面的keepalive，当没有tcp包的时候会自动发送。你以为这样就完了，too naive！有的NAT设备会当tcp中长时间没有有效荷载的时候中断该连接。于是乎有的应用在应用层每隔一段时间发送一个echo数据这样子就能够避免这种情况了。下图设置了keepalive同时对socket设置超时的情况\n123456789101112131415def set_keepalive_linux(sock, after_idle_sec=1, interval_sec=3, max_fails=5):    &quot;&quot;&quot;Set TCP keepalive on an open socket.    It activates after 1 second (after_idle_sec) of idleness,    then sends a keepalive ping once every 3 seconds (interval_sec),    and closes the connection after 5 failed ping (max_fails), or 15 seconds    &quot;&quot;&quot;    sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, after_idle_sec)    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)s.settimeout(10)set_keepalive_osx(s)\n下图是抓包结果可以看到数据传输完成后每隔3秒钟发送了一个tcp包。由于同时设置了settimeout，十秒后没有tcp荷载，客户端断开了连接(注意settimeout设置为秒只对阻塞模式有效)\nhttp层面的:这个就简单了，http1.0版本以前是请求→返回模式，请求一次就关闭了。因为tcp建立连接是挺耗时的，于是就有了一次数据来回就并不关闭下一个请求接着用。\n超时检测我觉得一个好的socket程序肯定会有超时机制和断线重连机制。上面的2个示例。测试中途断开网络再次重连接，会一直卡在recv阶段，对于一个死的TCP链接如果程序无法感知一直卡着绝对是无法接受的。如果是阻塞socket的超时我们只需要设置setttimeout就好了。配合应用层的echo也可以实现长连接。如果使用epoll这些那么settimeout就不行了，就需要自己维护状态检查~~~\n相关资料How to change tcp keepalive timer using python script?\n","dateCreated":"2016-06-17T16:06:14+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-06-17T16:06:14+08:00","description":"本文仅讨论阻塞socket的情况。在v2ex上看到了2个提问，socket.recv 完整接收数据、python socket 一个很简单的问题把我难住了.主要会有2个方面。怎么判断数据是否传输完成了进行下一步操作。recv什么时候返回数据，返回多少字节","headline":"socket.recv","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/06/17/socket_recv/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/06/17/socket_recv/"}</script>
     <meta name="description" content="本文仅讨论阻塞socket的情况。在v2ex上看到了2个提问，socket.recv 完整接收数据、python socket 一个很简单的问题把我难住了.主要会有2个方面。怎么判断数据是否传输完成了进行下一步操作。recv什么时候返回数据，返回多少字节">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="socket.recv">
@@ -179,7 +179,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -195,87 +195,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -660,6 +582,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -960,8 +888,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

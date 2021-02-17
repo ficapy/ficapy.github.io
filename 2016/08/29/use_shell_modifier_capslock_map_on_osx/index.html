@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"对于命令行爱好者,很多人会选择将黄金键盘位置CapsLock替换成Ctrl,有些人选择仅仅是和默认的Ctrl进行替换，有些人更极端，相当于去掉CapsLock键增加一个Ctrl位置。我选择后者。有时候会想。假如需要输入大段文字的时候一直按住Shift岂不是蛋疼。搜索了下，网上真有这个问题。而且有人还给出了答案。我就转发一下好了-_-\n\n首先你要知道在你的system preferences→keyboard→modifiers keys是可以修改CapsLock映射到Ctrl的\n其次使用applescript可以编辑脚本对GUI界面进行操作(系统还自带一个Script Editor,不得不吐槽一下,脚本真不美观)\n脚本编写后执行需要到安全设置里面添加许可权限(system preferences→security&amp;privacy→accessibility,由于我使用的是iTerm,将它加入就好了)\n\n最后奉上脚本(添加至~/.zshrc,!!!!仅对英文系统有效,中文估计改一下也能用)\n1234567891011121314151617181920212223242526caps () &#123;\tosascript &gt; &#x2F;dev&#x2F;null &lt;&lt;EOF    tell application &quot;System Preferences&quot;        reveal anchor &quot;keyboardTab&quot; of pane &quot;com.apple.preference.keyboard&quot;    end tell    tell application &quot;System Events&quot; to tell window 1 of process &quot;System Preferences&quot;        click button 1 of tab group 1        tell sheet 1            tell pop up button 4                click                delay 0.1                if value is &quot;⇪ Caps Lock&quot; then                    click menu item 2 of menu 1                    log &quot;Change Caps Lock&quot;                else                    click menu item 1 of menu 1                    log &quot;Restore Caps Lock&quot;                end if            end tell            click button &quot;OK&quot;        end tell    end tell    quit application &quot;System Preferences&quot;EOF&#125;\n参考Controlling modifier key behavior via the terminal on macRun AppleScript from bash script\n","dateCreated":"2016-08-29T11:24:33+08:00","dateModified":"2016-08-29T11:49:10+08:00","datePublished":"2016-08-29T11:24:33+08:00","description":"","headline":"使用shell修改osx的CapsLock映射","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/29/use_shell_modifier_capslock_map_on_osx/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/08/29/use_shell_modifier_capslock_map_on_osx/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"对于命令行爱好者,很多人会选择将黄金键盘位置CapsLock替换成Ctrl,有些人选择仅仅是和默认的Ctrl进行替换，有些人更极端，相当于去掉CapsLock键增加一个Ctrl位置。我选择后者。有时候会想。假如需要输入大段文字的时候一直按住Shift岂不是蛋疼。搜索了下，网上真有这个问题。而且有人还给出了答案。我就转发一下好了-_-\n\n首先你要知道在你的system preferences→keyboard→modifiers keys是可以修改CapsLock映射到Ctrl的\n其次使用applescript可以编辑脚本对GUI界面进行操作(系统还自带一个Script Editor,不得不吐槽一下,脚本真不美观)\n脚本编写后执行需要到安全设置里面添加许可权限(system preferences→security&amp;privacy→accessibility,由于我使用的是iTerm,将它加入就好了)\n\n最后奉上脚本(添加至~/.zshrc,!!!!仅对英文系统有效,中文估计改一下也能用)\n1234567891011121314151617181920212223242526caps () &#123;\tosascript &gt; &#x2F;dev&#x2F;null &lt;&lt;EOF    tell application &quot;System Preferences&quot;        reveal anchor &quot;keyboardTab&quot; of pane &quot;com.apple.preference.keyboard&quot;    end tell    tell application &quot;System Events&quot; to tell window 1 of process &quot;System Preferences&quot;        click button 1 of tab group 1        tell sheet 1            tell pop up button 4                click                delay 0.1                if value is &quot;⇪ Caps Lock&quot; then                    click menu item 2 of menu 1                    log &quot;Change Caps Lock&quot;                else                    click menu item 1 of menu 1                    log &quot;Restore Caps Lock&quot;                end if            end tell            click button &quot;OK&quot;        end tell    end tell    quit application &quot;System Preferences&quot;EOF&#125;\n参考Controlling modifier key behavior via the terminal on macRun AppleScript from bash script\n","dateCreated":"2016-08-29T11:24:33+08:00","dateModified":"2016-08-29T11:49:10+08:00","datePublished":"2016-08-29T11:24:33+08:00","description":"","headline":"使用shell修改osx的CapsLock映射","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/29/use_shell_modifier_capslock_map_on_osx/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/08/29/use_shell_modifier_capslock_map_on_osx/"}</script>
     <meta name="description" content="对于命令行爱好者,很多人会选择将黄金键盘位置CapsLock替换成Ctrl,有些人选择仅仅是和默认的Ctrl进行替换，有些人更极端，相当于去掉CapsLock键增加一个Ctrl位置。我选择后者。有时候会想。假如需要输入大段文字的时候一直按住Shift岂不是蛋疼。搜索了下，网上真有这个问题。而且有人还给出了答案。我就转发一下好了-_-  首先你要知道在你的system preferences→key">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="使用shell修改osx的CapsLock映射">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -647,6 +569,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -947,8 +875,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

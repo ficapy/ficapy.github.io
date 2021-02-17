@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~\n使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置***，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣还是记录下来吧 临时发现这个也算是福气哇~~\n\n\n每次右键点击再执行文件的时候都会生成一个python运行配置，这一步骤只是运行配置中的script项有所改变。假如你有很多个文件。那么执行多个文件后就将有多个运行配置了，看着真是相当不爽，如果你知道pycharm的externaltool，里面有insertmacros，其中$FilePath$就代表当前选择的文件绝对路径。可惜该参数无法填入script项，否则就能减少非常多python运行配置，大部分项目仅一个就可以了。\n如果项目使用的是本地python解释器&amp;没有复杂的配置，那么直接右键点击再执行会自动生成一个python运行配置可以正常执行，也就不会有俺最开始的苦恼了。我使用的是vagrant开发环境，代码是从本机映射到虚拟机上，所以直接执行会显示路径错误~~~我的处理流程是这样的\n\n 最开始选择照旧执行，报错后进入运行设置添加路径映射\n 可是特喵每次都添加映射好烦啊，映射路径好长的好咩，反正其他的不变，仅仅是运行文件改变了，于是乎选择要运行的时候就将一个好的运行设置修改文件路径为当前就好了\n 就是现在了，觉得2也好烦。。。。\n\n以上烦恼就是因为忘记了针对每一个项目都有默认的环境设置，其实将默认的环境设置设置好以后自动继承就ok了&gt;_&lt;当想到3的时候总体方针就是自动修改script参数为当前文件路径。最开始是想写脚本找出该项目下所有py文件中最后修改的那个，然后就想可能pycharm对于每个项目都有一个配置文件，修改配置文件中script的地址就好了~~~可是最后没找到。最后就想到了模拟点击到设置页面修改了。然后就试了以下几个sikulix、aauto(快手)、按键精灵、Automa。第一四个一看便可上手，就和上手python的库那么简单，就几个特好理解的函数，二看了一下虽有auto但不适合做模拟点击，而且想立马使用也是没多大可能的，按键精灵我咋看着想吐呢，宁可去背几个函数也不想插入插入插入。。。。\n最后还是亮上用sikulix和automa写的代码吧，炒鸡简单https://github.com/aec4d/ScriptLet/tree/master/pycharm\\_script\\_path\\_autochange需要注意的是需按照官网提示配置好环境。2个都是使用绝对坐标定位然后点击，屏幕分辨率1366*768，pycharm版本4.0.5\nbingo~~~~~~~~~~~~`\n \n","dateCreated":"2015-03-18T00:47:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2015-03-18T00:47:00+08:00","description":"这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~\n使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置***，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣还是记录下来吧 临时发现这个也算是福气哇~~","headline":"将pycharm的运行配置脚本路径修改为当前选中文件","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~\n使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置***，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣还是记录下来吧 临时发现这个也算是福气哇~~\n\n\n每次右键点击再执行文件的时候都会生成一个python运行配置，这一步骤只是运行配置中的script项有所改变。假如你有很多个文件。那么执行多个文件后就将有多个运行配置了，看着真是相当不爽，如果你知道pycharm的externaltool，里面有insertmacros，其中$FilePath$就代表当前选择的文件绝对路径。可惜该参数无法填入script项，否则就能减少非常多python运行配置，大部分项目仅一个就可以了。\n如果项目使用的是本地python解释器&amp;没有复杂的配置，那么直接右键点击再执行会自动生成一个python运行配置可以正常执行，也就不会有俺最开始的苦恼了。我使用的是vagrant开发环境，代码是从本机映射到虚拟机上，所以直接执行会显示路径错误~~~我的处理流程是这样的\n\n 最开始选择照旧执行，报错后进入运行设置添加路径映射\n 可是特喵每次都添加映射好烦啊，映射路径好长的好咩，反正其他的不变，仅仅是运行文件改变了，于是乎选择要运行的时候就将一个好的运行设置修改文件路径为当前就好了\n 就是现在了，觉得2也好烦。。。。\n\n以上烦恼就是因为忘记了针对每一个项目都有默认的环境设置，其实将默认的环境设置设置好以后自动继承就ok了&gt;_&lt;当想到3的时候总体方针就是自动修改script参数为当前文件路径。最开始是想写脚本找出该项目下所有py文件中最后修改的那个，然后就想可能pycharm对于每个项目都有一个配置文件，修改配置文件中script的地址就好了~~~可是最后没找到。最后就想到了模拟点击到设置页面修改了。然后就试了以下几个sikulix、aauto(快手)、按键精灵、Automa。第一四个一看便可上手，就和上手python的库那么简单，就几个特好理解的函数，二看了一下虽有auto但不适合做模拟点击，而且想立马使用也是没多大可能的，按键精灵我咋看着想吐呢，宁可去背几个函数也不想插入插入插入。。。。\n最后还是亮上用sikulix和automa写的代码吧，炒鸡简单https://github.com/aec4d/ScriptLet/tree/master/pycharm\\_script\\_path\\_autochange需要注意的是需按照官网提示配置好环境。2个都是使用绝对坐标定位然后点击，屏幕分辨率1366*768，pycharm版本4.0.5\nbingo~~~~~~~~~~~~`\n \n","dateCreated":"2015-03-18T00:47:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2015-03-18T00:47:00+08:00","description":"这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~\n使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置***，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣还是记录下来吧 临时发现这个也算是福气哇~~","headline":"将pycharm的运行配置脚本路径修改为当前选中文件","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/"}</script>
     <meta name="description" content="这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~ 使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置***，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="将pycharm的运行配置脚本路径修改为当前选中文件">
@@ -179,7 +179,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -195,87 +195,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -657,6 +579,12 @@ style="color: #ff0000; text-decoration: underline;">基于默认设置的python�
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -957,8 +885,8 @@ style="color: #ff0000; text-decoration: underline;">基于默认设置的python�
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

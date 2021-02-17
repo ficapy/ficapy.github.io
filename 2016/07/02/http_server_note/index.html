@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)\n\n\n先上图为敬:D这个模块只需要关心BaseHTTPRequestHandler类，其实里面还有个CGI处理类，不过这玩意儿估计也是上古神兽了。没关注的必要。\n代码解读\n支持http版本0.9、1.0、1.1，区别就是0.9版本只有body。1.1版本显式支持keep-alive。为了支持keep-alive，代码中有多处处理逻辑\n对于内容的解析主要是使用parse_request方法。该方法逻辑主要解析第一行request line。如果出错就直接调用send_error返回错误内容。header部分主要引入了email.parser.Parser进行解析\nparser_request对Except:100-continue进行了特殊处理，见附录\n返回status line和header是先使用send_response_only创建一个列表，然后调用send_header依次在列表中添加数据，最后调用end_headers发送数据\nsend_error函数就是一个回复的典范\n剩下就是日志函数和几个辅助函数了\n\n示例1234567891011121314151617181920from http.server import BaseHTTPRequestHandlerfrom socketserver import ThreadingTCPServerclass Handle(BaseHTTPRequestHandler):    protocol_version = &quot;HTTP/1.1&quot;    def do_GET(self):        self.send_error(500)    def do_POST(self):        len = self.headers.get(&#x27;Content-Length&#x27;)        data = self.rfile.read(int(len))        self.send_response(200)        self.send_header(&#x27;Content-Length&#x27;, len)        self.end_headers()        self.wfile.write(data)ThreadingTCPServer((&#x27;&#x27;, 9999), Handle).serve_forever()\n这是一个最简的http server。do_GET函数表面send_error就能够响应一个请求。do_POST函数参照send_error的逻辑只不过读取了客户端发送的body字段\n小知识类变量和实例变量这2个非常相近，具体区别我就不概述了。在写代码的时候很多人无脑self.xxx = xxx就搞了一个实例变量。大多数时候用实例变量都能够替代类变量的功能。这很容易让人忽略类变量的优点。①含义明确：这是这个类的所有实例共用的。②不需要重载__init__，这在继承的时候是很有用哒~~~，so，不要有事没事无脑在__init__里面self.xxx = xxx啦\n相关资料Expect:100-continue官方文档\n","dateCreated":"2016-07-02T17:07:20+08:00","dateModified":"2021-02-17T10:55:24+08:00","datePublished":"2016-07-02T17:07:20+08:00","description":"上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)","headline":"http.server源码阅读","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/07/02/http_server_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/07/02/http_server_note/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)\n\n\n先上图为敬:D这个模块只需要关心BaseHTTPRequestHandler类，其实里面还有个CGI处理类，不过这玩意儿估计也是上古神兽了。没关注的必要。\n代码解读\n支持http版本0.9、1.0、1.1，区别就是0.9版本只有body。1.1版本显式支持keep-alive。为了支持keep-alive，代码中有多处处理逻辑\n对于内容的解析主要是使用parse_request方法。该方法逻辑主要解析第一行request line。如果出错就直接调用send_error返回错误内容。header部分主要引入了email.parser.Parser进行解析\nparser_request对Except:100-continue进行了特殊处理，见附录\n返回status line和header是先使用send_response_only创建一个列表，然后调用send_header依次在列表中添加数据，最后调用end_headers发送数据\nsend_error函数就是一个回复的典范\n剩下就是日志函数和几个辅助函数了\n\n示例1234567891011121314151617181920from http.server import BaseHTTPRequestHandlerfrom socketserver import ThreadingTCPServerclass Handle(BaseHTTPRequestHandler):    protocol_version = &quot;HTTP/1.1&quot;    def do_GET(self):        self.send_error(500)    def do_POST(self):        len = self.headers.get(&#x27;Content-Length&#x27;)        data = self.rfile.read(int(len))        self.send_response(200)        self.send_header(&#x27;Content-Length&#x27;, len)        self.end_headers()        self.wfile.write(data)ThreadingTCPServer((&#x27;&#x27;, 9999), Handle).serve_forever()\n这是一个最简的http server。do_GET函数表面send_error就能够响应一个请求。do_POST函数参照send_error的逻辑只不过读取了客户端发送的body字段\n小知识类变量和实例变量这2个非常相近，具体区别我就不概述了。在写代码的时候很多人无脑self.xxx = xxx就搞了一个实例变量。大多数时候用实例变量都能够替代类变量的功能。这很容易让人忽略类变量的优点。①含义明确：这是这个类的所有实例共用的。②不需要重载__init__，这在继承的时候是很有用哒~~~，so，不要有事没事无脑在__init__里面self.xxx = xxx啦\n相关资料Expect:100-continue官方文档\n","dateCreated":"2016-07-02T17:07:20+08:00","dateModified":"2021-02-17T10:55:24+08:00","datePublished":"2016-07-02T17:07:20+08:00","description":"上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer/BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进行了简单的解析工作(源码版本Python3.5)","headline":"http.server源码阅读","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/07/02/http_server_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/07/02/http_server_note/"}</script>
     <meta name="description" content="上一章讲SocketServer模块，它将服务端根据监听套接字和连接套接字分为了2个部分(BaseServer&#x2F;BaseRequestHandler)，而连接套接字类的处理方法相当简单，最终是一个handle函数就搞定了。http.server这个模块主要类BaseHTTPRequestHandle继承自BaseRequestHandle,对handle进行了一点点的加强，主要就是对http协议进">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="http.server源码阅读">
@@ -179,7 +179,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -195,87 +195,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -656,6 +578,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -956,8 +884,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

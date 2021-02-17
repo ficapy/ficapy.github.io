@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容易实现生产者消费者模型。Tornado官方的demo中也有一个[爬虫代码(https://github.com/tornadoweb/tornado/blob/master/demos/webspider/webspider.py)]演示如何使用队列(本篇基于v5.0.0)\n\n\n目标理解Queue模块给出的例子就可以了\n12345678910111213141516171819202122232425262728293031from tornado import genfrom tornado.ioloop import IOLoopfrom tornado.queues import Queueq = Queue(maxsize=2)@gen.coroutinedef consumer():    while True:        item = yield q.get()        try:            print(&#x27;Doing work on %s&#x27; % item)            yield gen.sleep(0.01)        finally:            q.task_done()@gen.coroutinedef producer():    for item in range(5):        yield q.put(item)        print(&#x27;Put %s&#x27; % item)@gen.coroutinedef main():    # Start consumer without waiting (since it never finishes).    IOLoop.current().spawn_callback(consumer)    yield producer()  # Wait for producer to put all tasks.    yield q.join()  # Wait for consumer to finish all tasks.    print(&#x27;Done&#x27;)IOLoop.current().run_sync(main)\n\n控制权转移在python自带模块里面的queue是给多线程使用的.意味着当队列里面没有元素的时候会阻塞主线程。阻塞主线程这种操作在协程里面当然是不允许的。协程里面需要的是当某事需要进行等待的时候主动让出控制权限，让其他的事件执行。具体来说，如何让出控制权呢。理解上一篇的coroutine就可以发现。yield 一个暂时还没有结果的Future就会导致控制权转移，等Future结果到来yield就会被恢复\n12345678910111213141516from tornado.gen import coroutine,sleepfrom tornado.ioloop import IOLoop@coroutinedef xx():    yield sleep(1)    print(&quot;xx&quot;)@coroutinedef x():    xx()    print(&quot;x&quot;)# x()# IOLoop.instance().start()IOLoop.instance().run_sync(x)\n观察这个例子。正常的写法是yield xx()，然后会调用xx(),过一秒之后打印xx再打印x。如果直接使用xx，其实这段代码也没有什么问题。xx返回了一个Future对象。因为没有使用yield，所以它不必等待xx函数执行完再进行下面的操作。xx返回的Future已经开始了运行(它并不会什么都不发生)，它依旧在一秒钟之后被执行然后打印xx。\nQueue的实现思路核心思路是\n\nget、put操作均返回Future对象\n没有被设置值的Future执行yield会有阻塞效果\n\n创建三个队列分别为正常队列_queue、未来get队列_getters，未来put队列_putters。执行get操作的时候创建一个Future对象。优先从_putters里面获取.获得的是一个值和一个Future对象，执行Future.set_result。此时代表put被阻塞，执行set_result取消阻塞。再考虑从_queue里面取，代表正常取值。如果都没有则放入_getters队列(此时因为Futures没有值，取值的地方被阻塞)。\n执行put就是相反的操作，优先从_getters里面取(有值则执行Future.set_result，取消获取过程的阻塞)。再检查正常队列的元素是否超过最大值。否则加入未来队列\n那么队列还有task_done和join操作，前者每一个任务执行完毕都会被调用表示该任务完成，后者表示等待加入到队列的所有任务都完成，否则阻塞。顺便说一下tornado的锁是怎么实现的\n依旧是依靠没有被设置值的Future被yield会造成阻塞。该Future被设置值则会继续执行\n1234567891011121314class Event:    def __init__(self):        self.f = Future()    def set(self):        if not self.f.done():            self.f.set_result(None)    def clear(self):        if self.f.done():            self.f = Future()    def wait(self):        return self.f\n注意。这个地方调用set和clear都是不带yield的，只有当最后调用wait才使用yield。\nQueue的实现1234567891011121314151617181920212223242526272829303132333435363738394041424344454647class Queue:    def __init__(self, maxsize=None):        self.max_size = maxsize or 2 &lt;&lt; 16        self._queue = collections.deque([])        self._getters = collections.deque([])         self._putters = collections.deque([])         self._unfinished_tasks = 0        self._finished = Event()        self._finished.set()    def get(self):        f = Future()        if len(self._queue) &gt; 0:            value = self._queue.popleft()            f.set_result(value)        elif len(self._putters) &gt; 0:            item, future = self._putters.popleft()            f.set_result(item)            future.set_result(None)        else:            self._getters.append(f)        return f    def put(self, value):        self._unfinished_tasks += 1        self._finished.clear()        f = Future()        if  len(self._getters) &gt; 0:            future = self._getters.pop()            f.set_result(None)            future.set_result(value)        elif len(self._queue) &lt; self.max_size:            self._queue.append(value)            f.set_result(None)        else:            self._putters.append((value, f))        return f    def task_done(self):        self._unfinished_tasks -= 1        if self._unfinished_tasks == 0:            self._finished.set()    def join(self):        return self._finished.wait()\n\n源码做了更多的适配将_get和_put独立出来。然后使用优先级队列，先进后出队列满足不同的出入顺序要求\n","dateCreated":"2018-03-19T14:24:05+08:00","dateModified":"2018-03-20T14:44:46+08:00","datePublished":"2018-03-19T14:24:05+08:00","description":"介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容易实现生产者消费者模型。Tornado官方的demo中也有一个[爬虫代码(https://github.com/tornadoweb/tornado/blob/master/demos/webspider/webspider.py)]演示如何使用队列(本篇基于v5.0.0)","headline":"Tornado 之queue","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/19/tornado_queue/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/19/tornado_queue/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容易实现生产者消费者模型。Tornado官方的demo中也有一个[爬虫代码(https://github.com/tornadoweb/tornado/blob/master/demos/webspider/webspider.py)]演示如何使用队列(本篇基于v5.0.0)\n\n\n目标理解Queue模块给出的例子就可以了\n12345678910111213141516171819202122232425262728293031from tornado import genfrom tornado.ioloop import IOLoopfrom tornado.queues import Queueq = Queue(maxsize=2)@gen.coroutinedef consumer():    while True:        item = yield q.get()        try:            print(&#x27;Doing work on %s&#x27; % item)            yield gen.sleep(0.01)        finally:            q.task_done()@gen.coroutinedef producer():    for item in range(5):        yield q.put(item)        print(&#x27;Put %s&#x27; % item)@gen.coroutinedef main():    # Start consumer without waiting (since it never finishes).    IOLoop.current().spawn_callback(consumer)    yield producer()  # Wait for producer to put all tasks.    yield q.join()  # Wait for consumer to finish all tasks.    print(&#x27;Done&#x27;)IOLoop.current().run_sync(main)\n\n控制权转移在python自带模块里面的queue是给多线程使用的.意味着当队列里面没有元素的时候会阻塞主线程。阻塞主线程这种操作在协程里面当然是不允许的。协程里面需要的是当某事需要进行等待的时候主动让出控制权限，让其他的事件执行。具体来说，如何让出控制权呢。理解上一篇的coroutine就可以发现。yield 一个暂时还没有结果的Future就会导致控制权转移，等Future结果到来yield就会被恢复\n12345678910111213141516from tornado.gen import coroutine,sleepfrom tornado.ioloop import IOLoop@coroutinedef xx():    yield sleep(1)    print(&quot;xx&quot;)@coroutinedef x():    xx()    print(&quot;x&quot;)# x()# IOLoop.instance().start()IOLoop.instance().run_sync(x)\n观察这个例子。正常的写法是yield xx()，然后会调用xx(),过一秒之后打印xx再打印x。如果直接使用xx，其实这段代码也没有什么问题。xx返回了一个Future对象。因为没有使用yield，所以它不必等待xx函数执行完再进行下面的操作。xx返回的Future已经开始了运行(它并不会什么都不发生)，它依旧在一秒钟之后被执行然后打印xx。\nQueue的实现思路核心思路是\n\nget、put操作均返回Future对象\n没有被设置值的Future执行yield会有阻塞效果\n\n创建三个队列分别为正常队列_queue、未来get队列_getters，未来put队列_putters。执行get操作的时候创建一个Future对象。优先从_putters里面获取.获得的是一个值和一个Future对象，执行Future.set_result。此时代表put被阻塞，执行set_result取消阻塞。再考虑从_queue里面取，代表正常取值。如果都没有则放入_getters队列(此时因为Futures没有值，取值的地方被阻塞)。\n执行put就是相反的操作，优先从_getters里面取(有值则执行Future.set_result，取消获取过程的阻塞)。再检查正常队列的元素是否超过最大值。否则加入未来队列\n那么队列还有task_done和join操作，前者每一个任务执行完毕都会被调用表示该任务完成，后者表示等待加入到队列的所有任务都完成，否则阻塞。顺便说一下tornado的锁是怎么实现的\n依旧是依靠没有被设置值的Future被yield会造成阻塞。该Future被设置值则会继续执行\n1234567891011121314class Event:    def __init__(self):        self.f = Future()    def set(self):        if not self.f.done():            self.f.set_result(None)    def clear(self):        if self.f.done():            self.f = Future()    def wait(self):        return self.f\n注意。这个地方调用set和clear都是不带yield的，只有当最后调用wait才使用yield。\nQueue的实现1234567891011121314151617181920212223242526272829303132333435363738394041424344454647class Queue:    def __init__(self, maxsize=None):        self.max_size = maxsize or 2 &lt;&lt; 16        self._queue = collections.deque([])        self._getters = collections.deque([])         self._putters = collections.deque([])         self._unfinished_tasks = 0        self._finished = Event()        self._finished.set()    def get(self):        f = Future()        if len(self._queue) &gt; 0:            value = self._queue.popleft()            f.set_result(value)        elif len(self._putters) &gt; 0:            item, future = self._putters.popleft()            f.set_result(item)            future.set_result(None)        else:            self._getters.append(f)        return f    def put(self, value):        self._unfinished_tasks += 1        self._finished.clear()        f = Future()        if  len(self._getters) &gt; 0:            future = self._getters.pop()            f.set_result(None)            future.set_result(value)        elif len(self._queue) &lt; self.max_size:            self._queue.append(value)            f.set_result(None)        else:            self._putters.append((value, f))        return f    def task_done(self):        self._unfinished_tasks -= 1        if self._unfinished_tasks == 0:            self._finished.set()    def join(self):        return self._finished.wait()\n\n源码做了更多的适配将_get和_put独立出来。然后使用优先级队列，先进后出队列满足不同的出入顺序要求\n","dateCreated":"2018-03-19T14:24:05+08:00","dateModified":"2018-03-20T14:44:46+08:00","datePublished":"2018-03-19T14:24:05+08:00","description":"介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容易实现生产者消费者模型。Tornado官方的demo中也有一个[爬虫代码(https://github.com/tornadoweb/tornado/blob/master/demos/webspider/webspider.py)]演示如何使用队列(本篇基于v5.0.0)","headline":"Tornado 之queue","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/19/tornado_queue/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/03/19/tornado_queue/"}</script>
     <meta name="description" content="介绍完StackContext、gen.engine、gen.coroutine之后Tornado3.0以前的核心内容基本已经完结了。本篇介绍一下gen.coroutine中Future的应用，在tornado中生成一个队列的数据结构。如果经常写web的情况，单单只处理用户的输入给出输出，那么要求不会太多，也不会用到队列。可是如果你去写一个爬虫，肯定需要限速啥的，此时队列就是一个很有用的东西，很容">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Tornado 之queue">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -661,6 +583,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -961,8 +889,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

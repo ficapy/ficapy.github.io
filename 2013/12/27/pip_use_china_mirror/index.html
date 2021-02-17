@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。\n今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.\n\n教程是这样的\n使用pip的用户可以如下配置：在unix和macos，配置文件为: $HOME/.pip/pip.conf在windows上，配置文件为：%HOME%\\pip\\pip.ini需要在配置文件内加上\n123[global]  timeout &#x3D; 60  index-url &#x3D; http:&#x2F;&#x2F;e.pypi.python.org&#x2F;simple\n首先我在everything里面搜索pip.ini这个文件，发现没有。在google上搜索无果（最可能是姿势不对~~）,怀疑是pycharm安装的pip和原版有差异~~~删除pip文件夹后在pypi上下载安装。还是发现没有，在卸载之从http://www.lfd.uci.edu/~gohlke/pythonlibs/上下载安装。。当然还是没有~~~\n最终的结果是自己新建pip.ini这特么完全是超过我认知范围类了。。。。配置文件居然不在带需要自己新建，再者%HOME%\\pip\\pip.ini这个地址也是错的，正确的为%USERPROFILE%\\pip\\pip.ini。网上搜到的教程基本都是错的（估计他们都在linux上开发吧，其本质是官网的说明文档没有更新，%HOME%目测是XP时代的产物）。最后也可能会遇到error: invalid command &#39;egg_info&#39;这种错误 解决的方案就是pip install --upgrade setuptools\n参考文档http://www.pip-installer.org/en/latest/configuration.htmlhttp://stackoverflow.com/questions/11425106/python-pip-install-fails-invalid-command-egg-infohttps://bitbucket.org/pypa/pypi/issue/5/pipini-directory-in-windows\n \n\n\n\n\n\n","dateCreated":"2013-12-27T18:54:00+08:00","dateModified":"2021-02-17T11:03:35+08:00","datePublished":"2013-12-27T18:54:00+08:00","description":"作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。\n今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.","headline":"pip使用国内镜像","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。\n今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.\n\n教程是这样的\n使用pip的用户可以如下配置：在unix和macos，配置文件为: $HOME/.pip/pip.conf在windows上，配置文件为：%HOME%\\pip\\pip.ini需要在配置文件内加上\n123[global]  timeout &#x3D; 60  index-url &#x3D; http:&#x2F;&#x2F;e.pypi.python.org&#x2F;simple\n首先我在everything里面搜索pip.ini这个文件，发现没有。在google上搜索无果（最可能是姿势不对~~）,怀疑是pycharm安装的pip和原版有差异~~~删除pip文件夹后在pypi上下载安装。还是发现没有，在卸载之从http://www.lfd.uci.edu/~gohlke/pythonlibs/上下载安装。。当然还是没有~~~\n最终的结果是自己新建pip.ini这特么完全是超过我认知范围类了。。。。配置文件居然不在带需要自己新建，再者%HOME%\\pip\\pip.ini这个地址也是错的，正确的为%USERPROFILE%\\pip\\pip.ini。网上搜到的教程基本都是错的（估计他们都在linux上开发吧，其本质是官网的说明文档没有更新，%HOME%目测是XP时代的产物）。最后也可能会遇到error: invalid command &#39;egg_info&#39;这种错误 解决的方案就是pip install --upgrade setuptools\n参考文档http://www.pip-installer.org/en/latest/configuration.htmlhttp://stackoverflow.com/questions/11425106/python-pip-install-fails-invalid-command-egg-infohttps://bitbucket.org/pypa/pypi/issue/5/pipini-directory-in-windows\n \n\n\n\n\n\n","dateCreated":"2013-12-27T18:54:00+08:00","dateModified":"2021-02-17T11:03:35+08:00","datePublished":"2013-12-27T18:54:00+08:00","description":"作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。\n今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.","headline":"pip使用国内镜像","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"}</script>
     <meta name="description" content="作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。 今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="pip使用国内镜像">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -654,6 +576,12 @@ style="background-color: transparent; color: #000000; position: absolute; top: 3
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -954,8 +882,8 @@ style="background-color: transparent; color: #000000; position: absolute; top: 3
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

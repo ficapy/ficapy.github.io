@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现\n\n\n基本概念python的运行是讲源码进行编译，之后虚拟机执行。这2个步骤python都提供了接口,compile和exec。exec的执行会调用compile,我们一般不会主动去调用compile。compile这个函数有三个模式官方文档 stackoverflow\n\nexec:一系列声明\neval:单条表达式\nsingle:单条声明,和exec不同的是当返回不为None的时候执行的时候会打印。这一想都知道专门是为交互式环境准备的\n\n编译之后不用说。使用内建函数exec执行就好啦。它带有2个可选参数,全局空间变量及局部空间变量。看一个例子\n1234567891011121314151617local = &#123;&#125;code = compile(&#x27;a=1&#x27;, filename=&#x27;&lt;string&gt;&#x27;, mode=&#x27;single&#x27;)print(code)exec(code,local)code = compile(&#x27;a+=1&#x27;, filename=&#x27;&lt;string&gt;&#x27;, mode=&#x27;single&#x27;)try:    exec(code)except:    print(&#x27;Error&#x27;)exec(code,local)print(local.get(&#x27;a&#x27;))code = compile(&#x27;x+=1&#x27;,filename=&#x27;&lt;string&gt;&#x27;,mode=&#x27;single&#x27;)print(code)# &lt;code object &lt;module&gt; at 0x10fd9dc90, file &quot;&lt;string&gt;&quot;, line 1&gt;# Error# 2# &lt;code object &lt;module&gt; at 0x105c25c90, file &quot;&lt;string&gt;&quot;, line 1&gt;\n\n编译的时候只要语法没有问题就可以通过，看x+=1,即使全局变量不存在x也能够编译通过\n使用exec的时候，可以引入一个字典，否则会自动使用默认的global,有了这个字典我们就可以连接上下文，想一想。要是我们执行a=1，如果没有记录。那么后面执行a+=1就会报错了，这肯定不是我们所希望的\n\n自带REPL要实现一个类似的IDLE环境2条语句就够了\n12import codecode.interact()\n看调用图会涉及到2个模块，code和codeop，这2个模块可以都说是为生成交互式解释器服务的。code模块作用是接收请求然后解析再执行(exec)。解析部分就是由codeop提供的。设想一下为什么有了compile还需要一个单独的codeop模块。我们使用交互式解释器的时候并不是所有的命令都是一行输入完成的。比如输入一个函数，那就需要多行。将我们输入的多行编译一次。这是我们的需求。codeop就是为这个而存在的。比如你执行codeop.compile_command(‘math(‘)会返回None。这就代表你下一行继续输入，直到你连续输入了2个空行。好了，它知道你输入完成了。核心代码如下\n123456789101112131415def runsource(self, source, filename=&quot;&lt;input&gt;&quot;, symbol=&quot;single&quot;):    try:        code = self.compile(source, filename, symbol)    except (OverflowError, SyntaxError, ValueError):        # Case 1        self.showsyntaxerror(filename)        return False    if code is None:        # Case 2        return True    # Case 3    self.runcode(code)    return False\n逻辑还是比较好理解的。\nException,traceback,frame联系上个例子\n12345678910111213141516171819202122232425262728293031323334353637import sysclass CustomeExcept(Exception):    def __init__(self, desc):        super(CustomeExcept, self).__init__()        self.desc = desc    def __repr__(self):        return self.desc    __str__ = __repr__def t():    raise CustomeExcept(&#x27;l&#x27;)def app():    a = 1    t()try:    app()except Exception as e:    # traceback.print_exc(file=sys.stdout)    exc_type, exc_value, exc_tb = sys.exc_info()    print(exc_tb.tb_frame.f_lineno)    print(exc_type)    print(exc_value is e)    print(exc_value)    print([i for i in dir(exc_tb) if not i.startswith(&#x27;_&#x27;)])    print(exc_tb.tb_frame, exc_tb.tb_lineno, exc_tb.tb_next.tb_lineno, exc_tb.tb_next.tb_next.tb_lineno,          exc_tb.tb_next.tb_next.tb_next, sys._getframe(0), exc_tb.tb_frame.f_back)    print(exc_tb.tb_next.tb_frame.f_locals)# 23# &lt;class &#x27;__main__.CustomeExcept&#x27;&gt;# True# l# [&#x27;tb_frame&#x27;, &#x27;tb_lasti&#x27;, &#x27;tb_lineno&#x27;, &#x27;tb_next&#x27;]# &lt;frame object at 0x7f90b5813958&gt; 19 17 13 None &lt;frame object at 0x7f90b5813958&gt; None# &#123;&#x27;a&#x27;: 1&#125;\n\nException配合raise使用,使用except捕获异常的时候返回它的实例\n返回的实例是和帧栈Frame是没有关系的\nsys.exc_info返回了异常类，异常实例,traceback实例\ntraceback对象记录的帧不是当前帧,而是从发起异常的那个函数开始记录帧栈,因此比当前帧栈更长,traceback的中文意思是回溯,它的tb_next可以想象一下,实际上更可以说是读取上一个帧(因为引发异常的那个帧实际上在最上面)\ntb_next返回的还是一个traceback对象\ntraceback模块提供了一些接口(比如traceback.print_exc)从帧中提取出信息然后格式化打印偷一张图(引用自http://busuncle.github.io/python-vm-and-bytecode.html)\n\nwerkzeug实现1234__debugger__:yescmd:a &#x3D; 1+1frm:0s:3WcibzVj8YXQDR0Na4bv\n\n参考资料Python虚拟机与字节码\n","dateCreated":"2016-08-07T08:43:31+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-08-07T08:43:31+08:00","description":"flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现","headline":"werkzeug源码分析(Debug模块)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/08/07/werkzeug_debug_note/","keywords":"Flask"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现\n\n\n基本概念python的运行是讲源码进行编译，之后虚拟机执行。这2个步骤python都提供了接口,compile和exec。exec的执行会调用compile,我们一般不会主动去调用compile。compile这个函数有三个模式官方文档 stackoverflow\n\nexec:一系列声明\neval:单条表达式\nsingle:单条声明,和exec不同的是当返回不为None的时候执行的时候会打印。这一想都知道专门是为交互式环境准备的\n\n编译之后不用说。使用内建函数exec执行就好啦。它带有2个可选参数,全局空间变量及局部空间变量。看一个例子\n1234567891011121314151617local = &#123;&#125;code = compile(&#x27;a=1&#x27;, filename=&#x27;&lt;string&gt;&#x27;, mode=&#x27;single&#x27;)print(code)exec(code,local)code = compile(&#x27;a+=1&#x27;, filename=&#x27;&lt;string&gt;&#x27;, mode=&#x27;single&#x27;)try:    exec(code)except:    print(&#x27;Error&#x27;)exec(code,local)print(local.get(&#x27;a&#x27;))code = compile(&#x27;x+=1&#x27;,filename=&#x27;&lt;string&gt;&#x27;,mode=&#x27;single&#x27;)print(code)# &lt;code object &lt;module&gt; at 0x10fd9dc90, file &quot;&lt;string&gt;&quot;, line 1&gt;# Error# 2# &lt;code object &lt;module&gt; at 0x105c25c90, file &quot;&lt;string&gt;&quot;, line 1&gt;\n\n编译的时候只要语法没有问题就可以通过，看x+=1,即使全局变量不存在x也能够编译通过\n使用exec的时候，可以引入一个字典，否则会自动使用默认的global,有了这个字典我们就可以连接上下文，想一想。要是我们执行a=1，如果没有记录。那么后面执行a+=1就会报错了，这肯定不是我们所希望的\n\n自带REPL要实现一个类似的IDLE环境2条语句就够了\n12import codecode.interact()\n看调用图会涉及到2个模块，code和codeop，这2个模块可以都说是为生成交互式解释器服务的。code模块作用是接收请求然后解析再执行(exec)。解析部分就是由codeop提供的。设想一下为什么有了compile还需要一个单独的codeop模块。我们使用交互式解释器的时候并不是所有的命令都是一行输入完成的。比如输入一个函数，那就需要多行。将我们输入的多行编译一次。这是我们的需求。codeop就是为这个而存在的。比如你执行codeop.compile_command(‘math(‘)会返回None。这就代表你下一行继续输入，直到你连续输入了2个空行。好了，它知道你输入完成了。核心代码如下\n123456789101112131415def runsource(self, source, filename=&quot;&lt;input&gt;&quot;, symbol=&quot;single&quot;):    try:        code = self.compile(source, filename, symbol)    except (OverflowError, SyntaxError, ValueError):        # Case 1        self.showsyntaxerror(filename)        return False    if code is None:        # Case 2        return True    # Case 3    self.runcode(code)    return False\n逻辑还是比较好理解的。\nException,traceback,frame联系上个例子\n12345678910111213141516171819202122232425262728293031323334353637import sysclass CustomeExcept(Exception):    def __init__(self, desc):        super(CustomeExcept, self).__init__()        self.desc = desc    def __repr__(self):        return self.desc    __str__ = __repr__def t():    raise CustomeExcept(&#x27;l&#x27;)def app():    a = 1    t()try:    app()except Exception as e:    # traceback.print_exc(file=sys.stdout)    exc_type, exc_value, exc_tb = sys.exc_info()    print(exc_tb.tb_frame.f_lineno)    print(exc_type)    print(exc_value is e)    print(exc_value)    print([i for i in dir(exc_tb) if not i.startswith(&#x27;_&#x27;)])    print(exc_tb.tb_frame, exc_tb.tb_lineno, exc_tb.tb_next.tb_lineno, exc_tb.tb_next.tb_next.tb_lineno,          exc_tb.tb_next.tb_next.tb_next, sys._getframe(0), exc_tb.tb_frame.f_back)    print(exc_tb.tb_next.tb_frame.f_locals)# 23# &lt;class &#x27;__main__.CustomeExcept&#x27;&gt;# True# l# [&#x27;tb_frame&#x27;, &#x27;tb_lasti&#x27;, &#x27;tb_lineno&#x27;, &#x27;tb_next&#x27;]# &lt;frame object at 0x7f90b5813958&gt; 19 17 13 None &lt;frame object at 0x7f90b5813958&gt; None# &#123;&#x27;a&#x27;: 1&#125;\n\nException配合raise使用,使用except捕获异常的时候返回它的实例\n返回的实例是和帧栈Frame是没有关系的\nsys.exc_info返回了异常类，异常实例,traceback实例\ntraceback对象记录的帧不是当前帧,而是从发起异常的那个函数开始记录帧栈,因此比当前帧栈更长,traceback的中文意思是回溯,它的tb_next可以想象一下,实际上更可以说是读取上一个帧(因为引发异常的那个帧实际上在最上面)\ntb_next返回的还是一个traceback对象\ntraceback模块提供了一些接口(比如traceback.print_exc)从帧中提取出信息然后格式化打印偷一张图(引用自http://busuncle.github.io/python-vm-and-bytecode.html)\n\nwerkzeug实现1234__debugger__:yescmd:a &#x3D; 1+1frm:0s:3WcibzVj8YXQDR0Na4bv\n\n参考资料Python虚拟机与字节码\n","dateCreated":"2016-08-07T08:43:31+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-08-07T08:43:31+08:00","description":"flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现","headline":"werkzeug源码分析(Debug模块)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/07/werkzeug_debug_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/08/07/werkzeug_debug_note/","keywords":"Flask"}</script>
     <meta name="description" content="flask的debug看起来还是很神奇的，可以在异常页面查看当前调用栈，且能够在当前栈内进行交互式会话用以调试。本文将会从python的REPL进行说明并延伸到flask。看看它的具体实现">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="werkzeug源码分析(Debug模块)">
@@ -181,7 +181,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -197,87 +197,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -682,6 +604,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -982,8 +910,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

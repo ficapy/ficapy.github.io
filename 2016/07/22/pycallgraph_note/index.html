@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。\n\npycallgraph文件结构123456789101112131415161718.├── __init__.py├── color.py                显示颜色├── config.py               主要用来确定使用哪些过滤方法├── exceptions.py           没啥用├── globbing_filter.py      就一个fnmatch├── memory_profiler.py      ├── metadata.py├── output                  output.py是基类，其他几个是具体输出方式│   ├── __init__.py│   ├── gephi.py│   ├── graphviz.py│   ├── output.py│   ├── pickle.py│   └── ubigraph.py├── pycallgraph.py          整合config和output├── tracer.py               核心文件(调用sys.settrace的地方)└── util.py\n获取函数被哪些函数调用查看下面的相关资料。有这样一段代码\n123456789101112131415161718import tracebackdef f():    g()def g():    for line in traceback.format_stack():        print(line.strip())f()# Prints:# File &quot;so-stack.py&quot;, line 10, in &lt;module&gt;#     f()# File &quot;so-stack.py&quot;, line 4, in f#     g()# File &quot;so-stack.py&quot;, line 7, in g#     for line in traceback.format_stack():\n当f调用g的时候。在g里面有调用了traceback.format_stack，它显示了当调用函数g的时候的调用路径。实现其实是比较简单的嘛。当调用g的时候，它在栈顶。那么只需要不断的调用frame.f_back就能得到上一个栈，就可以得到以上信息。可以看出它得到的是函数被调用的信息。假如函数g调用了很多底层函数，此时我需要进行一些patch hook，那么要得到是函数g调用了哪些底层函数！这种方法就没用了。好在python提供了sys.settrace\nsys.settrace基本介绍首先得对python运行的基本概念有个了解，函数的调用是一种栈结构。当函数被调用(触发call事件)的时候当前帧入栈，当函数执行完毕返回(触发return事件)的时候栈顶的帧出栈。sys.settrace就是对这些事件的hook。看下面这段代码\n12345678910111213141516171819202122232425262728293031import sysdef trace(frame, event, args,record=[]):    print(frame.f_lineno, frame.f_code.co_filename, event)    if event == &#x27;call&#x27;:        record.append(frame)    elif event == &#x27;return&#x27;:        pre_frame = record.pop()        print(pre_frame is frame)    return tracesys.settrace(trace)def main():    for i in range(2):        try:            1 / i - 1        except ZeroDivisionError:            passmain()# 11 /Users/ficapy/Dropbox/source_read/py3/settrace.py call# 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 13 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 14 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 14 /Users/ficapy/Dropbox/source_read/py3/settrace.py exception# 15 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 16 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 13 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 14 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py return# True\n有几点需要注意的:\n\ntrace函数最后记得返回自身\n不需要考虑多线程问题，因为sys.settrace只对主线程有效(多线程是threading.settrace，多进程没试过)\n还是要废话一句，发生return的时候frame一定是最后一个call的frame。这也是pycallgraph的运行的基本条件。\n虽然trace有7个事件。可是对于我们绘制调用图call、return就够了.\n\npycallgraph原理版本123456789101112131415161718192021222324252627282930313233343536373839import sysfrom collections import defaultdictfrom pprint import pprintimport requestscall_dict = defaultdict(lambda: defaultdict(int))frame_stack = []def trace(frame, event, args):    if event == &#x27;call&#x27;:        frame_stack.append(frame)        call_dict[frame.f_back][frame] += 1    if event == &#x27;return&#x27;:        if frame is frame_stack[-1]:            frame_stack.pop()    return tracesys.settrace(trace)requests.get(&#x27;http://www.z.cn&#x27;)sys.settrace(None)pprint(call_dict)# defaultdict(&lt;function &lt;lambda&gt; at 0x10f282950&gt;,#             &#123;&lt;frame object at 0x10f199448&gt;: defaultdict(&lt;class &#x27;int&#x27;&gt;,#                                                         &#123;&lt;frame object at 0x10f303848&gt;: 1,#                                                          &lt;frame object at 0x10f4f93d8&gt;: 1,#                                                          &lt;frame object at 0x10f985980&gt;: 1&#125;),#                                                         :#                                                         :#                                                         :#              &lt;frame object at 0x7fa6630a2018&gt;: defaultdict(&lt;class &#x27;int&#x27;&gt;,#                                                            &#123;&lt;frame object at 0x10fd1b8b8&gt;: 1,#                                                             &lt;frame object at 0x10fd2a9d0&gt;: 1,#                                                             &lt;frame object at 0x10fd2f908&gt;: 1,#                                                             &lt;frame object at 0x10fd32570&gt;: 1,#                                                             &lt;frame object at 0x10fd3fac8&gt;: 1,#                                                             &lt;frame object at 0x7fa662093cc8&gt;: 1,#                                                             &lt;frame object at 0x7fa6621ddc98&gt;: 1,#                                                             &lt;frame object at 0x7fa6621e0468&gt;: 1&#125;)&#125;)\n在每个函数调用的时候，将当前栈和上一个栈关联起来。所有的数据汇总就得到了requests.get的调用关系图。然后就可以兴奋的去用graphviz生成图片(≧▽≦)/啦啦啦，直接这样大概就生成了类似下面的图片看起来很炫酷，其实嘛用没有，几百个元素线条一大堆，根本突出不了重点。**所以收集数据是很容易的，最重要的是过滤数据，重点突出自己需要的数据**这部分应该也是pycallgraph的重点要处理的部分(处理的并不好)。\n过滤不需要关注的函数比如一个函数我们不需要关注。那么当call事件的时候我们只需要不把它加入到call_dict中。同时将当前栈长度设置为最大长度。那么该函数和被该函数调用的函数都不会被我们记录。pycallgraph的做法是:不加入到call_dict，只是对frame_stack列表加入一个空值。return事件也只是简单的pop移出(这样造成的结果就是该函数不被记录，可是该被该函数调用的其他函数只要不被规则过滤就会被记录)通常过滤的条件会有:\n\n内置模块\n私有函数\n比如一些库有compat.py、datastructers.py、exceptions.py、utils.py这些模块常会被引用。可是对了解整个过程并没有什么帮助。反而会导致生成的图很混乱\n某些库虽然被引用太多次也该被删除总之就是根据需要关注的地方写过滤规则，生成合适的图~~比如这样。。。。requests.get的注意到这里有组(根据单个模块分)，实现的方式也很简单。可以查看我写的精简版的pycallgraph.https://gist.github.com/ficapy/a2601d44b1492c228732178e1bb3eb5e\n\n多线程版因为目前没有用来分析多线程程序，所以只是大概了解了一下。\n12345678910111213141516171819202122232425262728import threadingimport timeimport randomdef trace(frame, event, args,record=[]):    if event == &#x27;call&#x27;:        record.append(frame)    elif event == &#x27;return&#x27;:        pre_frame = record.pop()        print(pre_frame is frame)    return tracethreading.settrace(trace)def main():    time.sleep(random.random())    return 1for i in range(5):    threading.Thread(target=main).start()# False# False# False# False# True# True# True# False# False# False# False\n可以看到稍有区别，因为它有多个栈，所以无法像单个那样用一个列表就添加、取出就能搞定。可能以后有需要我会添加上线程支持\npycallgraph缺陷\n更新缓慢，master版本是3年前的！文档也是\n设置项有threaded.搞的是线程安全！sys.settrace在主线程是没有线程问题。我都没有想明白写线程这段是干啥子用的\n没有突出过滤的重要性\n\n相关资料官网sys.settracepython程序的执行原理PYCON-Dmitry Trofimov - Python Debugger UncoveredPrint current call stack from a method in Python code常用的python调试工具graphviz dot语言学习笔记Github_python-hunterGithub_pytrace\n","dateCreated":"2016-07-22T15:13:05+08:00","dateModified":"2021-02-17T10:54:23+08:00","datePublished":"2016-07-22T15:13:05+08:00","description":"用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。","headline":"pycallgraph源码分析","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/07/22/pycallgraph_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/07/22/pycallgraph_note/","keywords":"python"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。\n\npycallgraph文件结构123456789101112131415161718.├── __init__.py├── color.py                显示颜色├── config.py               主要用来确定使用哪些过滤方法├── exceptions.py           没啥用├── globbing_filter.py      就一个fnmatch├── memory_profiler.py      ├── metadata.py├── output                  output.py是基类，其他几个是具体输出方式│   ├── __init__.py│   ├── gephi.py│   ├── graphviz.py│   ├── output.py│   ├── pickle.py│   └── ubigraph.py├── pycallgraph.py          整合config和output├── tracer.py               核心文件(调用sys.settrace的地方)└── util.py\n获取函数被哪些函数调用查看下面的相关资料。有这样一段代码\n123456789101112131415161718import tracebackdef f():    g()def g():    for line in traceback.format_stack():        print(line.strip())f()# Prints:# File &quot;so-stack.py&quot;, line 10, in &lt;module&gt;#     f()# File &quot;so-stack.py&quot;, line 4, in f#     g()# File &quot;so-stack.py&quot;, line 7, in g#     for line in traceback.format_stack():\n当f调用g的时候。在g里面有调用了traceback.format_stack，它显示了当调用函数g的时候的调用路径。实现其实是比较简单的嘛。当调用g的时候，它在栈顶。那么只需要不断的调用frame.f_back就能得到上一个栈，就可以得到以上信息。可以看出它得到的是函数被调用的信息。假如函数g调用了很多底层函数，此时我需要进行一些patch hook，那么要得到是函数g调用了哪些底层函数！这种方法就没用了。好在python提供了sys.settrace\nsys.settrace基本介绍首先得对python运行的基本概念有个了解，函数的调用是一种栈结构。当函数被调用(触发call事件)的时候当前帧入栈，当函数执行完毕返回(触发return事件)的时候栈顶的帧出栈。sys.settrace就是对这些事件的hook。看下面这段代码\n12345678910111213141516171819202122232425262728293031import sysdef trace(frame, event, args,record=[]):    print(frame.f_lineno, frame.f_code.co_filename, event)    if event == &#x27;call&#x27;:        record.append(frame)    elif event == &#x27;return&#x27;:        pre_frame = record.pop()        print(pre_frame is frame)    return tracesys.settrace(trace)def main():    for i in range(2):        try:            1 / i - 1        except ZeroDivisionError:            passmain()# 11 /Users/ficapy/Dropbox/source_read/py3/settrace.py call# 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 13 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 14 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 14 /Users/ficapy/Dropbox/source_read/py3/settrace.py exception# 15 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 16 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 13 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 14 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py line# 12 /Users/ficapy/Dropbox/source_read/py3/settrace.py return# True\n有几点需要注意的:\n\ntrace函数最后记得返回自身\n不需要考虑多线程问题，因为sys.settrace只对主线程有效(多线程是threading.settrace，多进程没试过)\n还是要废话一句，发生return的时候frame一定是最后一个call的frame。这也是pycallgraph的运行的基本条件。\n虽然trace有7个事件。可是对于我们绘制调用图call、return就够了.\n\npycallgraph原理版本123456789101112131415161718192021222324252627282930313233343536373839import sysfrom collections import defaultdictfrom pprint import pprintimport requestscall_dict = defaultdict(lambda: defaultdict(int))frame_stack = []def trace(frame, event, args):    if event == &#x27;call&#x27;:        frame_stack.append(frame)        call_dict[frame.f_back][frame] += 1    if event == &#x27;return&#x27;:        if frame is frame_stack[-1]:            frame_stack.pop()    return tracesys.settrace(trace)requests.get(&#x27;http://www.z.cn&#x27;)sys.settrace(None)pprint(call_dict)# defaultdict(&lt;function &lt;lambda&gt; at 0x10f282950&gt;,#             &#123;&lt;frame object at 0x10f199448&gt;: defaultdict(&lt;class &#x27;int&#x27;&gt;,#                                                         &#123;&lt;frame object at 0x10f303848&gt;: 1,#                                                          &lt;frame object at 0x10f4f93d8&gt;: 1,#                                                          &lt;frame object at 0x10f985980&gt;: 1&#125;),#                                                         :#                                                         :#                                                         :#              &lt;frame object at 0x7fa6630a2018&gt;: defaultdict(&lt;class &#x27;int&#x27;&gt;,#                                                            &#123;&lt;frame object at 0x10fd1b8b8&gt;: 1,#                                                             &lt;frame object at 0x10fd2a9d0&gt;: 1,#                                                             &lt;frame object at 0x10fd2f908&gt;: 1,#                                                             &lt;frame object at 0x10fd32570&gt;: 1,#                                                             &lt;frame object at 0x10fd3fac8&gt;: 1,#                                                             &lt;frame object at 0x7fa662093cc8&gt;: 1,#                                                             &lt;frame object at 0x7fa6621ddc98&gt;: 1,#                                                             &lt;frame object at 0x7fa6621e0468&gt;: 1&#125;)&#125;)\n在每个函数调用的时候，将当前栈和上一个栈关联起来。所有的数据汇总就得到了requests.get的调用关系图。然后就可以兴奋的去用graphviz生成图片(≧▽≦)/啦啦啦，直接这样大概就生成了类似下面的图片看起来很炫酷，其实嘛用没有，几百个元素线条一大堆，根本突出不了重点。**所以收集数据是很容易的，最重要的是过滤数据，重点突出自己需要的数据**这部分应该也是pycallgraph的重点要处理的部分(处理的并不好)。\n过滤不需要关注的函数比如一个函数我们不需要关注。那么当call事件的时候我们只需要不把它加入到call_dict中。同时将当前栈长度设置为最大长度。那么该函数和被该函数调用的函数都不会被我们记录。pycallgraph的做法是:不加入到call_dict，只是对frame_stack列表加入一个空值。return事件也只是简单的pop移出(这样造成的结果就是该函数不被记录，可是该被该函数调用的其他函数只要不被规则过滤就会被记录)通常过滤的条件会有:\n\n内置模块\n私有函数\n比如一些库有compat.py、datastructers.py、exceptions.py、utils.py这些模块常会被引用。可是对了解整个过程并没有什么帮助。反而会导致生成的图很混乱\n某些库虽然被引用太多次也该被删除总之就是根据需要关注的地方写过滤规则，生成合适的图~~比如这样。。。。requests.get的注意到这里有组(根据单个模块分)，实现的方式也很简单。可以查看我写的精简版的pycallgraph.https://gist.github.com/ficapy/a2601d44b1492c228732178e1bb3eb5e\n\n多线程版因为目前没有用来分析多线程程序，所以只是大概了解了一下。\n12345678910111213141516171819202122232425262728import threadingimport timeimport randomdef trace(frame, event, args,record=[]):    if event == &#x27;call&#x27;:        record.append(frame)    elif event == &#x27;return&#x27;:        pre_frame = record.pop()        print(pre_frame is frame)    return tracethreading.settrace(trace)def main():    time.sleep(random.random())    return 1for i in range(5):    threading.Thread(target=main).start()# False# False# False# False# True# True# True# False# False# False# False\n可以看到稍有区别，因为它有多个栈，所以无法像单个那样用一个列表就添加、取出就能搞定。可能以后有需要我会添加上线程支持\npycallgraph缺陷\n更新缓慢，master版本是3年前的！文档也是\n设置项有threaded.搞的是线程安全！sys.settrace在主线程是没有线程问题。我都没有想明白写线程这段是干啥子用的\n没有突出过滤的重要性\n\n相关资料官网sys.settracepython程序的执行原理PYCON-Dmitry Trofimov - Python Debugger UncoveredPrint current call stack from a method in Python code常用的python调试工具graphviz dot语言学习笔记Github_python-hunterGithub_pytrace\n","dateCreated":"2016-07-22T15:13:05+08:00","dateModified":"2021-02-17T10:54:23+08:00","datePublished":"2016-07-22T15:13:05+08:00","description":"用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。","headline":"pycallgraph源码分析","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/07/22/pycallgraph_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/07/22/pycallgraph_note/","keywords":"python"}</script>
     <meta name="description" content="用来生成函数调用图，这个工具可能名气比较大。因为看介绍就能看到好像可以生成比较帅气的图像。从源码层面看。其实这个工具是相当简单的，就是使用了sys.settrace接口,该接口常用于debug、profile(本文环境python3.5.1)。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="pycallgraph源码分析">
@@ -181,7 +181,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -197,87 +197,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -682,6 +604,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -982,8 +910,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

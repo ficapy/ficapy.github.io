@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"天灾人祸，今年开年大家被迫在家远程办公。以前从来没有规划过的一些网络问题被提上了台面。我司是一个几乎不加班的公司。从来没有人被要求要在家里完成工作。我们有一些服务是内网的，同时写了一些工具供办公室的文员使用。然后被迫远程，需要解决在家里访问公司内网的要求。同时因为业务的原因还需要访问谷歌\n\n\n访问公司内网服务最常规的方案是VPN, 我对VPN不熟悉。但是在网上看到了一篇很详细的教程，刚好符合业务需求。利用softEther VPN远程访问内部网络。我试着搭建了一下。能够实现需求。用起来就是办公室里面的一台电脑一样。能够访问内网服务。能够正常使用Google. 但是我对这个不熟，不清楚如何优化它的配置。导致使用这个方案性能无比的差。连上VPN的客户端的所有请求都会经过中转服务器，在中转到内网。即使是不需要代理的请求也会被处理，这在性能上是完全无法接受的\n既然是http服务，那么如果使用了域名。是很好解决的。修改DNS让映射到一个外网ip. 访问外网ip,外网再转发到内网。基本不需要在客户端上做任何修改。即使觉得创建一个域名比较麻烦，相对写死一个ip，使用xip.io，或者sslip.io 这种服务也比写死ip强。如果用域名。客户端想要访问完全可以直接修改本地Hosts\n解决方案因为客户端都是用windows，所以用了proxifier. 它支持劫持所有的客户端访问，然后使用http或者socks代理进行代理处理请求\n有了代理就比较好办了。比如本机访问192.168.1.3。将访问代理到公网中转服务器，中转服务器转发到公司内网，如图所示 有几个需要注意的地方\n\n公网转发到内网使用的是zerotier，虽然有很多种方案可以做到转发，但是我个人比较偏好zerotier。觉得比较好管理，效果也不错。其次为什么没有选择直接让本机客户端直接安装zerotier，是因为大概只有电信网络使用zerotier比较顺畅，其他比如移动，联通几乎无法使用\nproxifier支持http代理，但是不支持普通http代理，仅仅支持connect隧道方式(不清楚这两者的区别，可以查看最后的链接)。非常多的现成代理工具，对于普通的http请求使用的是普通代理，对于https请求使用的是隧道代理，这和要求不符合\n\n中转服务器使用mitmproxy进行转发\n123456789101112import mitmproxyfrom mitmproxy import httpdef request(flow):    if flow.request.pretty_host.endswith(&quot;192.168.3.1&quot;):        flow.request.host = &quot;172.22.233.213&quot;    else:        flow.response = http.HTTPResponse.make(            200,  # (optional) status code            b&quot;Hello World&quot;,  # (optional) content            &#123;&quot;Content-Type&quot;: &quot;text/html&quot;&#125;  # (optional) headers        )\n访问代理google。因为业务需求需要访问谷歌地图这个也是使用proxifier进行代理。但是这个并不能使用http代理。因为http代理使用的是本地DNS解析，这一步就会得到错误的IP. 因此需要使用socks5代理搭配DNS远程解析(proxifier可以设置)服务端使用的是clash, 配置如下\n1234567891011121314151617socks-port: 5553allow-lan: truemode: Ruleauthentication:  - &quot;xxxx:xxxx&quot;Proxy Group:  - name: &quot;auto&quot;    type: url-test    proxies:    - ss1    - ss2    - ss3Rule:  - DOMAIN-KEYWORD,google,auto  - MATCH,REJECT\n缺点\n客户端需要设置，而且设置略复杂。如果使用域名代替直接写ip要好处理很多\nhttp和socks5代理都是明文, 安全性缺失\n\n优点嘛，解决了问题，可实施性和性能都还是不错的\n参考资料http代理原理及其实现clash\n","dateCreated":"2020-02-22T18:00:00+08:00","dateModified":"2021-02-17T10:47:54+08:00","datePublished":"2020-02-22T18:00:00+08:00","description":"天灾人祸，今年开年大家被迫在家远程办公。以前从来没有规划过的一些网络问题被提上了台面。我司是一个几乎不加班的公司。从来没有人被要求要在家里完成工作。我们有一些服务是内网的，同时写了一些工具供办公室的文员使用。然后被迫远程，需要解决在家里访问公司内网的要求。同时因为业务的原因还需要访问谷歌","headline":"远程办公访问公司内网","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2020/02/22/WFH/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2020/02/22/WFH/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"天灾人祸，今年开年大家被迫在家远程办公。以前从来没有规划过的一些网络问题被提上了台面。我司是一个几乎不加班的公司。从来没有人被要求要在家里完成工作。我们有一些服务是内网的，同时写了一些工具供办公室的文员使用。然后被迫远程，需要解决在家里访问公司内网的要求。同时因为业务的原因还需要访问谷歌\n\n\n访问公司内网服务最常规的方案是VPN, 我对VPN不熟悉。但是在网上看到了一篇很详细的教程，刚好符合业务需求。利用softEther VPN远程访问内部网络。我试着搭建了一下。能够实现需求。用起来就是办公室里面的一台电脑一样。能够访问内网服务。能够正常使用Google. 但是我对这个不熟，不清楚如何优化它的配置。导致使用这个方案性能无比的差。连上VPN的客户端的所有请求都会经过中转服务器，在中转到内网。即使是不需要代理的请求也会被处理，这在性能上是完全无法接受的\n既然是http服务，那么如果使用了域名。是很好解决的。修改DNS让映射到一个外网ip. 访问外网ip,外网再转发到内网。基本不需要在客户端上做任何修改。即使觉得创建一个域名比较麻烦，相对写死一个ip，使用xip.io，或者sslip.io 这种服务也比写死ip强。如果用域名。客户端想要访问完全可以直接修改本地Hosts\n解决方案因为客户端都是用windows，所以用了proxifier. 它支持劫持所有的客户端访问，然后使用http或者socks代理进行代理处理请求\n有了代理就比较好办了。比如本机访问192.168.1.3。将访问代理到公网中转服务器，中转服务器转发到公司内网，如图所示 有几个需要注意的地方\n\n公网转发到内网使用的是zerotier，虽然有很多种方案可以做到转发，但是我个人比较偏好zerotier。觉得比较好管理，效果也不错。其次为什么没有选择直接让本机客户端直接安装zerotier，是因为大概只有电信网络使用zerotier比较顺畅，其他比如移动，联通几乎无法使用\nproxifier支持http代理，但是不支持普通http代理，仅仅支持connect隧道方式(不清楚这两者的区别，可以查看最后的链接)。非常多的现成代理工具，对于普通的http请求使用的是普通代理，对于https请求使用的是隧道代理，这和要求不符合\n\n中转服务器使用mitmproxy进行转发\n123456789101112import mitmproxyfrom mitmproxy import httpdef request(flow):    if flow.request.pretty_host.endswith(&quot;192.168.3.1&quot;):        flow.request.host = &quot;172.22.233.213&quot;    else:        flow.response = http.HTTPResponse.make(            200,  # (optional) status code            b&quot;Hello World&quot;,  # (optional) content            &#123;&quot;Content-Type&quot;: &quot;text/html&quot;&#125;  # (optional) headers        )\n访问代理google。因为业务需求需要访问谷歌地图这个也是使用proxifier进行代理。但是这个并不能使用http代理。因为http代理使用的是本地DNS解析，这一步就会得到错误的IP. 因此需要使用socks5代理搭配DNS远程解析(proxifier可以设置)服务端使用的是clash, 配置如下\n1234567891011121314151617socks-port: 5553allow-lan: truemode: Ruleauthentication:  - &quot;xxxx:xxxx&quot;Proxy Group:  - name: &quot;auto&quot;    type: url-test    proxies:    - ss1    - ss2    - ss3Rule:  - DOMAIN-KEYWORD,google,auto  - MATCH,REJECT\n缺点\n客户端需要设置，而且设置略复杂。如果使用域名代替直接写ip要好处理很多\nhttp和socks5代理都是明文, 安全性缺失\n\n优点嘛，解决了问题，可实施性和性能都还是不错的\n参考资料http代理原理及其实现clash\n","dateCreated":"2020-02-22T18:00:00+08:00","dateModified":"2021-02-17T10:47:54+08:00","datePublished":"2020-02-22T18:00:00+08:00","description":"天灾人祸，今年开年大家被迫在家远程办公。以前从来没有规划过的一些网络问题被提上了台面。我司是一个几乎不加班的公司。从来没有人被要求要在家里完成工作。我们有一些服务是内网的，同时写了一些工具供办公室的文员使用。然后被迫远程，需要解决在家里访问公司内网的要求。同时因为业务的原因还需要访问谷歌","headline":"远程办公访问公司内网","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2020/02/22/WFH/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2020/02/22/WFH/"}</script>
     <meta name="description" content="天灾人祸，今年开年大家被迫在家远程办公。以前从来没有规划过的一些网络问题被提上了台面。我司是一个几乎不加班的公司。从来没有人被要求要在家里完成工作。我们有一些服务是内网的，同时写了一些工具供办公室的文员使用。然后被迫远程，需要解决在家里访问公司内网的要求。同时因为业务的原因还需要访问谷歌">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="远程办公访问公司内网">
@@ -179,7 +179,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -195,87 +195,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -661,6 +583,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -961,8 +889,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

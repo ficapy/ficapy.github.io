@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧\n\nREADME\n首先有2种认证方式，生成一个指定的文件让letsencrypt访问。或者生成一个DNS记录让letsencrypt访问。第一种方式有非常大的局限性。比如你的80端口正在被使用。那么你需要先设置DNS解析，再修改下nginx的配置让网址能够被正常访问到。这就显得很麻烦了。主流的DNS服务提供商都已经提供了API接口，使用DNS的优势就是：\n\n任何电脑都能直接生成证书文件，不需要依赖本机能够被外部访问\n不需要对nginx做任何设置\n\n以下记录下我使用一个临时的digitalocean机器从0开始部署https的步骤(假设测试url为ssl.ficapy.com,操作环境为osx)\n我还是要安利下，临时使用digitalocean测试使用命令行工具tugboat灰常好啊\n\n安装tugboat用命令行快速创建机器以及测试完成后删除\n 1gem install tugboat\n将digitalocean的api写入让tugboat能够正常使用,并执行一些初始化设置\n 1tugboat authorize\n根据初始化默认设置创建一个vps\n 1tugboat create temp\nssh登陆\n 1tugboat ssh temp\n安装acme.sh\n 1curl https:&#x2F;&#x2F;get.acme.sh | sh\n参照acme.sh文档将dns的api信息作为环境变量写入(记得执行source ~/.bashrc)\n\n生成证书\n 1acme.sh --issue --dns dns_cf -d ssl.ficapy.com --debug\n将证书放置到位置并设置nginx重启命令\n 1234acme.sh --installcert -d ssl.ficapy.com \\           --keypath       &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.key  \\           --fullchainpath &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.pem \\           --reloadcmd     &quot;service nginx force-reload&quot;\n强制测试续约(该操作会自动执行注册过的事件，一般就是重启nginx咯，续约key是不会变的，变的是fullchain.cer文件)\n 1acme.sh --renew-all --force\n生成dhparam文件\n1openssl dhparam -out &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;dhparam.pem 2048\n使用生成一个标准的nginx配置文件并放入/etc/nginx/site-enables目录，示例如下\n123456789101112131415161718    server &#123;    listen 443 ssl;    server_name ssl.ficapy.com;    # certs sent to the client in SERVER HELLO are concatenated in ssl_certificate    ssl_certificate &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.pem;    ssl_certificate_key &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.key;    ssl_session_timeout 1d;    ssl_session_cache shared:SSL:50m;    # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits    ssl_dhparam &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;dhparam.pem;        # intermediate configuration. tweak to your needs.    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;    ssl_ciphers &#39;ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS&#39;;    ssl_prefer_server_ciphers on;&#125;\n最后就是浏览器访问以下测试完毕啦。如果出现错误可以查看nginx的日志/var/log/error.log，肯定是哪一步出问题啦，最后就是测试完毕后删除vps啦tugboat destory temp\n\n\n额外说一下其他的吧。最开始我试过阿里云dns的api，用的是子账号。结果子账号是无法包含(注意)dns的操作权限的，就总是失败。后来不用子账号，直接用原账号的api密匙就完全没问题啦~~~。另外各大云平台大多都有负载均衡器，然后可以填写https证书。这种就不太适合letsencrypt这种短期证书了。否则总上去换证书不被麻烦死。如果在这种负载均衡器上不设置https证书。那么就需要在负载均衡器每一台机器都设置上https证书，嗯想想也挺头大啊~~~，所以这种自动化方式只比较适合在一台机器上生成并维护证书\n再额外，哪个时候写个Ansible的playbook就好哒，可能会更加方便┑(￣Д ￣)┍\n参考github tugboatmozilla ssl-config-generator使用 acme.sh 给 Nginx 安装 Let’ s Encrypt 提供的免费 SSL 证书\n","dateCreated":"2017-03-05T17:19:27+08:00","dateModified":"2021-02-17T13:35:31+08:00","datePublished":"2017-03-05T17:19:27+08:00","description":"letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧","headline":"使用acme.sh快速搭建https","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/03/05/acme.sh_quick_start/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/03/05/acme.sh_quick_start/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧\n\nREADME\n首先有2种认证方式，生成一个指定的文件让letsencrypt访问。或者生成一个DNS记录让letsencrypt访问。第一种方式有非常大的局限性。比如你的80端口正在被使用。那么你需要先设置DNS解析，再修改下nginx的配置让网址能够被正常访问到。这就显得很麻烦了。主流的DNS服务提供商都已经提供了API接口，使用DNS的优势就是：\n\n任何电脑都能直接生成证书文件，不需要依赖本机能够被外部访问\n不需要对nginx做任何设置\n\n以下记录下我使用一个临时的digitalocean机器从0开始部署https的步骤(假设测试url为ssl.ficapy.com,操作环境为osx)\n我还是要安利下，临时使用digitalocean测试使用命令行工具tugboat灰常好啊\n\n安装tugboat用命令行快速创建机器以及测试完成后删除\n 1gem install tugboat\n将digitalocean的api写入让tugboat能够正常使用,并执行一些初始化设置\n 1tugboat authorize\n根据初始化默认设置创建一个vps\n 1tugboat create temp\nssh登陆\n 1tugboat ssh temp\n安装acme.sh\n 1curl https:&#x2F;&#x2F;get.acme.sh | sh\n参照acme.sh文档将dns的api信息作为环境变量写入(记得执行source ~/.bashrc)\n\n生成证书\n 1acme.sh --issue --dns dns_cf -d ssl.ficapy.com --debug\n将证书放置到位置并设置nginx重启命令\n 1234acme.sh --installcert -d ssl.ficapy.com \\           --keypath       &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.key  \\           --fullchainpath &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.pem \\           --reloadcmd     &quot;service nginx force-reload&quot;\n强制测试续约(该操作会自动执行注册过的事件，一般就是重启nginx咯，续约key是不会变的，变的是fullchain.cer文件)\n 1acme.sh --renew-all --force\n生成dhparam文件\n1openssl dhparam -out &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;dhparam.pem 2048\n使用生成一个标准的nginx配置文件并放入/etc/nginx/site-enables目录，示例如下\n123456789101112131415161718    server &#123;    listen 443 ssl;    server_name ssl.ficapy.com;    # certs sent to the client in SERVER HELLO are concatenated in ssl_certificate    ssl_certificate &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.pem;    ssl_certificate_key &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.key;    ssl_session_timeout 1d;    ssl_session_cache shared:SSL:50m;    # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits    ssl_dhparam &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;dhparam.pem;        # intermediate configuration. tweak to your needs.    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;    ssl_ciphers &#39;ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS&#39;;    ssl_prefer_server_ciphers on;&#125;\n最后就是浏览器访问以下测试完毕啦。如果出现错误可以查看nginx的日志/var/log/error.log，肯定是哪一步出问题啦，最后就是测试完毕后删除vps啦tugboat destory temp\n\n\n额外说一下其他的吧。最开始我试过阿里云dns的api，用的是子账号。结果子账号是无法包含(注意)dns的操作权限的，就总是失败。后来不用子账号，直接用原账号的api密匙就完全没问题啦~~~。另外各大云平台大多都有负载均衡器，然后可以填写https证书。这种就不太适合letsencrypt这种短期证书了。否则总上去换证书不被麻烦死。如果在这种负载均衡器上不设置https证书。那么就需要在负载均衡器每一台机器都设置上https证书，嗯想想也挺头大啊~~~，所以这种自动化方式只比较适合在一台机器上生成并维护证书\n再额外，哪个时候写个Ansible的playbook就好哒，可能会更加方便┑(￣Д ￣)┍\n参考github tugboatmozilla ssl-config-generator使用 acme.sh 给 Nginx 安装 Let’ s Encrypt 提供的免费 SSL 证书\n","dateCreated":"2017-03-05T17:19:27+08:00","dateModified":"2021-02-17T13:35:31+08:00","datePublished":"2017-03-05T17:19:27+08:00","description":"letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧","headline":"使用acme.sh快速搭建https","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/03/05/acme.sh_quick_start/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/03/05/acme.sh_quick_start/"}</script>
     <meta name="description" content="letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="使用acme.sh快速搭建https">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -677,6 +599,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -977,8 +905,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

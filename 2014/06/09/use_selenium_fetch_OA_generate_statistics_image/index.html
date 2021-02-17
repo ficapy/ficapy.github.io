@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：\n\n  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。\n  需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。\n  系统性能不佳，反应巨慢，异常返回情况比较多。\n\n\n\n最后选择了使用python+selenium+IEdriver控制IE浏览器登陆系统抓取OA数据，不得不说这是一个痛苦的过程selenium对IE的支持异常差，支持最好的firefox以及速度最快的chrome都无法在该例中使用。这直接造成了几乎每一步模拟操作都要加一句time.sleep(3)进行等待操作，以免返回异常或者没有抓取到数据。最开始的时候我直接全模拟手工操作一步步进入需要抓取的页面（OA是frame里面套frame），结果浏览器经常运行不久就报告崩溃。山穷水尽疑无路，柳暗花明又一村，最终发现登陆后直接打开要抓取frame页面的地址就可以了，这一步让整个抓取数据的工作以及稳定性提高的不少整个流程比较简单。模拟登陆→抓取数据→把数据存储到数据库（sqlite）→利用matplotlib把数据库的内容生成图表在登录OA的时候会要求填入验证码，虽然目测该系统验证码比较弱智，但是俺目前的水平还是破不了。so。本着力求无人操作全自动的原则使用了在线打码服务。不得不吐槽一下，试了2家，联系了客服，第一家流程复杂的不得了，和技术人员折腾半天最后还是不了了之，俺的要求多简单啊，结果一定要搞啥开发者分成路线。另外一家流程倒是简单了很多，结果网站给的示例教程还是前一个网站没更新无法使用，找客服要了一个新的示例文件，根本无法运行。问客服，得到的答复是技术人员测试使用完全没问题,WQNMLGB。示例是用urllib写的上传文件操作。潇潇洒洒上百行。没办法自己用requests重新写了下20行搞定，嗯，感叹下httpfor humans的称号果然不是白喊的&gt;_&lt;最后抓取到数据就是可视化的过程啦，以前只听过matplotlib库生成牛X的图表。试过之后还不错，还好比较知名案例比较多，否则真不知道要折腾多久才能搞出来，借鉴了stackoverflow上面的一个回答看了下官网的一些文档东拼西凑生成了个看的过去的图表，如下图（嗯，打了点薄码）以下是录制的视频，上传到youku就成渣画质了，想看的还是忍忍吧（注：由于录屏操作导致selenium无法正常截取验证码，最后用手工输入）密码:zouleiselenium_fetch_oa\n以下是github地址 https://github.com/ficapy/OA_Fetch\np.s由于暂时还不会打包，尝试使用pyinstall打包成exe文件失败。so如果想直接双击使用还是需要很费功夫的，需要安装matplotlib，selenium（IEdriver）\n","dateCreated":"2014-06-09T22:21:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2014-06-09T22:21:00+08:00","description":"最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：\n\n  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。\n  需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。\n  系统性能不佳，反应巨慢，异常返回情况比较多。\n","headline":"利用selenium抓取OA数据生成综合图表","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/","keywords":"python, matplotlib, selenium"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：\n\n  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。\n  需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。\n  系统性能不佳，反应巨慢，异常返回情况比较多。\n\n\n\n最后选择了使用python+selenium+IEdriver控制IE浏览器登陆系统抓取OA数据，不得不说这是一个痛苦的过程selenium对IE的支持异常差，支持最好的firefox以及速度最快的chrome都无法在该例中使用。这直接造成了几乎每一步模拟操作都要加一句time.sleep(3)进行等待操作，以免返回异常或者没有抓取到数据。最开始的时候我直接全模拟手工操作一步步进入需要抓取的页面（OA是frame里面套frame），结果浏览器经常运行不久就报告崩溃。山穷水尽疑无路，柳暗花明又一村，最终发现登陆后直接打开要抓取frame页面的地址就可以了，这一步让整个抓取数据的工作以及稳定性提高的不少整个流程比较简单。模拟登陆→抓取数据→把数据存储到数据库（sqlite）→利用matplotlib把数据库的内容生成图表在登录OA的时候会要求填入验证码，虽然目测该系统验证码比较弱智，但是俺目前的水平还是破不了。so。本着力求无人操作全自动的原则使用了在线打码服务。不得不吐槽一下，试了2家，联系了客服，第一家流程复杂的不得了，和技术人员折腾半天最后还是不了了之，俺的要求多简单啊，结果一定要搞啥开发者分成路线。另外一家流程倒是简单了很多，结果网站给的示例教程还是前一个网站没更新无法使用，找客服要了一个新的示例文件，根本无法运行。问客服，得到的答复是技术人员测试使用完全没问题,WQNMLGB。示例是用urllib写的上传文件操作。潇潇洒洒上百行。没办法自己用requests重新写了下20行搞定，嗯，感叹下httpfor humans的称号果然不是白喊的&gt;_&lt;最后抓取到数据就是可视化的过程啦，以前只听过matplotlib库生成牛X的图表。试过之后还不错，还好比较知名案例比较多，否则真不知道要折腾多久才能搞出来，借鉴了stackoverflow上面的一个回答看了下官网的一些文档东拼西凑生成了个看的过去的图表，如下图（嗯，打了点薄码）以下是录制的视频，上传到youku就成渣画质了，想看的还是忍忍吧（注：由于录屏操作导致selenium无法正常截取验证码，最后用手工输入）密码:zouleiselenium_fetch_oa\n以下是github地址 https://github.com/ficapy/OA_Fetch\np.s由于暂时还不会打包，尝试使用pyinstall打包成exe文件失败。so如果想直接双击使用还是需要很费功夫的，需要安装matplotlib，selenium（IEdriver）\n","dateCreated":"2014-06-09T22:21:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2014-06-09T22:21:00+08:00","description":"最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：\n\n  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。\n  需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。\n  系统性能不佳，反应巨慢，异常返回情况比较多。\n","headline":"利用selenium抓取OA数据生成综合图表","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/","keywords":"python, matplotlib, selenium"}</script>
     <meta name="description" content="最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：    出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。   需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="利用selenium抓取OA数据生成综合图表">
@@ -182,7 +182,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -198,87 +198,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -661,6 +583,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -961,8 +889,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

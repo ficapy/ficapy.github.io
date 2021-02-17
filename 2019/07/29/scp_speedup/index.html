@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"今天有15G的资料需要先传递到服务器上，琢磨着怎么能更快的上传完成，最后总结了一下方法，确实比直接scp传递效率高很多,从直接scp速度是40M/s，到参照参考文章利用lz4变成93M，最后换成zstd变成了152M,效果很棒，语句如下\n12tar -c gh&#x2F; |pv| zstd -9 -T0 |ssh -c chacha20-poly1305@openssh.com  -o &quot;MACs umac-64@openssh.com&quot; clickhouse &quot;zstd -d | tar -xC &#x2F;tmp&#x2F;xx&quot;\n反向\n12ssh -c chacha20-poly1305@openssh.com  -o &quot;MACs umac-64@openssh.com&quot; remote &quot;cat &#x2F;data&#x2F;filename | zstd -T0&quot; | pv | zstd -d &gt; filename\n\n\n一般传文件会有两种选择，scp和rsync，scp最基础，rsync主要是增加了块计算，实现了增量传输。增量传输是rsync的优点，在某些场景却也是它的致命伤，为了计算区别，rsync不得不读取要传输的文件信息，对比之后再决定传哪一块，这种方式就对流传输不友好，无法做到边生成文件边传输的作用\n加速传输的主要思路是，将文件压缩后再上传，但是一般的压缩上传又要分为几个步骤\n\n本地压缩\nscp上传\n远程解压\n\n每次上传一个文件需要执行三条命令很烦躁，而且绝大多数情况下上传的速度是很慢的，我们完全可以做到边压缩边上传，这样就节约了时间。在无损压缩算法里面最近几年新出的zstd算法可谓是完爆各类压缩算法，看官方benchmark图就知道性能差异了\n\n\n\nCompressor name\nRatio\nCompression\nDecompress.\n\n\n\nzstd 1.3.4 -1\n2.877\n470 MB/s\n1380 MB/s\n\n\nzlib  1.2.11 -1\n2.743\n110 MB/s\n400 MB/s\n\n\nbrotli  1.0.2 -0\n2.701\n410 MB/s\n430 MB/s\n\n\nquicklz   1.5.0 -1\n2.238\n550 MB/s\n710 MB/s\n\n\nlzo1x   2.09 -1\n2.108\n650 MB/s\n830 MB/s\n\n\nlz4   1.8.1\n2.101\n750 MB/s\n3700 MB/s\n\n\nsnappy  1.1.4\n2.091\n530 MB/s\n1800 MB/s\n\n\nlzf 3.6 -1\n2.077\n400 MB/s\n860 MB/s\n\n\n压缩快的没它压缩率高，而且解压速度还贼快，很适合流式处理的场景\n再看它的压缩级别和压缩率曲线\n我个人觉得上图中第9个点很有意思，压缩率3.5, 压缩速率为64M/s, 压缩率很高，压缩文件速率也很快，比如我用5G Wifi无线网络连接内网服务器，传输速度是40M/s，这个时候假如选择了压缩率为9，压缩速率为64,压缩后就只有18M了，浪费了40M/s的性能，所以这种情况应该选择低压缩率占满带宽，假如是上传到云服务器，可能上传速度只有2M/s，这个时候就可以选择更高的压缩率10或者11，但不能选择太大，应该极限情况下压缩文件速率只有5M/s, 因此选择怎样的压缩速率由原始上传速率决定\n注意: 以上讨论的时候文件能够被压缩节省空间的情况下，如果你本来就是传输已经被压缩过的文件，比如mp4, 那么启用压缩很可能得不偿失\n在内网某些情况下，也有人赞成不启用压缩进行传输，看这个链接 , 但是我个人觉得，在有zstd这么优秀的压缩算法加持下，对于可以压缩的文件，加上zstd肯定不会亏\n另外，使用zstd需要本机和远程机器同时安装zstd osx: brew install zstd ubuntu: sudo apt install zstd\n其他就是ssh传输参数的调节了，因为ssh会话是安全加密的，加密性越强的算法性能一般会越低，所以一般而言，换成更低级别的加密强度会获得更好的性能，当然用更优秀的算法在不损失安全性的情况下也能获得更好的性能，本来性能最好的是arcfour(有安全问题)，但是这玩意儿已经被弃用了，综合之下选择chacha20-poly1305@openssh.com这个速度也挺好\nMACs umac-64@openssh.com 这个参数就是参照一篇13年的文章了，具体我没有测试过\n总结使用流式压缩，边压缩边传输边解压，修改ssh传输配置, 让传输更快\n扩展如果你经常使用ssh协议传大量文件，把它加到ssh配置里面其实不错，这样就能减少命令行参数了\n123456789101112131415161718192021222324参照相关资料照抄的配置Host\t   *\tPort          \t\t 22    User          \t\t root    StrictHostKeyChecking    no    IdentityFile  \t\t ~&#x2F;.ssh&#x2F;id_rsa    ConnectTimeout \t\t15    ConnectionAttempts \t3    ServerAliveInterval \t20    ServerAliveCountMax \t5\t\t    # 多条连接共享    ControlMaster   \tauto    ControlPath     \t&#x2F;tmp&#x2F;ssh_mux_%h_%p_%r    # 长连接(退出服务器后连接依然可重用)    ControlPersist  \t4h    # 减少延迟    GSSAPIAuthentication \tno    # 选择合适的Ciphers和MACs http:&#x2F;&#x2F;www.wreck.net&#x2F;ssh_speed    Ciphers aes128-gcm@openssh.com,aes256-gcm@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,chacha20-poly1305@openssh.com    MACs umac-128-etm@openssh.com,umac-128@openssh.com,hmac-sha1-etm@openssh.com,hmac-sha1,hmac-sha2-512-etm@openssh.com,hmac-sha2-512,hmac-sha2-256-etm@openssh.com,hmac-sha2-256    KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256    HostKeyAlgorithms ssh-ed25519,ssh-rsa    ChallengeResponseAuthentication no    UseRoaming no\n\n相关资料使用tar+lz4/pigz+ssh更快的数据传输ssh-cipher-benchmark.sh另一个测试\n","dateCreated":"2019-07-29T21:58:21+08:00","dateModified":"2019-08-05T17:20:44+08:00","datePublished":"2019-07-29T21:58:21+08:00","description":"今天有15G的资料需要先传递到服务器上，琢磨着怎么能更快的上传完成，最后总结了一下方法，确实比直接scp传递效率高很多,从直接scp速度是40M/s，到参照参考文章利用lz4变成93M，最后换成zstd变成了152M,效果很棒，语句如下\n12tar -c gh&#x2F; |pv| zstd -9 -T0 |ssh -c chacha20-poly1305@openssh.com  -o &quot;MACs umac-64@openssh.com&quot; clickhouse &quot;zstd -d | tar -xC &#x2F;tmp&#x2F;xx&quot;\n反向\n12ssh -c chacha20-poly1305@openssh.com  -o &quot;MACs umac-64@openssh.com&quot; remote &quot;cat &#x2F;data&#x2F;filename | zstd -T0&quot; | pv | zstd -d &gt; filename","headline":"scp加速传输","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2019/07/29/scp_speedup/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2019/07/29/scp_speedup/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"今天有15G的资料需要先传递到服务器上，琢磨着怎么能更快的上传完成，最后总结了一下方法，确实比直接scp传递效率高很多,从直接scp速度是40M/s，到参照参考文章利用lz4变成93M，最后换成zstd变成了152M,效果很棒，语句如下\n12tar -c gh&#x2F; |pv| zstd -9 -T0 |ssh -c chacha20-poly1305@openssh.com  -o &quot;MACs umac-64@openssh.com&quot; clickhouse &quot;zstd -d | tar -xC &#x2F;tmp&#x2F;xx&quot;\n反向\n12ssh -c chacha20-poly1305@openssh.com  -o &quot;MACs umac-64@openssh.com&quot; remote &quot;cat &#x2F;data&#x2F;filename | zstd -T0&quot; | pv | zstd -d &gt; filename\n\n\n一般传文件会有两种选择，scp和rsync，scp最基础，rsync主要是增加了块计算，实现了增量传输。增量传输是rsync的优点，在某些场景却也是它的致命伤，为了计算区别，rsync不得不读取要传输的文件信息，对比之后再决定传哪一块，这种方式就对流传输不友好，无法做到边生成文件边传输的作用\n加速传输的主要思路是，将文件压缩后再上传，但是一般的压缩上传又要分为几个步骤\n\n本地压缩\nscp上传\n远程解压\n\n每次上传一个文件需要执行三条命令很烦躁，而且绝大多数情况下上传的速度是很慢的，我们完全可以做到边压缩边上传，这样就节约了时间。在无损压缩算法里面最近几年新出的zstd算法可谓是完爆各类压缩算法，看官方benchmark图就知道性能差异了\n\n\n\nCompressor name\nRatio\nCompression\nDecompress.\n\n\n\nzstd 1.3.4 -1\n2.877\n470 MB/s\n1380 MB/s\n\n\nzlib  1.2.11 -1\n2.743\n110 MB/s\n400 MB/s\n\n\nbrotli  1.0.2 -0\n2.701\n410 MB/s\n430 MB/s\n\n\nquicklz   1.5.0 -1\n2.238\n550 MB/s\n710 MB/s\n\n\nlzo1x   2.09 -1\n2.108\n650 MB/s\n830 MB/s\n\n\nlz4   1.8.1\n2.101\n750 MB/s\n3700 MB/s\n\n\nsnappy  1.1.4\n2.091\n530 MB/s\n1800 MB/s\n\n\nlzf 3.6 -1\n2.077\n400 MB/s\n860 MB/s\n\n\n压缩快的没它压缩率高，而且解压速度还贼快，很适合流式处理的场景\n再看它的压缩级别和压缩率曲线\n我个人觉得上图中第9个点很有意思，压缩率3.5, 压缩速率为64M/s, 压缩率很高，压缩文件速率也很快，比如我用5G Wifi无线网络连接内网服务器，传输速度是40M/s，这个时候假如选择了压缩率为9，压缩速率为64,压缩后就只有18M了，浪费了40M/s的性能，所以这种情况应该选择低压缩率占满带宽，假如是上传到云服务器，可能上传速度只有2M/s，这个时候就可以选择更高的压缩率10或者11，但不能选择太大，应该极限情况下压缩文件速率只有5M/s, 因此选择怎样的压缩速率由原始上传速率决定\n注意: 以上讨论的时候文件能够被压缩节省空间的情况下，如果你本来就是传输已经被压缩过的文件，比如mp4, 那么启用压缩很可能得不偿失\n在内网某些情况下，也有人赞成不启用压缩进行传输，看这个链接 , 但是我个人觉得，在有zstd这么优秀的压缩算法加持下，对于可以压缩的文件，加上zstd肯定不会亏\n另外，使用zstd需要本机和远程机器同时安装zstd osx: brew install zstd ubuntu: sudo apt install zstd\n其他就是ssh传输参数的调节了，因为ssh会话是安全加密的，加密性越强的算法性能一般会越低，所以一般而言，换成更低级别的加密强度会获得更好的性能，当然用更优秀的算法在不损失安全性的情况下也能获得更好的性能，本来性能最好的是arcfour(有安全问题)，但是这玩意儿已经被弃用了，综合之下选择chacha20-poly1305@openssh.com这个速度也挺好\nMACs umac-64@openssh.com 这个参数就是参照一篇13年的文章了，具体我没有测试过\n总结使用流式压缩，边压缩边传输边解压，修改ssh传输配置, 让传输更快\n扩展如果你经常使用ssh协议传大量文件，把它加到ssh配置里面其实不错，这样就能减少命令行参数了\n123456789101112131415161718192021222324参照相关资料照抄的配置Host\t   *\tPort          \t\t 22    User          \t\t root    StrictHostKeyChecking    no    IdentityFile  \t\t ~&#x2F;.ssh&#x2F;id_rsa    ConnectTimeout \t\t15    ConnectionAttempts \t3    ServerAliveInterval \t20    ServerAliveCountMax \t5\t\t    # 多条连接共享    ControlMaster   \tauto    ControlPath     \t&#x2F;tmp&#x2F;ssh_mux_%h_%p_%r    # 长连接(退出服务器后连接依然可重用)    ControlPersist  \t4h    # 减少延迟    GSSAPIAuthentication \tno    # 选择合适的Ciphers和MACs http:&#x2F;&#x2F;www.wreck.net&#x2F;ssh_speed    Ciphers aes128-gcm@openssh.com,aes256-gcm@openssh.com,aes128-ctr,aes192-ctr,aes256-ctr,chacha20-poly1305@openssh.com    MACs umac-128-etm@openssh.com,umac-128@openssh.com,hmac-sha1-etm@openssh.com,hmac-sha1,hmac-sha2-512-etm@openssh.com,hmac-sha2-512,hmac-sha2-256-etm@openssh.com,hmac-sha2-256    KexAlgorithms curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256    HostKeyAlgorithms ssh-ed25519,ssh-rsa    ChallengeResponseAuthentication no    UseRoaming no\n\n相关资料使用tar+lz4/pigz+ssh更快的数据传输ssh-cipher-benchmark.sh另一个测试\n","dateCreated":"2019-07-29T21:58:21+08:00","dateModified":"2019-08-05T17:20:44+08:00","datePublished":"2019-07-29T21:58:21+08:00","description":"今天有15G的资料需要先传递到服务器上，琢磨着怎么能更快的上传完成，最后总结了一下方法，确实比直接scp传递效率高很多,从直接scp速度是40M/s，到参照参考文章利用lz4变成93M，最后换成zstd变成了152M,效果很棒，语句如下\n12tar -c gh&#x2F; |pv| zstd -9 -T0 |ssh -c chacha20-poly1305@openssh.com  -o &quot;MACs umac-64@openssh.com&quot; clickhouse &quot;zstd -d | tar -xC &#x2F;tmp&#x2F;xx&quot;\n反向\n12ssh -c chacha20-poly1305@openssh.com  -o &quot;MACs umac-64@openssh.com&quot; remote &quot;cat &#x2F;data&#x2F;filename | zstd -T0&quot; | pv | zstd -d &gt; filename","headline":"scp加速传输","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2019/07/29/scp_speedup/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2019/07/29/scp_speedup/"}</script>
     <meta name="description" content="今天有15G的资料需要先传递到服务器上，琢磨着怎么能更快的上传完成，最后总结了一下方法，确实比直接scp传递效率高很多,从直接scp速度是40M&#x2F;s，到参照参考文章利用lz4变成93M，最后换成zstd变成了152M,效果很棒，语句如下 12tar -c gh&#x2F; |pv| zstd -9 -T0 |ssh -c chacha20-poly1305@openssh.com  -o &amp;quo">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="scp加速传输">
@@ -179,7 +179,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -195,87 +195,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -725,6 +647,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -1025,8 +953,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张两张图开始\n\n\n\naggregation 聚合使用聚合函数对points中的set返回聚合结果\n\n\bcount 返回非null的field values个数\ndistinct  返回唯一field values列表\nintegral 由过滤条件组成的积分\nmean  返回field values的算术平均值\nmedian 返回field values排序后的中位数\nmode  \b从\bfield values列表中返回最常用的值\nspread 最大减去最小\nstddev 标准差\nsum 求和\n\nbatch 批量\b为了减少influxdb的负载\b，建议对\bpoint的集合进行\u0005\b上传。\b使用\\n做分割。\b建议每批包含五千到一万个point\ncontinuous query(CQ) 持续查询\b定期执行\b自动查询并将结果持久化到数据库\ndatabase 数据库和关系型数据库差不多吧。\b\n\n\n\n关系型数据库\ninfluxdb\n\n\n\ndatabase\ndatabase\n\n\ntable\nmeasurement\n\n\n\brow\npoint\n\n\n特别点的就是。influxdb有保留策略\n\n\n\nduration \b持续时间保留策略的一个属性\b表示数据会保存多久。数据过期会被执行自动删除\nfield \b字段\b对比tag来说field没有被索引。在一段时间范围内查询field的值需要扫描所有的point\b得到结果。性能没有tag好\nfield key 字段的key在key-value\b对中表示field字段的key.\b只能是\bstring类型。存储到metadata中\nfield set 字段的集合所有field key的集合\nfield value 字段的值\bfield的value。类型可以是\bstrings、float、integers、booleans。field的值始终与时间戳相关\nfunction 函数分三类，聚合、选择、转换\nidentifier 标识emmm…\b持续查询\b名称、数据库名称、field字段、度量名称、保留策略名称、订阅名称、\b标签名称、用户名\nline protocol 行协议基于文本格式写入到influxdb\nmeasurement 度量emmm…\b\b可以类比到关系型数据库的table\nmetastore  元数据存储包含内部系统的状态信息。元素据存储包含了用户信息、数据库信息、保留侧列、分片\b元数据、持续查询和订阅\nnode 节点一个独立的influxd进程\nnow()\b本地\b的纳秒\b时间戳\npoint 点\n在serises中由fields\b组成的单个数据。每个point由它的series和时间戳组成唯一标识(重点)\n\b\b对于一个相同的时间戳和相同的series只能保存一个point.如果相同则新的field set\b覆盖掉旧的\n\nquery \b查询从influxdb中查询到相关数据的操作\nreplication factor 复制因子\b对集群有用。O__O “…可是集群并不是免费功能,\b将一份数据保留到集群上多份\n\bretention policy(RP) 保留策略以数据库作为单位，分三个方面。保留时长，数据多久进行一次分片操作。数据设置多少个副本。默认autogen表示永不删除、一个副本集(表示没副本)、七天进行一次分片\n\bschema 模式如何组织数据到influxdb。包含databases、retention policies、series、measurements、tag keys、tag values、\bfield keys\nselector 选择器一个函数，从特定范围的point中返回单个\n\nbottom 返回N个最小的\bfield value\nfirst  返回最开始时间的field value\nlast  返回最近时间的field value\nmax  返回最大的field value\nmin  返回最小的field value\npercentile 根据百分比返回\nsample  随机返回\ntop  返回最大的N个field value\n\nseries 序列由measurement、tag set、retention policy组成(注意:field set不在里面)\nseries cardinality 序列基数唯一的series数，\b如果一个\bmeasurement有2个tag key。1个有三个唯一的值。另一个有\b两个。\b那么序列基数为6.因为tag集合是\b保存在内存中的。在配置里面也有默认的数量限制\nserver 服务器运行influxdb的环境。应该一台服务器只运行一个influxdb进程\nshard 分片\b包含编码和压缩数据，作为TSM文件保存到磁盘。每个分片属于唯一的一个shard group。每个分片包含了特定的\bseries\nshard duration 分片持续时间由\b保留策略中的shard duration决定。\nshard group 分片组分片组(保留策略)-&gt;shard-&gt;data.\b为了自动删除搞出了这么多概念┑(￣Д ￣)┍\nsubscription 订阅O__O “… 好像并没有什么用。\b搭配\bkapactior使用。订阅它的数据进行存储\ntag对比field。tag是有索引的\ntag key略\ntag set略\ntag value只能为数字。存储到metadata\ntimestamp \b时间戳和point关联的时间戳，可以有多种时间格式\b存储和查询\ntransformation \b变换\b特定的点返回值和集合，得到的结果不能用来再次聚合\n\n\bceiling 目前还不支持(ceil,floor)\n\bcumulative_sum 将列表变成累加和列表(原有1,1,2,2变成1,2,4,6)  \nderivative 导数\ndifference 和第一个结果相减得到不同\nelapsed  \b得到时间戳的不同\nfloor  \b目前还不支持\nhistogram 目前还不支持\nmoving_average 滚动平均值(\b原有1\b,2,3得到1.5,2.5)\nnon_negative_derivative \b非负导数\nnon_negative_difference 非负不同\n\ntsm(Time Structured Merge tree)influxdb的专用\b存储格式。\b允许高压缩和\b高速写入读取速度要高于已存在的B+树或者\bLSM树\nuser\nadmin用户具有读写所有数据库的权限并且可以管理用户\n\b非admin有每个数据库的读写权限(被admin分配)\n\nvalue per second度量写入\b速度,\b比如每个point有四个field,\b每批有5000个point.写入速度为每秒10个。那么\bvalues per second速率为4*5000*10\nWAL(write ahead log) 预写日志略\n","dateCreated":"2017-12-09T08:02:41+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2017-12-09T08:02:41+08:00","description":"以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张两张图开始","headline":"influxdb 专业术语","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/12/09/influxdb_glossary/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/12/09/influxdb_glossary/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张两张图开始\n\n\n\naggregation 聚合使用聚合函数对points中的set返回聚合结果\n\n\bcount 返回非null的field values个数\ndistinct  返回唯一field values列表\nintegral 由过滤条件组成的积分\nmean  返回field values的算术平均值\nmedian 返回field values排序后的中位数\nmode  \b从\bfield values列表中返回最常用的值\nspread 最大减去最小\nstddev 标准差\nsum 求和\n\nbatch 批量\b为了减少influxdb的负载\b，建议对\bpoint的集合进行\u0005\b上传。\b使用\\n做分割。\b建议每批包含五千到一万个point\ncontinuous query(CQ) 持续查询\b定期执行\b自动查询并将结果持久化到数据库\ndatabase 数据库和关系型数据库差不多吧。\b\n\n\n\n关系型数据库\ninfluxdb\n\n\n\ndatabase\ndatabase\n\n\ntable\nmeasurement\n\n\n\brow\npoint\n\n\n特别点的就是。influxdb有保留策略\n\n\n\nduration \b持续时间保留策略的一个属性\b表示数据会保存多久。数据过期会被执行自动删除\nfield \b字段\b对比tag来说field没有被索引。在一段时间范围内查询field的值需要扫描所有的point\b得到结果。性能没有tag好\nfield key 字段的key在key-value\b对中表示field字段的key.\b只能是\bstring类型。存储到metadata中\nfield set 字段的集合所有field key的集合\nfield value 字段的值\bfield的value。类型可以是\bstrings、float、integers、booleans。field的值始终与时间戳相关\nfunction 函数分三类，聚合、选择、转换\nidentifier 标识emmm…\b持续查询\b名称、数据库名称、field字段、度量名称、保留策略名称、订阅名称、\b标签名称、用户名\nline protocol 行协议基于文本格式写入到influxdb\nmeasurement 度量emmm…\b\b可以类比到关系型数据库的table\nmetastore  元数据存储包含内部系统的状态信息。元素据存储包含了用户信息、数据库信息、保留侧列、分片\b元数据、持续查询和订阅\nnode 节点一个独立的influxd进程\nnow()\b本地\b的纳秒\b时间戳\npoint 点\n在serises中由fields\b组成的单个数据。每个point由它的series和时间戳组成唯一标识(重点)\n\b\b对于一个相同的时间戳和相同的series只能保存一个point.如果相同则新的field set\b覆盖掉旧的\n\nquery \b查询从influxdb中查询到相关数据的操作\nreplication factor 复制因子\b对集群有用。O__O “…可是集群并不是免费功能,\b将一份数据保留到集群上多份\n\bretention policy(RP) 保留策略以数据库作为单位，分三个方面。保留时长，数据多久进行一次分片操作。数据设置多少个副本。默认autogen表示永不删除、一个副本集(表示没副本)、七天进行一次分片\n\bschema 模式如何组织数据到influxdb。包含databases、retention policies、series、measurements、tag keys、tag values、\bfield keys\nselector 选择器一个函数，从特定范围的point中返回单个\n\nbottom 返回N个最小的\bfield value\nfirst  返回最开始时间的field value\nlast  返回最近时间的field value\nmax  返回最大的field value\nmin  返回最小的field value\npercentile 根据百分比返回\nsample  随机返回\ntop  返回最大的N个field value\n\nseries 序列由measurement、tag set、retention policy组成(注意:field set不在里面)\nseries cardinality 序列基数唯一的series数，\b如果一个\bmeasurement有2个tag key。1个有三个唯一的值。另一个有\b两个。\b那么序列基数为6.因为tag集合是\b保存在内存中的。在配置里面也有默认的数量限制\nserver 服务器运行influxdb的环境。应该一台服务器只运行一个influxdb进程\nshard 分片\b包含编码和压缩数据，作为TSM文件保存到磁盘。每个分片属于唯一的一个shard group。每个分片包含了特定的\bseries\nshard duration 分片持续时间由\b保留策略中的shard duration决定。\nshard group 分片组分片组(保留策略)-&gt;shard-&gt;data.\b为了自动删除搞出了这么多概念┑(￣Д ￣)┍\nsubscription 订阅O__O “… 好像并没有什么用。\b搭配\bkapactior使用。订阅它的数据进行存储\ntag对比field。tag是有索引的\ntag key略\ntag set略\ntag value只能为数字。存储到metadata\ntimestamp \b时间戳和point关联的时间戳，可以有多种时间格式\b存储和查询\ntransformation \b变换\b特定的点返回值和集合，得到的结果不能用来再次聚合\n\n\bceiling 目前还不支持(ceil,floor)\n\bcumulative_sum 将列表变成累加和列表(原有1,1,2,2变成1,2,4,6)  \nderivative 导数\ndifference 和第一个结果相减得到不同\nelapsed  \b得到时间戳的不同\nfloor  \b目前还不支持\nhistogram 目前还不支持\nmoving_average 滚动平均值(\b原有1\b,2,3得到1.5,2.5)\nnon_negative_derivative \b非负导数\nnon_negative_difference 非负不同\n\ntsm(Time Structured Merge tree)influxdb的专用\b存储格式。\b允许高压缩和\b高速写入读取速度要高于已存在的B+树或者\bLSM树\nuser\nadmin用户具有读写所有数据库的权限并且可以管理用户\n\b非admin有每个数据库的读写权限(被admin分配)\n\nvalue per second度量写入\b速度,\b比如每个point有四个field,\b每批有5000个point.写入速度为每秒10个。那么\bvalues per second速率为4*5000*10\nWAL(write ahead log) 预写日志略\n","dateCreated":"2017-12-09T08:02:41+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2017-12-09T08:02:41+08:00","description":"以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张两张图开始","headline":"influxdb 专业术语","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/12/09/influxdb_glossary/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/12/09/influxdb_glossary/"}</script>
     <meta name="description" content="以下内容基本全篇摘抄自v1.3的官方文档,先从理解下面这张两张图开始">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="influxdb 专业术语">
@@ -180,7 +180,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -196,87 +196,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -747,6 +669,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -1047,8 +975,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

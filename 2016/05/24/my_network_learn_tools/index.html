@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工具及资源(内容不定期更新)\n\n\n\n软件\ntcpdump/dumpcap/wireshark\n 这应该是最广为人知的数据嗅探工具了，他们之间的区别和联系在stackexchange有一个回答\n123456789101112131415wireshark - powerfull sniffer which can decode lots of protocols, lots of filters. tshark - command line version of wireshark dumpcap (part of wireshark) - can only capture traffic and can be used by wireshark &#x2F; tshark tcpdump - limited protocol decoding but available on most *NIX platforms ettercap - used for injecting traffic not sniffing All tools use libpcap (on windows winpcap) for sniffing. Wireshark &#x2F; tshark &#x2F; dumpcap can use tcpdump filter syntax as capture filter. As tcpdump is available on most *NIX system I usually use tcpdump. Depending on the problem I sometimes use tcpdump to capture traffic and write it to a file and the later use wireshark to analyze it. If available I use tshark but if the problem gets more complicated I still like to write the data to a file and then use Wireshark for analysis. \n 比较牛的是以上产品均出自The Tcpdump team组织，更牛的是查看github统计数据得知大概主要仅有四个人维护。。。。。。 作为低端用户本人使用tcpdump和wireshark就够了。为了减少数据包。我一般会用vagrant开虚拟机抓包查看请求。使用vagrant ssh -c &quot;sudo tcpdump -i eth0 -s 0 -U -w - not port 22 and tcp&quot; -- -ntt| wireshark -k -i - 或者 vagrant ssh -c &quot;sudo dumpcap -P -i any -w - -f &#39;not tcp port 22 and tcp&#39;&quot; -- -ntt | wireshark -k -i - 均可。一般dumpcap没有预装~~。把tcpdump的参数解释下,-i(interface)表示监听某一个接口或全部，-s表示单个数据包最大多少，很明显0代表没限制，-U设置每个包输出为一行，-w保存。后面即为过滤表达式，注意:一定要加上-- -ntt不加上wireshark会报错，至于为什么我还真没搞明白。。。。很明显使用tcpdump和wireshark最基本的技能是学会过滤表达式的语法，否则过于嘈杂的信息流马上会触发密集恐惧症吧。注意:wireshark中capture filter和display filter是决然不同的语法。快速入门请查看capture filter速查表和display filter速查表\n 是否对嗅探的原理感到灰常好奇。一图胜千言。希望下面这张图能够初步解决你的疑惑(谷歌搜索图片libpcap)\n \n\nscapy\n 大概可以看成是python对libpcap的封装。可以不仅仅可以嗅探，还可以直接构建一个包发送出去(以上wireshark是不支持的)，所支持的协议也是灰常之多。可谓是学习之利器。可以查看官方DEMO体验下，不过此软件相对的依赖较多。\n\nsocat\n 和netcat是一类，据说更强大。至于有多强大我就不知道了。有待以后挖掘。本人也就按照tldr上的示例按需要进行体验了下socat - TCP-LISTEN:8080,fork感觉是挺好用哒\n\nhttpie\n 某一天我发现github上python类目star数目最多的是这货。然后我就试用了下。。。。。对于调试来说易用性简直秒杀curl无数倍(仅从调试角度)。完全就是python里面requests和urllib的对比哇。使用灰常简单，比如http g.cn -v --debug(读者不妨亲自体验下),比较值得关注的是httpie的session使用以及它支持配置文件，详情请查看文档\n\nfiddler\n 主要对应用层http进行处理。它主要使用WinInet自动设置代理或者用户手动设置代理。意味着如果无法设置代理那么该软件是无法捕获到需要的数据的。另外它支持导入pcap格式的报文查看http交互(不能实时灰常可惜)，fiddler原理可查看。最后放一张图     \n\ntldr\n 该软件不属于该类别，可是命令行对于刚接触的新手是不那么有好的。比如tcp -h得到\n 123456789    tcpdump version 4.7.3 -- Apple version 67libpcap version 1.5.3 - Apple version 54Usage: tcpdump [-aAbdDefhHIJKlLnNOpqRStuUvxX#] [ -B size ] [ -c count ]\t\t[ -C file_size ] [ -E algo:secret ] [ -F file ] [ -G seconds ]\t\t[ -i interface ] [ -j tstamptype ] [ -M secret ]\t\t[ -Q metadata-filter-expression ]\t\t[ -r file ] [ -s snaplen ] [ -T type ] [ --version ] [ -V file ]\t\t[ -w file ] [ -W filecount ] [ -y datalinktype ] [ -z command ]\t\t[ -Z user ] [ expression ]\n 也是灰常容易让人摸不着头脑,tldr tcpdump可以给出常用的最基本的用法。对于初学者非常友好，能够最开始就体验到神器的强大，这样至少兴趣是产生了吧~~~\n\niperf3\n 使用简单(iperf3 --help)，测量tcp/udp传输数据丢包率等，牛X的是即使没有公网ip也能打洞进行测试,甚至于官网还提供了一些公共服务器让你进行学习测试。初略解释下，分别需要在服务端和客户端运行。大概参数如下\n 1234服务端:iperf3 -s -i1 -f Miperf3 -c ip_address -t 10 -i 1 -u -b 20M -l 1K -Rc&#x2F;s指定是服务端还是客户端t(time测试总时间)，i(interval报告间隔时间),u(udp模式),b(bandwidth带宽),l(len单个包的荷载)，f(format报告格式),R(reverse进行反向测试)\n资源抓包专业资料较多,cheat-sheet值得一看。另外此博客友链也可以看看酷 壳–TCP 的那些事儿\n\n\n相关资料libpcap维基百科tcpdump/dumpcap区别capture filter和display filter不同基于libpcap的sniffer实现\n","dateCreated":"2016-05-24T21:26:52+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-05-24T21:26:52+08:00","description":"虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工具及资源(内容不定期更新)","headline":"我的网络学习工具","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/05/24/my_network_learn_tools/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/05/24/my_network_learn_tools/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工具及资源(内容不定期更新)\n\n\n\n软件\ntcpdump/dumpcap/wireshark\n 这应该是最广为人知的数据嗅探工具了，他们之间的区别和联系在stackexchange有一个回答\n123456789101112131415wireshark - powerfull sniffer which can decode lots of protocols, lots of filters. tshark - command line version of wireshark dumpcap (part of wireshark) - can only capture traffic and can be used by wireshark &#x2F; tshark tcpdump - limited protocol decoding but available on most *NIX platforms ettercap - used for injecting traffic not sniffing All tools use libpcap (on windows winpcap) for sniffing. Wireshark &#x2F; tshark &#x2F; dumpcap can use tcpdump filter syntax as capture filter. As tcpdump is available on most *NIX system I usually use tcpdump. Depending on the problem I sometimes use tcpdump to capture traffic and write it to a file and the later use wireshark to analyze it. If available I use tshark but if the problem gets more complicated I still like to write the data to a file and then use Wireshark for analysis. \n 比较牛的是以上产品均出自The Tcpdump team组织，更牛的是查看github统计数据得知大概主要仅有四个人维护。。。。。。 作为低端用户本人使用tcpdump和wireshark就够了。为了减少数据包。我一般会用vagrant开虚拟机抓包查看请求。使用vagrant ssh -c &quot;sudo tcpdump -i eth0 -s 0 -U -w - not port 22 and tcp&quot; -- -ntt| wireshark -k -i - 或者 vagrant ssh -c &quot;sudo dumpcap -P -i any -w - -f &#39;not tcp port 22 and tcp&#39;&quot; -- -ntt | wireshark -k -i - 均可。一般dumpcap没有预装~~。把tcpdump的参数解释下,-i(interface)表示监听某一个接口或全部，-s表示单个数据包最大多少，很明显0代表没限制，-U设置每个包输出为一行，-w保存。后面即为过滤表达式，注意:一定要加上-- -ntt不加上wireshark会报错，至于为什么我还真没搞明白。。。。很明显使用tcpdump和wireshark最基本的技能是学会过滤表达式的语法，否则过于嘈杂的信息流马上会触发密集恐惧症吧。注意:wireshark中capture filter和display filter是决然不同的语法。快速入门请查看capture filter速查表和display filter速查表\n 是否对嗅探的原理感到灰常好奇。一图胜千言。希望下面这张图能够初步解决你的疑惑(谷歌搜索图片libpcap)\n \n\nscapy\n 大概可以看成是python对libpcap的封装。可以不仅仅可以嗅探，还可以直接构建一个包发送出去(以上wireshark是不支持的)，所支持的协议也是灰常之多。可谓是学习之利器。可以查看官方DEMO体验下，不过此软件相对的依赖较多。\n\nsocat\n 和netcat是一类，据说更强大。至于有多强大我就不知道了。有待以后挖掘。本人也就按照tldr上的示例按需要进行体验了下socat - TCP-LISTEN:8080,fork感觉是挺好用哒\n\nhttpie\n 某一天我发现github上python类目star数目最多的是这货。然后我就试用了下。。。。。对于调试来说易用性简直秒杀curl无数倍(仅从调试角度)。完全就是python里面requests和urllib的对比哇。使用灰常简单，比如http g.cn -v --debug(读者不妨亲自体验下),比较值得关注的是httpie的session使用以及它支持配置文件，详情请查看文档\n\nfiddler\n 主要对应用层http进行处理。它主要使用WinInet自动设置代理或者用户手动设置代理。意味着如果无法设置代理那么该软件是无法捕获到需要的数据的。另外它支持导入pcap格式的报文查看http交互(不能实时灰常可惜)，fiddler原理可查看。最后放一张图     \n\ntldr\n 该软件不属于该类别，可是命令行对于刚接触的新手是不那么有好的。比如tcp -h得到\n 123456789    tcpdump version 4.7.3 -- Apple version 67libpcap version 1.5.3 - Apple version 54Usage: tcpdump [-aAbdDefhHIJKlLnNOpqRStuUvxX#] [ -B size ] [ -c count ]\t\t[ -C file_size ] [ -E algo:secret ] [ -F file ] [ -G seconds ]\t\t[ -i interface ] [ -j tstamptype ] [ -M secret ]\t\t[ -Q metadata-filter-expression ]\t\t[ -r file ] [ -s snaplen ] [ -T type ] [ --version ] [ -V file ]\t\t[ -w file ] [ -W filecount ] [ -y datalinktype ] [ -z command ]\t\t[ -Z user ] [ expression ]\n 也是灰常容易让人摸不着头脑,tldr tcpdump可以给出常用的最基本的用法。对于初学者非常友好，能够最开始就体验到神器的强大，这样至少兴趣是产生了吧~~~\n\niperf3\n 使用简单(iperf3 --help)，测量tcp/udp传输数据丢包率等，牛X的是即使没有公网ip也能打洞进行测试,甚至于官网还提供了一些公共服务器让你进行学习测试。初略解释下，分别需要在服务端和客户端运行。大概参数如下\n 1234服务端:iperf3 -s -i1 -f Miperf3 -c ip_address -t 10 -i 1 -u -b 20M -l 1K -Rc&#x2F;s指定是服务端还是客户端t(time测试总时间)，i(interval报告间隔时间),u(udp模式),b(bandwidth带宽),l(len单个包的荷载)，f(format报告格式),R(reverse进行反向测试)\n资源抓包专业资料较多,cheat-sheet值得一看。另外此博客友链也可以看看酷 壳–TCP 的那些事儿\n\n\n相关资料libpcap维基百科tcpdump/dumpcap区别capture filter和display filter不同基于libpcap的sniffer实现\n","dateCreated":"2016-05-24T21:26:52+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-05-24T21:26:52+08:00","description":"虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP/IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工具及资源(内容不定期更新)","headline":"我的网络学习工具","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/05/24/my_network_learn_tools/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/05/24/my_network_learn_tools/"}</script>
     <meta name="description" content="虽然一直在写web后台，可是对底层网络知道的也不多。毕竟这些东西经过层层封装，到web框架时给我们提供的内容已经和TCP&#x2F;IP相隔很远了。可是作为一个有好奇心的人。我还是会仔细去刨根问底，得到心中的答案。梳理清楚web后台开发中所接触的种种东西。以前总想把东西写简单写点大而全的东西，可是底层网络涉及到的内容真是太特么复杂了。我也只能慢慢来了。工欲善其事必先利其器，本篇列出学习过程中用到的一些网络工">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="我的网络学习工具">
@@ -180,7 +180,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -196,87 +196,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -677,6 +599,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -977,8 +905,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

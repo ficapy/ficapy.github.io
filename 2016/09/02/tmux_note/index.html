@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.\n\n\n基本概念\ntmux分客户端和服务端，这个docker这种是很相似的，我们操作的只是针对客户端，服务端以守护进程运行，这样实现了我们退出后下次再进入依旧保持了运行状态\nsession:比如你在公司有个工作环境，在家里又是另外一个工作环境。这2个环境差别非常大。那么就使用2个不同的session\nwindow:你在工作环境中要打开多个软件，聊天的、BT下载的、听歌的etc\npane:一个软件要分成多个区域输出\n当然一般来说越少是越方便切换的。就个人来说一个session就够了,主要切换来自于window和pane\ntmux主要来说最重要的就是对各个窗口的切换排列管理，各种键位绑定也是用于对窗口的切换\n\nwindows,pane基本设置和vim一样tmux也是使用一个主要的prefix key，先输入prefix key之后再输入绑定的字母执行操作.下面就将我从多个地方copy来的配置解释一番-_-\n设置成C-a,同时解绑原来的C-b,最后的bind a的作用就是:C-a本来是回到行首的快捷键，被tmux使用之后使用此设定变成了C-a-a到行首\n123set -g prefix ^aunbind ^bbind a send-prefix\n之后就是对window和pane的快捷键设定，本人使用vim相似的快捷键设定。这个好像没啥好说的，比如hjkl在pane中移动,s、v分屏，使用&lt;、&gt;、+、_对pane进行大小的改变，使用C-u、C-d进行交换，使用q、C-q进行关闭pane和window，举个例子\n1234bind k selectp -Ubind -r &lt; resize-pane -L 10bind ^u swapp -Ubind q killp\n使用-r(recursion)就能够输入一次&lt;之后马上多次输入&lt;、&gt;有效,这对于调整大小时是非常有用的。。。,没有被重写的配置基本都是非常好记的单词,c、n、w、d记这些都是毫不费力的\n鼠标、复制及清屏设置如果你不进行其他设置可能用几下动一下鼠标上下翻一下，就会高呼WTF。毕竟完全不动鼠标的大神不多，我还是打开鼠标设置吧,这样也能同时使用鼠标进行上下滑动了，其次复制也和以前不一样了，特别是如果你分了2个竖向的pane,这样和以前一样用鼠标复制就出问题了，当然你可以用z(zoom)全屏当前的pane，然后用鼠标复制。然而一个vim党是不会这样做的T_T。下面是设置\n123456789101112131415setw -g mouse on#set vi mode for copy modesetw -g mode-keys vi# more settings to make copy-mode more vim-likeunbind [bind Escape copy-modeunbind pbind p paste-bufferbind -t vi-copy &#39;v&#39; begin-selectionbind -t vi-copy &#39;y&#39; copy-selection# Buffers to&#x2F;from Mac clipboard, yay tmux book from pragprogbind C-c run &quot;tmux save-buffer - | reattach-to-user-namespace pbcopy&quot;bind C-v run &quot;tmux set-buffer $(reattach-to-user-namespace pbpaste); tmux paste-buffer&quot;\n这样复制好像变得复杂了。。。需要先进入选择模式C-a-ESC-v选择需要复制的内容后再执行y复制到tmux的缓冲区，另外像tmux和vim这种的粘贴板是独立的,和osx系统的粘贴板不共通,如果要再复制到系统粘贴板，此时再使用C-a-C-c,好像是比较复杂啊。。你可以按住option再用鼠标选择也是直接复制到系统粘贴板，要让vim和tmux和系统粘贴板通用，你需要brew install reattach-to-user-namespace安装。另外iterm2其实是可以让他们共用的，下图选中Applications in terminal may access clipboard也能达到同样的效果，不过下面的参考文章有说有缺点-_-我就听了他的了\n再就是配置重载和清屏\n1234#bind -n C-l send-keys &#39;C-l&#39;bind -n C-k send-keys -R \\; send-keys C-l \\; clear-history# reload config (prefix r)bind r source ~&#x2F;.tmux.conf \\; display &quot;Configuration reloaded!&quot;\n就好像command+k完全清屏，tmux也可以，不过需要配置(这个完美清屏命令找了很久),-n表示不需要先按prefix key直接使用C-k就调用了，另外不要将C-l设置为清屏,会让TAB补全失效\n状态栏配置一个好看的状态栏好像还是比较困难的,我比较偷懒就直接使用了tmux-powerline和tmux-colors-solarized,下面是效果注意配置powerline的时候可能需要在~/.zshrc中加入PS1=&quot;$PS1&quot;&#39;$([ -n &quot;$TMUX&quot; ] &amp;&amp; tmux setenv TMUXPWD_$(tmux display -p &quot;#D&quot; | tr -d %) &quot;$PWD&quot;)&#39;有的时候修改配置可能需要tmux kill-server后重新进入才能看到效果\n在状体栏的配置会看到这种set-option -g status-bg colour235,colour235是什么鬼颜色。真是不好猜啊，可以单独开一个pane打印输出所有256种颜色，自己对比修改成喜欢的颜色\n123for i in &#123;0..255&#125; ; do    printf &quot;\\x1b[38;5;$&#123;i&#125;mcolour$&#123;i&#125;\\n&quot;done\n其他我们设置好了之后可能需要在打开iterm之后就直接进入tmux,否则岂不是白忙活(≧▽≦)/啦啦啦，很简单,在iterm的设置页profiles→General→Send text at start中填入tmux attach -t init || tmux new -s init,更有用的是在我们远程到vps上的时候直接进入到tmux,设置一个别名如下alias hg=&quot;ssh -t hg \\&quot;bash -c &#39;tmux a -t init || tmux new -s init&#39;\\&quot;&quot;这样我们执行hg的时候就新建一个session或者连接到已有的session\n如果我们本地开一个tmux，然后远程连接vps，vps再运行tmux，这会造成嵌套使用。特别是当你的prefix key还是一样的时候。。。悲催了，你所输入的快捷键只会被本地的tmux处理而不会被远程的tmux响应，要处理这个问题可以将2者的prefix key设置成不一样,比如一个为a另外一个为s。或者使用iterm单独开一个窗口，我更推荐后者,因为设置成不同的prefix key输入快了可能就输入混淆啦。\n另外,使用了tmux显著增加了iterm2的耗电量,估计是我设置的那个状态栏显示上传下载流量导致的，每几秒刷新执行一次shell或许挺耗电.\n我的tmux配置\n参考A tmux Primergotbletu youtube playlistMaking the clipboard work between iTerm2, tmux, vim and OS X.How does the tmux color palette work?\n","dateCreated":"2016-09-02T15:43:22+08:00","dateModified":"2021-02-17T10:51:39+08:00","datePublished":"2016-09-02T15:43:22+08:00","description":"自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.","headline":"tmux","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/09/02/tmux_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/09/02/tmux_note/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.\n\n\n基本概念\ntmux分客户端和服务端，这个docker这种是很相似的，我们操作的只是针对客户端，服务端以守护进程运行，这样实现了我们退出后下次再进入依旧保持了运行状态\nsession:比如你在公司有个工作环境，在家里又是另外一个工作环境。这2个环境差别非常大。那么就使用2个不同的session\nwindow:你在工作环境中要打开多个软件，聊天的、BT下载的、听歌的etc\npane:一个软件要分成多个区域输出\n当然一般来说越少是越方便切换的。就个人来说一个session就够了,主要切换来自于window和pane\ntmux主要来说最重要的就是对各个窗口的切换排列管理，各种键位绑定也是用于对窗口的切换\n\nwindows,pane基本设置和vim一样tmux也是使用一个主要的prefix key，先输入prefix key之后再输入绑定的字母执行操作.下面就将我从多个地方copy来的配置解释一番-_-\n设置成C-a,同时解绑原来的C-b,最后的bind a的作用就是:C-a本来是回到行首的快捷键，被tmux使用之后使用此设定变成了C-a-a到行首\n123set -g prefix ^aunbind ^bbind a send-prefix\n之后就是对window和pane的快捷键设定，本人使用vim相似的快捷键设定。这个好像没啥好说的，比如hjkl在pane中移动,s、v分屏，使用&lt;、&gt;、+、_对pane进行大小的改变，使用C-u、C-d进行交换，使用q、C-q进行关闭pane和window，举个例子\n1234bind k selectp -Ubind -r &lt; resize-pane -L 10bind ^u swapp -Ubind q killp\n使用-r(recursion)就能够输入一次&lt;之后马上多次输入&lt;、&gt;有效,这对于调整大小时是非常有用的。。。,没有被重写的配置基本都是非常好记的单词,c、n、w、d记这些都是毫不费力的\n鼠标、复制及清屏设置如果你不进行其他设置可能用几下动一下鼠标上下翻一下，就会高呼WTF。毕竟完全不动鼠标的大神不多，我还是打开鼠标设置吧,这样也能同时使用鼠标进行上下滑动了，其次复制也和以前不一样了，特别是如果你分了2个竖向的pane,这样和以前一样用鼠标复制就出问题了，当然你可以用z(zoom)全屏当前的pane，然后用鼠标复制。然而一个vim党是不会这样做的T_T。下面是设置\n123456789101112131415setw -g mouse on#set vi mode for copy modesetw -g mode-keys vi# more settings to make copy-mode more vim-likeunbind [bind Escape copy-modeunbind pbind p paste-bufferbind -t vi-copy &#39;v&#39; begin-selectionbind -t vi-copy &#39;y&#39; copy-selection# Buffers to&#x2F;from Mac clipboard, yay tmux book from pragprogbind C-c run &quot;tmux save-buffer - | reattach-to-user-namespace pbcopy&quot;bind C-v run &quot;tmux set-buffer $(reattach-to-user-namespace pbpaste); tmux paste-buffer&quot;\n这样复制好像变得复杂了。。。需要先进入选择模式C-a-ESC-v选择需要复制的内容后再执行y复制到tmux的缓冲区，另外像tmux和vim这种的粘贴板是独立的,和osx系统的粘贴板不共通,如果要再复制到系统粘贴板，此时再使用C-a-C-c,好像是比较复杂啊。。你可以按住option再用鼠标选择也是直接复制到系统粘贴板，要让vim和tmux和系统粘贴板通用，你需要brew install reattach-to-user-namespace安装。另外iterm2其实是可以让他们共用的，下图选中Applications in terminal may access clipboard也能达到同样的效果，不过下面的参考文章有说有缺点-_-我就听了他的了\n再就是配置重载和清屏\n1234#bind -n C-l send-keys &#39;C-l&#39;bind -n C-k send-keys -R \\; send-keys C-l \\; clear-history# reload config (prefix r)bind r source ~&#x2F;.tmux.conf \\; display &quot;Configuration reloaded!&quot;\n就好像command+k完全清屏，tmux也可以，不过需要配置(这个完美清屏命令找了很久),-n表示不需要先按prefix key直接使用C-k就调用了，另外不要将C-l设置为清屏,会让TAB补全失效\n状态栏配置一个好看的状态栏好像还是比较困难的,我比较偷懒就直接使用了tmux-powerline和tmux-colors-solarized,下面是效果注意配置powerline的时候可能需要在~/.zshrc中加入PS1=&quot;$PS1&quot;&#39;$([ -n &quot;$TMUX&quot; ] &amp;&amp; tmux setenv TMUXPWD_$(tmux display -p &quot;#D&quot; | tr -d %) &quot;$PWD&quot;)&#39;有的时候修改配置可能需要tmux kill-server后重新进入才能看到效果\n在状体栏的配置会看到这种set-option -g status-bg colour235,colour235是什么鬼颜色。真是不好猜啊，可以单独开一个pane打印输出所有256种颜色，自己对比修改成喜欢的颜色\n123for i in &#123;0..255&#125; ; do    printf &quot;\\x1b[38;5;$&#123;i&#125;mcolour$&#123;i&#125;\\n&quot;done\n其他我们设置好了之后可能需要在打开iterm之后就直接进入tmux,否则岂不是白忙活(≧▽≦)/啦啦啦，很简单,在iterm的设置页profiles→General→Send text at start中填入tmux attach -t init || tmux new -s init,更有用的是在我们远程到vps上的时候直接进入到tmux,设置一个别名如下alias hg=&quot;ssh -t hg \\&quot;bash -c &#39;tmux a -t init || tmux new -s init&#39;\\&quot;&quot;这样我们执行hg的时候就新建一个session或者连接到已有的session\n如果我们本地开一个tmux，然后远程连接vps，vps再运行tmux，这会造成嵌套使用。特别是当你的prefix key还是一样的时候。。。悲催了，你所输入的快捷键只会被本地的tmux处理而不会被远程的tmux响应，要处理这个问题可以将2者的prefix key设置成不一样,比如一个为a另外一个为s。或者使用iterm单独开一个窗口，我更推荐后者,因为设置成不同的prefix key输入快了可能就输入混淆啦。\n另外,使用了tmux显著增加了iterm2的耗电量,估计是我设置的那个状态栏显示上传下载流量导致的，每几秒刷新执行一次shell或许挺耗电.\n我的tmux配置\n参考A tmux Primergotbletu youtube playlistMaking the clipboard work between iTerm2, tmux, vim and OS X.How does the tmux color palette work?\n","dateCreated":"2016-09-02T15:43:22+08:00","dateModified":"2021-02-17T10:51:39+08:00","datePublished":"2016-09-02T15:43:22+08:00","description":"自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.","headline":"tmux","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/09/02/tmux_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/09/02/tmux_note/"}</script>
     <meta name="description" content="自screen之后tmux早已身名远扬，然而这个东西对于一般人来说好像并没有什么卵用，好像还比较麻烦。这也是我以前的看法。主要原因就是iterm2已经非常完美了。iterm2的好用一定程度上掩盖了tmux的光辉。因为iterm2是开箱即用,tmux不配置不一定用的舒服。直到某一天我在youtube上看到了2个视频，我知道我该改改了:)我个人也是刚入门,下面介绍一些基本知识，希望对读者有所帮助.">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="tmux">
@@ -181,7 +181,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -197,87 +197,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -673,6 +595,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -973,8 +901,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：\n\n  windows7 X64\n  vagrant\n  ubuntu14\n  xshell\n  cmder(可选)\n  pycharm\n\n\n\n准备步骤：\n1.环境搭建1234vagrant box add ubuntu14 URL(或者先下载box文件用文件名替代)  vagrant init ubuntu14  vagrant up  vagrant halt  \nNOTE.vagrant使用可谓相当简单了,使用单文件配置,整个周期分为add/init/up/reload/suspend/halt/destroy;\n另外推荐将22端口进行转发。默认转发到2222，但是当打开多个虚拟机的时候因为2222端口被占用所有会随机指定一个端口。So，固定一下对自己的设置是相当有利的。当然因为Flask默认使用5000端口进行测试，对它进行转发也是理所当然的;\n至于使用vagrantssh登陆,用系统自带的CMD那是相当难受滴,使用cmder全功能版不错。用过一段时间不得不说相对CMD真实赏心悦目,在我的使用中感觉确定有两个。毕竟不是专业的SSH客户端，对于中文文件名无能为力，或许是我不会设置，其二是无法设置代理而且连接到远程VPS时候输入卡顿严重。所以最后还是回归了Xshell。\n开机关机每次进入cmder cd c:\\path 进入vagrant 在运行vagrantup是相当厌烦的，用python脚本启动它是个不错的选择\n12345import osos.system(&#x27;cd &quot;c:\\\\\\\\ficapy\\\\\\\\microblog&quot; &amp;&amp; vagrant reload&#x27;)  #是不是异常简单呢 切换到目录执行reload操作→不一定要先启动再重载！  # &amp;&amp;表示上个操作执行完毕后在执行下面的操作  \n2.Linux配置12345678sudo apt-get update upgrade \\#更新源&amp;升级系统  sudo apt-get install git git-core python python-dev python-setuptools  sudo easy\\_install pip  sudo pip install virtualenv virtualenvwrapper  nano \\~/.bashrc  添加下面两行配置后重新运行(source \\~/.bashrc)  export WORKON\\_HOME=\\$HOME/.virtualenvs  source /usr/local/bin/virtualenvwrapper.sh  \nNOTE:virtualenvwarpper顾名思义是对virtualenv的二次包装,给我的赶脚就是环境不是在放在开发文件夹下面了，而且命令行直观友好容易记忆，还有TAB自动补全哟。常用的大致有mkvirtualenv/rmvirtualenv/lsvirtualenv/workon/deactive;\n另外使用pip安装第三方包的时候不要使用sudo pipinstall,该操作会导致安装到全局，而不是安装到当前环境中.直接使用pipinstall安装.Linux比较小白，暂时我也不知道为什么\nubuntu14自带python2.7可以不用安装python。可是python-dev这个必装，否则pip安装一些需要编译安装的第三方包的时候会报一些莫名其妙的错误，比如pycurl等。同时直接使用二进制包python-pip安装pip有时候安装包会出错（一朝被蛇咬，十年怕井绳啊，所以我还是使用官方推荐的easy_install方式安装了，还有一种是下载get.py方式）\n3.windows端Pycharm设置使用vagrant后，默认设置文件将该目录映射到虚拟的的/vagrant文件夹。我们就将项目统一放在该文件夹下\n不得不说的是pycharm上的vagrant插件在windows上是无法使用的,至少对我来说是这样，手动配置远端python解释器，如下图\nNote.在这里点击fillfrom vagrant config就有用了,改变2222端口是一个很好的选择\n设置远端python解释器后就可以在本地调用了，这还不够，同时还需要设置项目目录映射，以便解释器能够根据本地文件映射到虚拟机文件的地址让解释器执行。选择Run→Configureations,最主要的设置是一、选择解释器；二、设置workdirectory和Path mapping之后就能正确的使用虚拟机的python运行本地文件了;\n另外，有时候不想用xshell连接后运行python。这时候使用pycharm也是相当方便的。Tools→runpythonconsole就够了,会默认添加当前目录到python的包索引列表方便导入,只是有时候这个目录并不完全正确,可能是设置还是有错误吧，我每次都重运行sys.path.extend([‘/vagrant/path~~~~~~‘])手动解决\n~~~~~~~~还想写个安装heroku客户端的,自己还没有很好的实践,以后试试吧，至少测试部署还是相当方便的\n参考：http://blog.segmentfault.com/fenbox/1190000000264347http://pedrokroger.net/getting-started-pycharm-python-ide/http://bliker.github.io/cmder/\n","dateCreated":"2014-10-29T22:19:00+08:00","dateModified":"2021-02-17T10:52:12+08:00","datePublished":"2014-10-29T22:19:00+08:00","description":"记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：\n\n  windows7 X64\n  vagrant\n  ubuntu14\n  xshell\n  cmder(可选)\n  pycharm\n","headline":"Flask项目初始配置","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/10/29/flask_project_init/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/10/29/flask_project_init/","keywords":"Flask配置, pycharm, vagrant"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：\n\n  windows7 X64\n  vagrant\n  ubuntu14\n  xshell\n  cmder(可选)\n  pycharm\n\n\n\n准备步骤：\n1.环境搭建1234vagrant box add ubuntu14 URL(或者先下载box文件用文件名替代)  vagrant init ubuntu14  vagrant up  vagrant halt  \nNOTE.vagrant使用可谓相当简单了,使用单文件配置,整个周期分为add/init/up/reload/suspend/halt/destroy;\n另外推荐将22端口进行转发。默认转发到2222，但是当打开多个虚拟机的时候因为2222端口被占用所有会随机指定一个端口。So，固定一下对自己的设置是相当有利的。当然因为Flask默认使用5000端口进行测试，对它进行转发也是理所当然的;\n至于使用vagrantssh登陆,用系统自带的CMD那是相当难受滴,使用cmder全功能版不错。用过一段时间不得不说相对CMD真实赏心悦目,在我的使用中感觉确定有两个。毕竟不是专业的SSH客户端，对于中文文件名无能为力，或许是我不会设置，其二是无法设置代理而且连接到远程VPS时候输入卡顿严重。所以最后还是回归了Xshell。\n开机关机每次进入cmder cd c:\\path 进入vagrant 在运行vagrantup是相当厌烦的，用python脚本启动它是个不错的选择\n12345import osos.system(&#x27;cd &quot;c:\\\\\\\\ficapy\\\\\\\\microblog&quot; &amp;&amp; vagrant reload&#x27;)  #是不是异常简单呢 切换到目录执行reload操作→不一定要先启动再重载！  # &amp;&amp;表示上个操作执行完毕后在执行下面的操作  \n2.Linux配置12345678sudo apt-get update upgrade \\#更新源&amp;升级系统  sudo apt-get install git git-core python python-dev python-setuptools  sudo easy\\_install pip  sudo pip install virtualenv virtualenvwrapper  nano \\~/.bashrc  添加下面两行配置后重新运行(source \\~/.bashrc)  export WORKON\\_HOME=\\$HOME/.virtualenvs  source /usr/local/bin/virtualenvwrapper.sh  \nNOTE:virtualenvwarpper顾名思义是对virtualenv的二次包装,给我的赶脚就是环境不是在放在开发文件夹下面了，而且命令行直观友好容易记忆，还有TAB自动补全哟。常用的大致有mkvirtualenv/rmvirtualenv/lsvirtualenv/workon/deactive;\n另外使用pip安装第三方包的时候不要使用sudo pipinstall,该操作会导致安装到全局，而不是安装到当前环境中.直接使用pipinstall安装.Linux比较小白，暂时我也不知道为什么\nubuntu14自带python2.7可以不用安装python。可是python-dev这个必装，否则pip安装一些需要编译安装的第三方包的时候会报一些莫名其妙的错误，比如pycurl等。同时直接使用二进制包python-pip安装pip有时候安装包会出错（一朝被蛇咬，十年怕井绳啊，所以我还是使用官方推荐的easy_install方式安装了，还有一种是下载get.py方式）\n3.windows端Pycharm设置使用vagrant后，默认设置文件将该目录映射到虚拟的的/vagrant文件夹。我们就将项目统一放在该文件夹下\n不得不说的是pycharm上的vagrant插件在windows上是无法使用的,至少对我来说是这样，手动配置远端python解释器，如下图\nNote.在这里点击fillfrom vagrant config就有用了,改变2222端口是一个很好的选择\n设置远端python解释器后就可以在本地调用了，这还不够，同时还需要设置项目目录映射，以便解释器能够根据本地文件映射到虚拟机文件的地址让解释器执行。选择Run→Configureations,最主要的设置是一、选择解释器；二、设置workdirectory和Path mapping之后就能正确的使用虚拟机的python运行本地文件了;\n另外，有时候不想用xshell连接后运行python。这时候使用pycharm也是相当方便的。Tools→runpythonconsole就够了,会默认添加当前目录到python的包索引列表方便导入,只是有时候这个目录并不完全正确,可能是设置还是有错误吧，我每次都重运行sys.path.extend([‘/vagrant/path~~~~~~‘])手动解决\n~~~~~~~~还想写个安装heroku客户端的,自己还没有很好的实践,以后试试吧，至少测试部署还是相当方便的\n参考：http://blog.segmentfault.com/fenbox/1190000000264347http://pedrokroger.net/getting-started-pycharm-python-ide/http://bliker.github.io/cmder/\n","dateCreated":"2014-10-29T22:19:00+08:00","dateModified":"2021-02-17T10:52:12+08:00","datePublished":"2014-10-29T22:19:00+08:00","description":"记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：\n\n  windows7 X64\n  vagrant\n  ubuntu14\n  xshell\n  cmder(可选)\n  pycharm\n","headline":"Flask项目初始配置","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/10/29/flask_project_init/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2014/10/29/flask_project_init/","keywords":"Flask配置, pycharm, vagrant"}</script>
     <meta name="description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：    windows7 X64   vagrant   ubuntu14   xshell   cmder(可选)   pycharm">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Flask项目初始配置">
@@ -182,7 +182,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -198,87 +198,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -679,6 +601,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -979,8 +907,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

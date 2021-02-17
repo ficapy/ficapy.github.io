@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"Tornado系列基本介绍的差不多了，本篇介绍一些零散的东西。有了前面的知识，本篇会讲的比较粗略\n\n\nset_blocking_signal_threshold因为Tornado是单线程的，因此当一个任务被阻塞一两秒钟基本就是哪里出问题了，该函数给了我们一个机会察觉这些问题。可以当发生阻塞超过阈值的时候执行相关回调函数\n实现原理就是使用信号机制，先使用signal.signal(signal.SIGALRM,callback)注册信号回调函数。在ioloop主循环中每次事件完成后将实时计时器归零signal.setitimer(signal.ITIMER_REAL, 0, 0)后再重新开始计时。如果主循环被阻塞没有被执行计时器归零则会被触发\n多进程有一些情况我们会部署多个Tornado实例用来增加系统整体吞吐量，有两种方案，一：将Tornado程序单独执行N份，每一个实例单独监听一个端口，然后使用Nginx实现负载均衡。二：使用Tornado提供的多进程，该模块实现在process.py(最简单的版本为v2.1.0)，实现原理为开启一个主进程，开启N个工作进程，主进程主要负责这些工作进程的重启工作(比如某进程挂掉了，那么会重新启动一个，维持总进程数量)。没一个工作进程都有一个主循环，它们均分处理http请求\ngen.sleep等待N秒钟，这个功能直到4.1版本才被加入，还是挺奇怪的。实现原理就是新建一个Future对象，同时添加回调到主循环，设置N秒后将Future对象设置为任意一个值。\ngen.run_on_executer使用单独的线程来完成阻塞的任务。同时能够使用yield异步接收到返回的值。实现原理主要依靠concurrent.future模块，concurrent.future.submit会返回一个Future对象。yield接收到这个对象控制权转移。当线程内容执行完毕后会设置Future的值。yield被恢复\nrun_sync经常用于调试。比如写了一个异步函数，要验证一下正确性。那么就不需要使用IOLoop.instance().start()让它无法终止。假设a函数被coroutine装饰，那么a()返回一个Future对象，此时执行IOLoop.instance().start()。整个主循环就会被执行。而run_sync仅仅只是在中间做了一件事情。对于一个Future对象，拥有add_done_callback函数，表示该Future完成后做某事，因此它只是添加了一个回调让主循环停止\n","dateCreated":"2018-03-20T14:50:09+08:00","dateModified":"2018-03-20T15:23:11+08:00","datePublished":"2018-03-20T14:50:09+08:00","description":"Tornado系列基本介绍的差不多了，本篇介绍一些零散的东西。有了前面的知识，本篇会讲的比较粗略","headline":"Tornado 杂项","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/20/Tornado_misc/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/20/Tornado_misc/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"Tornado系列基本介绍的差不多了，本篇介绍一些零散的东西。有了前面的知识，本篇会讲的比较粗略\n\n\nset_blocking_signal_threshold因为Tornado是单线程的，因此当一个任务被阻塞一两秒钟基本就是哪里出问题了，该函数给了我们一个机会察觉这些问题。可以当发生阻塞超过阈值的时候执行相关回调函数\n实现原理就是使用信号机制，先使用signal.signal(signal.SIGALRM,callback)注册信号回调函数。在ioloop主循环中每次事件完成后将实时计时器归零signal.setitimer(signal.ITIMER_REAL, 0, 0)后再重新开始计时。如果主循环被阻塞没有被执行计时器归零则会被触发\n多进程有一些情况我们会部署多个Tornado实例用来增加系统整体吞吐量，有两种方案，一：将Tornado程序单独执行N份，每一个实例单独监听一个端口，然后使用Nginx实现负载均衡。二：使用Tornado提供的多进程，该模块实现在process.py(最简单的版本为v2.1.0)，实现原理为开启一个主进程，开启N个工作进程，主进程主要负责这些工作进程的重启工作(比如某进程挂掉了，那么会重新启动一个，维持总进程数量)。没一个工作进程都有一个主循环，它们均分处理http请求\ngen.sleep等待N秒钟，这个功能直到4.1版本才被加入，还是挺奇怪的。实现原理就是新建一个Future对象，同时添加回调到主循环，设置N秒后将Future对象设置为任意一个值。\ngen.run_on_executer使用单独的线程来完成阻塞的任务。同时能够使用yield异步接收到返回的值。实现原理主要依靠concurrent.future模块，concurrent.future.submit会返回一个Future对象。yield接收到这个对象控制权转移。当线程内容执行完毕后会设置Future的值。yield被恢复\nrun_sync经常用于调试。比如写了一个异步函数，要验证一下正确性。那么就不需要使用IOLoop.instance().start()让它无法终止。假设a函数被coroutine装饰，那么a()返回一个Future对象，此时执行IOLoop.instance().start()。整个主循环就会被执行。而run_sync仅仅只是在中间做了一件事情。对于一个Future对象，拥有add_done_callback函数，表示该Future完成后做某事，因此它只是添加了一个回调让主循环停止\n","dateCreated":"2018-03-20T14:50:09+08:00","dateModified":"2018-03-20T15:23:11+08:00","datePublished":"2018-03-20T14:50:09+08:00","description":"Tornado系列基本介绍的差不多了，本篇介绍一些零散的东西。有了前面的知识，本篇会讲的比较粗略","headline":"Tornado 杂项","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/20/Tornado_misc/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/03/20/Tornado_misc/"}</script>
     <meta name="description" content="Tornado系列基本介绍的差不多了，本篇介绍一些零散的东西。有了前面的知识，本篇会讲的比较粗略">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Tornado 杂项">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -647,6 +569,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -947,8 +875,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

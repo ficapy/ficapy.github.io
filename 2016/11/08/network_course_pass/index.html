@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"刷一个网络课程，很常见的那种，播放视频统计观看时长。不过该系统比较弱，即使切换到别的页面一样也会计算时长。限制条件只是偶尔会出现一些问答题让视频暂停且一个视频播放完成后不会自动播放下一个视频。最开始是打算直接模拟发送http请求，不过后面感觉或许有坑就选了另外一种办法。讲课肯定是有声音的，用程序去捕获声音，如果五秒钟没有声音则认为有问答题出现或者该章节讲完了。\n\n\n模拟请求法通过chrome开发者工具可以知道每60秒会发送一个请求，大概如下(某些信息*号替代)\n12345678910111213141516171819202122POST &#x2F;home&#x2F;scorm&#x2F;rte?cmd&#x3D;submit&amp;token&#x3D;68&amp;uid&#x3D;null&amp;cwid&#x3D;20&amp;eplanid&#x3D;17245&amp;dig&#x3D;************ HTTP&#x2F;1.1Host: ******Connection: keep-aliveContent-Length: 58Pragma: no-cacheCache-Control: no-cacheOrigin: *********X-Requested-With: ShockwaveFlash&#x2F;23.0.0.205User-Agent: Mozilla&#x2F;5.0 (Windows NT 6.1; WOW64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;54.0.2840.71 Safari&#x2F;537.36Content-Type: text&#x2F;xmlAccept: *&#x2F;*Referer: *****htmlv1player_template_index.swf?1478605419919Accept-Encoding: gzip, deflateAccept-Language: zh-CN,zh;q&#x3D;0.8Cookie: *********cmd:submittoken:68uid:nullcwid:20eplanid:17245dig:*****\n可以看到cookie信息登录后就会有，要拼凑出以上信息只需要知道dig是如何产生的。从X-Requested-With: ShockwaveFlash/23.0.0.205我们就能看出来是flash发送的，然后下载页面的swf文件进行反编译就能知道dig产生的逻辑。把swf文件放入http://www.showmycode.com/就能看到产生的逻辑了。不过我不会as，他产生的代码也异常糟糕，截取一段如下\n12345678md5String = (md5String + _md5PrivateKey);md5String = MD5.hash(md5String);req = new URLRequest((_serviceUrlHasQuery) ? ((((((((((_serviceUrl + &quot;&amp;cmd=submit&amp;token=&quot;) + _token) + &quot;&amp;uid=&quot;) + _uid) + &quot;&amp;cwid=&quot;) + _cwid) + &quot;&amp;eplanid=&quot;) + _cplanid) + &quot;&amp;dig=&quot;) + md5String) : ((((((((((_serviceUrl + &quot;?cmd=submit&amp;token=&quot;) + _token) + &quot;&amp;uid=&quot;) + _uid) + &quot;&amp;cwid=&quot;) + _cwid) + &quot;&amp;eplanid=&quot;) + _cplanid) + &quot;&amp;dig=&quot;) + md5String));req.method = URLRequestMethod.POST;req.contentType = &quot;text/xml&quot;;_currentSubmitData = xml;req.data = xml;_urlLoader.load(req);\n如果你对as非常熟悉看起来估计没啥问题。可是有更好的方案。开源软件jpexs-decompiler.而且居然有中文语言包。很牛的一点就是它能够直接编辑编反编译后的代码再重新打包，可以看看它生成的代码\n12345678910111213141516171819202122232425262728293031this._token++;md5String = this._token + &quot;&quot; + this._uid + &quot;&quot; + this._cwid + &quot;&quot; + this._cplanid + &quot;&quot; + tmpTime;xml = &quot;&lt;request lastAccess=\\&quot;&quot; + this._lastAccess + &quot;\\&quot; sessionTime=\\&quot;&quot; + tmpTime + &quot;\\&quot;&gt;&quot;;for each(tmpObj in tmpHash)&#123;   if(tmpHash[&quot;sco_&quot; + tmpObj.id] == null)   &#123;      tmpObj2 = this._tracksHash[&quot;sco_&quot; + tmpObj.id];      if(tmpObj2 != null)      &#123;         xml = xml + &quot;&lt;item id=\\&quot;&quot; + tmpObj2.id + &quot;\\&quot; score=\\&quot;&quot; + tmpObj2.score + &quot;\\&quot; time=\\&quot;&quot; + tmpObj2.time + &quot;\\&quot;/&gt;&quot;;         tmpHash[&quot;sco_&quot; + tmpObj.id] = tmpObj2;         md5String = md5String + tmpObj2.id + tmpObj2.score;      &#125;   &#125;&#125;for each(objTemp in tmpHash)&#123;   xml = xml + &quot;&lt;item id=\\&quot;&quot; + objTemp.id + &quot;\\&quot; complete=\\&quot;&quot; + objTemp.complete + &quot;\\&quot; type=\\&quot;obj\\&quot;/&gt;&quot;;&#125;xml = xml + &quot;&lt;/request&gt;&quot;;this._cmd = &quot;submit&quot;;md5String = md5String + this._md5PrivateKey;ExternalInterface.call(&quot;console.log&quot;,md5String);md5String = MD5.hash(md5String);req = new URLRequest(!!this._serviceUrlHasQuery?this._serviceUrl + &quot;&amp;cmd=submit&amp;token=&quot; + this._token + &quot;&amp;uid=&quot; + this._uid + &quot;&amp;cwid=&quot; + this._cwid + &quot;&amp;eplanid=&quot; + this._cplanid + &quot;&amp;dig=&quot; + md5String:this._serviceUrl + &quot;?cmd=submit&amp;token=&quot; + this._token + &quot;&amp;uid=&quot; + this._uid + &quot;&amp;cwid=&quot; + this._cwid + &quot;&amp;eplanid=&quot; + this._cplanid + &quot;&amp;dig=&quot; + md5String);req.method = URLRequestMethod.POST;req.contentType = &quot;text/xml&quot;;this._currentSubmitData = xml;req.data = xml;this._urlLoader.load(req);\n这样看起来就很容易理解了，写成python代码大概就是这样子(反编译后可以看到key)\n123456789101112# Request Payload# &lt;request lastAccess=&quot;ch_00_02&quot; sessionTime=&quot;60&quot;&gt;&lt;/request&gt;# &lt;response success=&quot;true&quot;&gt;# &lt;item complete=&quot;0&quot; id=&quot;ch_00_02&quot; score=&quot;0.0&quot; time=&quot;2249&quot; /&gt;# &lt;/response&gt;# &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;response success=&quot;true&quot;&gt;&lt;item complete=&quot;0&quot; id=&quot;ch_00_02&quot; score=&quot;0.0&quot; time=&quot;2249&quot;/&gt;&lt;/response&gt;# http://***?cmd=submit&amp;token=5&amp;uid=null&amp;cwid=67&amp;eplanid=17242&amp;dig=*****from hashlib import md5pri = &#x27;#Huaxia$RTE-*PP&#x27;a = &#x27;1null671724260#Huaxia$RTE-*PP&#x27;b = md5(a).hexdigest()\n另外如果遇到什么疑惑可以直接ExternalInterface.call(&quot;console.log&quot;,md5String);这样能够输出变量。重新打包为swf，再用fiddler替换掉请求的swf文件为自己打包的文件，这样就能看到调试输出了。感慨下这个工具真好用，不过本人不是搞前端的，而且flash也已经没落到没有去深入的必要┑(￣Д ￣)┍\n判断视频是否播放完成半自动化我判断的依据是没有声音了，需要解决的就是获取当前音量大小的问题。最开始想的是使用系统的命令行接口，无奈并没有找到，而后看到了使用虚拟音频接口Soundflower,虽然2年没更新过了，惊奇的是能正常使用。安装上之后在sound里面的input和output会多出2个设备，如图,当你需要捕获系统声音的时候将input和output均选为同一个(这样会导致机器没有声音输出，需要选择同一个的原因我觉得是代码中根据input的文件描述符来获得output,所以需要将input和output选为同一个)，然而我单独开了一个windows虚拟机，虚拟机可以选择使用哪个输入输出音频接口，对于虚拟机的输出我选择了soundflower，在系统设置里面我选择了相同的soundeflower作为输入。可是选择了正常的接口作为输出。如此我听不到虚拟机发出的声音，同时本机发出的声音又可以正常收听，完美~~~代码如下\n12345678910111213141516171819202122232425262728import timeimport pyaudioimport audioopfrom collections import dequefrom subprocess import PopenFORMAT = pyaudio.paInt16CHANNELS = 2RATE = 44100CHUNK = 1024audio = pyaudio.PyAudio()stream = audio.open(format=FORMAT, channels=CHANNELS,                    rate=RATE, input=True,                    frames_per_buffer=CHUNK)flag = time.time()queue = deque(maxlen=5)while True:    data = stream.read(CHUNK)    if time.time() - flag &gt; 1:        flag = time.time()        rms = audioop.rms(data, 2)        print rms        queue.append(rms)        if len(queue) == 5 and sum(queue) == 0:            Popen(&quot;&quot;&quot;/usr/bin/osascript -e &#x27;display notification &quot;look here&quot; &#x27;&quot;&quot;&quot;, shell=True)\n当五秒钟没有声音就在屏幕右上角弹出一个提示框提醒你去点击。本文用于osx系统，其他系统按照这个思路应该也能实现\n其他当然这个系统还有很贴心的地方，对于视频讲解中出现的问答题，其实在前端页面中已经给出了答案，打开web控制台，查看一下就有哒。然后还不允许复制粘贴。这个同样直接在控制台里面复制就好了，也没必要禁用js啥的~~\n参考record-audio-soundflowergetting-volume-levels-from-pyaudio-for-use-in-arduino\n","dateCreated":"2016-11-08T22:04:28+08:00","dateModified":"2021-02-17T10:49:43+08:00","datePublished":"2016-11-08T22:04:28+08:00","description":"刷一个网络课程，很常见的那种，播放视频统计观看时长。不过该系统比较弱，即使切换到别的页面一样也会计算时长。限制条件只是偶尔会出现一些问答题让视频暂停且一个视频播放完成后不会自动播放下一个视频。最开始是打算直接模拟发送http请求，不过后面感觉或许有坑就选了另外一种办法。讲课肯定是有声音的，用程序去捕获声音，如果五秒钟没有声音则认为有问答题出现或者该章节讲完了。","headline":"半自动刷网络课程","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/11/08/network_course_pass/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/11/08/network_course_pass/","keywords":"python"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"刷一个网络课程，很常见的那种，播放视频统计观看时长。不过该系统比较弱，即使切换到别的页面一样也会计算时长。限制条件只是偶尔会出现一些问答题让视频暂停且一个视频播放完成后不会自动播放下一个视频。最开始是打算直接模拟发送http请求，不过后面感觉或许有坑就选了另外一种办法。讲课肯定是有声音的，用程序去捕获声音，如果五秒钟没有声音则认为有问答题出现或者该章节讲完了。\n\n\n模拟请求法通过chrome开发者工具可以知道每60秒会发送一个请求，大概如下(某些信息*号替代)\n12345678910111213141516171819202122POST &#x2F;home&#x2F;scorm&#x2F;rte?cmd&#x3D;submit&amp;token&#x3D;68&amp;uid&#x3D;null&amp;cwid&#x3D;20&amp;eplanid&#x3D;17245&amp;dig&#x3D;************ HTTP&#x2F;1.1Host: ******Connection: keep-aliveContent-Length: 58Pragma: no-cacheCache-Control: no-cacheOrigin: *********X-Requested-With: ShockwaveFlash&#x2F;23.0.0.205User-Agent: Mozilla&#x2F;5.0 (Windows NT 6.1; WOW64) AppleWebKit&#x2F;537.36 (KHTML, like Gecko) Chrome&#x2F;54.0.2840.71 Safari&#x2F;537.36Content-Type: text&#x2F;xmlAccept: *&#x2F;*Referer: *****htmlv1player_template_index.swf?1478605419919Accept-Encoding: gzip, deflateAccept-Language: zh-CN,zh;q&#x3D;0.8Cookie: *********cmd:submittoken:68uid:nullcwid:20eplanid:17245dig:*****\n可以看到cookie信息登录后就会有，要拼凑出以上信息只需要知道dig是如何产生的。从X-Requested-With: ShockwaveFlash/23.0.0.205我们就能看出来是flash发送的，然后下载页面的swf文件进行反编译就能知道dig产生的逻辑。把swf文件放入http://www.showmycode.com/就能看到产生的逻辑了。不过我不会as，他产生的代码也异常糟糕，截取一段如下\n12345678md5String = (md5String + _md5PrivateKey);md5String = MD5.hash(md5String);req = new URLRequest((_serviceUrlHasQuery) ? ((((((((((_serviceUrl + &quot;&amp;cmd=submit&amp;token=&quot;) + _token) + &quot;&amp;uid=&quot;) + _uid) + &quot;&amp;cwid=&quot;) + _cwid) + &quot;&amp;eplanid=&quot;) + _cplanid) + &quot;&amp;dig=&quot;) + md5String) : ((((((((((_serviceUrl + &quot;?cmd=submit&amp;token=&quot;) + _token) + &quot;&amp;uid=&quot;) + _uid) + &quot;&amp;cwid=&quot;) + _cwid) + &quot;&amp;eplanid=&quot;) + _cplanid) + &quot;&amp;dig=&quot;) + md5String));req.method = URLRequestMethod.POST;req.contentType = &quot;text/xml&quot;;_currentSubmitData = xml;req.data = xml;_urlLoader.load(req);\n如果你对as非常熟悉看起来估计没啥问题。可是有更好的方案。开源软件jpexs-decompiler.而且居然有中文语言包。很牛的一点就是它能够直接编辑编反编译后的代码再重新打包，可以看看它生成的代码\n12345678910111213141516171819202122232425262728293031this._token++;md5String = this._token + &quot;&quot; + this._uid + &quot;&quot; + this._cwid + &quot;&quot; + this._cplanid + &quot;&quot; + tmpTime;xml = &quot;&lt;request lastAccess=\\&quot;&quot; + this._lastAccess + &quot;\\&quot; sessionTime=\\&quot;&quot; + tmpTime + &quot;\\&quot;&gt;&quot;;for each(tmpObj in tmpHash)&#123;   if(tmpHash[&quot;sco_&quot; + tmpObj.id] == null)   &#123;      tmpObj2 = this._tracksHash[&quot;sco_&quot; + tmpObj.id];      if(tmpObj2 != null)      &#123;         xml = xml + &quot;&lt;item id=\\&quot;&quot; + tmpObj2.id + &quot;\\&quot; score=\\&quot;&quot; + tmpObj2.score + &quot;\\&quot; time=\\&quot;&quot; + tmpObj2.time + &quot;\\&quot;/&gt;&quot;;         tmpHash[&quot;sco_&quot; + tmpObj.id] = tmpObj2;         md5String = md5String + tmpObj2.id + tmpObj2.score;      &#125;   &#125;&#125;for each(objTemp in tmpHash)&#123;   xml = xml + &quot;&lt;item id=\\&quot;&quot; + objTemp.id + &quot;\\&quot; complete=\\&quot;&quot; + objTemp.complete + &quot;\\&quot; type=\\&quot;obj\\&quot;/&gt;&quot;;&#125;xml = xml + &quot;&lt;/request&gt;&quot;;this._cmd = &quot;submit&quot;;md5String = md5String + this._md5PrivateKey;ExternalInterface.call(&quot;console.log&quot;,md5String);md5String = MD5.hash(md5String);req = new URLRequest(!!this._serviceUrlHasQuery?this._serviceUrl + &quot;&amp;cmd=submit&amp;token=&quot; + this._token + &quot;&amp;uid=&quot; + this._uid + &quot;&amp;cwid=&quot; + this._cwid + &quot;&amp;eplanid=&quot; + this._cplanid + &quot;&amp;dig=&quot; + md5String:this._serviceUrl + &quot;?cmd=submit&amp;token=&quot; + this._token + &quot;&amp;uid=&quot; + this._uid + &quot;&amp;cwid=&quot; + this._cwid + &quot;&amp;eplanid=&quot; + this._cplanid + &quot;&amp;dig=&quot; + md5String);req.method = URLRequestMethod.POST;req.contentType = &quot;text/xml&quot;;this._currentSubmitData = xml;req.data = xml;this._urlLoader.load(req);\n这样看起来就很容易理解了，写成python代码大概就是这样子(反编译后可以看到key)\n123456789101112# Request Payload# &lt;request lastAccess=&quot;ch_00_02&quot; sessionTime=&quot;60&quot;&gt;&lt;/request&gt;# &lt;response success=&quot;true&quot;&gt;# &lt;item complete=&quot;0&quot; id=&quot;ch_00_02&quot; score=&quot;0.0&quot; time=&quot;2249&quot; /&gt;# &lt;/response&gt;# &lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;response success=&quot;true&quot;&gt;&lt;item complete=&quot;0&quot; id=&quot;ch_00_02&quot; score=&quot;0.0&quot; time=&quot;2249&quot;/&gt;&lt;/response&gt;# http://***?cmd=submit&amp;token=5&amp;uid=null&amp;cwid=67&amp;eplanid=17242&amp;dig=*****from hashlib import md5pri = &#x27;#Huaxia$RTE-*PP&#x27;a = &#x27;1null671724260#Huaxia$RTE-*PP&#x27;b = md5(a).hexdigest()\n另外如果遇到什么疑惑可以直接ExternalInterface.call(&quot;console.log&quot;,md5String);这样能够输出变量。重新打包为swf，再用fiddler替换掉请求的swf文件为自己打包的文件，这样就能看到调试输出了。感慨下这个工具真好用，不过本人不是搞前端的，而且flash也已经没落到没有去深入的必要┑(￣Д ￣)┍\n判断视频是否播放完成半自动化我判断的依据是没有声音了，需要解决的就是获取当前音量大小的问题。最开始想的是使用系统的命令行接口，无奈并没有找到，而后看到了使用虚拟音频接口Soundflower,虽然2年没更新过了，惊奇的是能正常使用。安装上之后在sound里面的input和output会多出2个设备，如图,当你需要捕获系统声音的时候将input和output均选为同一个(这样会导致机器没有声音输出，需要选择同一个的原因我觉得是代码中根据input的文件描述符来获得output,所以需要将input和output选为同一个)，然而我单独开了一个windows虚拟机，虚拟机可以选择使用哪个输入输出音频接口，对于虚拟机的输出我选择了soundflower，在系统设置里面我选择了相同的soundeflower作为输入。可是选择了正常的接口作为输出。如此我听不到虚拟机发出的声音，同时本机发出的声音又可以正常收听，完美~~~代码如下\n12345678910111213141516171819202122232425262728import timeimport pyaudioimport audioopfrom collections import dequefrom subprocess import PopenFORMAT = pyaudio.paInt16CHANNELS = 2RATE = 44100CHUNK = 1024audio = pyaudio.PyAudio()stream = audio.open(format=FORMAT, channels=CHANNELS,                    rate=RATE, input=True,                    frames_per_buffer=CHUNK)flag = time.time()queue = deque(maxlen=5)while True:    data = stream.read(CHUNK)    if time.time() - flag &gt; 1:        flag = time.time()        rms = audioop.rms(data, 2)        print rms        queue.append(rms)        if len(queue) == 5 and sum(queue) == 0:            Popen(&quot;&quot;&quot;/usr/bin/osascript -e &#x27;display notification &quot;look here&quot; &#x27;&quot;&quot;&quot;, shell=True)\n当五秒钟没有声音就在屏幕右上角弹出一个提示框提醒你去点击。本文用于osx系统，其他系统按照这个思路应该也能实现\n其他当然这个系统还有很贴心的地方，对于视频讲解中出现的问答题，其实在前端页面中已经给出了答案，打开web控制台，查看一下就有哒。然后还不允许复制粘贴。这个同样直接在控制台里面复制就好了，也没必要禁用js啥的~~\n参考record-audio-soundflowergetting-volume-levels-from-pyaudio-for-use-in-arduino\n","dateCreated":"2016-11-08T22:04:28+08:00","dateModified":"2021-02-17T10:49:43+08:00","datePublished":"2016-11-08T22:04:28+08:00","description":"刷一个网络课程，很常见的那种，播放视频统计观看时长。不过该系统比较弱，即使切换到别的页面一样也会计算时长。限制条件只是偶尔会出现一些问答题让视频暂停且一个视频播放完成后不会自动播放下一个视频。最开始是打算直接模拟发送http请求，不过后面感觉或许有坑就选了另外一种办法。讲课肯定是有声音的，用程序去捕获声音，如果五秒钟没有声音则认为有问答题出现或者该章节讲完了。","headline":"半自动刷网络课程","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/11/08/network_course_pass/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/11/08/network_course_pass/","keywords":"python"}</script>
     <meta name="description" content="刷一个网络课程，很常见的那种，播放视频统计观看时长。不过该系统比较弱，即使切换到别的页面一样也会计算时长。限制条件只是偶尔会出现一些问答题让视频暂停且一个视频播放完成后不会自动播放下一个视频。最开始是打算直接模拟发送http请求，不过后面感觉或许有坑就选了另外一种办法。讲课肯定是有声音的，用程序去捕获声音，如果五秒钟没有声音则认为有问答题出现或者该章节讲完了。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="半自动刷网络课程">
@@ -180,7 +180,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -196,87 +196,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -665,6 +587,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -965,8 +893,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

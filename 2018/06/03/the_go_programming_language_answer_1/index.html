@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~\nGolang版本:1.10.1IDE: GoLand操作系统: 10.13.4\n\n\n练习1.1修改echo程序输出os.Args[0],即命令的名字\n\nos.Args是一个slice\n\n123func TestOutputName(t *testing.T) &#123;\tfmt.Println(os.Args[0])&#125;\n\n\n练习1.2修改echo程序,输出参数的索引和值,每行一个\n\nfor range结构的使用\n\n12345func TestListArgs(t *testing.T) &#123;\tfor k, v := range os.Args &#123;\t\tfmt.Printf(&quot;%d\\t%s\\n&quot;, k, v)\t&#125;&#125;\n\n练习1.3尝试测量可能低效的程序和使用strings.Join的程序在执行时间上的差异\n\n该用例大概显示相比+=,使用strings.Join要快1782倍\n\n1234567891011121314151617181920212223242526func BenchmarkStringJoin1(b *testing.B) &#123;\t// 1\t1581441327 ns/op\tvar a [100000]string\tfor i := 0; i &lt; 100000; i++ &#123;\t\ta[i] = &quot;1&quot;\t&#125;\tfor i := 0; i &lt; b.N; i++ &#123;\t\tvar ret string\t\tfor _, i := range a &#123;\t\t\tret += i\t\t&#125;\t&#125;&#125;func BenchmarkStringJoin2(b *testing.B) &#123;\t// 2000\t    844351 ns/op\tvar a [100000]string\tfor i := 0; i &lt; 100000; i++ &#123;\t\ta[i] = &quot;1&quot;\t&#125;\tfor i := 0; i &lt; b.N; i++ &#123;\t\t_ = strings.Join(a[:], &quot;&quot;)\t&#125;&#125;\n\n练习1.4修改dup2程序,输出出现重复行的文件的名称\n\n用结构体代替原有的string类型\n\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647package mainimport (\t&quot;os&quot;\t&quot;fmt&quot;\t&quot;bufio&quot;)type line struct &#123;\tFileName string\tString   string&#125;func main() &#123;\tcounts := make(map[line]int)\tfiles := os.Args[1:]\tif len(files) == 0 &#123;\t\tcountLines(os.Stdin, counts, &quot;ARGS&quot;)\t&#125; else &#123;\t\tfor _, arg := range files &#123;\t\t\tf, err := os.Open(arg)\t\t\tif err != nil &#123;\t\t\t\tfmt.Fprintf(os.Stderr, &quot;dup2: %v\\n&quot;, err)\t\t\t\tcontinue\t\t\t&#125;\t\t\tcountLines(f, counts, f.Name())\t\t\tf.Close()\t\t&#125;\t&#125;\tfor line, n := range counts &#123;\t\tif n &gt; 1 &#123;\t\t\tfmt.Printf(&quot;%s\\t%s\\t%d\\n&quot;, line.FileName, line.String, n)\t\t&#125;\t&#125;&#125;func countLines(file *os.File, counts map[line]int, fileName string) &#123;\tinput := bufio.NewScanner(file)\tfor input.Scan() &#123;\t\tcounts[line&#123;\t\t\tFileName: fileName,\t\t\tString:   input.Text(),\t\t&#125;]++\t&#125;&#125;\n\n练习1.5改变利萨如程序的画板颜色为绿色黑底来增加真实性。使用color.RGBA{0xRR,0xGG,0xBB,0xff}创建一种web颜色#RRGGBB,每一对十六进制数组表示组成一个像素红、绿、蓝分量的亮度。\n\n画板底色为palette的第一个元素，可采用0x表示十六进制数字\n\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960package mainimport (\t&quot;image/color&quot;\t&quot;math/rand&quot;\t&quot;time&quot;\t&quot;os&quot;\t&quot;net/http&quot;\t&quot;log&quot;\t&quot;io&quot;\t&quot;image/gif&quot;\t&quot;image&quot;\t&quot;math&quot;)var palette = []color.Color&#123;color.Black, color.RGBA&#123;\tR: 0,\tG: 0xFF,\tB: 0,\tA: 0xFF,&#125;&#125;func main() &#123;\trand.Seed(time.Now().UTC().UnixNano())\tif len(os.Args) &gt; 1 &amp;&amp; os.Args[1] == &quot;web&quot; &#123;\t\thandler := func(w http.ResponseWriter, r *http.Request) &#123;\t\t\tlissajous(w)\t\t&#125;\t\thttp.HandleFunc(&quot;/&quot;, handler)\t\tlog.Fatal(http.ListenAndServe(&quot;localhost:8000&quot;, nil))\t\treturn\t&#125;\tlissajous(os.Stdout)&#125;func lissajous(out io.Writer) &#123;\tconst (\t\tcycles  = 5     // 完整的x振荡器变化的个数\t\tres     = 0.001 //\t角度分辨率\t\tsize    = 100   //\t图像画布包含 [-size..+size]\t\tnframes = 64    //\t动画中的帧数\t\tdelay   = 8     //\t以10ms为单位的帧间延迟\t)\tfreq := rand.Float64() * 3.0 // y振荡器的相对频率\tanim := gif.GIF&#123;LoopCount: nframes&#125;\tphase := 0.0\tfor i := 0; i &lt; nframes; i++ &#123;\t\trect := image.Rect(0, 0, 2*size+1, 2*size+1)\t\timg := image.NewPaletted(rect, palette)\t\tfor t := 0.0; t &lt; cycles*2*math.Pi; t += res &#123;\t\t\tx := math.Sin(t)\t\t\ty := math.Sin(t*freq + phase)\t\t\timg.SetColorIndex(size+int(x*size+0.5), size+int(y*size+0.5), 1)\t\t&#125;\t\tphase += 0.1\t\tanim.Delay = append(anim.Delay, delay)\t\tanim.Image = append(anim.Image, img)\t&#125;\tgif.EncodeAll(out, &amp;anim)&#125;\n\n练习1.6通过在画板中添加更多颜色，然后通过有趣的方式改变SetColorIndex的第三个参数,修改利萨如程序来产生多彩的图片\n\n没想到什么有趣的方式，随便用了个随机生成，rand.Intn,注意init在main前面被执行，因此随机种子需要放在init里面\n\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566package mainimport (\t&quot;image/color&quot;\t&quot;math/rand&quot;\t&quot;time&quot;\t&quot;os&quot;\t&quot;net/http&quot;\t&quot;log&quot;\t&quot;io&quot;\t&quot;image/gif&quot;\t&quot;image&quot;\t&quot;math&quot;)var palette []color.Colorfunc init() &#123;\trand.Seed(time.Now().UTC().UnixNano())\tfor i := 0; i &lt; 256; i++ &#123;\t\tpalette = append(palette, color.RGBA&#123;\t\t\tR: uint8(rand.Intn(256)),\t\t\tG: uint8(rand.Intn(256)),\t\t\tB: uint8(rand.Intn(256)),\t\t\tA: 0xFF,\t\t&#125;)\t&#125;&#125;func main() &#123;\tif len(os.Args) &gt; 1 &amp;&amp; os.Args[1] == &quot;web&quot; &#123;\t\thandler := func(w http.ResponseWriter, r *http.Request) &#123;\t\t\tlissajous(w)\t\t&#125;\t\thttp.HandleFunc(&quot;/&quot;, handler)\t\tlog.Fatal(http.ListenAndServe(&quot;localhost:8000&quot;, nil))\t\treturn\t&#125;\tlissajous(os.Stdout)&#125;func lissajous(out io.Writer) &#123;\tconst (\t\tcycles  = 5     // 完整的x振荡器变化的个数\t\tres     = 0.001 //\t角度分辨率\t\tsize    = 100   //\t图像画布包含 [-size..+size]\t\tnframes = 64    //\t动画中的帧数\t\tdelay   = 8     //\t以10ms为单位的帧间延迟\t)\tfreq := rand.Float64() * 3.0 // y振荡器的相对频率\tanim := gif.GIF&#123;LoopCount: nframes&#125;\tphase := 0.0\tfor i := 0; i &lt; nframes; i++ &#123;\t\trect := image.Rect(0, 0, 2*size+1, 2*size+1)\t\timg := image.NewPaletted(rect, palette)\t\tfor t := 0.0; t &lt; cycles*2*math.Pi; t += res &#123;\t\t\tx := math.Sin(t)\t\t\ty := math.Sin(t*freq + phase)\t\t\timg.SetColorIndex(size+int(x*size+0.5), size+int(y*size+0.5), uint8(rand.Intn(len(palette))))\t\t&#125;\t\tphase += 0.1\t\tanim.Delay = append(anim.Delay, delay)\t\tanim.Image = append(anim.Image, img)\t&#125;\tgif.EncodeAll(out, &amp;anim)&#125;\n\n练习1.7函数io.Copy(dst,src)从src读,并且写入dst.使用它代替ioutil.ReadAll来复制响应内容到os.StdOut,这样不需要装下整个数据流的缓冲区.确保检查io.Copy返回的错误结果\n\nio.Copy代替ioutil.ReadAll更省内存，同时也可以把它看做是一个同步的操作，返回了最终传输数据的大小\n\n123456789101112131415161718192021222324252627282930313233343536373839package mainimport (\t&quot;time&quot;\t&quot;os&quot;\t&quot;fmt&quot;\t&quot;net/http&quot;\t&quot;io&quot;\t&quot;io/ioutil&quot;)func main() &#123;\tstart := time.Now()\tch := make(chan string)\tfor _, url := range os.Args[1:] &#123;\t\tgo fetch(url, ch)\t&#125;\tfor range os.Args[1:] &#123;\t\tfmt.Println(&lt;-ch)\t&#125;\tfmt.Printf(&quot;%.2f elapsed\\n&quot;, time.Since(start).Seconds())&#125;func fetch(url string, ch chan&lt;- string) &#123;\tstart := time.Now()\tresp, err := http.Get(url)\tif err != nil &#123;\t\tch &lt;- fmt.Sprint(err)\t\treturn\t&#125;\tnbytes, err := io.Copy(ioutil.Discard, resp.Body)\tresp.Body.Close()\tif err != nil &#123;\t\tch &lt;- fmt.Sprintf(&quot;while reading %s: %v&quot;, url, err)\t\treturn\t&#125;\tsecs := time.Since(start).Seconds()\tch &lt;- fmt.Sprintf(&quot;%.2fs %7d %s&quot;, secs, nbytes, url)&#125;\n\n练习1.8修改fetch程序添加一个http://前缀(假如该URL参数缺失协议前缀).可能会用到strings.HasPrefix\n1234567func TestAddPrefix(t *testing.T) &#123;\tinputURL := &quot;z.cn&quot;\tif ! strings.HasPrefix(inputURL, &quot;http&quot;) &#123;\t\tinputURL = &quot;http://&quot; + inputURL\t&#125;\tfmt.Println(inputURL)&#125;\n\n练习1.9修改fetch来输出http状态码,可以在resp.Status中找到它\n123456func TestOutputStatusCode(t *testing.T) &#123;\tresp, _ := http.Get(&quot;http://z.cn&quot;)\tfmt.Println(&quot;StatusCode: &quot;, resp.StatusCode)\tio.Copy(os.Stdout, resp.Body)\tresp.Body.Close()&#125;\n\n练习1.10找一个产生大量数据的网站.连续两次运行fetchall,看报告的时间是否会有大的变化,调查缓存情况.每一次获取的内容一样吗?修改fetchall将内容输出到文件,这样可以检查它是否一致\n\n这问题不是他傻就是我傻，我还是偏向是他傻。猜测有可能说的是访问网站第一次很慢，第二次会因为缓存策略加速传输(比如http运营商缓存啥的)，亦或者是本机缓存304状态码(但是两次完全独立的访问和这个扯不上什么关系)\n\n练习1.11使用更长的参数列表来尝试fetchall,例如使用alexa.com排名前100万的网站,如果一个网站没有响应,程序的行为是则么样的\n\nGo net/http 超时机制完全手册\n虽然每个URL都对应了一个chan，但是有可能某几个URL特别慢，那么所有的请求都需要等到最慢的那个完成，比如你在本地nc -l 8000监听端口，再直接使用http.Get访问。它默认永不超时，直到tcp连接被中断\n打开太多的链接会启用N多的goroutine，这样会达到系统上限，比如触发常见的too many open files\n\n","dateCreated":"2018-06-03T20:56:37+08:00","dateModified":"2018-06-04T22:15:32+08:00","datePublished":"2018-06-03T20:56:37+08:00","description":"作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~\nGolang版本:1.10.1IDE: GoLand操作系统: 10.13.4","headline":"Go程序设计语言课后习题答案-第一章(入门)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~\nGolang版本:1.10.1IDE: GoLand操作系统: 10.13.4\n\n\n练习1.1修改echo程序输出os.Args[0],即命令的名字\n\nos.Args是一个slice\n\n123func TestOutputName(t *testing.T) &#123;\tfmt.Println(os.Args[0])&#125;\n\n\n练习1.2修改echo程序,输出参数的索引和值,每行一个\n\nfor range结构的使用\n\n12345func TestListArgs(t *testing.T) &#123;\tfor k, v := range os.Args &#123;\t\tfmt.Printf(&quot;%d\\t%s\\n&quot;, k, v)\t&#125;&#125;\n\n练习1.3尝试测量可能低效的程序和使用strings.Join的程序在执行时间上的差异\n\n该用例大概显示相比+=,使用strings.Join要快1782倍\n\n1234567891011121314151617181920212223242526func BenchmarkStringJoin1(b *testing.B) &#123;\t// 1\t1581441327 ns/op\tvar a [100000]string\tfor i := 0; i &lt; 100000; i++ &#123;\t\ta[i] = &quot;1&quot;\t&#125;\tfor i := 0; i &lt; b.N; i++ &#123;\t\tvar ret string\t\tfor _, i := range a &#123;\t\t\tret += i\t\t&#125;\t&#125;&#125;func BenchmarkStringJoin2(b *testing.B) &#123;\t// 2000\t    844351 ns/op\tvar a [100000]string\tfor i := 0; i &lt; 100000; i++ &#123;\t\ta[i] = &quot;1&quot;\t&#125;\tfor i := 0; i &lt; b.N; i++ &#123;\t\t_ = strings.Join(a[:], &quot;&quot;)\t&#125;&#125;\n\n练习1.4修改dup2程序,输出出现重复行的文件的名称\n\n用结构体代替原有的string类型\n\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647package mainimport (\t&quot;os&quot;\t&quot;fmt&quot;\t&quot;bufio&quot;)type line struct &#123;\tFileName string\tString   string&#125;func main() &#123;\tcounts := make(map[line]int)\tfiles := os.Args[1:]\tif len(files) == 0 &#123;\t\tcountLines(os.Stdin, counts, &quot;ARGS&quot;)\t&#125; else &#123;\t\tfor _, arg := range files &#123;\t\t\tf, err := os.Open(arg)\t\t\tif err != nil &#123;\t\t\t\tfmt.Fprintf(os.Stderr, &quot;dup2: %v\\n&quot;, err)\t\t\t\tcontinue\t\t\t&#125;\t\t\tcountLines(f, counts, f.Name())\t\t\tf.Close()\t\t&#125;\t&#125;\tfor line, n := range counts &#123;\t\tif n &gt; 1 &#123;\t\t\tfmt.Printf(&quot;%s\\t%s\\t%d\\n&quot;, line.FileName, line.String, n)\t\t&#125;\t&#125;&#125;func countLines(file *os.File, counts map[line]int, fileName string) &#123;\tinput := bufio.NewScanner(file)\tfor input.Scan() &#123;\t\tcounts[line&#123;\t\t\tFileName: fileName,\t\t\tString:   input.Text(),\t\t&#125;]++\t&#125;&#125;\n\n练习1.5改变利萨如程序的画板颜色为绿色黑底来增加真实性。使用color.RGBA{0xRR,0xGG,0xBB,0xff}创建一种web颜色#RRGGBB,每一对十六进制数组表示组成一个像素红、绿、蓝分量的亮度。\n\n画板底色为palette的第一个元素，可采用0x表示十六进制数字\n\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960package mainimport (\t&quot;image/color&quot;\t&quot;math/rand&quot;\t&quot;time&quot;\t&quot;os&quot;\t&quot;net/http&quot;\t&quot;log&quot;\t&quot;io&quot;\t&quot;image/gif&quot;\t&quot;image&quot;\t&quot;math&quot;)var palette = []color.Color&#123;color.Black, color.RGBA&#123;\tR: 0,\tG: 0xFF,\tB: 0,\tA: 0xFF,&#125;&#125;func main() &#123;\trand.Seed(time.Now().UTC().UnixNano())\tif len(os.Args) &gt; 1 &amp;&amp; os.Args[1] == &quot;web&quot; &#123;\t\thandler := func(w http.ResponseWriter, r *http.Request) &#123;\t\t\tlissajous(w)\t\t&#125;\t\thttp.HandleFunc(&quot;/&quot;, handler)\t\tlog.Fatal(http.ListenAndServe(&quot;localhost:8000&quot;, nil))\t\treturn\t&#125;\tlissajous(os.Stdout)&#125;func lissajous(out io.Writer) &#123;\tconst (\t\tcycles  = 5     // 完整的x振荡器变化的个数\t\tres     = 0.001 //\t角度分辨率\t\tsize    = 100   //\t图像画布包含 [-size..+size]\t\tnframes = 64    //\t动画中的帧数\t\tdelay   = 8     //\t以10ms为单位的帧间延迟\t)\tfreq := rand.Float64() * 3.0 // y振荡器的相对频率\tanim := gif.GIF&#123;LoopCount: nframes&#125;\tphase := 0.0\tfor i := 0; i &lt; nframes; i++ &#123;\t\trect := image.Rect(0, 0, 2*size+1, 2*size+1)\t\timg := image.NewPaletted(rect, palette)\t\tfor t := 0.0; t &lt; cycles*2*math.Pi; t += res &#123;\t\t\tx := math.Sin(t)\t\t\ty := math.Sin(t*freq + phase)\t\t\timg.SetColorIndex(size+int(x*size+0.5), size+int(y*size+0.5), 1)\t\t&#125;\t\tphase += 0.1\t\tanim.Delay = append(anim.Delay, delay)\t\tanim.Image = append(anim.Image, img)\t&#125;\tgif.EncodeAll(out, &amp;anim)&#125;\n\n练习1.6通过在画板中添加更多颜色，然后通过有趣的方式改变SetColorIndex的第三个参数,修改利萨如程序来产生多彩的图片\n\n没想到什么有趣的方式，随便用了个随机生成，rand.Intn,注意init在main前面被执行，因此随机种子需要放在init里面\n\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566package mainimport (\t&quot;image/color&quot;\t&quot;math/rand&quot;\t&quot;time&quot;\t&quot;os&quot;\t&quot;net/http&quot;\t&quot;log&quot;\t&quot;io&quot;\t&quot;image/gif&quot;\t&quot;image&quot;\t&quot;math&quot;)var palette []color.Colorfunc init() &#123;\trand.Seed(time.Now().UTC().UnixNano())\tfor i := 0; i &lt; 256; i++ &#123;\t\tpalette = append(palette, color.RGBA&#123;\t\t\tR: uint8(rand.Intn(256)),\t\t\tG: uint8(rand.Intn(256)),\t\t\tB: uint8(rand.Intn(256)),\t\t\tA: 0xFF,\t\t&#125;)\t&#125;&#125;func main() &#123;\tif len(os.Args) &gt; 1 &amp;&amp; os.Args[1] == &quot;web&quot; &#123;\t\thandler := func(w http.ResponseWriter, r *http.Request) &#123;\t\t\tlissajous(w)\t\t&#125;\t\thttp.HandleFunc(&quot;/&quot;, handler)\t\tlog.Fatal(http.ListenAndServe(&quot;localhost:8000&quot;, nil))\t\treturn\t&#125;\tlissajous(os.Stdout)&#125;func lissajous(out io.Writer) &#123;\tconst (\t\tcycles  = 5     // 完整的x振荡器变化的个数\t\tres     = 0.001 //\t角度分辨率\t\tsize    = 100   //\t图像画布包含 [-size..+size]\t\tnframes = 64    //\t动画中的帧数\t\tdelay   = 8     //\t以10ms为单位的帧间延迟\t)\tfreq := rand.Float64() * 3.0 // y振荡器的相对频率\tanim := gif.GIF&#123;LoopCount: nframes&#125;\tphase := 0.0\tfor i := 0; i &lt; nframes; i++ &#123;\t\trect := image.Rect(0, 0, 2*size+1, 2*size+1)\t\timg := image.NewPaletted(rect, palette)\t\tfor t := 0.0; t &lt; cycles*2*math.Pi; t += res &#123;\t\t\tx := math.Sin(t)\t\t\ty := math.Sin(t*freq + phase)\t\t\timg.SetColorIndex(size+int(x*size+0.5), size+int(y*size+0.5), uint8(rand.Intn(len(palette))))\t\t&#125;\t\tphase += 0.1\t\tanim.Delay = append(anim.Delay, delay)\t\tanim.Image = append(anim.Image, img)\t&#125;\tgif.EncodeAll(out, &amp;anim)&#125;\n\n练习1.7函数io.Copy(dst,src)从src读,并且写入dst.使用它代替ioutil.ReadAll来复制响应内容到os.StdOut,这样不需要装下整个数据流的缓冲区.确保检查io.Copy返回的错误结果\n\nio.Copy代替ioutil.ReadAll更省内存，同时也可以把它看做是一个同步的操作，返回了最终传输数据的大小\n\n123456789101112131415161718192021222324252627282930313233343536373839package mainimport (\t&quot;time&quot;\t&quot;os&quot;\t&quot;fmt&quot;\t&quot;net/http&quot;\t&quot;io&quot;\t&quot;io/ioutil&quot;)func main() &#123;\tstart := time.Now()\tch := make(chan string)\tfor _, url := range os.Args[1:] &#123;\t\tgo fetch(url, ch)\t&#125;\tfor range os.Args[1:] &#123;\t\tfmt.Println(&lt;-ch)\t&#125;\tfmt.Printf(&quot;%.2f elapsed\\n&quot;, time.Since(start).Seconds())&#125;func fetch(url string, ch chan&lt;- string) &#123;\tstart := time.Now()\tresp, err := http.Get(url)\tif err != nil &#123;\t\tch &lt;- fmt.Sprint(err)\t\treturn\t&#125;\tnbytes, err := io.Copy(ioutil.Discard, resp.Body)\tresp.Body.Close()\tif err != nil &#123;\t\tch &lt;- fmt.Sprintf(&quot;while reading %s: %v&quot;, url, err)\t\treturn\t&#125;\tsecs := time.Since(start).Seconds()\tch &lt;- fmt.Sprintf(&quot;%.2fs %7d %s&quot;, secs, nbytes, url)&#125;\n\n练习1.8修改fetch程序添加一个http://前缀(假如该URL参数缺失协议前缀).可能会用到strings.HasPrefix\n1234567func TestAddPrefix(t *testing.T) &#123;\tinputURL := &quot;z.cn&quot;\tif ! strings.HasPrefix(inputURL, &quot;http&quot;) &#123;\t\tinputURL = &quot;http://&quot; + inputURL\t&#125;\tfmt.Println(inputURL)&#125;\n\n练习1.9修改fetch来输出http状态码,可以在resp.Status中找到它\n123456func TestOutputStatusCode(t *testing.T) &#123;\tresp, _ := http.Get(&quot;http://z.cn&quot;)\tfmt.Println(&quot;StatusCode: &quot;, resp.StatusCode)\tio.Copy(os.Stdout, resp.Body)\tresp.Body.Close()&#125;\n\n练习1.10找一个产生大量数据的网站.连续两次运行fetchall,看报告的时间是否会有大的变化,调查缓存情况.每一次获取的内容一样吗?修改fetchall将内容输出到文件,这样可以检查它是否一致\n\n这问题不是他傻就是我傻，我还是偏向是他傻。猜测有可能说的是访问网站第一次很慢，第二次会因为缓存策略加速传输(比如http运营商缓存啥的)，亦或者是本机缓存304状态码(但是两次完全独立的访问和这个扯不上什么关系)\n\n练习1.11使用更长的参数列表来尝试fetchall,例如使用alexa.com排名前100万的网站,如果一个网站没有响应,程序的行为是则么样的\n\nGo net/http 超时机制完全手册\n虽然每个URL都对应了一个chan，但是有可能某几个URL特别慢，那么所有的请求都需要等到最慢的那个完成，比如你在本地nc -l 8000监听端口，再直接使用http.Get访问。它默认永不超时，直到tcp连接被中断\n打开太多的链接会启用N多的goroutine，这样会达到系统上限，比如触发常见的too many open files\n\n","dateCreated":"2018-06-03T20:56:37+08:00","dateModified":"2018-06-04T22:15:32+08:00","datePublished":"2018-06-03T20:56:37+08:00","description":"作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~\nGolang版本:1.10.1IDE: GoLand操作系统: 10.13.4","headline":"Go程序设计语言课后习题答案-第一章(入门)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/06/03/the_go_programming_language_answer_1/"}</script>
     <meta name="description" content="作为一个初学者超级喜欢这本书，值得反复阅读，常读常新。因为读了好多时间了，因此有一个计划把课后习题全部做完，每天做五题~~ Golang版本:1.10.1IDE: GoLand操作系统: 10.13.4">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Go程序设计语言课后习题答案-第一章(入门)">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -701,6 +623,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -1001,8 +929,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

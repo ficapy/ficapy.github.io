@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。\n\n\nBootLoader一般刷机教程中不大会出现该名词，可是它其实是非常重要的。它和我们常听到的BIOS是一类程序–引导程序，在我们给电脑重装系统的时候通常都是开机的时候按特定的功能键然后进入图形界面和BIOS交互。openwrt刷机中其实也非常类似，只是交互的方式不同→→→直接造成了下面几个名词的产生\n不死UBoot即为上面描述的引导程序的一种(即还有别的引导程序)。试想我们给电脑装系统的时候。无论怎么失败，都是可以进入BIOS设置，然后一次次的重装系统的。可是有的openwrt的引导程序则不同。他们只给你一次失败的机会。如果失败就要用特殊的手段重装(比如TTL串口)，不死Uboot即相对那种失败就死的Bootloader而言的(其实感觉这应该是一个理所当然的自带功能,然而并没有)。不死UBoot提供这样的交互→→→如果刷机失败，无法ssh进入到openwrt系统，那么Uboot提供一个web服务，路由器运行的时候直接通过LAN接口连接电脑，然后通过web页面上传固件刷机。这样无论刷固件如何失败。都可以反复刷固件。可以看出不死Uboot它只是提供了一种比较方便的和引导程序交互的途径。其他常见途径还包括自动读取U盘里面的固件、使用TTL串口等\nTTL刷机听起来很高大上有没有，其实也仅仅只是和BootLoader进行交互的一种手段。所以如果你感觉它能解救任何砖机那就大错特错了。因为它需要设备预留口而且需要TTL串口设备，所以普通玩家是不会太有机会通过该方法刷机的，不死Uboot通过web交互，TTL刷机通过TTL串口。所以他们并没有实质的区别，都是和boot进行交互。\nmtdMemory_Technology_Device,如果执行命令刷机，那么在教程中mtd这个词并不陌生，它提供对文件系统读写的接口（描述可能不准确）。和linux中的dd差不多吧\n锁UBoot即限制mtd去擦写u-boot分区。如果执行命令写入的时候提示被锁就是锁了(好像是废话)。解决办法就是先刷一个允许写入u-boot分区的固件，当然锁住也不是完全没道理的，因为刷uboot是刷openwrt中危险性最高的一步。当然也有恶心的产品同时限制你擦写固件分区，比如极路由3。遇上这种普通方法无解了。既然刷uboot风险高，那么为何要刷呢。我想因为是自带的BootLoader不支持不死这种方式造成的，或者官方通过boot限制安装非官方固件\nFlash/内存等参数下载玩家自制固件的时候需要知道自己的设备参数，可以通过openwrt官方查找。ssh进入openwrt可以通过free查看内存大小。注意通过df -h查看到的并不是Flash大小，至于为什么我也不大明白。\n刷机小总结\nssh进入openwrt，小心谨慎使用mtd刷不死uboot(因为该步成功后刷固件失败也可安然无恙，so该步收益大于风险)，当然要是你这一步就失败了。机器基本就变砖了。因为TTL这类科技也是和boot交互的。boot都被刷挂了。基本没戏了，只能通过专用设备写入来解决了\n有了不死uboot这类科技护体，意味着你只要不要乱作死去随便反复刷boot那么反反复复刷固件都是没事的，即使刷固件变砖。另:有没有看到网上很多教程都写的通过LAN口来刷固件，其实看完上面的一些概念，是完全不需要这样的(因为有的笔记本并没有LAN接口)。进入到openwrt里面通过mtd刷固件和进入到uboot的web页面并没有任何区别\n选择固件的时候可以在淘宝上找店主。毕竟别人存货多XD\n网上找几个和自己一样设备的教程贴，思索下别人的操作发生了什么。\n原厂固件和sysupgrade的区别见参考资料最后一个链接\n\n笔者刷机过程因为我的路由出厂就是不死uboot，所以我在收集了一天资料之后，进行了如下操作\n123下载固件firmwarescp firmware root@192.168.8.1:/tmpmtd -r write /tmp/firmware firmware\nover 然后等两三分钟就好了，当然我凭着好奇的心理随便刷了几个别的固件。很不出意外的变砖了。然后通过LAN连接，再刷就好了\n参考资料关于串口TTL、USB转接实例(含图)关于刷UBoot不死uboot在v2ex上的一个讨论TTL线刷原理另一个TTL线刷原理再来一个TTL线刷实例关于BootLoader初探OpenWrtMTD维基百科介绍MTD扩展阅读如果你看不懂这篇文章，那么全篇你是白看了\n","dateCreated":"2016-05-05T20:59:17+08:00","dateModified":"2016-06-06T22:19:58+08:00","datePublished":"2016-05-05T20:59:17+08:00","description":"openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。","headline":"openwrt刷机常识","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/05/05/openwrt_recovery_you_need_to_know/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/05/05/openwrt_recovery_you_need_to_know/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。\n\n\nBootLoader一般刷机教程中不大会出现该名词，可是它其实是非常重要的。它和我们常听到的BIOS是一类程序–引导程序，在我们给电脑重装系统的时候通常都是开机的时候按特定的功能键然后进入图形界面和BIOS交互。openwrt刷机中其实也非常类似，只是交互的方式不同→→→直接造成了下面几个名词的产生\n不死UBoot即为上面描述的引导程序的一种(即还有别的引导程序)。试想我们给电脑装系统的时候。无论怎么失败，都是可以进入BIOS设置，然后一次次的重装系统的。可是有的openwrt的引导程序则不同。他们只给你一次失败的机会。如果失败就要用特殊的手段重装(比如TTL串口)，不死Uboot即相对那种失败就死的Bootloader而言的(其实感觉这应该是一个理所当然的自带功能,然而并没有)。不死UBoot提供这样的交互→→→如果刷机失败，无法ssh进入到openwrt系统，那么Uboot提供一个web服务，路由器运行的时候直接通过LAN接口连接电脑，然后通过web页面上传固件刷机。这样无论刷固件如何失败。都可以反复刷固件。可以看出不死Uboot它只是提供了一种比较方便的和引导程序交互的途径。其他常见途径还包括自动读取U盘里面的固件、使用TTL串口等\nTTL刷机听起来很高大上有没有，其实也仅仅只是和BootLoader进行交互的一种手段。所以如果你感觉它能解救任何砖机那就大错特错了。因为它需要设备预留口而且需要TTL串口设备，所以普通玩家是不会太有机会通过该方法刷机的，不死Uboot通过web交互，TTL刷机通过TTL串口。所以他们并没有实质的区别，都是和boot进行交互。\nmtdMemory_Technology_Device,如果执行命令刷机，那么在教程中mtd这个词并不陌生，它提供对文件系统读写的接口（描述可能不准确）。和linux中的dd差不多吧\n锁UBoot即限制mtd去擦写u-boot分区。如果执行命令写入的时候提示被锁就是锁了(好像是废话)。解决办法就是先刷一个允许写入u-boot分区的固件，当然锁住也不是完全没道理的，因为刷uboot是刷openwrt中危险性最高的一步。当然也有恶心的产品同时限制你擦写固件分区，比如极路由3。遇上这种普通方法无解了。既然刷uboot风险高，那么为何要刷呢。我想因为是自带的BootLoader不支持不死这种方式造成的，或者官方通过boot限制安装非官方固件\nFlash/内存等参数下载玩家自制固件的时候需要知道自己的设备参数，可以通过openwrt官方查找。ssh进入openwrt可以通过free查看内存大小。注意通过df -h查看到的并不是Flash大小，至于为什么我也不大明白。\n刷机小总结\nssh进入openwrt，小心谨慎使用mtd刷不死uboot(因为该步成功后刷固件失败也可安然无恙，so该步收益大于风险)，当然要是你这一步就失败了。机器基本就变砖了。因为TTL这类科技也是和boot交互的。boot都被刷挂了。基本没戏了，只能通过专用设备写入来解决了\n有了不死uboot这类科技护体，意味着你只要不要乱作死去随便反复刷boot那么反反复复刷固件都是没事的，即使刷固件变砖。另:有没有看到网上很多教程都写的通过LAN口来刷固件，其实看完上面的一些概念，是完全不需要这样的(因为有的笔记本并没有LAN接口)。进入到openwrt里面通过mtd刷固件和进入到uboot的web页面并没有任何区别\n选择固件的时候可以在淘宝上找店主。毕竟别人存货多XD\n网上找几个和自己一样设备的教程贴，思索下别人的操作发生了什么。\n原厂固件和sysupgrade的区别见参考资料最后一个链接\n\n笔者刷机过程因为我的路由出厂就是不死uboot，所以我在收集了一天资料之后，进行了如下操作\n123下载固件firmwarescp firmware root@192.168.8.1:/tmpmtd -r write /tmp/firmware firmware\nover 然后等两三分钟就好了，当然我凭着好奇的心理随便刷了几个别的固件。很不出意外的变砖了。然后通过LAN连接，再刷就好了\n参考资料关于串口TTL、USB转接实例(含图)关于刷UBoot不死uboot在v2ex上的一个讨论TTL线刷原理另一个TTL线刷原理再来一个TTL线刷实例关于BootLoader初探OpenWrtMTD维基百科介绍MTD扩展阅读如果你看不懂这篇文章，那么全篇你是白看了\n","dateCreated":"2016-05-05T20:59:17+08:00","dateModified":"2016-06-06T22:19:58+08:00","datePublished":"2016-05-05T20:59:17+08:00","description":"openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。","headline":"openwrt刷机常识","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/05/05/openwrt_recovery_you_need_to_know/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/05/05/openwrt_recovery_you_need_to_know/"}</script>
     <meta name="description" content="openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="openwrt刷机常识">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -658,6 +580,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -958,8 +886,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

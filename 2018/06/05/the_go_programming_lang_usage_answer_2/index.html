@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"第二章\n名称\n声明\n变量\n赋值\n类型声明\n包和文件\n作用域\n\n\n\n练习2.1:添加类型、常量和函数到tempconv包中，处理以开尔文为单位(K)的温度值,0K=-273.15℃,变化1K和变化1℃是等价的\n\n很水的题\n\n123456789101112131415161718package tempconvimport &quot;fmt&quot;type Kelvin float64type Celsius float64func (k Kelvin) String() string &#123;\treturn fmt.Sprintf(&quot;%gK&quot;, k)&#125;func CToK(c Celsius) Kelvin &#123;\treturn Kelvin(c - 273.15)&#125;func KToC(k Kelvin) Celsius &#123;\treturn Celsius(k + 273.15)&#125;\n\n练习2.2写一个类似于cf的通用的单位转换程序,从命令行参数或者标准输入(如果没有参数)获取数字,然后将每一个数字转换为以摄氏温度和华氏温度表示的温度,以英寸和米表示的长度单位,以磅和千克表示的重量单位,等等\n\n略，同很水\n\n练习2.3:使用循环重写PopCount来代替单个表达式.对比两个版本的效率\n\n下面连续三道题都是经典面试题，求二进制数中1的个数，限定了正整数\n书上的代码主要是预先计算,将64bit每8bit一组,8bit会有二的八次方种结果，共256种结果，将所有的结果都先计算出来(空间换时间)\n预计算主要是这一步pc[i] = pc[i/2] + byte(i&amp;1)，注意此处的含义是除以二表示二进制数右移一位，后面表示最后一位是1还是0\n代码中[256]byte换成[256]int，更好理解。可能这样写只是为了让人更加能搞明白byte和int的各种转换吧\n注意这种预计算的执行效率是很高的\n\n书上给的代码还是比较扭曲的\n123456789101112131415161718192021// 2000000000\t         0.32 ns/oppackage tempconvvar pc [256]bytefunc init() &#123;\tfor i := range pc &#123;\t\tpc[i] = pc[i/2] + byte(i&amp;1)\t&#125;&#125;func PopCount(x uint64) int &#123;\treturn int(pc[byte(x&gt;&gt;(0*8))] +\t\tpc[byte(x&gt;&gt;(1*8))] +\t\tpc[byte(x&gt;&gt;(2*8))] +\t\tpc[byte(x&gt;&gt;(3*8))] +\t\tpc[byte(x&gt;&gt;(4*8))] +\t\tpc[byte(x&gt;&gt;(5*8))] +\t\tpc[byte(x&gt;&gt;(6*8))] +\t\tpc[byte(x&gt;&gt;(7*8))])&#125;\n\n改成循环\n\n惊不惊喜，意不意外，速度居然爆降低100倍\n\n123456789101112131415func PopCount1(x uint64) int &#123;\tret := byte(0)\tfor i := uint8(0); i &lt; 8; i++ &#123;\t\tret += pc[byte(x&gt;&gt;(i*8))]\t&#125;\treturn int(ret)&#125;func BenchmarkPopCount1(b *testing.B) &#123;\t// 100000000\t        21.4 ns/op\t// 循环\tfor i := 0; i &lt; b.N; i++ &#123;\t\tPopCount1(2&lt;&lt;63 - 1)\t&#125;&#125;\n\n\n练习2.4写一个用于统计位的PopCount,它在其实际参数的64位上执行移位操作,每次判断最右边的位,进而实现统计功能.把它与快查表版本的性能进行对比\n\n很普通的写法\n\n123456789101112131415161718func PopCount2(x uint64) int &#123;\tret := 0\tfor i := 0; i &lt; 64; i++ &#123;\t\tif x&amp;1 == 1 &#123;\t\t\tret += 1\t\t&#125;\t\tx = x &gt;&gt; 1\t&#125;\treturn ret&#125;func BenchmarkPopCount2(b *testing.B) &#123;\t// 20000000\t        60.5 ns/op\t// &gt;&gt; 循环\tfor i := 0; i &lt; b.N; i++ &#123;\t\tPopCount2(2&lt;&lt;63 - 1)\t&#125;&#125;\n\n\n练习2.5使用x&amp;(x-1)可以清除x最右边的非零位,利用该特点写一个PopCount,然后评价它的性能\n\nx&amp;(x-1)面试基础题\n\n123456789101112131415func PopCount3(x uint64) int &#123;\tret := 0\tfor x != 0 &#123;\t\tx = (x - 1) &amp; x\t\tret += 1\t&#125;\treturn ret&#125;func BenchmarkPopCount3(b *testing.B) &#123;\t// 30000000\t        50.5 ns/op\t// x&amp;(x-1)\tfor i := 0; i &lt; b.N; i++ &#123;\t\tPopCount3(2&lt;&lt;63 - 1)\t&#125;&#125;\n\n\n最后~~~还是挺奇葩，书上的写法居然是最快的，改成循环速度居然爆降，也不知道Go编译器是如何优化代码的╭(╯^╰)╮\n","dateCreated":"2018-06-05T23:52:24+08:00","dateModified":"2018-06-06T07:52:21+08:00","datePublished":"2018-06-05T23:52:24+08:00","description":"第二章\n名称\n声明\n变量\n赋值\n类型声明\n包和文件\n作用域\n","headline":"Go程序设计语言课后习题答案-第二章(程序结构)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"第二章\n名称\n声明\n变量\n赋值\n类型声明\n包和文件\n作用域\n\n\n\n练习2.1:添加类型、常量和函数到tempconv包中，处理以开尔文为单位(K)的温度值,0K=-273.15℃,变化1K和变化1℃是等价的\n\n很水的题\n\n123456789101112131415161718package tempconvimport &quot;fmt&quot;type Kelvin float64type Celsius float64func (k Kelvin) String() string &#123;\treturn fmt.Sprintf(&quot;%gK&quot;, k)&#125;func CToK(c Celsius) Kelvin &#123;\treturn Kelvin(c - 273.15)&#125;func KToC(k Kelvin) Celsius &#123;\treturn Celsius(k + 273.15)&#125;\n\n练习2.2写一个类似于cf的通用的单位转换程序,从命令行参数或者标准输入(如果没有参数)获取数字,然后将每一个数字转换为以摄氏温度和华氏温度表示的温度,以英寸和米表示的长度单位,以磅和千克表示的重量单位,等等\n\n略，同很水\n\n练习2.3:使用循环重写PopCount来代替单个表达式.对比两个版本的效率\n\n下面连续三道题都是经典面试题，求二进制数中1的个数，限定了正整数\n书上的代码主要是预先计算,将64bit每8bit一组,8bit会有二的八次方种结果，共256种结果，将所有的结果都先计算出来(空间换时间)\n预计算主要是这一步pc[i] = pc[i/2] + byte(i&amp;1)，注意此处的含义是除以二表示二进制数右移一位，后面表示最后一位是1还是0\n代码中[256]byte换成[256]int，更好理解。可能这样写只是为了让人更加能搞明白byte和int的各种转换吧\n注意这种预计算的执行效率是很高的\n\n书上给的代码还是比较扭曲的\n123456789101112131415161718192021// 2000000000\t         0.32 ns/oppackage tempconvvar pc [256]bytefunc init() &#123;\tfor i := range pc &#123;\t\tpc[i] = pc[i/2] + byte(i&amp;1)\t&#125;&#125;func PopCount(x uint64) int &#123;\treturn int(pc[byte(x&gt;&gt;(0*8))] +\t\tpc[byte(x&gt;&gt;(1*8))] +\t\tpc[byte(x&gt;&gt;(2*8))] +\t\tpc[byte(x&gt;&gt;(3*8))] +\t\tpc[byte(x&gt;&gt;(4*8))] +\t\tpc[byte(x&gt;&gt;(5*8))] +\t\tpc[byte(x&gt;&gt;(6*8))] +\t\tpc[byte(x&gt;&gt;(7*8))])&#125;\n\n改成循环\n\n惊不惊喜，意不意外，速度居然爆降低100倍\n\n123456789101112131415func PopCount1(x uint64) int &#123;\tret := byte(0)\tfor i := uint8(0); i &lt; 8; i++ &#123;\t\tret += pc[byte(x&gt;&gt;(i*8))]\t&#125;\treturn int(ret)&#125;func BenchmarkPopCount1(b *testing.B) &#123;\t// 100000000\t        21.4 ns/op\t// 循环\tfor i := 0; i &lt; b.N; i++ &#123;\t\tPopCount1(2&lt;&lt;63 - 1)\t&#125;&#125;\n\n\n练习2.4写一个用于统计位的PopCount,它在其实际参数的64位上执行移位操作,每次判断最右边的位,进而实现统计功能.把它与快查表版本的性能进行对比\n\n很普通的写法\n\n123456789101112131415161718func PopCount2(x uint64) int &#123;\tret := 0\tfor i := 0; i &lt; 64; i++ &#123;\t\tif x&amp;1 == 1 &#123;\t\t\tret += 1\t\t&#125;\t\tx = x &gt;&gt; 1\t&#125;\treturn ret&#125;func BenchmarkPopCount2(b *testing.B) &#123;\t// 20000000\t        60.5 ns/op\t// &gt;&gt; 循环\tfor i := 0; i &lt; b.N; i++ &#123;\t\tPopCount2(2&lt;&lt;63 - 1)\t&#125;&#125;\n\n\n练习2.5使用x&amp;(x-1)可以清除x最右边的非零位,利用该特点写一个PopCount,然后评价它的性能\n\nx&amp;(x-1)面试基础题\n\n123456789101112131415func PopCount3(x uint64) int &#123;\tret := 0\tfor x != 0 &#123;\t\tx = (x - 1) &amp; x\t\tret += 1\t&#125;\treturn ret&#125;func BenchmarkPopCount3(b *testing.B) &#123;\t// 30000000\t        50.5 ns/op\t// x&amp;(x-1)\tfor i := 0; i &lt; b.N; i++ &#123;\t\tPopCount3(2&lt;&lt;63 - 1)\t&#125;&#125;\n\n\n最后~~~还是挺奇葩，书上的写法居然是最快的，改成循环速度居然爆降，也不知道Go编译器是如何优化代码的╭(╯^╰)╮\n","dateCreated":"2018-06-05T23:52:24+08:00","dateModified":"2018-06-06T07:52:21+08:00","datePublished":"2018-06-05T23:52:24+08:00","description":"第二章\n名称\n声明\n变量\n赋值\n类型声明\n包和文件\n作用域\n","headline":"Go程序设计语言课后习题答案-第二章(程序结构)","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/06/05/the_go_programming_lang_usage_answer_2/"}</script>
     <meta name="description" content="第二章 名称 声明 变量 赋值 类型声明 包和文件 作用域">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Go程序设计语言课后习题答案-第二章(程序结构)">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -692,6 +614,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -992,8 +920,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

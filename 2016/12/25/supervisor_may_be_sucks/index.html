@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"写几条自己用supervisor遇到的一些小坑\n\nPython 3 Wall的反派代表，一直不能使用python3安装\n对中文输出支持奇差，估计是使用python2造成的，举个例子，假如你要在python2里面print输出一个unicode中文字符。我试了各种办法，均无解(和supervisor使用子进程运行程序的策略有关),好在使用logging模块输出中文居然没啥问题-_-，正式运行环境也是全部使用logging代替print\n即使用python3，输出中文也会遇到问题,需要在配置文件添加environment=LANG=&quot;en_US.utf8&quot;, LC_ALL=&quot;en_US.UTF-8&quot;, LC_LANG=&quot;en_US.UTF-8&quot;解决\n写配置文件的时候一个变量不能配置多行,我一开始因为environment太长。写了2行，导致后面的没生效，折腾好久\n修改supervisor配置文件后，如果配置文件错了，不会报错！而且supervisor没有工具能对配置文件的正确性进行检查，灰常操蛋啊！\nsupervisor可以检查到异常自动重启并设置最大重启次数，可是有时候会造成无限重启这种情况。因为重启后立刻退出才会触发最大重启次数机制，假如程序一直是运行了十分钟自动退出。那么会造成无限重启，可以使用它的api写一个脚本监控这种情况，进行警告\n\n1234567891011import xmlrpc.clientdef list_time(name: str, interval: int, times: int):    s = xmlrpc.client.ServerProxy(&#x27;http://localhost:9001&#x27;)    if s.supervisor.getProcessInfo(name).get(&#x27;statename&#x27;) != &#x27;RUNNING&#x27;:        return False    context = s.supervisor.readLog(0, 10 * 1024 * 100)    context = filter(lambda x: name in x and &#x27;spawn&#x27; in x, context.splitlines())    context = map(lambda x: datetime.strptime(x[:19], &#x27;%Y-%m-%d %H:%M:%S&#x27;), context)    context = list(filter(lambda x: x + timedelta(minutes=interval) &gt; datetime.now(), context))    return (len(context) &gt; times) and len(context)\n\n参考也谈 Python 的中文编码处理\n","dateCreated":"2016-12-25T20:01:43+08:00","dateModified":"2017-01-11T16:02:14+08:00","datePublished":"2016-12-25T20:01:43+08:00","description":"","headline":"supervisor遇到的坑","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/12/25/supervisor_may_be_sucks/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/12/25/supervisor_may_be_sucks/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"写几条自己用supervisor遇到的一些小坑\n\nPython 3 Wall的反派代表，一直不能使用python3安装\n对中文输出支持奇差，估计是使用python2造成的，举个例子，假如你要在python2里面print输出一个unicode中文字符。我试了各种办法，均无解(和supervisor使用子进程运行程序的策略有关),好在使用logging模块输出中文居然没啥问题-_-，正式运行环境也是全部使用logging代替print\n即使用python3，输出中文也会遇到问题,需要在配置文件添加environment=LANG=&quot;en_US.utf8&quot;, LC_ALL=&quot;en_US.UTF-8&quot;, LC_LANG=&quot;en_US.UTF-8&quot;解决\n写配置文件的时候一个变量不能配置多行,我一开始因为environment太长。写了2行，导致后面的没生效，折腾好久\n修改supervisor配置文件后，如果配置文件错了，不会报错！而且supervisor没有工具能对配置文件的正确性进行检查，灰常操蛋啊！\nsupervisor可以检查到异常自动重启并设置最大重启次数，可是有时候会造成无限重启这种情况。因为重启后立刻退出才会触发最大重启次数机制，假如程序一直是运行了十分钟自动退出。那么会造成无限重启，可以使用它的api写一个脚本监控这种情况，进行警告\n\n1234567891011import xmlrpc.clientdef list_time(name: str, interval: int, times: int):    s = xmlrpc.client.ServerProxy(&#x27;http://localhost:9001&#x27;)    if s.supervisor.getProcessInfo(name).get(&#x27;statename&#x27;) != &#x27;RUNNING&#x27;:        return False    context = s.supervisor.readLog(0, 10 * 1024 * 100)    context = filter(lambda x: name in x and &#x27;spawn&#x27; in x, context.splitlines())    context = map(lambda x: datetime.strptime(x[:19], &#x27;%Y-%m-%d %H:%M:%S&#x27;), context)    context = list(filter(lambda x: x + timedelta(minutes=interval) &gt; datetime.now(), context))    return (len(context) &gt; times) and len(context)\n\n参考也谈 Python 的中文编码处理\n","dateCreated":"2016-12-25T20:01:43+08:00","dateModified":"2017-01-11T16:02:14+08:00","datePublished":"2016-12-25T20:01:43+08:00","description":"","headline":"supervisor遇到的坑","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/12/25/supervisor_may_be_sucks/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/12/25/supervisor_may_be_sucks/"}</script>
     <meta name="description" content="写几条自己用supervisor遇到的一些小坑  Python 3 Wall的反派代表，一直不能使用python3安装 对中文输出支持奇差，估计是使用python2造成的，举个例子，假如你要在python2里面print输出一个unicode中文字符。我试了各种办法，均无解(和supervisor使用子进程运行程序的策略有关),好在使用logging模块输出中文居然没啥问题-_-，正式运行环境也是">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="supervisor遇到的坑">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -650,6 +572,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -950,8 +878,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

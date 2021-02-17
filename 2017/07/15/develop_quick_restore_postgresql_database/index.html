@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"开发中总会遇到一些测试需要回滚数据库。常规的单元测试的做法是在单个会话中不真正的写入到数据库。而是测试完成后进行数据库回滚。大多数情况下这样都是满足要求的。只是有的时候需要数据库真正的写入到数据库。此时rollback回滚就有些乏力了。此时给数据库做一个备份，测试完成后回滚是一种不错的主意。Postgresql数据库的常规备份我们会使用pg_dump和pg_restore进行导出和恢复。此时如何快速的进行这个操作是我们关注的话题\n很幸运。很顺利的搜到了答案。6年前有人在stackexchange上提问同样的问题。得到了一些有用的回复。大概有这些\n\n使用文件系统级快照LVM\n使用CREATE  DATABASE … TEMPLATE语法\n将数据库放在虚拟机里面。使用虚拟机快照\n\n其中最有效的方案是二。因为LVM在个人笔记本上难以实施。虚拟机恢复时间较慢。依据方案二于是乎有人写了一个工具 stellar。粗略读了一下源码。其具体原理大概如下图\n备份的时候使用create database … template创建2个备份。恢复的时候删掉原有的数据库。将一个备份重命名为原有的名称。另外的一个备份再生成一个备份就完成了。另外删除新建数据库操作均会关闭所有已连接的数据库会话。\n因为类似文件系统级快照，所以方法极快。我本机2G的数据库文件，创建一个快照大概十秒钟左右，恢复就更快了。当然缺点也是有的，你每创建一个快照都会新增2个一样大小的副本，相当的占据硬盘空间，可是为了速度这点缺陷也就微不足道了┑(￣Д ￣)┍\n另外一个小缺点。因为它定位于测试环境下的数据库备份恢复。所以只连接一台机器。比如你一个数据库在机器A,一个数据库在机器B.赛高~~，那你只能在2个目录下使用2个配置文件来完成了。如果同一个机器上的多个数据库是可以直接备份的。再就是此工具比较专注于Postgresql。对于Mysql就不那么友好了。或许是Mysql的备份方案不一样\n使用方法\nstellar init 按照提示输入本机数据库访问路径生成配置文件\nstellar snapshot 生成一个快照\nstellar restore &lt;snap1&gt; 恢复\n其他请看 stellar --help\n\n( ⊙ o ⊙ )啊！ 多么爽快，世界真美妙\n参考Is it possible to quickly create/restore database snapshots with PostgreSQL?github stellar\n","dateCreated":"2017-07-15T15:18:39+08:00","dateModified":"2019-07-26T15:45:15+08:00","datePublished":"2017-07-15T15:18:39+08:00","description":"","headline":"开发环境中数据库快速回滚","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/07/15/develop_quick_restore_postgresql_database/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/07/15/develop_quick_restore_postgresql_database/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"开发中总会遇到一些测试需要回滚数据库。常规的单元测试的做法是在单个会话中不真正的写入到数据库。而是测试完成后进行数据库回滚。大多数情况下这样都是满足要求的。只是有的时候需要数据库真正的写入到数据库。此时rollback回滚就有些乏力了。此时给数据库做一个备份，测试完成后回滚是一种不错的主意。Postgresql数据库的常规备份我们会使用pg_dump和pg_restore进行导出和恢复。此时如何快速的进行这个操作是我们关注的话题\n很幸运。很顺利的搜到了答案。6年前有人在stackexchange上提问同样的问题。得到了一些有用的回复。大概有这些\n\n使用文件系统级快照LVM\n使用CREATE  DATABASE … TEMPLATE语法\n将数据库放在虚拟机里面。使用虚拟机快照\n\n其中最有效的方案是二。因为LVM在个人笔记本上难以实施。虚拟机恢复时间较慢。依据方案二于是乎有人写了一个工具 stellar。粗略读了一下源码。其具体原理大概如下图\n备份的时候使用create database … template创建2个备份。恢复的时候删掉原有的数据库。将一个备份重命名为原有的名称。另外的一个备份再生成一个备份就完成了。另外删除新建数据库操作均会关闭所有已连接的数据库会话。\n因为类似文件系统级快照，所以方法极快。我本机2G的数据库文件，创建一个快照大概十秒钟左右，恢复就更快了。当然缺点也是有的，你每创建一个快照都会新增2个一样大小的副本，相当的占据硬盘空间，可是为了速度这点缺陷也就微不足道了┑(￣Д ￣)┍\n另外一个小缺点。因为它定位于测试环境下的数据库备份恢复。所以只连接一台机器。比如你一个数据库在机器A,一个数据库在机器B.赛高~~，那你只能在2个目录下使用2个配置文件来完成了。如果同一个机器上的多个数据库是可以直接备份的。再就是此工具比较专注于Postgresql。对于Mysql就不那么友好了。或许是Mysql的备份方案不一样\n使用方法\nstellar init 按照提示输入本机数据库访问路径生成配置文件\nstellar snapshot 生成一个快照\nstellar restore &lt;snap1&gt; 恢复\n其他请看 stellar --help\n\n( ⊙ o ⊙ )啊！ 多么爽快，世界真美妙\n参考Is it possible to quickly create/restore database snapshots with PostgreSQL?github stellar\n","dateCreated":"2017-07-15T15:18:39+08:00","dateModified":"2019-07-26T15:45:15+08:00","datePublished":"2017-07-15T15:18:39+08:00","description":"","headline":"开发环境中数据库快速回滚","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/07/15/develop_quick_restore_postgresql_database/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/07/15/develop_quick_restore_postgresql_database/"}</script>
     <meta name="description" content="开发中总会遇到一些测试需要回滚数据库。常规的单元测试的做法是在单个会话中不真正的写入到数据库。而是测试完成后进行数据库回滚。大多数情况下这样都是满足要求的。只是有的时候需要数据库真正的写入到数据库。此时rollback回滚就有些乏力了。此时给数据库做一个备份，测试完成后回滚是一种不错的主意。Postgresql数据库的常规备份我们会使用pg_dump和pg_restore进行导出和恢复。此时如何快">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="开发环境中数据库快速回滚">
@@ -179,7 +179,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -195,87 +195,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -659,6 +581,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -959,8 +887,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

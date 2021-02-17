@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"信号是进程间通信的一种方式,同时它是一种异步的形式。先注册信号处理函数，当接收到信号的时候回调该函数进程处理。信号在系统中以数字的形式标识。每个信号对应着一个处理函数\n\n\n信号表来个python打印支持的信号\n123456789101112131415import signalsignals_to_names = &#123;    getattr(signal, n): n    for n in dir(signal)    if n.startswith(&#x27;SIG&#x27;) and &#x27;_&#x27; not in n&#125;for s, name in sorted(signals_to_names.items()):    handler = signal.getsignal(s)    if handler is signal.SIG_DFL:        handler = &#x27;SIG_DFL&#x27;    elif handler is signal.SIG_IGN:        handler = &#x27;SIG_IGN&#x27;    print(&#x27;&#123;:&lt;10&#125; (&#123;:2d&#125;):&#x27;.format(name, s), handler)\n\n因为平时用的少，而ubuntu上的man 7 signal的内容比较多，我只是在osx上看了一下singal的文档。它仅包含下列一些信号\n\n\n\n序号\n名称\n默认动作\n解释\n\n\n\n1\nSIGHUP\n终止进程\n让程序挂起\n\n\n2\nSIGINT\n终止进程\n打断程序的执行\n\n\n3\nSIGQUIT\ndump\n程序\n\n\n4\nSIGILL\ndump\n非法指令\n\n\n5\nSIGTRAP\ndump\n陷阱\n\n\n6\nSIGABRT\ndump\n打断程序\n\n\n7\nSIGEMT\ndump\n\n\n\n8\nSIGFPE\ndump\n浮点数异常\n\n\n9\nSIGKILL\n终止进程\n杀死程序(不可修改)\n\n\n10\nSIGBUS\ndump\n总线错误\n\n\n11\nSIGSEGV\ndump\n段错误\n\n\n12\nSIGSYS\ndump\n调用不存在的系统调用\n\n\n13\nSIGPIPE\n终止进程\n给一个没有读的管道写数据\n\n\n14\nSIGALRM\n终止进程\n实时计时器超时\n\n\n15\nSIGTERM\n终止进程\n软中断信号\n\n\n16\nSIGURG\n已废弃\n\n\n\n17\nSIGSTOP\n停止进程\n停止(不可修改)\n\n\n18\nSIGTSTP\n停止进程\n从键盘生成停止信号\n\n\n19\nSIGCONT\n废弃\n\n\n\n20\nSIGCHLD\n废弃\n\n\n\n21\nSIGTTIN\n停止进程\n后台进程尝试读取终端时触发\n\n\n22\nSIGTOU\n停止进程\n后台进程尝试写入终端时触发\n\n\n23\nSIGIO\n废弃\n\n\n\n24\nSIGXCPU\n终止进程\n进程的cpu时间片到期(setrlimit)\n\n\n25\nSIGXFSZ\n终止进程\n文件大小超过限制(setrlimit)\n\n\n26\nSIGVTLRM\n终止进程\n虚拟时钟超时(setitimer)\n\n\n27\nSIGPROF\n终止进程\nprofil时钟超时(setitimer)\n\n\n28\nSIGWINCH\n废弃\n\n\n\n29\nSIGINFO\n废弃\n\n\n\n30\nSIGUSR1\n终止进程\n用户自定义信号1\n\n\n31\nSIGUSR2\n终止进程\n用户自定义信号2\n\n\n信号的产生信号可以产生自软件和硬件，硬件来说，我们最常用的Ctrl+C来终止一个程序的执行，软件层面就是经常使用kill -9 pid来强制终止一个程序。观察上表可以发现还有很多类似非法指令、陷入、段错误等等都是由操作系统触发反馈给应用程序。还有就是我们自己编写程序进行系统调用触发。比如python中常用的signal.alarm\n信号的处理观察信号表可以发现虽然有31个信号。但是默认动作只有终止进程、dump、停止进程三种。这算成了多对一的关系，多个信号对应一个处理结果。想想这其实是一种人为的约定。操作系统遇到一些异常的时候本可以直接卡擦掉进程。但是还是先知会你一声，万一程序作者觉得遇到这种情况还能再抢救一下那就不异常了。所以规定这么多信号id。还是为了方便编程的时候对信号进行分类处理。而且不仅仅约定俗成。后面还有两个自定义信号让你自己进行定义\n信号处理基本有三种套路，默认、忽略、自定义。如果你觉得遇到异常你还可以再抢救一下那就自定义或者忽略。但是假如忽略掉所有的信号。管理人员可能就无法退出你的程序了。因此SIGKILL和SIGSTOP强制不允许被忽略或者自定义。所以kill -9就是一个大杀器\n但是很多人并不被推荐用kill -9，而更多的人推荐用kill -15。原因是强制虽然强。但是这样编程人员别无选择。有的程序在意外退出前需要做一些清理工作，比如删掉临时文件啥的。当然，渣水平的作者怎么可能会去自定义处理SIGTERM信号┑(￣Д ￣)┍\n应用比如tornado中可以使用信号机制记录响应时间超过阈值的栈帧\n1234567891011121314151617181920212223242526272829303132import tornado.httpserverimport tornado.ioloopimport tornado.webimport tracebackimport timedef record_block(_, frame):    a = traceback.format_stack(frame)    print(&quot;&quot;.join(a))class MainHandler(tornado.web.RequestHandler):    def get(self):        time.sleep(10)        self.write(&quot;Hello, world&quot;)def main():    application = tornado.web.Application([        (r&quot;/&quot;, MainHandler),    ])    http_server = tornado.httpserver.HTTPServer(application)    http_server.listen(8888)    ioloop = tornado.ioloop.IOLoop.current()    ioloop.set_blocking_signal_threshold(1, record_block)    ioloop.start()if __name__ == &quot;__main__&quot;:    main()\n\n关于它的实现就比较简单了。先使用signal.signal(signal.SIGALRM,callback)注册信号回调函数。在ioloop主循环中每次事件完成后将实时计时器归零signal.setitimer(signal.ITIMER_REAL, 0, 0)后再重新开始计时。此处为什么不是用alarm而使用setitimer。因为前者只支持整数秒，后者支持浮点数\n参考资料signal — Asynchronous System Events\n","dateCreated":"2018-03-06T12:29:40+08:00","dateModified":"2018-03-06T12:35:15+08:00","datePublished":"2018-03-06T12:29:40+08:00","description":"信号是进程间通信的一种方式,同时它是一种异步的形式。先注册信号处理函数，当接收到信号的时候回调该函数进程处理。信号在系统中以数字的形式标识。每个信号对应着一个处理函数","headline":"Linux 信号","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/06/linux_signal/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/06/linux_signal/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"信号是进程间通信的一种方式,同时它是一种异步的形式。先注册信号处理函数，当接收到信号的时候回调该函数进程处理。信号在系统中以数字的形式标识。每个信号对应着一个处理函数\n\n\n信号表来个python打印支持的信号\n123456789101112131415import signalsignals_to_names = &#123;    getattr(signal, n): n    for n in dir(signal)    if n.startswith(&#x27;SIG&#x27;) and &#x27;_&#x27; not in n&#125;for s, name in sorted(signals_to_names.items()):    handler = signal.getsignal(s)    if handler is signal.SIG_DFL:        handler = &#x27;SIG_DFL&#x27;    elif handler is signal.SIG_IGN:        handler = &#x27;SIG_IGN&#x27;    print(&#x27;&#123;:&lt;10&#125; (&#123;:2d&#125;):&#x27;.format(name, s), handler)\n\n因为平时用的少，而ubuntu上的man 7 signal的内容比较多，我只是在osx上看了一下singal的文档。它仅包含下列一些信号\n\n\n\n序号\n名称\n默认动作\n解释\n\n\n\n1\nSIGHUP\n终止进程\n让程序挂起\n\n\n2\nSIGINT\n终止进程\n打断程序的执行\n\n\n3\nSIGQUIT\ndump\n程序\n\n\n4\nSIGILL\ndump\n非法指令\n\n\n5\nSIGTRAP\ndump\n陷阱\n\n\n6\nSIGABRT\ndump\n打断程序\n\n\n7\nSIGEMT\ndump\n\n\n\n8\nSIGFPE\ndump\n浮点数异常\n\n\n9\nSIGKILL\n终止进程\n杀死程序(不可修改)\n\n\n10\nSIGBUS\ndump\n总线错误\n\n\n11\nSIGSEGV\ndump\n段错误\n\n\n12\nSIGSYS\ndump\n调用不存在的系统调用\n\n\n13\nSIGPIPE\n终止进程\n给一个没有读的管道写数据\n\n\n14\nSIGALRM\n终止进程\n实时计时器超时\n\n\n15\nSIGTERM\n终止进程\n软中断信号\n\n\n16\nSIGURG\n已废弃\n\n\n\n17\nSIGSTOP\n停止进程\n停止(不可修改)\n\n\n18\nSIGTSTP\n停止进程\n从键盘生成停止信号\n\n\n19\nSIGCONT\n废弃\n\n\n\n20\nSIGCHLD\n废弃\n\n\n\n21\nSIGTTIN\n停止进程\n后台进程尝试读取终端时触发\n\n\n22\nSIGTOU\n停止进程\n后台进程尝试写入终端时触发\n\n\n23\nSIGIO\n废弃\n\n\n\n24\nSIGXCPU\n终止进程\n进程的cpu时间片到期(setrlimit)\n\n\n25\nSIGXFSZ\n终止进程\n文件大小超过限制(setrlimit)\n\n\n26\nSIGVTLRM\n终止进程\n虚拟时钟超时(setitimer)\n\n\n27\nSIGPROF\n终止进程\nprofil时钟超时(setitimer)\n\n\n28\nSIGWINCH\n废弃\n\n\n\n29\nSIGINFO\n废弃\n\n\n\n30\nSIGUSR1\n终止进程\n用户自定义信号1\n\n\n31\nSIGUSR2\n终止进程\n用户自定义信号2\n\n\n信号的产生信号可以产生自软件和硬件，硬件来说，我们最常用的Ctrl+C来终止一个程序的执行，软件层面就是经常使用kill -9 pid来强制终止一个程序。观察上表可以发现还有很多类似非法指令、陷入、段错误等等都是由操作系统触发反馈给应用程序。还有就是我们自己编写程序进行系统调用触发。比如python中常用的signal.alarm\n信号的处理观察信号表可以发现虽然有31个信号。但是默认动作只有终止进程、dump、停止进程三种。这算成了多对一的关系，多个信号对应一个处理结果。想想这其实是一种人为的约定。操作系统遇到一些异常的时候本可以直接卡擦掉进程。但是还是先知会你一声，万一程序作者觉得遇到这种情况还能再抢救一下那就不异常了。所以规定这么多信号id。还是为了方便编程的时候对信号进行分类处理。而且不仅仅约定俗成。后面还有两个自定义信号让你自己进行定义\n信号处理基本有三种套路，默认、忽略、自定义。如果你觉得遇到异常你还可以再抢救一下那就自定义或者忽略。但是假如忽略掉所有的信号。管理人员可能就无法退出你的程序了。因此SIGKILL和SIGSTOP强制不允许被忽略或者自定义。所以kill -9就是一个大杀器\n但是很多人并不被推荐用kill -9，而更多的人推荐用kill -15。原因是强制虽然强。但是这样编程人员别无选择。有的程序在意外退出前需要做一些清理工作，比如删掉临时文件啥的。当然，渣水平的作者怎么可能会去自定义处理SIGTERM信号┑(￣Д ￣)┍\n应用比如tornado中可以使用信号机制记录响应时间超过阈值的栈帧\n1234567891011121314151617181920212223242526272829303132import tornado.httpserverimport tornado.ioloopimport tornado.webimport tracebackimport timedef record_block(_, frame):    a = traceback.format_stack(frame)    print(&quot;&quot;.join(a))class MainHandler(tornado.web.RequestHandler):    def get(self):        time.sleep(10)        self.write(&quot;Hello, world&quot;)def main():    application = tornado.web.Application([        (r&quot;/&quot;, MainHandler),    ])    http_server = tornado.httpserver.HTTPServer(application)    http_server.listen(8888)    ioloop = tornado.ioloop.IOLoop.current()    ioloop.set_blocking_signal_threshold(1, record_block)    ioloop.start()if __name__ == &quot;__main__&quot;:    main()\n\n关于它的实现就比较简单了。先使用signal.signal(signal.SIGALRM,callback)注册信号回调函数。在ioloop主循环中每次事件完成后将实时计时器归零signal.setitimer(signal.ITIMER_REAL, 0, 0)后再重新开始计时。此处为什么不是用alarm而使用setitimer。因为前者只支持整数秒，后者支持浮点数\n参考资料signal — Asynchronous System Events\n","dateCreated":"2018-03-06T12:29:40+08:00","dateModified":"2018-03-06T12:35:15+08:00","datePublished":"2018-03-06T12:29:40+08:00","description":"信号是进程间通信的一种方式,同时它是一种异步的形式。先注册信号处理函数，当接收到信号的时候回调该函数进程处理。信号在系统中以数字的形式标识。每个信号对应着一个处理函数","headline":"Linux 信号","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/06/linux_signal/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/03/06/linux_signal/"}</script>
     <meta name="description" content="信号是进程间通信的一种方式,同时它是一种异步的形式。先注册信号处理函数，当接收到信号的时候回调该函数进程处理。信号在系统中以数字的形式标识。每个信号对应着一个处理函数">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Linux 信号">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -850,6 +772,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -1150,8 +1078,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

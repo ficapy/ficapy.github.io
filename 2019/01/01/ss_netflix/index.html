@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix\n\n\nipv4现状我先后尝试使用三个代理去连接Netflix，居然都成功被识别为代理，有点心灰意冷，心想这商家还做不做生意了，有必要这样赶尽杀绝吗？后来在网上搜索了一番，发现居然有好多代理商家用能看Netflix作为卖点，搞的好像用了很高深的黑科技的样子，后来网友反馈用ipv6可以连接，我试了一下居然还真可以了\nipv6 解决ipv4毕竟地址有限，也发展了这么多年，所以ipv4的地址归纳比较完善了，能准确的知道某个ip是否是云服务器厂商所拥有的，ipv6的地址范围明显就广的多，因此目前并不能很好的识别是否来自于云服务器，另外，商家也要赚钱，不能把路彻底堵死，我想这也是一个原因吧\nshadowsocks5本地提供socks5代理,socks5代理有dns解析选项，一个是本地dns解析，一个是远程dns解析，本地dns解析那得到的ip基本就是ipv4的，所以Netflix识别到的也是ipv4的ip,就被识别为代理了，远程dns解析，交由代理服务器解析，此时我们的目的是得到ipv6的地址，就能成功突破封锁了。\nshadowsocks的python原版和ssr都是自己实现了异步的dns解析功能，通过配置文件开启ipv6解析，ss是prefer_ipv6, ssr的是dns_ipv6，顺利的情况下把它们设置为true就解决问题了。可以使用如下地址连接测试是否正常使用http://v4v6.ipv6-test.com/json/defaultproto.php。或者使用命令行看到更详细一些的交互\n1curl -x socks5h:&#x2F;&#x2F;127.0.0.1:1086 http:&#x2F;&#x2F;v4v6.ipv6-test.com&#x2F;json&#x2F;defaultproto.php -v\n如果返回的ipv6的地址就成功了\n其他\n如果你使用docker运行，那么容器环境需要额外开启ipv6的支持\n如果是其他版本的shadowsocks实现，具体看一下代码应该也能实现类似的配置\n开启ipv6有缺点，具体在于极多网站对ipv6的支持不友好，为了Netflix开启ipv6相当于全局开启了ipv6，所以保险起见，你可以开两个代理端口，一个专门看Netflix开启ipv6\n测试了ios端，设置代理无效，可能ios端忽略了代理设置吧，可以尝试直接部署在路由器全局翻\n\n","dateCreated":"2019-01-01T11:45:26+08:00","dateModified":"2019-01-01T12:25:33+08:00","datePublished":"2019-01-01T11:45:26+08:00","description":"元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix","headline":"国内观看Netflix","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2019/01/01/ss_netflix/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2019/01/01/ss_netflix/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix\n\n\nipv4现状我先后尝试使用三个代理去连接Netflix，居然都成功被识别为代理，有点心灰意冷，心想这商家还做不做生意了，有必要这样赶尽杀绝吗？后来在网上搜索了一番，发现居然有好多代理商家用能看Netflix作为卖点，搞的好像用了很高深的黑科技的样子，后来网友反馈用ipv6可以连接，我试了一下居然还真可以了\nipv6 解决ipv4毕竟地址有限，也发展了这么多年，所以ipv4的地址归纳比较完善了，能准确的知道某个ip是否是云服务器厂商所拥有的，ipv6的地址范围明显就广的多，因此目前并不能很好的识别是否来自于云服务器，另外，商家也要赚钱，不能把路彻底堵死，我想这也是一个原因吧\nshadowsocks5本地提供socks5代理,socks5代理有dns解析选项，一个是本地dns解析，一个是远程dns解析，本地dns解析那得到的ip基本就是ipv4的，所以Netflix识别到的也是ipv4的ip,就被识别为代理了，远程dns解析，交由代理服务器解析，此时我们的目的是得到ipv6的地址，就能成功突破封锁了。\nshadowsocks的python原版和ssr都是自己实现了异步的dns解析功能，通过配置文件开启ipv6解析，ss是prefer_ipv6, ssr的是dns_ipv6，顺利的情况下把它们设置为true就解决问题了。可以使用如下地址连接测试是否正常使用http://v4v6.ipv6-test.com/json/defaultproto.php。或者使用命令行看到更详细一些的交互\n1curl -x socks5h:&#x2F;&#x2F;127.0.0.1:1086 http:&#x2F;&#x2F;v4v6.ipv6-test.com&#x2F;json&#x2F;defaultproto.php -v\n如果返回的ipv6的地址就成功了\n其他\n如果你使用docker运行，那么容器环境需要额外开启ipv6的支持\n如果是其他版本的shadowsocks实现，具体看一下代码应该也能实现类似的配置\n开启ipv6有缺点，具体在于极多网站对ipv6的支持不友好，为了Netflix开启ipv6相当于全局开启了ipv6，所以保险起见，你可以开两个代理端口，一个专门看Netflix开启ipv6\n测试了ios端，设置代理无效，可能ios端忽略了代理设置吧，可以尝试直接部署在路由器全局翻\n\n","dateCreated":"2019-01-01T11:45:26+08:00","dateModified":"2019-01-01T12:25:33+08:00","datePublished":"2019-01-01T11:45:26+08:00","description":"元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix","headline":"国内观看Netflix","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2019/01/01/ss_netflix/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2019/01/01/ss_netflix/"}</script>
     <meta name="description" content="元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="国内观看Netflix">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -653,6 +575,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -953,8 +881,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

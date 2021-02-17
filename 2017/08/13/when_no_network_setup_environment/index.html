@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"遇到有人反映可能是内网环境。无法访问外部网络。安装初始化环境的时候好像颇为不便。其实只要能ssh上去。这一切都不是问题。就是各种转发，以下以内网使用pip安装第三方依赖包为例说明该如何操作\n1.本机开启一个临时的http代理1pip install mitmproxy           # 安装\n1mitmproxy -p 8899 --ignore .+               #  使用\nmitmproxy是一个python编写的http/https中间人框架。这里我们单独的使用它的http proxy功能。参数p当然是port端口的意思了。监听8899端口加上ignore是因为中间人https连接需要客户端安装信任证书才可以。此处我们只是单纯的使用一下proxy不需要中间人。所以所有流量使用HTTP Connection隧道方式就达成目的了。使用正则表达式.+忽略所有域名。至于为什么使用http不是用socks。因为http使用更广泛\n2.ssh使用远程端口转发(参考ssh端口映射)1ssh -R 8899:localhost:8899 remote_server\n将远程主机上的8899端口映射到本机的8899端口\n3.远程主机使用本地的http代理进行环境初始化可以使用如下命令进行测验\n1curl -x http:&#x2F;&#x2F;localhost:8899 ip.cn\n比如使用pypi安装tornado执行如下命令即可\n1pip install -i https:&#x2F;&#x2F;pypi.tuna.tsinghua.edu.cn&#x2F;simple --proxy http:&#x2F;&#x2F;localhost:8899 tornado\n思路是这样。其它同理~~~\n","dateCreated":"2017-08-13T17:18:36+08:00","dateModified":"2017-08-13T17:46:27+08:00","datePublished":"2017-08-13T17:18:36+08:00","description":"","headline":"内网无网络环境初始化线上环境","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"遇到有人反映可能是内网环境。无法访问外部网络。安装初始化环境的时候好像颇为不便。其实只要能ssh上去。这一切都不是问题。就是各种转发，以下以内网使用pip安装第三方依赖包为例说明该如何操作\n1.本机开启一个临时的http代理1pip install mitmproxy           # 安装\n1mitmproxy -p 8899 --ignore .+               #  使用\nmitmproxy是一个python编写的http/https中间人框架。这里我们单独的使用它的http proxy功能。参数p当然是port端口的意思了。监听8899端口加上ignore是因为中间人https连接需要客户端安装信任证书才可以。此处我们只是单纯的使用一下proxy不需要中间人。所以所有流量使用HTTP Connection隧道方式就达成目的了。使用正则表达式.+忽略所有域名。至于为什么使用http不是用socks。因为http使用更广泛\n2.ssh使用远程端口转发(参考ssh端口映射)1ssh -R 8899:localhost:8899 remote_server\n将远程主机上的8899端口映射到本机的8899端口\n3.远程主机使用本地的http代理进行环境初始化可以使用如下命令进行测验\n1curl -x http:&#x2F;&#x2F;localhost:8899 ip.cn\n比如使用pypi安装tornado执行如下命令即可\n1pip install -i https:&#x2F;&#x2F;pypi.tuna.tsinghua.edu.cn&#x2F;simple --proxy http:&#x2F;&#x2F;localhost:8899 tornado\n思路是这样。其它同理~~~\n","dateCreated":"2017-08-13T17:18:36+08:00","dateModified":"2017-08-13T17:46:27+08:00","datePublished":"2017-08-13T17:18:36+08:00","description":"","headline":"内网无网络环境初始化线上环境","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/"}</script>
     <meta name="description" content="遇到有人反映可能是内网环境。无法访问外部网络。安装初始化环境的时候好像颇为不便。其实只要能ssh上去。这一切都不是问题。就是各种转发，以下以内网使用pip安装第三方依赖包为例说明该如何操作 1.本机开启一个临时的http代理1pip install mitmproxy           # 安装 1mitmproxy -p 8899 --ignore .+               #  使用">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="内网无网络环境初始化线上环境">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -649,6 +571,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -949,8 +877,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

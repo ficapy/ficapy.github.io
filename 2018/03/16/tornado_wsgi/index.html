@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是完美的，它仅仅提供了基本的兼容，效率和可用性得不到保证。因此个人还是感觉很鸡肋的\n\n\n回顾WSGIwsgi由PEP333开始，在PEP3333得到增强。分为两部分，一部分为容器，另一部分为应用。应用的最简形式如下传入environ基础环境字典(必须包含一些值)和回调函数，最终返回一个可迭代对线\n12345def simple_app(environ, start_response):    status = &#x27;200 OK&#x27;    response_headers = [(&#x27;Content-type&#x27;, &#x27;text/plain&#x27;)]    start_response(status, response_headers)    return [&#x27;Hello world!\\n&#x27;]\n对于容器。则是每接收到一个http请求则调用一次应用。这样的好处是容器和应用可以完全隔离，应用可以使用任意容器来执行\nTornado application转变成WSGI application实现效果如下\n12345678910111213141516import tornado.webimport tornado.wsgiimport wsgiref.simple_serverclass MainHandler(tornado.web.RequestHandler):    def get(self):        self.write(&quot;Hello, world&quot;)if __name__ == &quot;__main__&quot;:    application = tornado.wsgi.WSGIApplication([        (r&quot;/&quot;, MainHandler),    ])    server = wsgiref.simple_server.make_server(&#x27;&#x27;, 8888, application)    server.serve_forever()\n\n在Tornado里面application接受一个参数调用，传入Requests对象。调用的结果是最终生成header以及handler._write_buffer对象(会触发iostream的写事件，最终由IOLoop触发socket写操作)。因此虽然它执行了RequestsHandler._execute操作，实际并没有发生socket发送操作，我们可以从handler对象取得完整的HTTP回复报文。然后调用start_response和返回一个可迭代对象可以看到重点就是从WSGI server传递的environ字典里面重组出一个Request对象(模拟到和httpserver模块中的HTTPRequest对象一样)\n12345678910111213141516171819class WSGIApplication(web.Application):    def __init__(self, handlers=None, default_host=&quot;&quot;, **settings):        web.Application.__init__(self, handlers, default_host, transforms=[],                                 wsgi=True, **settings)    def __call__(self, environ, start_response):        handler = web.Application.__call__(self, HTTPRequest(environ))        assert handler._finished        status = str(handler._status_code) + &quot; &quot; + \\            httplib.responses[handler._status_code]        headers = handler._headers.items()        for cookie_dict in getattr(handler, &quot;_new_cookies&quot;, []):            for cookie in cookie_dict.values():                headers.append((&quot;Set-Cookie&quot;, cookie.OutputString(None)))        start_response(status, headers)        return handler._write_bufferclass HTTPRequest(object):    pass\n可以看到重点就是从environ里面构建出一个兼容httpserver的HTTPRequest对象。另外由于IOLoop在这种情况下不允许使用，所以依赖IOLoop的异步特性也就不存在了。而且连同多线程的特性也不在存在。所以只是一个玩具罢了吧\n在Tornado中运行WSGI application上面的是将tornado的应用转变成WSGI兼容，然后让WSGI的容器去运行。这一个是反过来，让tornado作为容器去运行WSGI应用。实现这样的效果\n12345678910def simple_app(environ, start_response):    status = &quot;200 OK&quot;    response_headers = [(&quot;Content-type&quot;, &quot;text/plain&quot;)]    start_response(status, response_headers)    return [&quot;Hello world!\\n&quot;]container = tornado.wsgi.WSGIContainer(simple_app)http_server = tornado.httpserver.HTTPServer(container)http_server.listen(8888)tornado.ioloop.IOLoop.instance().start()\n\ntornado.httpserver.HTTPServer会调用函数并传入一个Request对象。刚好和上面的过程相反。将Request对象分割为environ和start_response。直接贴1.0.0的原始代码吧\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687class WSGIContainer(object):    def __init__(self, wsgi_application):        self.wsgi_application = wsgi_application    def __call__(self, request):        data = &#123;&#125;        response = []        # 将status和headers放入字典中,后续调用则写入body        def start_response(status, response_headers, exc_info=None):            data[&quot;status&quot;] = status            data[&quot;headers&quot;] = response_headers            return response.append        # wsgi app最终返回可迭代对象作为body        app_response = self.wsgi_application(            WSGIContainer.environ(request), start_response)        response.extend(app_response)        body = &quot;&quot;.join(response)        if hasattr(app_response, &quot;close&quot;):            app_response.close()        if not data: raise Exception(&quot;WSGI app did not call start_response&quot;)        # 组合成整个http报文        status_code = int(data[&quot;status&quot;].split()[0])        headers = data[&quot;headers&quot;]        header_set = set(k.lower() for (k,v) in headers)        body = escape.utf8(body)        if &quot;content-length&quot; not in header_set:            headers.append((&quot;Content-Length&quot;, str(len(body))))        if &quot;content-type&quot; not in header_set:            headers.append((&quot;Content-Type&quot;, &quot;text/html; charset=UTF-8&quot;))        if &quot;server&quot; not in header_set:            headers.append((&quot;Server&quot;, &quot;TornadoServer/0.1&quot;))        parts = [&quot;HTTP/1.1 &quot; + data[&quot;status&quot;] + &quot;\\r\\n&quot;]        for key, value in headers:            parts.append(escape.utf8(key) + &quot;: &quot; + escape.utf8(value) + &quot;\\r\\n&quot;)        parts.append(&quot;\\r\\n&quot;)        parts.append(body)        # 发送完成        request.write(&quot;&quot;.join(parts))        request.finish()        self._log(status_code, request)    @staticmethod    def environ(request):        hostport = request.host.split(&quot;:&quot;)        if len(hostport) == 2:            host = hostport[0]            port = int(hostport[1])        else:            host = request.host            port = 443 if request.protocol == &quot;https&quot; else 80        environ = &#123;            &quot;REQUEST_METHOD&quot;: request.method,            &quot;SCRIPT_NAME&quot;: &quot;&quot;,            &quot;PATH_INFO&quot;: request.path,            &quot;QUERY_STRING&quot;: request.query,            &quot;REMOTE_ADDR&quot;: request.remote_ip,            &quot;SERVER_NAME&quot;: host,            &quot;SERVER_PORT&quot;: port,            &quot;SERVER_PROTOCOL&quot;: request.version,            &quot;wsgi.version&quot;: (1, 0),            &quot;wsgi.url_scheme&quot;: request.protocol,            &quot;wsgi.input&quot;: cStringIO.StringIO(escape.utf8(request.body)),            &quot;wsgi.errors&quot;: sys.stderr,            &quot;wsgi.multithread&quot;: False,            &quot;wsgi.multiprocess&quot;: True,            &quot;wsgi.run_once&quot;: False,        &#125;        if &quot;Content-Type&quot; in request.headers:            environ[&quot;CONTENT_TYPE&quot;] = request.headers[&quot;Content-Type&quot;]        if &quot;Content-Length&quot; in request.headers:            environ[&quot;CONTENT_LENGTH&quot;] = request.headers[&quot;Content-Length&quot;]        for key, value in request.headers.iteritems():            environ[&quot;HTTP_&quot; + key.replace(&quot;-&quot;, &quot;_&quot;).upper()] = value        return environ    def _log(self, status_code, request):        if status_code &lt; 400:            log_method = logging.info        elif status_code &lt; 500:            log_method = logging.warning        else:            log_method = logging.error        request_time = 1000.0 * request.request_time()        summary = request.method + &quot; &quot; + request.uri + &quot; (&quot; + \\            request.remote_ip + &quot;)&quot;        log_method(&quot;%d %s %.2fms&quot;, status_code, summary, request_time)\n\n主要是将Requests转变成environ，传入给WSGI应用。最终根据应用的返回重组成一个HTTP回复报文字符串调用发送逻辑，流程完成。\n","dateCreated":"2018-03-16T11:28:02+08:00","dateModified":"2018-03-16T15:39:45+08:00","datePublished":"2018-03-16T11:28:02+08:00","description":"WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是完美的，它仅仅提供了基本的兼容，效率和可用性得不到保证。因此个人还是感觉很鸡肋的","headline":"Tornado 之WSGI","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/16/tornado_wsgi/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/16/tornado_wsgi/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是完美的，它仅仅提供了基本的兼容，效率和可用性得不到保证。因此个人还是感觉很鸡肋的\n\n\n回顾WSGIwsgi由PEP333开始，在PEP3333得到增强。分为两部分，一部分为容器，另一部分为应用。应用的最简形式如下传入environ基础环境字典(必须包含一些值)和回调函数，最终返回一个可迭代对线\n12345def simple_app(environ, start_response):    status = &#x27;200 OK&#x27;    response_headers = [(&#x27;Content-type&#x27;, &#x27;text/plain&#x27;)]    start_response(status, response_headers)    return [&#x27;Hello world!\\n&#x27;]\n对于容器。则是每接收到一个http请求则调用一次应用。这样的好处是容器和应用可以完全隔离，应用可以使用任意容器来执行\nTornado application转变成WSGI application实现效果如下\n12345678910111213141516import tornado.webimport tornado.wsgiimport wsgiref.simple_serverclass MainHandler(tornado.web.RequestHandler):    def get(self):        self.write(&quot;Hello, world&quot;)if __name__ == &quot;__main__&quot;:    application = tornado.wsgi.WSGIApplication([        (r&quot;/&quot;, MainHandler),    ])    server = wsgiref.simple_server.make_server(&#x27;&#x27;, 8888, application)    server.serve_forever()\n\n在Tornado里面application接受一个参数调用，传入Requests对象。调用的结果是最终生成header以及handler._write_buffer对象(会触发iostream的写事件，最终由IOLoop触发socket写操作)。因此虽然它执行了RequestsHandler._execute操作，实际并没有发生socket发送操作，我们可以从handler对象取得完整的HTTP回复报文。然后调用start_response和返回一个可迭代对象可以看到重点就是从WSGI server传递的environ字典里面重组出一个Request对象(模拟到和httpserver模块中的HTTPRequest对象一样)\n12345678910111213141516171819class WSGIApplication(web.Application):    def __init__(self, handlers=None, default_host=&quot;&quot;, **settings):        web.Application.__init__(self, handlers, default_host, transforms=[],                                 wsgi=True, **settings)    def __call__(self, environ, start_response):        handler = web.Application.__call__(self, HTTPRequest(environ))        assert handler._finished        status = str(handler._status_code) + &quot; &quot; + \\            httplib.responses[handler._status_code]        headers = handler._headers.items()        for cookie_dict in getattr(handler, &quot;_new_cookies&quot;, []):            for cookie in cookie_dict.values():                headers.append((&quot;Set-Cookie&quot;, cookie.OutputString(None)))        start_response(status, headers)        return handler._write_bufferclass HTTPRequest(object):    pass\n可以看到重点就是从environ里面构建出一个兼容httpserver的HTTPRequest对象。另外由于IOLoop在这种情况下不允许使用，所以依赖IOLoop的异步特性也就不存在了。而且连同多线程的特性也不在存在。所以只是一个玩具罢了吧\n在Tornado中运行WSGI application上面的是将tornado的应用转变成WSGI兼容，然后让WSGI的容器去运行。这一个是反过来，让tornado作为容器去运行WSGI应用。实现这样的效果\n12345678910def simple_app(environ, start_response):    status = &quot;200 OK&quot;    response_headers = [(&quot;Content-type&quot;, &quot;text/plain&quot;)]    start_response(status, response_headers)    return [&quot;Hello world!\\n&quot;]container = tornado.wsgi.WSGIContainer(simple_app)http_server = tornado.httpserver.HTTPServer(container)http_server.listen(8888)tornado.ioloop.IOLoop.instance().start()\n\ntornado.httpserver.HTTPServer会调用函数并传入一个Request对象。刚好和上面的过程相反。将Request对象分割为environ和start_response。直接贴1.0.0的原始代码吧\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687class WSGIContainer(object):    def __init__(self, wsgi_application):        self.wsgi_application = wsgi_application    def __call__(self, request):        data = &#123;&#125;        response = []        # 将status和headers放入字典中,后续调用则写入body        def start_response(status, response_headers, exc_info=None):            data[&quot;status&quot;] = status            data[&quot;headers&quot;] = response_headers            return response.append        # wsgi app最终返回可迭代对象作为body        app_response = self.wsgi_application(            WSGIContainer.environ(request), start_response)        response.extend(app_response)        body = &quot;&quot;.join(response)        if hasattr(app_response, &quot;close&quot;):            app_response.close()        if not data: raise Exception(&quot;WSGI app did not call start_response&quot;)        # 组合成整个http报文        status_code = int(data[&quot;status&quot;].split()[0])        headers = data[&quot;headers&quot;]        header_set = set(k.lower() for (k,v) in headers)        body = escape.utf8(body)        if &quot;content-length&quot; not in header_set:            headers.append((&quot;Content-Length&quot;, str(len(body))))        if &quot;content-type&quot; not in header_set:            headers.append((&quot;Content-Type&quot;, &quot;text/html; charset=UTF-8&quot;))        if &quot;server&quot; not in header_set:            headers.append((&quot;Server&quot;, &quot;TornadoServer/0.1&quot;))        parts = [&quot;HTTP/1.1 &quot; + data[&quot;status&quot;] + &quot;\\r\\n&quot;]        for key, value in headers:            parts.append(escape.utf8(key) + &quot;: &quot; + escape.utf8(value) + &quot;\\r\\n&quot;)        parts.append(&quot;\\r\\n&quot;)        parts.append(body)        # 发送完成        request.write(&quot;&quot;.join(parts))        request.finish()        self._log(status_code, request)    @staticmethod    def environ(request):        hostport = request.host.split(&quot;:&quot;)        if len(hostport) == 2:            host = hostport[0]            port = int(hostport[1])        else:            host = request.host            port = 443 if request.protocol == &quot;https&quot; else 80        environ = &#123;            &quot;REQUEST_METHOD&quot;: request.method,            &quot;SCRIPT_NAME&quot;: &quot;&quot;,            &quot;PATH_INFO&quot;: request.path,            &quot;QUERY_STRING&quot;: request.query,            &quot;REMOTE_ADDR&quot;: request.remote_ip,            &quot;SERVER_NAME&quot;: host,            &quot;SERVER_PORT&quot;: port,            &quot;SERVER_PROTOCOL&quot;: request.version,            &quot;wsgi.version&quot;: (1, 0),            &quot;wsgi.url_scheme&quot;: request.protocol,            &quot;wsgi.input&quot;: cStringIO.StringIO(escape.utf8(request.body)),            &quot;wsgi.errors&quot;: sys.stderr,            &quot;wsgi.multithread&quot;: False,            &quot;wsgi.multiprocess&quot;: True,            &quot;wsgi.run_once&quot;: False,        &#125;        if &quot;Content-Type&quot; in request.headers:            environ[&quot;CONTENT_TYPE&quot;] = request.headers[&quot;Content-Type&quot;]        if &quot;Content-Length&quot; in request.headers:            environ[&quot;CONTENT_LENGTH&quot;] = request.headers[&quot;Content-Length&quot;]        for key, value in request.headers.iteritems():            environ[&quot;HTTP_&quot; + key.replace(&quot;-&quot;, &quot;_&quot;).upper()] = value        return environ    def _log(self, status_code, request):        if status_code &lt; 400:            log_method = logging.info        elif status_code &lt; 500:            log_method = logging.warning        else:            log_method = logging.error        request_time = 1000.0 * request.request_time()        summary = request.method + &quot; &quot; + request.uri + &quot; (&quot; + \\            request.remote_ip + &quot;)&quot;        log_method(&quot;%d %s %.2fms&quot;, status_code, summary, request_time)\n\n主要是将Requests转变成environ，传入给WSGI应用。最终根据应用的返回重组成一个HTTP回复报文字符串调用发送逻辑，流程完成。\n","dateCreated":"2018-03-16T11:28:02+08:00","dateModified":"2018-03-16T15:39:45+08:00","datePublished":"2018-03-16T11:28:02+08:00","description":"WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是完美的，它仅仅提供了基本的兼容，效率和可用性得不到保证。因此个人还是感觉很鸡肋的","headline":"Tornado 之WSGI","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/16/tornado_wsgi/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2018/03/16/tornado_wsgi/"}</script>
     <meta name="description" content="WSGI毕竟是Python社区官方认可的规范，可是这种规范在多线程多进程模式下实现很简单，不太适合单线程异步这种情况。鉴于此Tornado并没有按照这个框架去实现一个WSGI的web框架，可是它却提供了基本的兼容，1.允许Tornado的application对象转变成WSGI application。2. 允许WSGI application在tornado ioloop中执行，只是这一切都不是">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Tornado 之WSGI">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -657,6 +579,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -957,8 +885,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

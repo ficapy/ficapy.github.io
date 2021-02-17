@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点，线程安全应该针对于具体的操作，而不是具体的对象，我们说Queue是线程安全的是因为针对它的所有操作都是线程安全的。\n\n\n官方文档可以看到大概有这么个概念\n123456789101112131415161718192021222324L,L1,L2-&gt;listD,D1,D2-&gt;dictx,y-&gt;objecti,j-&gt;int线程安全L.append(x)L1.append(L2)x&#x3D;L[i]y&#x3D;L.pop()L1[i,j]&#x3D;L2L.sort()x&#x3D;yx.field&#x3D;yD[x]&#x3D;yD1.update(D2)D.keys()以下是非线程安全i&#x3D;i+1L.append(L[-1])L[i]&#x3D;L[j]D[x]&#x3D;D[x]+1\n可以看到list的append啥的其实是线程安全的。我们看到的举非线程安全的例子基本都是i+=1这种，最后得到的结果小于相加次数。然后最后说一句多线程对同一资源进行操作的时候要加锁哇。。。。。这话直接说的好像比较不负责任。让我这样的初学者风声鹤唳草木皆兵\n一点小解释1234567891011121314151617181920212223242526272829303132333435363738import threadingimport disi = 0def main():    global i    for _ in range(3000000):        i += 1th = [threading.Thread(target=main), threading.Thread(target=main)]for t in th:    t.start()for t in th:    t.join()print(i)dis.dis(main)# 4372439#   8           0 SETUP_LOOP              30 (to 33)#               3 LOAD_GLOBAL              0 (range)#               6 LOAD_CONST               1 (3000000)#               9 CALL_FUNCTION            1#              12 GET_ITER            #         &gt;&gt;   13 FOR_ITER                16 (to 32)#              16 STORE_FAST               0 (_)# #   9          19 LOAD_GLOBAL              1 (i)#              22 LOAD_CONST               2 (1)#              25 INPLACE_ADD         #              26 STORE_GLOBAL             1 (i)#              29 JUMP_ABSOLUTE           13#         &gt;&gt;   32 POP_BLOCK           #         &gt;&gt;   33 LOAD_CONST               0 (None)#              36 RETURN_VALUE     \n我们知道python代码经过编译成字节码指令，然后python虚拟机按照指令进行执行，这里每一条指令都是原子操作不会被中断，可以看到i+=1这条语句被划分为4条指令被执行。取出i变量的值入栈→→将被加数1入栈→→取出2个数相加结果再入栈→→结果出栈。因为是要累加。我们当然需要累加的第一步加入的值是上一个累加的结果。可是在多线程不加锁的情况下每一条指令被执行完毕后都有可能去执行另外一个线程的指令。这就会造成第一步加入的值有可能和另外一个线程是一样的，于是悲剧发生了O_o\n再想一想append\n123458          19 LOAD_GLOBAL              1 (i)           22 LOAD_ATTR                2 (append)           25 LOAD_CONST               2 (1)           28 CALL_FUNCTION            1           31 POP_TOP             \n 图片引用自 可以看出list就是一个容器.append就相当与在最后面加了一个引用。虽然它也是由几条指定组成。也会发生交错执行的情况。这种交错造成的结果无非就是我本来是先执行的却在了一个的后面执行了插入，造成的结果就是顺序错乱了。😄可是特喵本来就是多线程程序，谁特喵会去关心顺序呢。所以就说线程安全了。可以看出，append和i+=1最大的区别就是是否对自身进行了修改。dict同理~~\n另外加锁的时间开销其实还是挺大的。上例，我用3个线程(结果是9000000)，不加锁1.38秒，加锁执行39.16秒(python2.7.11)。不加锁1.06秒，加锁3.94秒(python3.5.1)。→_→当然你可以把i+=1改成i.apped(1)这样不用锁结果也能对了，只不过内存消耗感人\n参考资料A Python Interpreter Written in Python\n","dateCreated":"2016-07-31T07:47:09+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-07-31T07:47:09+08:00","description":"刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点，线程安全应该针对于具体的操作，而不是具体的对象，我们说Queue是线程安全的是因为针对它的所有操作都是线程安全的。","headline":"list和dict的线程安全","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/07/31/list_dict_threading_safe/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/07/31/list_dict_threading_safe/","keywords":"python"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点，线程安全应该针对于具体的操作，而不是具体的对象，我们说Queue是线程安全的是因为针对它的所有操作都是线程安全的。\n\n\n官方文档可以看到大概有这么个概念\n123456789101112131415161718192021222324L,L1,L2-&gt;listD,D1,D2-&gt;dictx,y-&gt;objecti,j-&gt;int线程安全L.append(x)L1.append(L2)x&#x3D;L[i]y&#x3D;L.pop()L1[i,j]&#x3D;L2L.sort()x&#x3D;yx.field&#x3D;yD[x]&#x3D;yD1.update(D2)D.keys()以下是非线程安全i&#x3D;i+1L.append(L[-1])L[i]&#x3D;L[j]D[x]&#x3D;D[x]+1\n可以看到list的append啥的其实是线程安全的。我们看到的举非线程安全的例子基本都是i+=1这种，最后得到的结果小于相加次数。然后最后说一句多线程对同一资源进行操作的时候要加锁哇。。。。。这话直接说的好像比较不负责任。让我这样的初学者风声鹤唳草木皆兵\n一点小解释1234567891011121314151617181920212223242526272829303132333435363738import threadingimport disi = 0def main():    global i    for _ in range(3000000):        i += 1th = [threading.Thread(target=main), threading.Thread(target=main)]for t in th:    t.start()for t in th:    t.join()print(i)dis.dis(main)# 4372439#   8           0 SETUP_LOOP              30 (to 33)#               3 LOAD_GLOBAL              0 (range)#               6 LOAD_CONST               1 (3000000)#               9 CALL_FUNCTION            1#              12 GET_ITER            #         &gt;&gt;   13 FOR_ITER                16 (to 32)#              16 STORE_FAST               0 (_)# #   9          19 LOAD_GLOBAL              1 (i)#              22 LOAD_CONST               2 (1)#              25 INPLACE_ADD         #              26 STORE_GLOBAL             1 (i)#              29 JUMP_ABSOLUTE           13#         &gt;&gt;   32 POP_BLOCK           #         &gt;&gt;   33 LOAD_CONST               0 (None)#              36 RETURN_VALUE     \n我们知道python代码经过编译成字节码指令，然后python虚拟机按照指令进行执行，这里每一条指令都是原子操作不会被中断，可以看到i+=1这条语句被划分为4条指令被执行。取出i变量的值入栈→→将被加数1入栈→→取出2个数相加结果再入栈→→结果出栈。因为是要累加。我们当然需要累加的第一步加入的值是上一个累加的结果。可是在多线程不加锁的情况下每一条指令被执行完毕后都有可能去执行另外一个线程的指令。这就会造成第一步加入的值有可能和另外一个线程是一样的，于是悲剧发生了O_o\n再想一想append\n123458          19 LOAD_GLOBAL              1 (i)           22 LOAD_ATTR                2 (append)           25 LOAD_CONST               2 (1)           28 CALL_FUNCTION            1           31 POP_TOP             \n 图片引用自 可以看出list就是一个容器.append就相当与在最后面加了一个引用。虽然它也是由几条指定组成。也会发生交错执行的情况。这种交错造成的结果无非就是我本来是先执行的却在了一个的后面执行了插入，造成的结果就是顺序错乱了。😄可是特喵本来就是多线程程序，谁特喵会去关心顺序呢。所以就说线程安全了。可以看出，append和i+=1最大的区别就是是否对自身进行了修改。dict同理~~\n另外加锁的时间开销其实还是挺大的。上例，我用3个线程(结果是9000000)，不加锁1.38秒，加锁执行39.16秒(python2.7.11)。不加锁1.06秒，加锁3.94秒(python3.5.1)。→_→当然你可以把i+=1改成i.apped(1)这样不用锁结果也能对了，只不过内存消耗感人\n参考资料A Python Interpreter Written in Python\n","dateCreated":"2016-07-31T07:47:09+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-07-31T07:47:09+08:00","description":"刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点，线程安全应该针对于具体的操作，而不是具体的对象，我们说Queue是线程安全的是因为针对它的所有操作都是线程安全的。","headline":"list和dict的线程安全","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/07/31/list_dict_threading_safe/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/07/31/list_dict_threading_safe/","keywords":"python"}</script>
     <meta name="description" content="刚转行第一次IT面试的时候面试官问我，list和dict是不是线程安全的。当时我就想，擦嘞,作为一个初学者list和dict不是线程安全的都看了N遍啦。这还有疑问么~~~，现在想想并没有抓住重点，线程安全应该针对于具体的操作，而不是具体的对象，我们说Queue是线程安全的是因为针对它的所有操作都是线程安全的。">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="list和dict的线程安全">
@@ -180,7 +180,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -196,87 +196,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -655,6 +577,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -955,8 +883,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 

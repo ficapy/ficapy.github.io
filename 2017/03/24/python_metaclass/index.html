@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5\n\n\n你只需要理解以下2点\n\n metaclass和__new__、__init__并没有非常非常深的关系\n type(name, bases, dict)生成了一个object类，了解三个参数分别指代了什么\n\n了解python中有这样一条关系链type-&gt;object-&gt;instance,通常我们写类默认会继承自object。从关系链就能知道type能够生成object。代码如下\n1234567891011121314151617181920212223242526272829303132333435363738class A(type):    def __new__(cls, name, bases, attrs):        attrs.pop(&#x27;e&#x27;)        print(&#x27;1&#x27;, cls, name, bases, attrs)        cls.a = 1        return super().__new__(cls, name, bases, attrs)    # def __call__(self, *args, **kwargs):    #     print(&#x27;3&#x27;)    def __init__(self, name, bases, attrs):        self.b = 2        print(&#x27;2&#x27;, self, name, bases, attrs)class B(metaclass=A):    def __new__(cls, *args, **kwargs):        print(&#x27;4&#x27;, args, kwargs)        cls.c = 4        return super().__new__(cls)    def e(self):        pass    def __call__(self, *args, **kwargs):        print(&#x27;5&#x27;)    def __init__(self, d):        self.d = d        print(&#x27;6&#x27;)b = B(6)print(hasattr(b, &#x27;a&#x27;))print(b.b)print(b.c)print(b.d)print(hasattr(b, &#x27;e&#x27;))\n\n可以尝试注释掉B(12)，A依旧会被打印，观察args和kwargs的输出。对比A和B的不同，你会发现metaclass的用处，使用metaclass的时候，B的所有属性会被当做参数传递给A，那么我们能够将这些传过来的参数预处理然后挂在到类的属性上面返回。以供后续B使用。目前在我遇到的web开发中体现的最常见的就是ORM和表单验证。\n我们知道__new__创建一个对象。__init__对创建后的对象进行赋值等初始化操作。他们的传参args和kwargs是没有区别的。但是在__new__阶段，能够对attrs进行修改从而hook对象的创建流程，除此之外感觉只能用new不能用init的场景是很少的。目前看到的例子记得的可能只有用new实现单例。对于内置不可变对象比如int用new变更初始化逻辑\n最后例举一个ORM的例子(见参考)\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859class Field(object):    def __init__(self, name, column_type):        self.name = name        self.column_type = column_typeclass StringField(Field):    def __init__(self, name):        super(StringField, self).__init__(name, &#x27;vachar(100)&#x27;)class ModelMetaclass(type):    def __new__(cls, name, bases, attrs):        if name != &#x27;Model&#x27;:            mappings = &#123;k: v.name for k, v in attrs.items() if isinstance(v, Field)&#125;            for k in mappings.keys():                attrs.pop(k)            attrs[&#x27;__mappings__&#x27;] = mappings            attrs[&#x27;__table__&#x27;] = name        return type.__new__(cls, name, bases, attrs)class Model(dict, metaclass=ModelMetaclass):    def __init__(self, **kwargs):        super().__init__(**kwargs)    def __getattr__(self, key):        try:            return self[key]        except KeyError:            raise AttributeError(r&quot;&#x27;Model&#x27; object has no attribute &#123;key&#125;&quot;.format(key=key))    def __setattr__(self, key, value):        self[key] = value    def save(self):        fields, params, args = [], [], []        for k, v in self.__mappings__.items():            fields.append(v)            params.append(&#x27;?&#x27;)            args.append(getattr(self, k, None))        sql = &#x27;insert into &#123;table_name&#125; (&#123;fields&#125;) values (&#123;values&#125;)&#x27;.format(table_name=self.__table__,                                                                             fields=&#x27;,&#x27;.join(fields),                                                                             values=&#x27;,&#x27;.join(params))        print(&#x27;SQL: &#123;sql&#125;&#x27;.format(sql=sql))        print(&#x27;ARGS: &#123;args&#125;&#x27;.format(args=args))class UserModel(Model):    user_name = StringField(&#x27;username&#x27;)    email = StringField(&#x27;email&#x27;)    password = StringField(&#x27;password&#x27;)if __name__ == &#x27;__main__&#x27;:    user = UserModel(user_id=123, user_name=&#x27;hhh&#x27;, email=&#x27;a@a.a&#x27;, password=&#x27;asdfa&#x27;, x=&#x27;y&#x27;)    user.save()        \n\n下篇会分析metaclass在WTForms中的应用\n参考Understanding Python metaclasses 更详细的介绍python实现ORM\n","dateCreated":"2017-03-24T09:34:48+08:00","dateModified":"2017-05-31T16:46:35+08:00","datePublished":"2017-03-24T09:34:48+08:00","description":"metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5","headline":"理解metaclass","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/03/24/python_metaclass/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/03/24/python_metaclass/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5\n\n\n你只需要理解以下2点\n\n metaclass和__new__、__init__并没有非常非常深的关系\n type(name, bases, dict)生成了一个object类，了解三个参数分别指代了什么\n\n了解python中有这样一条关系链type-&gt;object-&gt;instance,通常我们写类默认会继承自object。从关系链就能知道type能够生成object。代码如下\n1234567891011121314151617181920212223242526272829303132333435363738class A(type):    def __new__(cls, name, bases, attrs):        attrs.pop(&#x27;e&#x27;)        print(&#x27;1&#x27;, cls, name, bases, attrs)        cls.a = 1        return super().__new__(cls, name, bases, attrs)    # def __call__(self, *args, **kwargs):    #     print(&#x27;3&#x27;)    def __init__(self, name, bases, attrs):        self.b = 2        print(&#x27;2&#x27;, self, name, bases, attrs)class B(metaclass=A):    def __new__(cls, *args, **kwargs):        print(&#x27;4&#x27;, args, kwargs)        cls.c = 4        return super().__new__(cls)    def e(self):        pass    def __call__(self, *args, **kwargs):        print(&#x27;5&#x27;)    def __init__(self, d):        self.d = d        print(&#x27;6&#x27;)b = B(6)print(hasattr(b, &#x27;a&#x27;))print(b.b)print(b.c)print(b.d)print(hasattr(b, &#x27;e&#x27;))\n\n可以尝试注释掉B(12)，A依旧会被打印，观察args和kwargs的输出。对比A和B的不同，你会发现metaclass的用处，使用metaclass的时候，B的所有属性会被当做参数传递给A，那么我们能够将这些传过来的参数预处理然后挂在到类的属性上面返回。以供后续B使用。目前在我遇到的web开发中体现的最常见的就是ORM和表单验证。\n我们知道__new__创建一个对象。__init__对创建后的对象进行赋值等初始化操作。他们的传参args和kwargs是没有区别的。但是在__new__阶段，能够对attrs进行修改从而hook对象的创建流程，除此之外感觉只能用new不能用init的场景是很少的。目前看到的例子记得的可能只有用new实现单例。对于内置不可变对象比如int用new变更初始化逻辑\n最后例举一个ORM的例子(见参考)\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859class Field(object):    def __init__(self, name, column_type):        self.name = name        self.column_type = column_typeclass StringField(Field):    def __init__(self, name):        super(StringField, self).__init__(name, &#x27;vachar(100)&#x27;)class ModelMetaclass(type):    def __new__(cls, name, bases, attrs):        if name != &#x27;Model&#x27;:            mappings = &#123;k: v.name for k, v in attrs.items() if isinstance(v, Field)&#125;            for k in mappings.keys():                attrs.pop(k)            attrs[&#x27;__mappings__&#x27;] = mappings            attrs[&#x27;__table__&#x27;] = name        return type.__new__(cls, name, bases, attrs)class Model(dict, metaclass=ModelMetaclass):    def __init__(self, **kwargs):        super().__init__(**kwargs)    def __getattr__(self, key):        try:            return self[key]        except KeyError:            raise AttributeError(r&quot;&#x27;Model&#x27; object has no attribute &#123;key&#125;&quot;.format(key=key))    def __setattr__(self, key, value):        self[key] = value    def save(self):        fields, params, args = [], [], []        for k, v in self.__mappings__.items():            fields.append(v)            params.append(&#x27;?&#x27;)            args.append(getattr(self, k, None))        sql = &#x27;insert into &#123;table_name&#125; (&#123;fields&#125;) values (&#123;values&#125;)&#x27;.format(table_name=self.__table__,                                                                             fields=&#x27;,&#x27;.join(fields),                                                                             values=&#x27;,&#x27;.join(params))        print(&#x27;SQL: &#123;sql&#125;&#x27;.format(sql=sql))        print(&#x27;ARGS: &#123;args&#125;&#x27;.format(args=args))class UserModel(Model):    user_name = StringField(&#x27;username&#x27;)    email = StringField(&#x27;email&#x27;)    password = StringField(&#x27;password&#x27;)if __name__ == &#x27;__main__&#x27;:    user = UserModel(user_id=123, user_name=&#x27;hhh&#x27;, email=&#x27;a@a.a&#x27;, password=&#x27;asdfa&#x27;, x=&#x27;y&#x27;)    user.save()        \n\n下篇会分析metaclass在WTForms中的应用\n参考Understanding Python metaclasses 更详细的介绍python实现ORM\n","dateCreated":"2017-03-24T09:34:48+08:00","dateModified":"2017-05-31T16:46:35+08:00","datePublished":"2017-03-24T09:34:48+08:00","description":"metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5","headline":"理解metaclass","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/03/24/python_metaclass/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/03/24/python_metaclass/"}</script>
     <meta name="description" content="metaclass一直被归类为比较高深的内容，写代码也很少会使用到metaclass。然而如果你看某些项目的源代码，还是会被绕到metaclass里面去。花一些时间理解下metaclass很有用的，因为它真的能把一条线串起来，环环相扣，所以有扎实的基础是掌握metaclass的前提，本文代码基于python3.5">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="理解metaclass">
@@ -177,7 +177,7 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="https://github.com/"
+                            href="https://github.com/ficapy"
                             
                                 target="_blank"
                             
@@ -193,87 +193,9 @@
                     
                         <a
                             class="sidebar-button-link "
-                            href="http://stackoverflow.com/users"
+                            href="mailto:afexcg@gmail.com"
                             
                                 target="_blank"
-                            
-                            rel="noopener"
-                            title="Stack Overflow"
-                        >
-                        <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Stack Overflow</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://twitter.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Twitter"
-                        >
-                        <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Twitter</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://facebook.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Facebook"
-                        >
-                        <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Facebook</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://plus.google.com/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="Google Plus"
-                        >
-                        <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">Google Plus</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="https://www.linkedin.com/profile/"
-                            
-                                target="_blank"
-                            
-                            rel="noopener"
-                            title="LinkedIn"
-                        >
-                        <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
-                        <span class="sidebar-button-desc">LinkedIn</span>
-                    </a>
-            </li>
-            
-                <li class="sidebar-button">
-                    
-                        <a
-                            class="sidebar-button-link "
-                            href="/mailto"
                             
                             rel="noopener"
                             title="邮箱"
@@ -656,6 +578,12 @@
             </div>
         
         
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
     </div>
 </div>
 
@@ -956,8 +884,8 @@
 <script src="/assets/js/algoliasearch.js"></script>
 
     <script>
-      var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
-      var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
+      var algoliaClient = algoliasearch('CX8LZHBELF', '1b41ec18773122404c61cdd4384b473e');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
     </script>
 
 
