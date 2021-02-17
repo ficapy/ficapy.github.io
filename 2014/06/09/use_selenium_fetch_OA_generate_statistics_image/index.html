@@ -11,22 +11,22 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：\n\n出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。\n需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。\n系统性能不佳，反应巨慢，异常返回情况比较多。\n\n\n\n最后选择了使用python+selenium+IEdriver控制IE浏览器登陆系统抓取OA数据，不得不说这是一个痛苦的过程selenium对IE的支持异常差，支持最好的firefox以及速度最快的chrome都无法在该例中使用。这直接造成了几乎每一步模拟操作都要加一句time.sleep(3)进行等待操作，以免返回异常或者没有抓取到数据。最开始的时候我直接全模拟手工操作一步步进入需要抓取的页面（OA是frame里面套frame），结果浏览器经常运行不久就报告崩溃。山穷水尽疑无路，柳暗花明又一村，最终发现登陆后直接打开要抓取frame页面的地址就可以了，这一步让整个抓取数据的工作以及稳定性提高的不少整个流程比较简单。模拟登陆→抓取数据→把数据存储到数据库（sqlite）→利用matplotlib把数据库的内容生成图表在登录OA的时候会要求填入验证码，虽然目测该系统验证码比较弱智，但是俺目前的水平还是破不了。so。本着力求无人操作全自动的原则使用了在线打码服务。不得不吐槽一下，试了2家，联系了客服，第一家流程复杂的不得了，和技术人员折腾半天最后还是不了了之，俺的要求多简单啊，结果一定要搞啥开发者分成路线。另外一家流程倒是简单了很多，结果网站给的示例教程还是前一个网站没更新无法使用，找客服要了一个新的示例文件，根本无法运行。问客服，得到的答复是技术人员测试使用完全没问题,WQNMLGB。示例是用urllib写的上传文件操作。潇潇洒洒上百行。没办法自己用requests重新写了下20行搞定，嗯，感叹下httpfor humans的称号果然不是白喊的&gt;_&lt;最后抓取到数据就是可视化的过程啦，以前只听过matplotlib库生成牛X的图表。试过之后还不错，还好比较知名案例比较多，否则真不知道要折腾多久才能搞出来，借鉴了stackoverflow上面的一个回答看了下官网的一些文档东拼西凑生成了个看的过去的图表，如下图（嗯，打了点薄码）以下是录制的视频，上传到youku就成渣画质了，想看的还是忍忍吧（注：由于录屏操作导致selenium无法正常截取验证码，最后用手工输入）密码:zouleiselenium_fetch_oa\n以下是github地址 https://github.com/ficapy/OA_Fetch\np.s由于暂时还不会打包，尝试使用pyinstall打包成exe文件失败。so如果想直接双击使用还是需要很费功夫的，需要安装matplotlib，selenium（IEdriver）\n","dateCreated":"2014-06-09T22:21:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2014-06-09T22:21:00+08:00","description":"最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：\n\n出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。\n需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。\n系统性能不佳，反应巨慢，异常返回情况比较多。\n","headline":"利用selenium抓取OA数据生成综合图表","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/","keywords":"python, matplotlib, selenium"}</script>
-    <meta name="description" content="最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。 需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺">
-<meta name="keywords" content="python,matplotlib,selenium">
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：\n\n  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。\n  需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。\n  系统性能不佳，反应巨慢，异常返回情况比较多。\n\n\n\n最后选择了使用python+selenium+IEdriver控制IE浏览器登陆系统抓取OA数据，不得不说这是一个痛苦的过程selenium对IE的支持异常差，支持最好的firefox以及速度最快的chrome都无法在该例中使用。这直接造成了几乎每一步模拟操作都要加一句time.sleep(3)进行等待操作，以免返回异常或者没有抓取到数据。最开始的时候我直接全模拟手工操作一步步进入需要抓取的页面（OA是frame里面套frame），结果浏览器经常运行不久就报告崩溃。山穷水尽疑无路，柳暗花明又一村，最终发现登陆后直接打开要抓取frame页面的地址就可以了，这一步让整个抓取数据的工作以及稳定性提高的不少整个流程比较简单。模拟登陆→抓取数据→把数据存储到数据库（sqlite）→利用matplotlib把数据库的内容生成图表在登录OA的时候会要求填入验证码，虽然目测该系统验证码比较弱智，但是俺目前的水平还是破不了。so。本着力求无人操作全自动的原则使用了在线打码服务。不得不吐槽一下，试了2家，联系了客服，第一家流程复杂的不得了，和技术人员折腾半天最后还是不了了之，俺的要求多简单啊，结果一定要搞啥开发者分成路线。另外一家流程倒是简单了很多，结果网站给的示例教程还是前一个网站没更新无法使用，找客服要了一个新的示例文件，根本无法运行。问客服，得到的答复是技术人员测试使用完全没问题,WQNMLGB。示例是用urllib写的上传文件操作。潇潇洒洒上百行。没办法自己用requests重新写了下20行搞定，嗯，感叹下httpfor humans的称号果然不是白喊的&gt;_&lt;最后抓取到数据就是可视化的过程啦，以前只听过matplotlib库生成牛X的图表。试过之后还不错，还好比较知名案例比较多，否则真不知道要折腾多久才能搞出来，借鉴了stackoverflow上面的一个回答看了下官网的一些文档东拼西凑生成了个看的过去的图表，如下图（嗯，打了点薄码）以下是录制的视频，上传到youku就成渣画质了，想看的还是忍忍吧（注：由于录屏操作导致selenium无法正常截取验证码，最后用手工输入）密码:zouleiselenium_fetch_oa\n以下是github地址 https://github.com/ficapy/OA_Fetch\np.s由于暂时还不会打包，尝试使用pyinstall打包成exe文件失败。so如果想直接双击使用还是需要很费功夫的，需要安装matplotlib，selenium（IEdriver）\n","dateCreated":"2014-06-09T22:21:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2014-06-09T22:21:00+08:00","description":"最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：\n\n  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。\n  需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。\n  系统性能不佳，反应巨慢，异常返回情况比较多。\n","headline":"利用selenium抓取OA数据生成综合图表","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/","keywords":"python, matplotlib, selenium"}</script>
+    <meta name="description" content="最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：    出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。   需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="利用selenium抓取OA数据生成综合图表">
 <meta property="og:url" content="https://www.zoulei.net/2014/06/09/use_selenium_fetch_OA_generate_statistics_image/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。 需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺">
-<meta property="og:locale" content="zh-cn">
+<meta property="og:description" content="最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：    出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。   需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功">
+<meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://blogimg.ficapy.com/blogimg/2014-06-05.png">
-<meta property="og:updated_time" content="2019-07-26T06:53:30.697Z">
+<meta property="article:published_time" content="2014-06-09T14:21:00.000Z">
+<meta property="article:modified_time" content="2019-07-26T06:53:30.697Z">
+<meta property="article:author" content="ficapy">
+<meta property="article:tag" content="python">
+<meta property="article:tag" content="matplotlib">
+<meta property="article:tag" content="selenium">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="利用selenium抓取OA数据生成综合图表">
-<meta name="twitter:description" content="最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。总结一下该OA系统的特征：  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。 需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺">
 <meta name="twitter:image" content="https://blogimg.ficapy.com/blogimg/2014-06-05.png">
     
     
@@ -37,7 +37,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -60,7 +62,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -90,12 +92,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -103,12 +106,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -116,12 +120,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -129,12 +134,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -142,12 +148,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -155,12 +162,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -172,8 +180,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -181,8 +196,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -190,8 +212,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -199,8 +228,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -208,8 +244,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -217,8 +260,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -226,11 +276,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -242,12 +294,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -283,7 +336,7 @@
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+    <a class="category-link" href="/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/">伪技术</a>
 
 
     
@@ -297,15 +350,15 @@
         <div class="main-content-wrap">
             <p>最近自己写了个小项目练手，原由是偶尔有需要登录公司OA看看发给领导批示的文件到哪一步了，文件不是特别多，但是流程比较多，需要的时间比较长。<br>总结一下该OA系统的特征：</p>
 <ul>
-<li>出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。</li>
-<li>需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。</li>
-<li>系统性能不佳，反应巨慢，异常返回情况比较多。</li>
+<li>  出于安全措施考虑，采用了内网登录，首先需要连接深信服SSLVPN登录到系统内网才能操作。直接导致常规的使用requests等模拟登陆手段直接失效。</li>
+<li>  需安装java等套件，设置信任等等一系列麻烦操作，对非IE浏览器几近无法成功浏览（俺试过多次），即使对于IE也不支持高版本，不过好像一直在升级，也不知是否有改进。</li>
+<li>  系统性能不佳，反应巨慢，异常返回情况比较多。</li>
 </ul>
 <a id="more"></a>
 
-<p>最后选择了使用python+selenium+IEdriver控制IE浏览器登陆系统抓取OA数据，不得不说这是一个痛苦的过程selenium对IE的支持异常差，支持最好的firefox以及速度最快的chrome都无法在该例中使用。这直接造成了几乎每一步模拟操作都要加一句time.sleep(3)进行等待操作，以免返回异常或者没有抓取到数据。最开始的时候我直接全模拟手工操作一步步进入需要抓取的页面（OA是frame里面套frame），结果浏览器经常运行不久就报告崩溃。山穷水尽疑无路，柳暗花明又一村，最终发现登陆后直接打开要抓取frame页面的地址就可以了，这一步让整个抓取数据的工作以及稳定性提高的不少<br>整个流程比较简单。模拟登陆→抓取数据→把数据存储到数据库（sqlite）→利用matplotlib把数据库的内容生成图表<br>在登录OA的时候会要求填入验证码，虽然目测该系统验证码比较弱智，但是俺目前的水平还是破不了。so。本着力求无人操作全自动的原则使用了在线打码服务。不得不吐槽一下，试了2家，联系了客服，第一家流程复杂的不得了，和技术人员折腾半天最后还是不了了之，俺的要求多简单啊，结果一定要搞啥开发者分成路线。另外一家流程倒是简单了很多，结果网站给的示例教程还是前一个网站没更新无法使用，找客服要了一个新的示例文件，根本无法运行。问客服，得到的答复是技术人员测试使用完全没问题,WQNMLGB。示例是用urllib写的上传文件操作。潇潇洒洒上百行。没办法自己用requests重新写了下20行搞定，嗯，感叹下http<br>for humans的称号果然不是白喊的&gt;_&lt;<br>最后抓取到数据就是可视化的过程啦，以前只听过matplotlib库生成牛X的图表。试过之后还不错，还好比较知名案例比较多，否则真不知道要折腾多久才能搞出来，借鉴了stackoverflow上面的一个回答看了下官网的一些文档东拼西凑生成了个看的过去的图表，如下图（嗯，打了点薄码）<img src="https://blogimg.ficapy.com/blogimg/2014-06-05.png" alt="2014-06-05"><br>以下是录制的视频，上传到youku就成渣画质了，想看的还是忍忍吧（注：由于录屏操作导致selenium无法正常截取验证码，最后用手工输入）密码:zoulei<br><a href="http://v.youku.com/v_show/id_XNzIzNTMxOTA4.html" target="_blank" rel="noopener">selenium_fetch_oa</a></p>
-<p>以下是github地址 <a href="https://github.com/ficapy/OA_Fetch" target="_blank" rel="noopener">https://github.com/ficapy/OA_Fetch</a></p>
-<p>p.s由于暂时还不会打包，尝试使用pyinstall打包成exe文件失败。so如果想直接双击使用还是需要很费功夫的，需要安装<br><a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/#matplotlib" target="_blank" rel="noopener">matplotlib</a>，<a href="http://docs.seleniumhq.org/" target="_blank" rel="noopener">selenium</a>（IEdriver）</p>
+<p>最后选择了使用python+selenium+IEdriver控制IE浏览器登陆系统抓取OA数据，不得不说这是一个痛苦的过程selenium对IE的支持异常差，支持最好的firefox以及速度最快的chrome都无法在该例中使用。这直接造成了几乎每一步模拟操作都要加一句time.sleep(3)进行等待操作，以免返回异常或者没有抓取到数据。最开始的时候我直接全模拟手工操作一步步进入需要抓取的页面（OA是frame里面套frame），结果浏览器经常运行不久就报告崩溃。山穷水尽疑无路，柳暗花明又一村，最终发现登陆后直接打开要抓取frame页面的地址就可以了，这一步让整个抓取数据的工作以及稳定性提高的不少<br>整个流程比较简单。模拟登陆→抓取数据→把数据存储到数据库（sqlite）→利用matplotlib把数据库的内容生成图表<br>在登录OA的时候会要求填入验证码，虽然目测该系统验证码比较弱智，但是俺目前的水平还是破不了。so。本着力求无人操作全自动的原则使用了在线打码服务。不得不吐槽一下，试了2家，联系了客服，第一家流程复杂的不得了，和技术人员折腾半天最后还是不了了之，俺的要求多简单啊，结果一定要搞啥开发者分成路线。另外一家流程倒是简单了很多，结果网站给的示例教程还是前一个网站没更新无法使用，找客服要了一个新的示例文件，根本无法运行。问客服，得到的答复是技术人员测试使用完全没问题,WQNMLGB。示例是用urllib写的上传文件操作。潇潇洒洒上百行。没办法自己用requests重新写了下20行搞定，嗯，感叹下http<br>for humans的称号果然不是白喊的&gt;_&lt;<br>最后抓取到数据就是可视化的过程啦，以前只听过matplotlib库生成牛X的图表。试过之后还不错，还好比较知名案例比较多，否则真不知道要折腾多久才能搞出来，借鉴了stackoverflow上面的一个回答看了下官网的一些文档东拼西凑生成了个看的过去的图表，如下图（嗯，打了点薄码）<img src="https://blogimg.ficapy.com/blogimg/2014-06-05.png" alt="2014-06-05"><br>以下是录制的视频，上传到youku就成渣画质了，想看的还是忍忍吧（注：由于录屏操作导致selenium无法正常截取验证码，最后用手工输入）密码:zoulei<br><a href="http://v.youku.com/v_show/id_XNzIzNTMxOTA4.html">selenium_fetch_oa</a></p>
+<p>以下是github地址 <a href="https://github.com/ficapy/OA_Fetch">https://github.com/ficapy/OA_Fetch</a></p>
+<p>p.s由于暂时还不会打包，尝试使用pyinstall打包成exe文件失败。so如果想直接双击使用还是需要很费功夫的，需要安装<br><a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/#matplotlib">matplotlib</a>，<a href="http://docs.seleniumhq.org/">selenium</a>（IEdriver）</p>
 
             
 
@@ -317,7 +370,7 @@
             <div class="post-footer-tags">
                 <span class="text-color-light text-small">标签</span><br/>
                 
-    <a class="tag tag--primary tag--small t-link" href="/tags/matplotlib/">matplotlib</a> <a class="tag tag--primary tag--small t-link" href="/tags/python/">python</a> <a class="tag tag--primary tag--small t-link" href="/tags/selenium/">selenium</a>
+    <a class="tag tag--primary tag--small t-none-link" href="/tags/matplotlib/" rel="tag">matplotlib</a> <a class="tag tag--primary tag--small t-none-link" href="/tags/python/" rel="tag">python</a> <a class="tag tag--primary tag--small t-none-link" href="/tags/selenium/" rel="tag">selenium</a>
 
             </div>
         
@@ -430,7 +483,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -675,7 +728,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -699,7 +752,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -748,7 +801,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -773,8 +826,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -891,7 +944,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -899,8 +954,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

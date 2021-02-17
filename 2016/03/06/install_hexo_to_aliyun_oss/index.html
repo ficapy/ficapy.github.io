@@ -11,20 +11,18 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近把博客从wordpress迁移到hexo,主要原因是wordpress太过臃肿。一个个人博客完全不需要那么多的功能。这么多年过去了都没有一个完美的支持markdown方案，然而随着github的流行，程序员社区早已将markdown作为最佳写博客手段！生成静态博客的框架众多。为什么笔者会选择使用hexo。没别的，JS社区一片繁荣(挖坑小能手众多),甚至hexo官网有整站中文化。\n注: 该方案同样适用于又拍及七牛\n\n\n至于怎么安装,如何使用hexo本文就不表述了,请查看官网以及hexo --help。说一下我遇到的几个问题。\n\n对于npm、pip、gem或者其他的包管理系统在国内请使用镜像源,比如中科大、淘宝等\n对于osx系统，请使用npm install hexo --no-optional安装，参见官方文档\n由于hexo框架的升级或者使用环境的不同。有可能导致你使用的主题出现错误。搜索主题的提问信息一般会有答案\n将导出的wordpress文件使用hexo官方推荐的hexo-migrator-wordpress很可能会失败。此时不必纠结,实质就是将xml文件转换成markdown。可用的方法有很多。我使用的是pelican推荐的做法,转换出来有些不标准的需要脚本辅助手工完成\n\n下面说一下安装hexo到阿里云oss的要点，他们最大的区别就是:OSS不能正常的处理请求文件的类型也就是header中Content-Type字段。默认会返回application/octet-stream。意味着请求该资源浏览器会直接下载，而不是正常的解析，所以需要手动指定。另外OSS不能使用相对路径进行访问(因为它的设计就是用作存储，而不是web服务器)。比如访问a.com\\b\\并不会返回a.com\\b\\index.html的内容。\n解决以上2个问题的方案就是。对每个上传的文件根据文件名后缀得到其mime指定Content-Type字段。将hexo生成的所有html中href进行处理：将他们的路径加上index.html如果此路径在本地存在文件。则将该路径换成绝对路径。例如\\b或者\\b\\换成\\b\\index.html。python2示例代码如下,依赖requests、lxml\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119#!/usr/bin/env python# -*- coding: utf-8 -*-# Author: ficapyimport osimport requestsimport base64import hmacimport datetimefrom os.path import join, exists, relpathfrom mimetypes import MimeTypesfrom hashlib import sha1, md5from pickle import dump, loadsfrom cStringIO import StringIO, InputType, OutputTypefrom lxml import htmlKEY             = '----------'SECRET          = '----------'BUCKET          = '----------'url             = '----------'ABSOLUTE_PATH   = '/Users/ficapy/CodeSpace/Blog/public's = requests.Session()headers = &#123;    'Date': datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT'),    'Content-Type': 'text/html',    'HOST': url,&#125;def signature(file_path):    global headers    path = join(ABSOLUTE_PATH, file_path)    headers['Content-Type'] = MimeTypes().guess_type(path)[0] or 'text/html'    sign = base64.b64encode(hmac.new(SECRET,                                     'PUT' + \"\\n\"                                     + '' + \"\\n\"                                     + headers['Content-Type'] + \"\\n\"                                     + headers['Date'] + \"\\n\"                                     + '/' + BUCKET + '/' + file_path, sha1).digest()).strip()    headers.update(&#123;'Authorization': 'OSS ' + KEY + ':' + sign&#125;)def read_in_chunks(file_object, blocksize=1024):    file_object = file_object if isinstance(file_object, (InputType, OutputType)) else open(        join(ABSOLUTE_PATH, file_object))    file_object.seek(0)    while 1:        data = file_object.read(blocksize)        if not data:            break        yield datadef upload(file_path, file_object):    signature(file_path)    s.put('http://' + url + '/' + file_path, headers=headers, data=read_in_chunks(file_object)).raise_for_status()    print('upload done: ' + file_path)# 首先请求oss_fuck_md5文件,没有则全部上传  有则和生成的md5对比,本地文件不存在或变动则上传# 所有文件上传成功后最后上传.oss_fuck_md5文件def local_md5():    file_md5_mp = &#123;&#125;    for root, dirnames, files in os.walk(ABSOLUTE_PATH):        for file in files:            fullpath = join(root, file)            rel = relpath(fullpath, ABSOLUTE_PATH)            file_md5_mp[rel] = md5(open(fullpath).read()).hexdigest()    return file_md5_mpdef remote_md5():    a = s.get('http://' + url + '/oss_fuck_md5')    if a.status_code != 200:        return &#123;&#125;    else:        return loads(a.content)def path_process(file_path):    file_path = join(ABSOLUTE_PATH, file_path)    tree = html.parse(file_path).getroot()    hrefs = tree.xpath('//*[@href]')    for i, href in enumerate(hrefs):        rewrite = join(href.attrib['href'].split()[0], 'index.html')        if exists(join(ABSOLUTE_PATH, rewrite[1:])):            hrefs[i].attrib['href'] = rewrite    f = StringIO()    f.write(html.tostring(tree))    return fdef main():    remote = remote_md5()    locals = local_md5()    _locals = locals.copy()    for local in _locals.keys():        if _locals[local] != remote.get(local, None):            continue        else:            locals.pop(local)    for path in locals.keys():        if path.endswith('html'):            upload(path, path_process(path))        else:            upload(path, path)    f = StringIO()    dump(_locals, f)    upload('oss_fuck_md5', f)if __name__ == '__main__':    main()\n\n\n接下来就是绑定域名了,oss管理页面找找就有了。灰常简单，在下一篇将会阐述如何使用免费的letsencrypt生成证书绑定在阿里云CDN上以及做一些简单的优化。\n","dateCreated":"2016-03-06T22:34:00+08:00","dateModified":"2016-08-18T18:01:11+08:00","datePublished":"2016-03-06T22:34:00+08:00","description":"最近把博客从wordpress迁移到hexo,主要原因是wordpress太过臃肿。一个个人博客完全不需要那么多的功能。这么多年过去了都没有一个完美的支持markdown方案，然而随着github的流行，程序员社区早已将markdown作为最佳写博客手段！生成静态博客的框架众多。为什么笔者会选择使用hexo。没别的，JS社区一片繁荣(挖坑小能手众多),甚至hexo官网有整站中文化。\n注: 该方案同样适用于又拍及七牛","headline":"将hexo部署到阿里云OSS","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近把博客从wordpress迁移到hexo,主要原因是wordpress太过臃肿。一个个人博客完全不需要那么多的功能。这么多年过去了都没有一个完美的支持markdown方案，然而随着github的流行，程序员社区早已将markdown作为最佳写博客手段！生成静态博客的框架众多。为什么笔者会选择使用hexo。没别的，JS社区一片繁荣(挖坑小能手众多),甚至hexo官网有整站中文化。\n注: 该方案同样适用于又拍及七牛\n\n\n至于怎么安装,如何使用hexo本文就不表述了,请查看官网以及hexo --help。说一下我遇到的几个问题。\n\n对于npm、pip、gem或者其他的包管理系统在国内请使用镜像源,比如中科大、淘宝等\n\n\n 对于osx系统，请使用npm install hexo --no-optional安装，参见官方文档\n 由于hexo框架的升级或者使用环境的不同。有可能导致你使用的主题出现错误。搜索主题的提问信息一般会有答案\n 将导出的wordpress文件使用hexo官方推荐的hexo-migrator-wordpress很可能会失败。此时不必纠结,实质就是将xml文件转换成markdown。可用的方法有很多。我使用的是pelican推荐的做法,转换出来有些不标准的需要脚本辅助手工完成\n\n下面说一下安装hexo到阿里云oss的要点，他们最大的区别就是:OSS不能正常的处理请求文件的类型也就是header中Content-Type字段。默认会返回application/octet-stream。意味着请求该资源浏览器会直接下载，而不是正常的解析，所以需要手动指定。另外OSS不能使用相对路径进行访问(因为它的设计就是用作存储，而不是web服务器)。比如访问a.com\\b\\并不会返回a.com\\b\\index.html的内容。\n解决以上2个问题的方案就是。对每个上传的文件根据文件名后缀得到其mime指定Content-Type字段。将hexo生成的所有html中href进行处理：将他们的路径加上index.html如果此路径在本地存在文件。则将该路径换成绝对路径。例如\\b或者\\b\\换成\\b\\index.html。python2示例代码如下,依赖requests、lxml\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119#!/usr/bin/env python# -*- coding: utf-8 -*-# Author: ficapyimport osimport requestsimport base64import hmacimport datetimefrom os.path import join, exists, relpathfrom mimetypes import MimeTypesfrom hashlib import sha1, md5from pickle import dump, loadsfrom cStringIO import StringIO, InputType, OutputTypefrom lxml import htmlKEY             = &#x27;----------&#x27;SECRET          = &#x27;----------&#x27;BUCKET          = &#x27;----------&#x27;url             = &#x27;----------&#x27;ABSOLUTE_PATH   = &#x27;/Users/ficapy/CodeSpace/Blog/public&#x27;s = requests.Session()headers = &#123;    &#x27;Date&#x27;: datetime.datetime.utcnow().strftime(&#x27;%a, %d %b %Y %H:%M:%S GMT&#x27;),    &#x27;Content-Type&#x27;: &#x27;text/html&#x27;,    &#x27;HOST&#x27;: url,&#125;def signature(file_path):    global headers    path = join(ABSOLUTE_PATH, file_path)    headers[&#x27;Content-Type&#x27;] = MimeTypes().guess_type(path)[0] or &#x27;text/html&#x27;    sign = base64.b64encode(hmac.new(SECRET,                                     &#x27;PUT&#x27; + &quot;\\n&quot;                                     + &#x27;&#x27; + &quot;\\n&quot;                                     + headers[&#x27;Content-Type&#x27;] + &quot;\\n&quot;                                     + headers[&#x27;Date&#x27;] + &quot;\\n&quot;                                     + &#x27;/&#x27; + BUCKET + &#x27;/&#x27; + file_path, sha1).digest()).strip()    headers.update(&#123;&#x27;Authorization&#x27;: &#x27;OSS &#x27; + KEY + &#x27;:&#x27; + sign&#125;)def read_in_chunks(file_object, blocksize=1024):    file_object = file_object if isinstance(file_object, (InputType, OutputType)) else open(        join(ABSOLUTE_PATH, file_object))    file_object.seek(0)    while 1:        data = file_object.read(blocksize)        if not data:            break        yield datadef upload(file_path, file_object):    signature(file_path)    s.put(&#x27;http://&#x27; + url + &#x27;/&#x27; + file_path, headers=headers, data=read_in_chunks(file_object)).raise_for_status()    print(&#x27;upload done: &#x27; + file_path)# 首先请求oss_fuck_md5文件,没有则全部上传  有则和生成的md5对比,本地文件不存在或变动则上传# 所有文件上传成功后最后上传.oss_fuck_md5文件def local_md5():    file_md5_mp = &#123;&#125;    for root, dirnames, files in os.walk(ABSOLUTE_PATH):        for file in files:            fullpath = join(root, file)            rel = relpath(fullpath, ABSOLUTE_PATH)            file_md5_mp[rel] = md5(open(fullpath).read()).hexdigest()    return file_md5_mpdef remote_md5():    a = s.get(&#x27;http://&#x27; + url + &#x27;/oss_fuck_md5&#x27;)    if a.status_code != 200:        return &#123;&#125;    else:        return loads(a.content)def path_process(file_path):    file_path = join(ABSOLUTE_PATH, file_path)    tree = html.parse(file_path).getroot()    hrefs = tree.xpath(&#x27;//*[@href]&#x27;)    for i, href in enumerate(hrefs):        rewrite = join(href.attrib[&#x27;href&#x27;].split()[0], &#x27;index.html&#x27;)        if exists(join(ABSOLUTE_PATH, rewrite[1:])):            hrefs[i].attrib[&#x27;href&#x27;] = rewrite    f = StringIO()    f.write(html.tostring(tree))    return fdef main():    remote = remote_md5()    locals = local_md5()    _locals = locals.copy()    for local in _locals.keys():        if _locals[local] != remote.get(local, None):            continue        else:            locals.pop(local)    for path in locals.keys():        if path.endswith(&#x27;html&#x27;):            upload(path, path_process(path))        else:            upload(path, path)    f = StringIO()    dump(_locals, f)    upload(&#x27;oss_fuck_md5&#x27;, f)if __name__ == &#x27;__main__&#x27;:    main()\n\n\n接下来就是绑定域名了,oss管理页面找找就有了。灰常简单，在下一篇将会阐述如何使用免费的letsencrypt生成证书绑定在阿里云CDN上以及做一些简单的优化。\n","dateCreated":"2016-03-06T22:34:00+08:00","dateModified":"2016-08-18T18:01:11+08:00","datePublished":"2016-03-06T22:34:00+08:00","description":"最近把博客从wordpress迁移到hexo,主要原因是wordpress太过臃肿。一个个人博客完全不需要那么多的功能。这么多年过去了都没有一个完美的支持markdown方案，然而随着github的流行，程序员社区早已将markdown作为最佳写博客手段！生成静态博客的框架众多。为什么笔者会选择使用hexo。没别的，JS社区一片繁荣(挖坑小能手众多),甚至hexo官网有整站中文化。\n注: 该方案同样适用于又拍及七牛","headline":"将hexo部署到阿里云OSS","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/"}</script>
     <meta name="description" content="最近把博客从wordpress迁移到hexo,主要原因是wordpress太过臃肿。一个个人博客完全不需要那么多的功能。这么多年过去了都没有一个完美的支持markdown方案，然而随着github的流行，程序员社区早已将markdown作为最佳写博客手段！生成静态博客的框架众多。为什么笔者会选择使用hexo。没别的，JS社区一片繁荣(挖坑小能手众多),甚至hexo官网有整站中文化。 注: 该方案同">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="将hexo部署到阿里云OSS">
 <meta property="og:url" content="https://www.zoulei.net/2016/03/06/install_hexo_to_aliyun_oss/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="最近把博客从wordpress迁移到hexo,主要原因是wordpress太过臃肿。一个个人博客完全不需要那么多的功能。这么多年过去了都没有一个完美的支持markdown方案，然而随着github的流行，程序员社区早已将markdown作为最佳写博客手段！生成静态博客的框架众多。为什么笔者会选择使用hexo。没别的，JS社区一片繁荣(挖坑小能手众多),甚至hexo官网有整站中文化。 注: 该方案同">
-<meta property="og:locale" content="zh-cn">
-<meta property="og:updated_time" content="2016-08-18T10:01:11.000Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2016-03-06T14:34:00.000Z">
+<meta property="article:modified_time" content="2016-08-18T10:01:11.000Z">
+<meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="将hexo部署到阿里云OSS">
-<meta name="twitter:description" content="最近把博客从wordpress迁移到hexo,主要原因是wordpress太过臃肿。一个个人博客完全不需要那么多的功能。这么多年过去了都没有一个完美的支持markdown方案，然而随着github的流行，程序员社区早已将markdown作为最佳写博客手段！生成静态博客的框架众多。为什么笔者会选择使用hexo。没别的，JS社区一片繁荣(挖坑小能手众多),甚至hexo官网有整站中文化。 注: 该方案同">
     
     
         
@@ -34,7 +32,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -57,7 +57,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -87,12 +87,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -100,12 +101,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -113,12 +115,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -126,12 +129,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -139,12 +143,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -152,12 +157,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -169,8 +175,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -178,8 +191,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -187,8 +207,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -196,8 +223,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -205,8 +239,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -214,8 +255,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -223,11 +271,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -239,12 +289,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -280,7 +331,7 @@
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+    <a class="category-link" href="/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/">伪技术</a>
 
 
     
@@ -298,14 +349,16 @@
 
 <p>至于怎么安装,如何使用hexo本文就不表述了,请查看官网以及<code>hexo --help</code>。说一下我遇到的几个问题。</p>
 <ul>
-<li>对于npm、pip、gem或者其他的包管理系统在国内请使用镜像源,比如中科大、淘宝等</li>
-<li>对于osx系统，请使用<code>npm install hexo --no-optional</code>安装，参见<a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="noopener">官方文档</a></li>
-<li>由于hexo框架的升级或者使用环境的不同。有可能导致你使用的主题出现错误。搜索主题的提问信息一般会有答案</li>
-<li>将导出的wordpress文件使用hexo官方推荐的hexo-migrator-wordpress很可能会失败。此时不必纠结,实质就是将xml文件转换成markdown。可用的方法有很多。我使用的是<a href="http://docs.getpelican.com/en/latest/importer.html" target="_blank" rel="noopener">pelican推荐的做法</a>,转换出来有些不标准的需要脚本辅助手工完成</li>
+<li><pre><code>对于npm、pip、gem或者其他的包管理系统在国内请使用镜像源,比如中科大、淘宝等
+</code></pre>
+</li>
+<li> 对于osx系统，请使用<code>npm install hexo --no-optional</code>安装，参见<a href="https://hexo.io/docs/troubleshooting.html">官方文档</a></li>
+<li> 由于hexo框架的升级或者使用环境的不同。有可能导致你使用的主题出现错误。搜索主题的提问信息一般会有答案</li>
+<li> 将导出的wordpress文件使用hexo官方推荐的hexo-migrator-wordpress很可能会失败。此时不必纠结,实质就是将xml文件转换成markdown。可用的方法有很多。我使用的是<a href="http://docs.getpelican.com/en/latest/importer.html">pelican推荐的做法</a>,转换出来有些不标准的需要脚本辅助手工完成</li>
 </ul>
 <p>下面说一下安装hexo到阿里云oss的要点，他们最大的区别就是:OSS不能正常的处理请求文件的类型也就是header中Content-Type字段。默认会返回application/octet-stream。意味着请求该资源浏览器会直接下载，而不是正常的解析，所以需要手动指定。另外OSS不能使用相对路径进行访问(因为它的设计就是用作存储，而不是web服务器)。<code>比如访问a.com\b\并不会返回a.com\b\index.html的内容</code>。</p>
 <p>解决以上2个问题的方案就是。对每个上传的文件根据文件名后缀得到其mime指定Content-Type字段。将hexo生成的所有html中href进行处理：将他们的路径加上index.html如果此路径在本地存在文件。则将该路径换成绝对路径。例如\b或者\b\换成\b\index.html。python2示例代码如下,依赖requests、lxml</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># -*- coding: utf-8 -*-</span></span><br><span class="line"><span class="comment"># Author: ficapy</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> base64</span><br><span class="line"><span class="keyword">import</span> hmac</span><br><span class="line"><span class="keyword">import</span> datetime</span><br><span class="line"><span class="keyword">from</span> os.path <span class="keyword">import</span> join, exists, relpath</span><br><span class="line"><span class="keyword">from</span> mimetypes <span class="keyword">import</span> MimeTypes</span><br><span class="line"><span class="keyword">from</span> hashlib <span class="keyword">import</span> sha1, md5</span><br><span class="line"><span class="keyword">from</span> pickle <span class="keyword">import</span> dump, loads</span><br><span class="line"><span class="keyword">from</span> cStringIO <span class="keyword">import</span> StringIO, InputType, OutputType</span><br><span class="line"><span class="keyword">from</span> lxml <span class="keyword">import</span> html</span><br><span class="line"></span><br><span class="line">KEY             = <span class="string">'----------'</span></span><br><span class="line">SECRET          = <span class="string">'----------'</span></span><br><span class="line">BUCKET          = <span class="string">'----------'</span></span><br><span class="line">url             = <span class="string">'----------'</span></span><br><span class="line">ABSOLUTE_PATH   = <span class="string">'/Users/ficapy/CodeSpace/Blog/public'</span></span><br><span class="line"></span><br><span class="line">s = requests.Session()</span><br><span class="line"></span><br><span class="line">headers = &#123;</span><br><span class="line">    <span class="string">'Date'</span>: datetime.datetime.utcnow().strftime(<span class="string">'%a, %d %b %Y %H:%M:%S GMT'</span>),</span><br><span class="line">    <span class="string">'Content-Type'</span>: <span class="string">'text/html'</span>,</span><br><span class="line">    <span class="string">'HOST'</span>: url,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">signature</span><span class="params">(file_path)</span>:</span></span><br><span class="line">    <span class="keyword">global</span> headers</span><br><span class="line">    path = join(ABSOLUTE_PATH, file_path)</span><br><span class="line">    headers[<span class="string">'Content-Type'</span>] = MimeTypes().guess_type(path)[<span class="number">0</span>] <span class="keyword">or</span> <span class="string">'text/html'</span></span><br><span class="line">    sign = base64.b64encode(hmac.new(SECRET,</span><br><span class="line">                                     <span class="string">'PUT'</span> + <span class="string">"\n"</span></span><br><span class="line">                                     + <span class="string">''</span> + <span class="string">"\n"</span></span><br><span class="line">                                     + headers[<span class="string">'Content-Type'</span>] + <span class="string">"\n"</span></span><br><span class="line">                                     + headers[<span class="string">'Date'</span>] + <span class="string">"\n"</span></span><br><span class="line">                                     + <span class="string">'/'</span> + BUCKET + <span class="string">'/'</span> + file_path, sha1).digest()).strip()</span><br><span class="line">    headers.update(&#123;<span class="string">'Authorization'</span>: <span class="string">'OSS '</span> + KEY + <span class="string">':'</span> + sign&#125;)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">read_in_chunks</span><span class="params">(file_object, blocksize=<span class="number">1024</span>)</span>:</span></span><br><span class="line">    file_object = file_object <span class="keyword">if</span> isinstance(file_object, (InputType, OutputType)) <span class="keyword">else</span> open(</span><br><span class="line">        join(ABSOLUTE_PATH, file_object))</span><br><span class="line">    file_object.seek(<span class="number">0</span>)</span><br><span class="line">    <span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">        data = file_object.read(blocksize)</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> data:</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        <span class="keyword">yield</span> data</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">upload</span><span class="params">(file_path, file_object)</span>:</span></span><br><span class="line">    signature(file_path)</span><br><span class="line">    s.put(<span class="string">'http://'</span> + url + <span class="string">'/'</span> + file_path, headers=headers, data=read_in_chunks(file_object)).raise_for_status()</span><br><span class="line">    print(<span class="string">'upload done: '</span> + file_path)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 首先请求oss_fuck_md5文件,没有则全部上传  有则和生成的md5对比,本地文件不存在或变动则上传</span></span><br><span class="line"><span class="comment"># 所有文件上传成功后最后上传.oss_fuck_md5文件</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">local_md5</span><span class="params">()</span>:</span></span><br><span class="line">    file_md5_mp = &#123;&#125;</span><br><span class="line">    <span class="keyword">for</span> root, dirnames, files <span class="keyword">in</span> os.walk(ABSOLUTE_PATH):</span><br><span class="line">        <span class="keyword">for</span> file <span class="keyword">in</span> files:</span><br><span class="line">            fullpath = join(root, file)</span><br><span class="line">            rel = relpath(fullpath, ABSOLUTE_PATH)</span><br><span class="line">            file_md5_mp[rel] = md5(open(fullpath).read()).hexdigest()</span><br><span class="line">    <span class="keyword">return</span> file_md5_mp</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">remote_md5</span><span class="params">()</span>:</span></span><br><span class="line">    a = s.get(<span class="string">'http://'</span> + url + <span class="string">'/oss_fuck_md5'</span>)</span><br><span class="line">    <span class="keyword">if</span> a.status_code != <span class="number">200</span>:</span><br><span class="line">        <span class="keyword">return</span> &#123;&#125;</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">return</span> loads(a.content)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">path_process</span><span class="params">(file_path)</span>:</span></span><br><span class="line">    file_path = join(ABSOLUTE_PATH, file_path)</span><br><span class="line">    tree = html.parse(file_path).getroot()</span><br><span class="line">    hrefs = tree.xpath(<span class="string">'//*[@href]'</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i, href <span class="keyword">in</span> enumerate(hrefs):</span><br><span class="line">        rewrite = join(href.attrib[<span class="string">'href'</span>].split()[<span class="number">0</span>], <span class="string">'index.html'</span>)</span><br><span class="line">        <span class="keyword">if</span> exists(join(ABSOLUTE_PATH, rewrite[<span class="number">1</span>:])):</span><br><span class="line">            hrefs[i].attrib[<span class="string">'href'</span>] = rewrite</span><br><span class="line">    f = StringIO()</span><br><span class="line">    f.write(html.tostring(tree))</span><br><span class="line">    <span class="keyword">return</span> f</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    remote = remote_md5()</span><br><span class="line">    locals = local_md5()</span><br><span class="line">    _locals = locals.copy()</span><br><span class="line">    <span class="keyword">for</span> local <span class="keyword">in</span> _locals.keys():</span><br><span class="line">        <span class="keyword">if</span> _locals[local] != remote.get(local, <span class="literal">None</span>):</span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            locals.pop(local)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> path <span class="keyword">in</span> locals.keys():</span><br><span class="line">        <span class="keyword">if</span> path.endswith(<span class="string">'html'</span>):</span><br><span class="line">            upload(path, path_process(path))</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            upload(path, path)</span><br><span class="line"></span><br><span class="line">    f = StringIO()</span><br><span class="line">    dump(_locals, f)</span><br><span class="line">    upload(<span class="string">'oss_fuck_md5'</span>, f)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">'__main__'</span>:</span><br><span class="line">    main()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#!/usr/bin/env python</span></span><br><span class="line"><span class="comment"># -*- coding: utf-8 -*-</span></span><br><span class="line"><span class="comment"># Author: ficapy</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"><span class="keyword">import</span> requests</span><br><span class="line"><span class="keyword">import</span> base64</span><br><span class="line"><span class="keyword">import</span> hmac</span><br><span class="line"><span class="keyword">import</span> datetime</span><br><span class="line"><span class="keyword">from</span> os.path <span class="keyword">import</span> join, exists, relpath</span><br><span class="line"><span class="keyword">from</span> mimetypes <span class="keyword">import</span> MimeTypes</span><br><span class="line"><span class="keyword">from</span> hashlib <span class="keyword">import</span> sha1, md5</span><br><span class="line"><span class="keyword">from</span> pickle <span class="keyword">import</span> dump, loads</span><br><span class="line"><span class="keyword">from</span> cStringIO <span class="keyword">import</span> StringIO, InputType, OutputType</span><br><span class="line"><span class="keyword">from</span> lxml <span class="keyword">import</span> html</span><br><span class="line"></span><br><span class="line">KEY             = <span class="string">&#x27;----------&#x27;</span></span><br><span class="line">SECRET          = <span class="string">&#x27;----------&#x27;</span></span><br><span class="line">BUCKET          = <span class="string">&#x27;----------&#x27;</span></span><br><span class="line">url             = <span class="string">&#x27;----------&#x27;</span></span><br><span class="line">ABSOLUTE_PATH   = <span class="string">&#x27;/Users/ficapy/CodeSpace/Blog/public&#x27;</span></span><br><span class="line"></span><br><span class="line">s = requests.Session()</span><br><span class="line"></span><br><span class="line">headers = &#123;</span><br><span class="line">    <span class="string">&#x27;Date&#x27;</span>: datetime.datetime.utcnow().strftime(<span class="string">&#x27;%a, %d %b %Y %H:%M:%S GMT&#x27;</span>),</span><br><span class="line">    <span class="string">&#x27;Content-Type&#x27;</span>: <span class="string">&#x27;text/html&#x27;</span>,</span><br><span class="line">    <span class="string">&#x27;HOST&#x27;</span>: url,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">signature</span>(<span class="params">file_path</span>):</span></span><br><span class="line">    <span class="keyword">global</span> headers</span><br><span class="line">    path = join(ABSOLUTE_PATH, file_path)</span><br><span class="line">    headers[<span class="string">&#x27;Content-Type&#x27;</span>] = MimeTypes().guess_type(path)[<span class="number">0</span>] <span class="keyword">or</span> <span class="string">&#x27;text/html&#x27;</span></span><br><span class="line">    sign = base64.b64encode(hmac.new(SECRET,</span><br><span class="line">                                     <span class="string">&#x27;PUT&#x27;</span> + <span class="string">&quot;\n&quot;</span></span><br><span class="line">                                     + <span class="string">&#x27;&#x27;</span> + <span class="string">&quot;\n&quot;</span></span><br><span class="line">                                     + headers[<span class="string">&#x27;Content-Type&#x27;</span>] + <span class="string">&quot;\n&quot;</span></span><br><span class="line">                                     + headers[<span class="string">&#x27;Date&#x27;</span>] + <span class="string">&quot;\n&quot;</span></span><br><span class="line">                                     + <span class="string">&#x27;/&#x27;</span> + BUCKET + <span class="string">&#x27;/&#x27;</span> + file_path, sha1).digest()).strip()</span><br><span class="line">    headers.update(&#123;<span class="string">&#x27;Authorization&#x27;</span>: <span class="string">&#x27;OSS &#x27;</span> + KEY + <span class="string">&#x27;:&#x27;</span> + sign&#125;)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">read_in_chunks</span>(<span class="params">file_object, blocksize=<span class="number">1024</span></span>):</span></span><br><span class="line">    file_object = file_object <span class="keyword">if</span> <span class="built_in">isinstance</span>(file_object, (InputType, OutputType)) <span class="keyword">else</span> <span class="built_in">open</span>(</span><br><span class="line">        join(ABSOLUTE_PATH, file_object))</span><br><span class="line">    file_object.seek(<span class="number">0</span>)</span><br><span class="line">    <span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">        data = file_object.read(blocksize)</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> data:</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        <span class="keyword">yield</span> data</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">upload</span>(<span class="params">file_path, file_object</span>):</span></span><br><span class="line">    signature(file_path)</span><br><span class="line">    s.put(<span class="string">&#x27;http://&#x27;</span> + url + <span class="string">&#x27;/&#x27;</span> + file_path, headers=headers, data=read_in_chunks(file_object)).raise_for_status()</span><br><span class="line">    print(<span class="string">&#x27;upload done: &#x27;</span> + file_path)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 首先请求oss_fuck_md5文件,没有则全部上传  有则和生成的md5对比,本地文件不存在或变动则上传</span></span><br><span class="line"><span class="comment"># 所有文件上传成功后最后上传.oss_fuck_md5文件</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">local_md5</span>():</span></span><br><span class="line">    file_md5_mp = &#123;&#125;</span><br><span class="line">    <span class="keyword">for</span> root, dirnames, files <span class="keyword">in</span> os.walk(ABSOLUTE_PATH):</span><br><span class="line">        <span class="keyword">for</span> file <span class="keyword">in</span> files:</span><br><span class="line">            fullpath = join(root, file)</span><br><span class="line">            rel = relpath(fullpath, ABSOLUTE_PATH)</span><br><span class="line">            file_md5_mp[rel] = md5(<span class="built_in">open</span>(fullpath).read()).hexdigest()</span><br><span class="line">    <span class="keyword">return</span> file_md5_mp</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">remote_md5</span>():</span></span><br><span class="line">    a = s.get(<span class="string">&#x27;http://&#x27;</span> + url + <span class="string">&#x27;/oss_fuck_md5&#x27;</span>)</span><br><span class="line">    <span class="keyword">if</span> a.status_code != <span class="number">200</span>:</span><br><span class="line">        <span class="keyword">return</span> &#123;&#125;</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="keyword">return</span> loads(a.content)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">path_process</span>(<span class="params">file_path</span>):</span></span><br><span class="line">    file_path = join(ABSOLUTE_PATH, file_path)</span><br><span class="line">    tree = html.parse(file_path).getroot()</span><br><span class="line">    hrefs = tree.xpath(<span class="string">&#x27;//*[@href]&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i, href <span class="keyword">in</span> <span class="built_in">enumerate</span>(hrefs):</span><br><span class="line">        rewrite = join(href.attrib[<span class="string">&#x27;href&#x27;</span>].split()[<span class="number">0</span>], <span class="string">&#x27;index.html&#x27;</span>)</span><br><span class="line">        <span class="keyword">if</span> exists(join(ABSOLUTE_PATH, rewrite[<span class="number">1</span>:])):</span><br><span class="line">            hrefs[i].attrib[<span class="string">&#x27;href&#x27;</span>] = rewrite</span><br><span class="line">    f = StringIO()</span><br><span class="line">    f.write(html.tostring(tree))</span><br><span class="line">    <span class="keyword">return</span> f</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span>():</span></span><br><span class="line">    remote = remote_md5()</span><br><span class="line">    <span class="built_in">locals</span> = local_md5()</span><br><span class="line">    _locals = <span class="built_in">locals</span>.copy()</span><br><span class="line">    <span class="keyword">for</span> local <span class="keyword">in</span> _locals.keys():</span><br><span class="line">        <span class="keyword">if</span> _locals[local] != remote.get(local, <span class="literal">None</span>):</span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            <span class="built_in">locals</span>.pop(local)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> path <span class="keyword">in</span> <span class="built_in">locals</span>.keys():</span><br><span class="line">        <span class="keyword">if</span> path.endswith(<span class="string">&#x27;html&#x27;</span>):</span><br><span class="line">            upload(path, path_process(path))</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            upload(path, path)</span><br><span class="line"></span><br><span class="line">    f = StringIO()</span><br><span class="line">    dump(_locals, f)</span><br><span class="line">    upload(<span class="string">&#x27;oss_fuck_md5&#x27;</span>, f)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    main()</span><br><span class="line"></span><br></pre></td></tr></table></figure>
 
 
 <p>接下来就是绑定域名了,oss管理页面找找就有了。灰常简单，在下一篇将会阐述如何使用免费的letsencrypt生成证书绑定在阿里云CDN上以及做一些简单的优化。</p>
@@ -426,7 +479,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -671,7 +724,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -695,7 +748,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -744,7 +797,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -769,8 +822,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -887,7 +940,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -895,8 +950,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

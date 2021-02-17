@@ -11,21 +11,19 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)\n\n\ndispatcher类(调度)文件asyncore.py中最重要的类为dispatcher，使用的时候只需要继承asyncore.dispatcher就好了\n可以这样理解每一个继承了asyncore.dispatcher的类都代表了一个socket(监听socket或者连接socket)\n在asyncore.py的最开始有一个全局字典socket_map对应fd和一个asyncore.dispatcher类，当你继承一个dispatcher类的时候总会调用函数在全局字典socket_map中创建一个映射，当然在关闭的时候也会从全局字典中删除\n最后是一个loop死循环，可以很容易想到是使用了系统IO多路复用接口select.select对全局socket_map进行了操作。根据返回的事件进行操作(3个事件读、写、错误)\n源码中我们着重看dispatcher类，它可以划分为以下几个要点\n\n添加了4个状态，connected/accepting/connecting/closing，想想为什么要设置这几个状态呢？？？connected:已经连接上对方,比如监听套接字sock,addr = socket.accept()返回的sock\nadd_channel/del_channel/create_socket/set_socket这几个都是针对全局字典socket_map的操作。添加进去或者删除\nreadable/writable 用的地方不是太多，预先确定该socket该不该添加到socket的可读可写里面\nlisten/bind/connect/accept/send/recv/close 这几个函数嘛，对原有的行为稍微改动了下，比如listen设置为accepting状态，connect设置为connecting状态，send,recv一定条件出发close，close即为从全局字典中删除并关闭socket\nhandle_read_event/handle_connect_event/handle_write_event.当select有事件返回的时候就是调用的这3个方法。只是需要注意。这里并不是最终执行的操作(send、recv等)！！！这里也体现了标注socket状态的作用，read可以分为监听(accepting)、连接完成后(connecting)→→→这里就是一个hook，如果自己调用connect连接那么完成后是此状态，可以自己重写handle_connect处理该事件，如果是直接初始化的socket则直接为connected状态。handle_write_event也很明显，当为connecting状态的时候处理hook，否则处理写入事件\n最后这一部分基本就是使用者需要重写的部分了。handle_expt/handle_read/handle_write/handle_connect/handle_accept/handle_close含义很明白，就不表述了\n\n在后面就是dispatcher的继承类dispatcher_with_send和file_dispatcher，前者嘛，试想一下你要发送非常多内容，肯定调用一次send发不完。它就给你解决了这个问题，当然方法也很简单。后面就是为了高效发送文件而产生的了\n流程图示(以一个客户端为例)\nsockets5 DEMO对于使用asyncore，官方的例子我觉得已经表现的非常到位了。下面我放出一个使用它写的简单socks5server(作为一个demo，只对tcp进行处理，没有写远程dns解析)\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119120121import asyncoreimport socketimport structsockets_map = &#123;&#125;class Socks5Listen(asyncore.dispatcher):    def __init__(self, address=('localhost', 8081)):        asyncore.dispatcher.__init__(self)        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)        self.set_reuse_addr()        self.bind(address)        self.listen(2048)    def handle_accept(self):        pair = self.accept()        if pair is not None:            sock, addr = pair            print('socks connection from ', addr)            Local(sock)class Local(asyncore.dispatcher_with_send):    def __init__(self, sock):        asyncore.dispatcher_with_send.__init__(self, sock=sock)        self.read_buffer = ''        self.status = 'init'    def read(self, num):        data = self.recv(num)        self.read_buffer += data        if len(self.read_buffer) != num:            return None        else:            _ = self.read_buffer            self.read_buffer = ''            return _    def handle_read(self):        if self.status == 'init':            self.recv(262)            self.send(b\"\\x05\\x00\")            self.status = 'request'            return        if self.status == 'request':            data = self.read(4)            if data is None: return            mode = ord(data[1])            addrtype = ord(data[3])            if addrtype == 1:  # IPv4                addr = self.read(4)                if addr is None: return                addr = socket.inet_ntoa(addr)            elif addrtype == 3:  # Domain name                addr = self.read(ord(self.recv(1)[0]))                if addr is None: return            port = self.read(2)            if port is None: return            port = struct.unpack('&gt;H', port)[0]            if mode == 1:  # 1. Tcp connect                remote = Remote(addr, port)                sockets_map[self] = remote                sockets_map[remote] = self                self.status = 'transfer'                return            else:                reply = b\"\\x05\\x07\\x00\\x01\"  # Command not supported                self.send(reply)                self.close()                return        if self.status == 'transfer':            data = self.recv(2048)            if data:                sockets_map[self].send(data)    def handle_expt(self):        self.handle_close()    def handle_close(self):        asyncore.dispatcher_with_send.handle_close(self)        remote = sockets_map.get(self)        if remote:            del sockets_map[remote]        if self in sockets_map:            del sockets_map[self]class Remote(asyncore.dispatcher_with_send):    def __init__(self, addr, port):        asyncore.dispatcher_with_send.__init__(self)        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)        self.connect((addr, port))    def handle_connect(self):        print('Tcp connect to', self.addr)        local = self.socket.getsockname()        reply = b\"\\x05\\x00\\x00\\x01\"        reply += socket.inet_aton(local[0]) + struct.pack(\"&gt;H\", local[1])        sockets_map[self].socket.send(reply)    def handle_read(self):        data = self.recv(2048)        if data:            sockets_map[self].send(data)    def handle_expt(self):        reply = '\\x05\\x05\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00'        self.send(reply)        self.handle_close()    def handle_close(self):        asyncore.dispatcher_with_send.handle_close(self)        local = sockets_map.get(self)        if local:            del sockets_map[local]        if self in sockets_map:            del sockets_map[self]server = Socks5Listen()asyncore.loop()\n\n一个socks5服务端会有3类socket。所以会有三个类。\n小知识LEGB作用域asyncore中使用全局字典socket_map记录映射。想到全局就会想到global\n123456a = 1def main():    global a    a += 1main()print a\n可以注意到这里必须要有global关键字，然而换成字典。为何就不需要global了。实际上这里要关注的是对象的id,对于数字、字符串这些对象是不可变的，然而字典对象是可变的。要改变不可变变量实际是重新赋值，所以对于改变外部不可变变量要用global，可变对象不需要\n框架和库的区别俗称好莱坞模式(Don’t call us, we will call you)。比如库函数sum你很容易想到给几个数字它返回给你和。框架嘛。就像上面的asyncore你需要的是继承dispatcher类然后重新一些方法。虽然它能达到目的，可是如果你不看源码或许你永远也无法明白框架在后面做了什么。从我个人的理解来看我是比较喜欢成熟的框架的。毕竟如果不用框架自己用库函数写最后也可能是一个框架，当然很可能是一个垃圾的框架:D\n为什么多路IO复用一定是配合的非阻塞socket妈蛋，这个问题各种说法真是太多了。想一想如果select返回给你一个fd可读，那么他一定是可读的。如果这样那么一般情况下我们用select配合阻塞socket也是可以的。可是现实不这样纸啊。unix手册中明确说明了不是这样的。所以工程上几乎没有见过配合阻塞socket使用的例子。另外asyncore种connect方法用的是connect_ex\n相关资料官方文档\n知乎:为什么IO多路复用要搭配非阻塞socket\n","dateCreated":"2016-06-29T11:24:21+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-06-29T11:24:21+08:00","description":"asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)","headline":"asyncore源码阅读","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/06/29/asyncore_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/06/29/asyncore_note/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)\n\n\ndispatcher类(调度)文件asyncore.py中最重要的类为dispatcher，使用的时候只需要继承asyncore.dispatcher就好了\n可以这样理解每一个继承了asyncore.dispatcher的类都代表了一个socket(监听socket或者连接socket)\n在asyncore.py的最开始有一个全局字典socket_map对应fd和一个asyncore.dispatcher类，当你继承一个dispatcher类的时候总会调用函数在全局字典socket_map中创建一个映射，当然在关闭的时候也会从全局字典中删除\n最后是一个loop死循环，可以很容易想到是使用了系统IO多路复用接口select.select对全局socket_map进行了操作。根据返回的事件进行操作(3个事件读、写、错误)\n源码中我们着重看dispatcher类，它可以划分为以下几个要点\n\n添加了4个状态，connected/accepting/connecting/closing，想想为什么要设置这几个状态呢？？？connected:已经连接上对方,比如监听套接字sock,addr = socket.accept()返回的sock\nadd_channel/del_channel/create_socket/set_socket这几个都是针对全局字典socket_map的操作。添加进去或者删除\nreadable/writable 用的地方不是太多，预先确定该socket该不该添加到socket的可读可写里面\nlisten/bind/connect/accept/send/recv/close 这几个函数嘛，对原有的行为稍微改动了下，比如listen设置为accepting状态，connect设置为connecting状态，send,recv一定条件出发close，close即为从全局字典中删除并关闭socket\nhandle_read_event/handle_connect_event/handle_write_event.当select有事件返回的时候就是调用的这3个方法。只是需要注意。这里并不是最终执行的操作(send、recv等)！！！这里也体现了标注socket状态的作用，read可以分为监听(accepting)、连接完成后(connecting)→→→这里就是一个hook，如果自己调用connect连接那么完成后是此状态，可以自己重写handle_connect处理该事件，如果是直接初始化的socket则直接为connected状态。handle_write_event也很明显，当为connecting状态的时候处理hook，否则处理写入事件\n最后这一部分基本就是使用者需要重写的部分了。handle_expt/handle_read/handle_write/handle_connect/handle_accept/handle_close含义很明白，就不表述了\n\n在后面就是dispatcher的继承类dispatcher_with_send和file_dispatcher，前者嘛，试想一下你要发送非常多内容，肯定调用一次send发不完。它就给你解决了这个问题，当然方法也很简单。后面就是为了高效发送文件而产生的了\n流程图示(以一个客户端为例)\nsockets5 DEMO对于使用asyncore，官方的例子我觉得已经表现的非常到位了。下面我放出一个使用它写的简单socks5server(作为一个demo，只对tcp进行处理，没有写远程dns解析)\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119120121import asyncoreimport socketimport structsockets_map = &#123;&#125;class Socks5Listen(asyncore.dispatcher):    def __init__(self, address=(&#x27;localhost&#x27;, 8081)):        asyncore.dispatcher.__init__(self)        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)        self.set_reuse_addr()        self.bind(address)        self.listen(2048)    def handle_accept(self):        pair = self.accept()        if pair is not None:            sock, addr = pair            print(&#x27;socks connection from &#x27;, addr)            Local(sock)class Local(asyncore.dispatcher_with_send):    def __init__(self, sock):        asyncore.dispatcher_with_send.__init__(self, sock=sock)        self.read_buffer = &#x27;&#x27;        self.status = &#x27;init&#x27;    def read(self, num):        data = self.recv(num)        self.read_buffer += data        if len(self.read_buffer) != num:            return None        else:            _ = self.read_buffer            self.read_buffer = &#x27;&#x27;            return _        def handle_read(self):        if self.status == &#x27;init&#x27;:            self.recv(262)            self.send(b&quot;\\x05\\x00&quot;)            self.status = &#x27;request&#x27;            return        if self.status == &#x27;request&#x27;:            data = self.read(4)            if data is None: return            mode = ord(data[1])            addrtype = ord(data[3])            if addrtype == 1:  # IPv4                addr = self.read(4)                if addr is None: return                addr = socket.inet_ntoa(addr)            elif addrtype == 3:  # Domain name                addr = self.read(ord(self.recv(1)[0]))                if addr is None: return            port = self.read(2)            if port is None: return            port = struct.unpack(&#x27;&gt;H&#x27;, port)[0]            if mode == 1:  # 1. Tcp connect                remote = Remote(addr, port)                sockets_map[self] = remote                sockets_map[remote] = self                self.status = &#x27;transfer&#x27;                return            else:                reply = b&quot;\\x05\\x07\\x00\\x01&quot;  # Command not supported                self.send(reply)                self.close()                return        if self.status == &#x27;transfer&#x27;:            data = self.recv(2048)            if data:                sockets_map[self].send(data)        def handle_expt(self):        self.handle_close()        def handle_close(self):        asyncore.dispatcher_with_send.handle_close(self)        remote = sockets_map.get(self)        if remote:            del sockets_map[remote]        if self in sockets_map:            del sockets_map[self]class Remote(asyncore.dispatcher_with_send):    def __init__(self, addr, port):        asyncore.dispatcher_with_send.__init__(self)        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)        self.connect((addr, port))    def handle_connect(self):        print(&#x27;Tcp connect to&#x27;, self.addr)        local = self.socket.getsockname()        reply = b&quot;\\x05\\x00\\x00\\x01&quot;        reply += socket.inet_aton(local[0]) + struct.pack(&quot;&gt;H&quot;, local[1])        sockets_map[self].socket.send(reply)        def handle_read(self):        data = self.recv(2048)        if data:            sockets_map[self].send(data)        def handle_expt(self):        reply = &#x27;\\x05\\x05\\x00\\x01\\x00\\x00\\x00\\x00\\x00\\x00&#x27;        self.send(reply)        self.handle_close()        def handle_close(self):        asyncore.dispatcher_with_send.handle_close(self)        local = sockets_map.get(self)        if local:            del sockets_map[local]        if self in sockets_map:            del sockets_map[self]server = Socks5Listen()asyncore.loop()\n一个socks5服务端会有3类socket。所以会有三个类。\n小知识LEGB作用域asyncore中使用全局字典socket_map记录映射。想到全局就会想到global\n123456a = 1def main():    global a    a += 1main()print a\n可以注意到这里必须要有global关键字，然而换成字典。为何就不需要global了。实际上这里要关注的是对象的id,对于数字、字符串这些对象是不可变的，然而字典对象是可变的。要改变不可变变量实际是重新赋值，所以对于改变外部不可变变量要用global，可变对象不需要\n框架和库的区别俗称好莱坞模式(Don’t call us, we will call you)。比如库函数sum你很容易想到给几个数字它返回给你和。框架嘛。就像上面的asyncore你需要的是继承dispatcher类然后重新一些方法。虽然它能达到目的，可是如果你不看源码或许你永远也无法明白框架在后面做了什么。从我个人的理解来看我是比较喜欢成熟的框架的。毕竟如果不用框架自己用库函数写最后也可能是一个框架，当然很可能是一个垃圾的框架:D\n为什么多路IO复用一定是配合的非阻塞socket妈蛋，这个问题各种说法真是太多了。想一想如果select返回给你一个fd可读，那么他一定是可读的。如果这样那么一般情况下我们用select配合阻塞socket也是可以的。可是现实不这样纸啊。unix手册中明确说明了不是这样的。所以工程上几乎没有见过配合阻塞socket使用的例子。另外asyncore种connect方法用的是connect_ex\n相关资料官方文档\n知乎:为什么IO多路复用要搭配非阻塞socket\n","dateCreated":"2016-06-29T11:24:21+08:00","dateModified":"2021-02-17T11:10:59+08:00","datePublished":"2016-06-29T11:24:21+08:00","description":"asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)","headline":"asyncore源码阅读","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/06/29/asyncore_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/06/29/asyncore_note/"}</script>
     <meta name="description" content="asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="asyncore源码阅读">
 <meta property="og:url" content="https://www.zoulei.net/2016/06/29/asyncore_note/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)">
-<meta property="og:locale" content="zh-cn">
+<meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://blogimg.ficapy.com/blogimg/asyncore%E7%AE%80%E6%98%93%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%B5%81%E7%A8%8B%E5%9B%BE.png">
-<meta property="og:updated_time" content="2019-07-26T06:53:30.617Z">
+<meta property="article:published_time" content="2016-06-29T03:24:21.000Z">
+<meta property="article:modified_time" content="2021-02-17T03:10:59.835Z">
+<meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="asyncore源码阅读">
-<meta name="twitter:description" content="asyncore为select.select、poll的封装(实际上现在大家都使用更为高效的epoll)，变成了框架的使用模式，该库已经作为兼容模式存在，新的库为asyncio。且在2和3中asyncore代码有一点点差异。(源码版本2.7.11)">
 <meta name="twitter:image" content="https://blogimg.ficapy.com/blogimg/asyncore%E7%AE%80%E6%98%93%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%B5%81%E7%A8%8B%E5%9B%BE.png">
     
     
@@ -36,7 +34,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -59,7 +59,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -89,12 +89,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -102,12 +103,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -115,12 +117,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -128,12 +131,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -141,12 +145,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -154,12 +159,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -171,8 +177,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -180,8 +193,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -189,8 +209,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -198,8 +225,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -207,8 +241,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -216,8 +257,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -225,11 +273,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -241,12 +291,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -282,7 +333,7 @@
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/源码解析/">源码解析</a>
+    <a class="category-link" href="/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">源码解析</a>
 
 
     
@@ -311,18 +362,17 @@
 <li>最后这一部分基本就是使用者需要重写的部分了。handle_expt/handle_read/handle_write/handle_connect/handle_accept/handle_close含义很明白，就不表述了</li>
 </ol>
 <p>在后面就是dispatcher的继承类dispatcher_with_send和file_dispatcher，前者嘛，试想一下你要发送非常多内容，肯定调用一次send发不完。它就给你解决了这个问题，当然方法也很简单。后面就是为了高效发送文件而产生的了</p>
-<h3 id="流程图示-以一个客户端为例"><a href="#流程图示-以一个客户端为例" class="headerlink" title="流程图示(以一个客户端为例)"></a>流程图示(以一个客户端为例)</h3><p><img src="https://blogimg.ficapy.com/blogimg/asyncore%E7%AE%80%E6%98%93%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%B5%81%E7%A8%8B%E5%9B%BE.png" alt></p>
+<h3 id="流程图示-以一个客户端为例"><a href="#流程图示-以一个客户端为例" class="headerlink" title="流程图示(以一个客户端为例)"></a>流程图示(以一个客户端为例)</h3><p><img src="https://blogimg.ficapy.com/blogimg/asyncore%E7%AE%80%E6%98%93%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%B5%81%E7%A8%8B%E5%9B%BE.png"></p>
 <h3 id="sockets5-DEMO"><a href="#sockets5-DEMO" class="headerlink" title="sockets5 DEMO"></a>sockets5 DEMO</h3><p>对于使用asyncore，官方的例子我觉得已经表现的非常到位了。下面我放出一个使用它写的简单socks5server(作为一个demo，只对tcp进行处理，没有写远程dns解析)</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> asyncore</span><br><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">import</span> struct</span><br><span class="line"></span><br><span class="line">sockets_map = &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Socks5Listen</span><span class="params">(asyncore.dispatcher)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, address=<span class="params">(<span class="string">'localhost'</span>, <span class="number">8081</span>)</span>)</span>:</span></span><br><span class="line">        asyncore.dispatcher.__init__(self)</span><br><span class="line">        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        self.set_reuse_addr()</span><br><span class="line">        self.bind(address)</span><br><span class="line">        self.listen(<span class="number">2048</span>)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_accept</span><span class="params">(self)</span>:</span></span><br><span class="line">        pair = self.accept()</span><br><span class="line">        <span class="keyword">if</span> pair <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            sock, addr = pair</span><br><span class="line">            print(<span class="string">'socks connection from '</span>, addr)</span><br><span class="line">            Local(sock)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Local</span><span class="params">(asyncore.dispatcher_with_send)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, sock)</span>:</span></span><br><span class="line">        asyncore.dispatcher_with_send.__init__(self, sock=sock)</span><br><span class="line">        self.read_buffer = <span class="string">''</span></span><br><span class="line">        self.status = <span class="string">'init'</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">read</span><span class="params">(self, num)</span>:</span></span><br><span class="line">        data = self.recv(num)</span><br><span class="line">        self.read_buffer += data</span><br><span class="line">        <span class="keyword">if</span> len(self.read_buffer) != num:</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">None</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            _ = self.read_buffer</span><br><span class="line">            self.read_buffer = <span class="string">''</span></span><br><span class="line">            <span class="keyword">return</span> _</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_read</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">if</span> self.status == <span class="string">'init'</span>:</span><br><span class="line">            self.recv(<span class="number">262</span>)</span><br><span class="line">            self.send(<span class="string">b"\x05\x00"</span>)</span><br><span class="line">            self.status = <span class="string">'request'</span></span><br><span class="line">            <span class="keyword">return</span></span><br><span class="line">        <span class="keyword">if</span> self.status == <span class="string">'request'</span>:</span><br><span class="line">            data = self.read(<span class="number">4</span>)</span><br><span class="line">            <span class="keyword">if</span> data <span class="keyword">is</span> <span class="literal">None</span>: <span class="keyword">return</span></span><br><span class="line">            mode = ord(data[<span class="number">1</span>])</span><br><span class="line">            addrtype = ord(data[<span class="number">3</span>])</span><br><span class="line">            <span class="keyword">if</span> addrtype == <span class="number">1</span>:  <span class="comment"># IPv4</span></span><br><span class="line">                addr = self.read(<span class="number">4</span>)</span><br><span class="line">                <span class="keyword">if</span> addr <span class="keyword">is</span> <span class="literal">None</span>: <span class="keyword">return</span></span><br><span class="line">                addr = socket.inet_ntoa(addr)</span><br><span class="line">            <span class="keyword">elif</span> addrtype == <span class="number">3</span>:  <span class="comment"># Domain name</span></span><br><span class="line">                addr = self.read(ord(self.recv(<span class="number">1</span>)[<span class="number">0</span>]))</span><br><span class="line">                <span class="keyword">if</span> addr <span class="keyword">is</span> <span class="literal">None</span>: <span class="keyword">return</span></span><br><span class="line">            port = self.read(<span class="number">2</span>)</span><br><span class="line">            <span class="keyword">if</span> port <span class="keyword">is</span> <span class="literal">None</span>: <span class="keyword">return</span></span><br><span class="line">            port = struct.unpack(<span class="string">'&gt;H'</span>, port)[<span class="number">0</span>]</span><br><span class="line">            <span class="keyword">if</span> mode == <span class="number">1</span>:  <span class="comment"># 1. Tcp connect</span></span><br><span class="line">                remote = Remote(addr, port)</span><br><span class="line">                sockets_map[self] = remote</span><br><span class="line">                sockets_map[remote] = self</span><br><span class="line">                self.status = <span class="string">'transfer'</span></span><br><span class="line">                <span class="keyword">return</span></span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                reply = <span class="string">b"\x05\x07\x00\x01"</span>  <span class="comment"># Command not supported</span></span><br><span class="line">                self.send(reply)</span><br><span class="line">                self.close()</span><br><span class="line">                <span class="keyword">return</span></span><br><span class="line">        <span class="keyword">if</span> self.status == <span class="string">'transfer'</span>:</span><br><span class="line">            data = self.recv(<span class="number">2048</span>)</span><br><span class="line">            <span class="keyword">if</span> data:</span><br><span class="line">                sockets_map[self].send(data)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_expt</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.handle_close()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_close</span><span class="params">(self)</span>:</span></span><br><span class="line">        asyncore.dispatcher_with_send.handle_close(self)</span><br><span class="line">        remote = sockets_map.get(self)</span><br><span class="line">        <span class="keyword">if</span> remote:</span><br><span class="line">            <span class="keyword">del</span> sockets_map[remote]</span><br><span class="line">        <span class="keyword">if</span> self <span class="keyword">in</span> sockets_map:</span><br><span class="line">            <span class="keyword">del</span> sockets_map[self]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Remote</span><span class="params">(asyncore.dispatcher_with_send)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, addr, port)</span>:</span></span><br><span class="line">        asyncore.dispatcher_with_send.__init__(self)</span><br><span class="line">        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        self.connect((addr, port))</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_connect</span><span class="params">(self)</span>:</span></span><br><span class="line">        print(<span class="string">'Tcp connect to'</span>, self.addr)</span><br><span class="line">        local = self.socket.getsockname()</span><br><span class="line">        reply = <span class="string">b"\x05\x00\x00\x01"</span></span><br><span class="line">        reply += socket.inet_aton(local[<span class="number">0</span>]) + struct.pack(<span class="string">"&gt;H"</span>, local[<span class="number">1</span>])</span><br><span class="line">        sockets_map[self].socket.send(reply)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_read</span><span class="params">(self)</span>:</span></span><br><span class="line">        data = self.recv(<span class="number">2048</span>)</span><br><span class="line">        <span class="keyword">if</span> data:</span><br><span class="line">            sockets_map[self].send(data)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_expt</span><span class="params">(self)</span>:</span></span><br><span class="line">        reply = <span class="string">'\x05\x05\x00\x01\x00\x00\x00\x00\x00\x00'</span></span><br><span class="line">        self.send(reply)</span><br><span class="line">        self.handle_close()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_close</span><span class="params">(self)</span>:</span></span><br><span class="line">        asyncore.dispatcher_with_send.handle_close(self)</span><br><span class="line">        local = sockets_map.get(self)</span><br><span class="line">        <span class="keyword">if</span> local:</span><br><span class="line">            <span class="keyword">del</span> sockets_map[local]</span><br><span class="line">        <span class="keyword">if</span> self <span class="keyword">in</span> sockets_map:</span><br><span class="line">            <span class="keyword">del</span> sockets_map[self]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">server = Socks5Listen()</span><br><span class="line">asyncore.loop()</span><br></pre></td></tr></table></figure>
-
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> asyncore</span><br><span class="line"><span class="keyword">import</span> socket</span><br><span class="line"><span class="keyword">import</span> struct</span><br><span class="line"></span><br><span class="line">sockets_map = &#123;&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Socks5Listen</span>(<span class="params">asyncore.dispatcher</span>):</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, address=(<span class="params"><span class="string">&#x27;localhost&#x27;</span>, <span class="number">8081</span></span>)</span>):</span></span><br><span class="line">        asyncore.dispatcher.__init__(self)</span><br><span class="line">        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        self.set_reuse_addr()</span><br><span class="line">        self.bind(address)</span><br><span class="line">        self.listen(<span class="number">2048</span>)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_accept</span>(<span class="params">self</span>):</span></span><br><span class="line">        pair = self.accept()</span><br><span class="line">        <span class="keyword">if</span> pair <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">            sock, addr = pair</span><br><span class="line">            print(<span class="string">&#x27;socks connection from &#x27;</span>, addr)</span><br><span class="line">            Local(sock)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Local</span>(<span class="params">asyncore.dispatcher_with_send</span>):</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, sock</span>):</span></span><br><span class="line">        asyncore.dispatcher_with_send.__init__(self, sock=sock)</span><br><span class="line">        self.read_buffer = <span class="string">&#x27;&#x27;</span></span><br><span class="line">        self.status = <span class="string">&#x27;init&#x27;</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">read</span>(<span class="params">self, num</span>):</span></span><br><span class="line">        data = self.recv(num)</span><br><span class="line">        self.read_buffer += data</span><br><span class="line">        <span class="keyword">if</span> <span class="built_in">len</span>(self.read_buffer) != num:</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">None</span></span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            _ = self.read_buffer</span><br><span class="line">            self.read_buffer = <span class="string">&#x27;&#x27;</span></span><br><span class="line">            <span class="keyword">return</span> _</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_read</span>(<span class="params">self</span>):</span></span><br><span class="line">        <span class="keyword">if</span> self.status == <span class="string">&#x27;init&#x27;</span>:</span><br><span class="line">            self.recv(<span class="number">262</span>)</span><br><span class="line">            self.send(<span class="string">b&quot;\x05\x00&quot;</span>)</span><br><span class="line">            self.status = <span class="string">&#x27;request&#x27;</span></span><br><span class="line">            <span class="keyword">return</span></span><br><span class="line">        <span class="keyword">if</span> self.status == <span class="string">&#x27;request&#x27;</span>:</span><br><span class="line">            data = self.read(<span class="number">4</span>)</span><br><span class="line">            <span class="keyword">if</span> data <span class="keyword">is</span> <span class="literal">None</span>: <span class="keyword">return</span></span><br><span class="line">            mode = <span class="built_in">ord</span>(data[<span class="number">1</span>])</span><br><span class="line">            addrtype = <span class="built_in">ord</span>(data[<span class="number">3</span>])</span><br><span class="line">            <span class="keyword">if</span> addrtype == <span class="number">1</span>:  <span class="comment"># IPv4</span></span><br><span class="line">                addr = self.read(<span class="number">4</span>)</span><br><span class="line">                <span class="keyword">if</span> addr <span class="keyword">is</span> <span class="literal">None</span>: <span class="keyword">return</span></span><br><span class="line">                addr = socket.inet_ntoa(addr)</span><br><span class="line">            <span class="keyword">elif</span> addrtype == <span class="number">3</span>:  <span class="comment"># Domain name</span></span><br><span class="line">                addr = self.read(<span class="built_in">ord</span>(self.recv(<span class="number">1</span>)[<span class="number">0</span>]))</span><br><span class="line">                <span class="keyword">if</span> addr <span class="keyword">is</span> <span class="literal">None</span>: <span class="keyword">return</span></span><br><span class="line">            port = self.read(<span class="number">2</span>)</span><br><span class="line">            <span class="keyword">if</span> port <span class="keyword">is</span> <span class="literal">None</span>: <span class="keyword">return</span></span><br><span class="line">            port = struct.unpack(<span class="string">&#x27;&gt;H&#x27;</span>, port)[<span class="number">0</span>]</span><br><span class="line">            <span class="keyword">if</span> mode == <span class="number">1</span>:  <span class="comment"># 1. Tcp connect</span></span><br><span class="line">                remote = Remote(addr, port)</span><br><span class="line">                sockets_map[self] = remote</span><br><span class="line">                sockets_map[remote] = self</span><br><span class="line">                self.status = <span class="string">&#x27;transfer&#x27;</span></span><br><span class="line">                <span class="keyword">return</span></span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                reply = <span class="string">b&quot;\x05\x07\x00\x01&quot;</span>  <span class="comment"># Command not supported</span></span><br><span class="line">                self.send(reply)</span><br><span class="line">                self.close()</span><br><span class="line">                <span class="keyword">return</span></span><br><span class="line">        <span class="keyword">if</span> self.status == <span class="string">&#x27;transfer&#x27;</span>:</span><br><span class="line">            data = self.recv(<span class="number">2048</span>)</span><br><span class="line">            <span class="keyword">if</span> data:</span><br><span class="line">                sockets_map[self].send(data)</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_expt</span>(<span class="params">self</span>):</span></span><br><span class="line">        self.handle_close()</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_close</span>(<span class="params">self</span>):</span></span><br><span class="line">        asyncore.dispatcher_with_send.handle_close(self)</span><br><span class="line">        remote = sockets_map.get(self)</span><br><span class="line">        <span class="keyword">if</span> remote:</span><br><span class="line">            <span class="keyword">del</span> sockets_map[remote]</span><br><span class="line">        <span class="keyword">if</span> self <span class="keyword">in</span> sockets_map:</span><br><span class="line">            <span class="keyword">del</span> sockets_map[self]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Remote</span>(<span class="params">asyncore.dispatcher_with_send</span>):</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, addr, port</span>):</span></span><br><span class="line">        asyncore.dispatcher_with_send.__init__(self)</span><br><span class="line">        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)</span><br><span class="line">        self.connect((addr, port))</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_connect</span>(<span class="params">self</span>):</span></span><br><span class="line">        print(<span class="string">&#x27;Tcp connect to&#x27;</span>, self.addr)</span><br><span class="line">        local = self.socket.getsockname()</span><br><span class="line">        reply = <span class="string">b&quot;\x05\x00\x00\x01&quot;</span></span><br><span class="line">        reply += socket.inet_aton(local[<span class="number">0</span>]) + struct.pack(<span class="string">&quot;&gt;H&quot;</span>, local[<span class="number">1</span>])</span><br><span class="line">        sockets_map[self].socket.send(reply)</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_read</span>(<span class="params">self</span>):</span></span><br><span class="line">        data = self.recv(<span class="number">2048</span>)</span><br><span class="line">        <span class="keyword">if</span> data:</span><br><span class="line">            sockets_map[self].send(data)</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_expt</span>(<span class="params">self</span>):</span></span><br><span class="line">        reply = <span class="string">&#x27;\x05\x05\x00\x01\x00\x00\x00\x00\x00\x00&#x27;</span></span><br><span class="line">        self.send(reply)</span><br><span class="line">        self.handle_close()</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">handle_close</span>(<span class="params">self</span>):</span></span><br><span class="line">        asyncore.dispatcher_with_send.handle_close(self)</span><br><span class="line">        local = sockets_map.get(self)</span><br><span class="line">        <span class="keyword">if</span> local:</span><br><span class="line">            <span class="keyword">del</span> sockets_map[local]</span><br><span class="line">        <span class="keyword">if</span> self <span class="keyword">in</span> sockets_map:</span><br><span class="line">            <span class="keyword">del</span> sockets_map[self]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">server = Socks5Listen()</span><br><span class="line">asyncore.loop()</span><br></pre></td></tr></table></figure>
 <p>一个socks5服务端会有3类socket。所以会有三个类。</p>
 <h3 id="小知识"><a href="#小知识" class="headerlink" title="小知识"></a>小知识</h3><h6 id="LEGB作用域"><a href="#LEGB作用域" class="headerlink" title="LEGB作用域"></a>LEGB作用域</h6><p>asyncore中使用全局字典socket_map记录映射。想到全局就会想到global</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">a = <span class="number">1</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    <span class="keyword">global</span> a</span><br><span class="line">    a += <span class="number">1</span></span><br><span class="line">main()</span><br><span class="line"><span class="keyword">print</span> a</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">a = <span class="number">1</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span>():</span></span><br><span class="line">    <span class="keyword">global</span> a</span><br><span class="line">    a += <span class="number">1</span></span><br><span class="line">main()</span><br><span class="line"><span class="built_in">print</span> a</span><br></pre></td></tr></table></figure>
 <p>可以注意到这里必须要有global关键字，然而换成字典。为何就不需要global了。实际上这里要关注的是对象的id,对于数字、字符串这些对象是不可变的，然而字典对象是可变的。要改变不可变变量实际是重新赋值，所以对于改变外部不可变变量要用global，可变对象不需要</p>
 <h6 id="框架和库的区别"><a href="#框架和库的区别" class="headerlink" title="框架和库的区别"></a>框架和库的区别</h6><p>俗称好莱坞模式(Don’t call us, we will call you)。比如库函数sum你很容易想到给几个数字它返回给你和。框架嘛。就像上面的asyncore你需要的是继承dispatcher类然后重新一些方法。虽然它能达到目的，可是如果你不看源码或许你永远也无法明白框架在后面做了什么。从我个人的理解来看我是比较喜欢成熟的框架的。毕竟如果不用框架自己用库函数写最后也可能是一个框架，当然很可能是一个垃圾的框架:D</p>
 <h6 id="为什么多路IO复用一定是配合的非阻塞socket"><a href="#为什么多路IO复用一定是配合的非阻塞socket" class="headerlink" title="为什么多路IO复用一定是配合的非阻塞socket"></a>为什么多路IO复用一定是配合的非阻塞socket</h6><p>妈蛋，这个问题各种说法真是太多了。想一想如果select返回给你一个fd可读，那么他一定是可读的。如果这样那么一般情况下我们用select配合阻塞socket也是可以的。可是现实不这样纸啊。unix手册中明确说明了不是这样的。所以工程上几乎没有见过配合阻塞socket使用的例子。另外asyncore种connect方法用的是connect_ex</p>
-<h3 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h3><p><a href="https://docs.python.org/2/library/asyncore.html" target="_blank" rel="noopener">官方文档</a></p>
-<p><a href="https://www.zhihu.com/question/37271342" target="_blank" rel="noopener">知乎:为什么IO多路复用要搭配非阻塞socket</a></p>
+<h3 id="相关资料"><a href="#相关资料" class="headerlink" title="相关资料"></a>相关资料</h3><p><a href="https://docs.python.org/2/library/asyncore.html">官方文档</a></p>
+<p><a href="https://www.zhihu.com/question/37271342">知乎:为什么IO多路复用要搭配非阻塞socket</a></p>
 
             
 
@@ -440,7 +490,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -685,7 +735,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -709,7 +759,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -758,7 +808,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -783,8 +833,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -901,7 +951,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -909,8 +961,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

@@ -11,20 +11,18 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"在多线程多进程当道的年代这个被称为高级并发的模块还是很令人惊艳的。concurrent.future模块的厉害之处在于封装了多线程、多进程、锁、队列到一起。这些细节使用者都不需要知道。四五行代码能实现以往二三十行实现的效果。而且多线程和多进程的使用方式完全一样，堪称完美杰作。可惜，现在已经是异步时代了，主要是因为tornado用到了它的Future模块。我就看看它大概是怎样实现的\n\n\n来自官方文档的示例\n1234567891011121314151617181920212223242526import concurrent.futuresimport urllib.requestURLS = ['http://www.foxnews.com/',        'http://www.cnn.com/',        'http://europe.wsj.com/',        'http://www.bbc.co.uk/',        'http://some-made-up-domain.com/']# Retrieve a single page and report the URL and contentsdef load_url(url, timeout):    with urllib.request.urlopen(url, timeout=timeout) as conn:        return conn.read()# We can use a with statement to ensure threads are cleaned up promptlywith concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:    # Start the load operations and mark each future with its URL    future_to_url = &#123;executor.submit(load_url, url, 60): url for url in URLS&#125;    for future in concurrent.futures.as_completed(future_to_url):        url = future_to_url[future]        try:            data = future.result()        except Exception as exc:            print('%r generated an exception: %s' % (url, exc))        else:            print('%r page is %d bytes' % (url, len(data)))\n\n首先考虑一个问题。在多线程里面，一般我们直接threading.Thread(target=),但是直接运行不会得到返回的结果的。这里就用到了Future对象。类似与装饰器，最终运行的函数被嵌套，结果被添加到Future对象上。你可以将Future当做一个及其简单的对象，就像下面这样\n1234567891011class Future:    def __init__(self):        self.result = None        self._state = \"PENDING\"    def set_result(self, value):        self._state = \"FINISHED\"        self.result = value    def get_result(self):        return self.result\n\n因此最终最新的并非是原始的函数。此处被封装成了WorkItem对象\n123456789101112131415161718192021222324class WorkerItem:    def __init__(self, future, fn, *args, **kwargs):        self.fn = fn        self.args = args        self.kwargs = kwargs        self.future = future    def run(self):        try:            ret = self.fn(*self.args, **self.kwargs)            self.future.set_result(ret)        except Exception as e:            self.future.set_result(e)def _worker(work_queue):    try:        while True:            work_item = work_queue.get(block=True)            if work_item is not None:                work_item.run()    except BaseException:        traceback.print_exc()\n\n其次它能够允许对创建的线程数量进行控制max_client。这个也可以想到通过队列来控制，当submit创建任务的时候并不是直接调用threading.Thread创建一个全新的线程。而是仅仅把它加入到队列，判断当前线程数量是否小于最大数量。当然在线程中就是不断循环执行Work。Future、WorkItem、_worker都是影藏没有对用户暴露。真正对用户暴露的只有一个ThreadPoolExecutor,大概可以这样认为\n12345678910111213141516171819202122class ThreadPoolExecutor:    def __enter__(self):        return self    def __init__(self, max_workers):        self.max_workers = max_workers        self._queue = Queue()        self._thread = set()    def submit(self, fn, *args, **kwargs):        f = Future()        worker_item = WorkerItem(f, fn, *args, **kwargs)        self._queue.put(worker_item)        if len(self._thread) &lt; self.max_workers:            t = Thread(target=_worker, args=(self._queue,))            t.daemon = True            t.start()        return f    def __exit__(self, exc_type, exc_val, exc_tb):        for i in self._thread:            i.join()\n\n\n从上面可以看到每次submit后会得到一个Future对象。设想一下当线程执行得到结果后我们可以根据Future的状态轮询得到我们需要的结果。大概可以这样写\n123456789with ThreadPoolExecutor(max_workers=5) as executor:    future_to_url = &#123;executor.submit(load_url, url, 1): url for url in URLS&#125;    while 1:        for i in future_to_url.copy().keys():            if i._state == \"FINISHED\":                print(i.get_result())                future_to_url.pop(i)        if len(future_to_url) == 0:            break\n\n但是可能作者觉得这种方式太low,效率太低。实现了一个as_completed函数，直接让理解难度提升一个数量级。。。。\n大概就是先生成了一个waiters对象(这个对象有threading.Event)，并将这些对象添加到所有的未完成的Futures中。任一对象完成则会触发事件的设置。这样阻塞被暂时取消，可以得到结果返回，代码注释如下\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748def as_completed(fs, timeout=None):    if timeout is not None:        end_time = timeout + time.time()    fs = set(fs)    with _AcquireFutures(fs):        # 先挑选出所有已经有结果的Future        finished = set(                f for f in fs                if f._state in [CANCELLED_AND_NOTIFIED, FINISHED])        pending = fs - finished        # 创建了一个waiter对象。该对象用于threading.Event。然后将自身添加到了所有的Futures上面        waiter = _create_and_install_waiters(fs, _AS_COMPLETED)    try:        # 先依次返回已完成的Future        yield from finished        while pending:            if timeout is None:                wait_timeout = None            else:                wait_timeout = end_time - time.time()                if wait_timeout &lt; 0:                    raise TimeoutError(                            '%d (of %d) futures unfinished' % (                            len(pending), len(fs)))                        # 当Future被进行设置结果会触发threading.Event.set            # 那么该处的阻塞就会被取消            waiter.event.wait(wait_timeout)            with waiter.lock:                # 又得到一批已完成的Futures                finished = waiter.finished_futures                waiter.finished_futures = []                # 取消状态,等待下一次的set                waiter.event.clear()                        # 依次返回并从pending队列中移出            for future in finished:                yield future                pending.remove(future)    finally:        for f in fs:            with f._condition:                f._waiters.remove(waiter)\n\n\n多线程的方式相较多进程要简单很多。多进程的实现有机会再写续篇~~\n","dateCreated":"2018-03-12T18:49:33+08:00","dateModified":"2018-03-12T19:27:47+08:00","datePublished":"2018-03-12T18:49:33+08:00","description":"在多线程多进程当道的年代这个被称为高级并发的模块还是很令人惊艳的。concurrent.future模块的厉害之处在于封装了多线程、多进程、锁、队列到一起。这些细节使用者都不需要知道。四五行代码能实现以往二三十行实现的效果。而且多线程和多进程的使用方式完全一样，堪称完美杰作。可惜，现在已经是异步时代了，主要是因为tornado用到了它的Future模块。我就看看它大概是怎样实现的","headline":"Python高级多线程并发","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/12/python_concurrent_futures_thread/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/12/python_concurrent_futures_thread/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"在多线程多进程当道的年代这个被称为高级并发的模块还是很令人惊艳的。concurrent.future模块的厉害之处在于封装了多线程、多进程、锁、队列到一起。这些细节使用者都不需要知道。四五行代码能实现以往二三十行实现的效果。而且多线程和多进程的使用方式完全一样，堪称完美杰作。可惜，现在已经是异步时代了，主要是因为tornado用到了它的Future模块。我就看看它大概是怎样实现的\n\n\n来自官方文档的示例\n1234567891011121314151617181920212223242526import concurrent.futuresimport urllib.requestURLS = [&#x27;http://www.foxnews.com/&#x27;,        &#x27;http://www.cnn.com/&#x27;,        &#x27;http://europe.wsj.com/&#x27;,        &#x27;http://www.bbc.co.uk/&#x27;,        &#x27;http://some-made-up-domain.com/&#x27;]# Retrieve a single page and report the URL and contentsdef load_url(url, timeout):    with urllib.request.urlopen(url, timeout=timeout) as conn:        return conn.read()# We can use a with statement to ensure threads are cleaned up promptlywith concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:    # Start the load operations and mark each future with its URL    future_to_url = &#123;executor.submit(load_url, url, 60): url for url in URLS&#125;    for future in concurrent.futures.as_completed(future_to_url):        url = future_to_url[future]        try:            data = future.result()        except Exception as exc:            print(&#x27;%r generated an exception: %s&#x27; % (url, exc))        else:            print(&#x27;%r page is %d bytes&#x27; % (url, len(data)))\n\n首先考虑一个问题。在多线程里面，一般我们直接threading.Thread(target=),但是直接运行不会得到返回的结果的。这里就用到了Future对象。类似与装饰器，最终运行的函数被嵌套，结果被添加到Future对象上。你可以将Future当做一个及其简单的对象，就像下面这样\n1234567891011class Future:    def __init__(self):        self.result = None        self._state = &quot;PENDING&quot;    def set_result(self, value):        self._state = &quot;FINISHED&quot;        self.result = value    def get_result(self):        return self.result\n\n因此最终最新的并非是原始的函数。此处被封装成了WorkItem对象\n123456789101112131415161718192021222324class WorkerItem:    def __init__(self, future, fn, *args, **kwargs):        self.fn = fn        self.args = args        self.kwargs = kwargs        self.future = future    def run(self):        try:            ret = self.fn(*self.args, **self.kwargs)            self.future.set_result(ret)        except Exception as e:            self.future.set_result(e)def _worker(work_queue):    try:        while True:            work_item = work_queue.get(block=True)            if work_item is not None:                work_item.run()    except BaseException:        traceback.print_exc()\n\n其次它能够允许对创建的线程数量进行控制max_client。这个也可以想到通过队列来控制，当submit创建任务的时候并不是直接调用threading.Thread创建一个全新的线程。而是仅仅把它加入到队列，判断当前线程数量是否小于最大数量。当然在线程中就是不断循环执行Work。Future、WorkItem、_worker都是影藏没有对用户暴露。真正对用户暴露的只有一个ThreadPoolExecutor,大概可以这样认为\n12345678910111213141516171819202122class ThreadPoolExecutor:    def __enter__(self):        return self    def __init__(self, max_workers):        self.max_workers = max_workers        self._queue = Queue()        self._thread = set()    def submit(self, fn, *args, **kwargs):        f = Future()        worker_item = WorkerItem(f, fn, *args, **kwargs)        self._queue.put(worker_item)        if len(self._thread) &lt; self.max_workers:            t = Thread(target=_worker, args=(self._queue,))            t.daemon = True            t.start()        return f    def __exit__(self, exc_type, exc_val, exc_tb):        for i in self._thread:            i.join()\n\n\n从上面可以看到每次submit后会得到一个Future对象。设想一下当线程执行得到结果后我们可以根据Future的状态轮询得到我们需要的结果。大概可以这样写\n123456789with ThreadPoolExecutor(max_workers=5) as executor:    future_to_url = &#123;executor.submit(load_url, url, 1): url for url in URLS&#125;    while 1:        for i in future_to_url.copy().keys():            if i._state == &quot;FINISHED&quot;:                print(i.get_result())                future_to_url.pop(i)        if len(future_to_url) == 0:            break\n\n但是可能作者觉得这种方式太low,效率太低。实现了一个as_completed函数，直接让理解难度提升一个数量级。。。。\n大概就是先生成了一个waiters对象(这个对象有threading.Event)，并将这些对象添加到所有的未完成的Futures中。任一对象完成则会触发事件的设置。这样阻塞被暂时取消，可以得到结果返回，代码注释如下\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748def as_completed(fs, timeout=None):    if timeout is not None:        end_time = timeout + time.time()    fs = set(fs)    with _AcquireFutures(fs):        # 先挑选出所有已经有结果的Future        finished = set(                f for f in fs                if f._state in [CANCELLED_AND_NOTIFIED, FINISHED])        pending = fs - finished        # 创建了一个waiter对象。该对象用于threading.Event。然后将自身添加到了所有的Futures上面        waiter = _create_and_install_waiters(fs, _AS_COMPLETED)    try:        # 先依次返回已完成的Future        yield from finished        while pending:            if timeout is None:                wait_timeout = None            else:                wait_timeout = end_time - time.time()                if wait_timeout &lt; 0:                    raise TimeoutError(                            &#x27;%d (of %d) futures unfinished&#x27; % (                            len(pending), len(fs)))                        # 当Future被进行设置结果会触发threading.Event.set            # 那么该处的阻塞就会被取消            waiter.event.wait(wait_timeout)            with waiter.lock:                # 又得到一批已完成的Futures                finished = waiter.finished_futures                waiter.finished_futures = []                # 取消状态,等待下一次的set                waiter.event.clear()                        # 依次返回并从pending队列中移出            for future in finished:                yield future                pending.remove(future)    finally:        for f in fs:            with f._condition:                f._waiters.remove(waiter)\n\n\n多线程的方式相较多进程要简单很多。多进程的实现有机会再写续篇~~\n","dateCreated":"2018-03-12T18:49:33+08:00","dateModified":"2018-03-12T19:27:47+08:00","datePublished":"2018-03-12T18:49:33+08:00","description":"在多线程多进程当道的年代这个被称为高级并发的模块还是很令人惊艳的。concurrent.future模块的厉害之处在于封装了多线程、多进程、锁、队列到一起。这些细节使用者都不需要知道。四五行代码能实现以往二三十行实现的效果。而且多线程和多进程的使用方式完全一样，堪称完美杰作。可惜，现在已经是异步时代了，主要是因为tornado用到了它的Future模块。我就看看它大概是怎样实现的","headline":"Python高级多线程并发","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/03/12/python_concurrent_futures_thread/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/03/12/python_concurrent_futures_thread/"}</script>
     <meta name="description" content="在多线程多进程当道的年代这个被称为高级并发的模块还是很令人惊艳的。concurrent.future模块的厉害之处在于封装了多线程、多进程、锁、队列到一起。这些细节使用者都不需要知道。四五行代码能实现以往二三十行实现的效果。而且多线程和多进程的使用方式完全一样，堪称完美杰作。可惜，现在已经是异步时代了，主要是因为tornado用到了它的Future模块。我就看看它大概是怎样实现的">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Python高级多线程并发">
 <meta property="og:url" content="https://www.zoulei.net/2018/03/12/python_concurrent_futures_thread/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="在多线程多进程当道的年代这个被称为高级并发的模块还是很令人惊艳的。concurrent.future模块的厉害之处在于封装了多线程、多进程、锁、队列到一起。这些细节使用者都不需要知道。四五行代码能实现以往二三十行实现的效果。而且多线程和多进程的使用方式完全一样，堪称完美杰作。可惜，现在已经是异步时代了，主要是因为tornado用到了它的Future模块。我就看看它大概是怎样实现的">
-<meta property="og:locale" content="zh-cn">
-<meta property="og:updated_time" content="2018-03-12T11:27:47.000Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-03-12T10:49:33.000Z">
+<meta property="article:modified_time" content="2018-03-12T11:27:47.000Z">
+<meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Python高级多线程并发">
-<meta name="twitter:description" content="在多线程多进程当道的年代这个被称为高级并发的模块还是很令人惊艳的。concurrent.future模块的厉害之处在于封装了多线程、多进程、锁、队列到一起。这些细节使用者都不需要知道。四五行代码能实现以往二三十行实现的效果。而且多线程和多进程的使用方式完全一样，堪称完美杰作。可惜，现在已经是异步时代了，主要是因为tornado用到了它的Future模块。我就看看它大概是怎样实现的">
     
     
         
@@ -34,7 +32,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -57,7 +57,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -87,12 +87,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -100,12 +101,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -113,12 +115,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -126,12 +129,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -139,12 +143,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -152,12 +157,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -169,8 +175,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -178,8 +191,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -187,8 +207,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -196,8 +223,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -205,8 +239,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -214,8 +255,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -223,11 +271,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -239,12 +289,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -296,24 +347,24 @@
 <a id="more"></a>
 
 <p>来自官方文档的示例</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> concurrent.futures</span><br><span class="line"><span class="keyword">import</span> urllib.request</span><br><span class="line"></span><br><span class="line">URLS = [<span class="string">'http://www.foxnews.com/'</span>,</span><br><span class="line">        <span class="string">'http://www.cnn.com/'</span>,</span><br><span class="line">        <span class="string">'http://europe.wsj.com/'</span>,</span><br><span class="line">        <span class="string">'http://www.bbc.co.uk/'</span>,</span><br><span class="line">        <span class="string">'http://some-made-up-domain.com/'</span>]</span><br><span class="line"></span><br><span class="line"><span class="comment"># Retrieve a single page and report the URL and contents</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">load_url</span><span class="params">(url, timeout)</span>:</span></span><br><span class="line">    <span class="keyword">with</span> urllib.request.urlopen(url, timeout=timeout) <span class="keyword">as</span> conn:</span><br><span class="line">        <span class="keyword">return</span> conn.read()</span><br><span class="line"></span><br><span class="line"><span class="comment"># We can use a with statement to ensure threads are cleaned up promptly</span></span><br><span class="line"><span class="keyword">with</span> concurrent.futures.ThreadPoolExecutor(max_workers=<span class="number">5</span>) <span class="keyword">as</span> executor:</span><br><span class="line">    <span class="comment"># Start the load operations and mark each future with its URL</span></span><br><span class="line">    future_to_url = &#123;executor.submit(load_url, url, <span class="number">60</span>): url <span class="keyword">for</span> url <span class="keyword">in</span> URLS&#125;</span><br><span class="line">    <span class="keyword">for</span> future <span class="keyword">in</span> concurrent.futures.as_completed(future_to_url):</span><br><span class="line">        url = future_to_url[future]</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            data = future.result()</span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> exc:</span><br><span class="line">            print(<span class="string">'%r generated an exception: %s'</span> % (url, exc))</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            print(<span class="string">'%r page is %d bytes'</span> % (url, len(data)))</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> concurrent.futures</span><br><span class="line"><span class="keyword">import</span> urllib.request</span><br><span class="line"></span><br><span class="line">URLS = [<span class="string">&#x27;http://www.foxnews.com/&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;http://www.cnn.com/&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;http://europe.wsj.com/&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;http://www.bbc.co.uk/&#x27;</span>,</span><br><span class="line">        <span class="string">&#x27;http://some-made-up-domain.com/&#x27;</span>]</span><br><span class="line"></span><br><span class="line"><span class="comment"># Retrieve a single page and report the URL and contents</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">load_url</span>(<span class="params">url, timeout</span>):</span></span><br><span class="line">    <span class="keyword">with</span> urllib.request.urlopen(url, timeout=timeout) <span class="keyword">as</span> conn:</span><br><span class="line">        <span class="keyword">return</span> conn.read()</span><br><span class="line"></span><br><span class="line"><span class="comment"># We can use a with statement to ensure threads are cleaned up promptly</span></span><br><span class="line"><span class="keyword">with</span> concurrent.futures.ThreadPoolExecutor(max_workers=<span class="number">5</span>) <span class="keyword">as</span> executor:</span><br><span class="line">    <span class="comment"># Start the load operations and mark each future with its URL</span></span><br><span class="line">    future_to_url = &#123;executor.submit(load_url, url, <span class="number">60</span>): url <span class="keyword">for</span> url <span class="keyword">in</span> URLS&#125;</span><br><span class="line">    <span class="keyword">for</span> future <span class="keyword">in</span> concurrent.futures.as_completed(future_to_url):</span><br><span class="line">        url = future_to_url[future]</span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            data = future.result()</span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> exc:</span><br><span class="line">            print(<span class="string">&#x27;%r generated an exception: %s&#x27;</span> % (url, exc))</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            print(<span class="string">&#x27;%r page is %d bytes&#x27;</span> % (url, <span class="built_in">len</span>(data)))</span><br></pre></td></tr></table></figure>
 
 <p>首先考虑一个问题。在多线程里面，一般我们直接<code>threading.Thread(target=)</code>,但是直接运行不会得到返回的结果的。这里就用到了<code>Future</code>对象。类似与装饰器，最终运行的函数被嵌套，结果被添加到<code>Future</code>对象上。你可以将<code>Future</code>当做一个及其简单的对象，就像下面这样</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Future</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></span><br><span class="line">        self.result = <span class="literal">None</span></span><br><span class="line">        self._state = <span class="string">"PENDING"</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">set_result</span><span class="params">(self, value)</span>:</span></span><br><span class="line">        self._state = <span class="string">"FINISHED"</span></span><br><span class="line">        self.result = value</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get_result</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self.result</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Future</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self</span>):</span></span><br><span class="line">        self.result = <span class="literal">None</span></span><br><span class="line">        self._state = <span class="string">&quot;PENDING&quot;</span></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">set_result</span>(<span class="params">self, value</span>):</span></span><br><span class="line">        self._state = <span class="string">&quot;FINISHED&quot;</span></span><br><span class="line">        self.result = value</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get_result</span>(<span class="params">self</span>):</span></span><br><span class="line">        <span class="keyword">return</span> self.result</span><br></pre></td></tr></table></figure>
 
 <p>因此最终最新的并非是原始的函数。此处被封装成了WorkItem对象</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WorkerItem</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, future, fn, *args, **kwargs)</span>:</span></span><br><span class="line">        self.fn = fn</span><br><span class="line">        self.args = args</span><br><span class="line">        self.kwargs = kwargs</span><br><span class="line">        self.future = future</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            ret = self.fn(*self.args, **self.kwargs)</span><br><span class="line">            self.future.set_result(ret)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            self.future.set_result(e)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">_worker</span><span class="params">(work_queue)</span>:</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">            work_item = work_queue.get(block=<span class="literal">True</span>)</span><br><span class="line">            <span class="keyword">if</span> work_item <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">                work_item.run()</span><br><span class="line">    <span class="keyword">except</span> BaseException:</span><br><span class="line">        traceback.print_exc()</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">WorkerItem</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, future, fn, *args, **kwargs</span>):</span></span><br><span class="line">        self.fn = fn</span><br><span class="line">        self.args = args</span><br><span class="line">        self.kwargs = kwargs</span><br><span class="line">        self.future = future</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">run</span>(<span class="params">self</span>):</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            ret = self.fn(*self.args, **self.kwargs)</span><br><span class="line">            self.future.set_result(ret)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">            self.future.set_result(e)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">_worker</span>(<span class="params">work_queue</span>):</span></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="keyword">while</span> <span class="literal">True</span>:</span><br><span class="line">            work_item = work_queue.get(block=<span class="literal">True</span>)</span><br><span class="line">            <span class="keyword">if</span> work_item <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">                work_item.run()</span><br><span class="line">    <span class="keyword">except</span> BaseException:</span><br><span class="line">        traceback.print_exc()</span><br></pre></td></tr></table></figure>
 
 <p>其次它能够允许对创建的线程数量进行控制max_client。这个也可以想到通过队列来控制，当submit创建任务的时候并不是直接调用threading.Thread创建一个全新的线程。而是仅仅把它加入到队列，判断当前线程数量是否小于最大数量。当然在线程中就是不断循环执行Work。<code>Future</code>、<code>WorkItem</code>、<code>_worker</code>都是影藏没有对用户暴露。真正对用户暴露的只有一个ThreadPoolExecutor,大概可以这样认为</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ThreadPoolExecutor</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__enter__</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="keyword">return</span> self</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, max_workers)</span>:</span></span><br><span class="line">        self.max_workers = max_workers</span><br><span class="line">        self._queue = Queue()</span><br><span class="line">        self._thread = set()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">submit</span><span class="params">(self, fn, *args, **kwargs)</span>:</span></span><br><span class="line">        f = Future()</span><br><span class="line">        worker_item = WorkerItem(f, fn, *args, **kwargs)</span><br><span class="line">        self._queue.put(worker_item)</span><br><span class="line">        <span class="keyword">if</span> len(self._thread) &lt; self.max_workers:</span><br><span class="line">            t = Thread(target=_worker, args=(self._queue,))</span><br><span class="line">            t.daemon = <span class="literal">True</span></span><br><span class="line">            t.start()</span><br><span class="line">        <span class="keyword">return</span> f</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__exit__</span><span class="params">(self, exc_type, exc_val, exc_tb)</span>:</span></span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> self._thread:</span><br><span class="line">            i.join()</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ThreadPoolExecutor</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__enter__</span>(<span class="params">self</span>):</span></span><br><span class="line">        <span class="keyword">return</span> self</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, max_workers</span>):</span></span><br><span class="line">        self.max_workers = max_workers</span><br><span class="line">        self._queue = Queue()</span><br><span class="line">        self._thread = <span class="built_in">set</span>()</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">submit</span>(<span class="params">self, fn, *args, **kwargs</span>):</span></span><br><span class="line">        f = Future()</span><br><span class="line">        worker_item = WorkerItem(f, fn, *args, **kwargs)</span><br><span class="line">        self._queue.put(worker_item)</span><br><span class="line">        <span class="keyword">if</span> <span class="built_in">len</span>(self._thread) &lt; self.max_workers:</span><br><span class="line">            t = Thread(target=_worker, args=(self._queue,))</span><br><span class="line">            t.daemon = <span class="literal">True</span></span><br><span class="line">            t.start()</span><br><span class="line">        <span class="keyword">return</span> f</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__exit__</span>(<span class="params">self, exc_type, exc_val, exc_tb</span>):</span></span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> self._thread:</span><br><span class="line">            i.join()</span><br></pre></td></tr></table></figure>
 
 
 <p>从上面可以看到每次submit后会得到一个<code>Future</code>对象。设想一下当线程执行得到结果后我们可以根据<code>Future</code>的状态轮询得到我们需要的结果。大概可以这样写</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">with</span> ThreadPoolExecutor(max_workers=<span class="number">5</span>) <span class="keyword">as</span> executor:</span><br><span class="line">    future_to_url = &#123;executor.submit(load_url, url, <span class="number">1</span>): url <span class="keyword">for</span> url <span class="keyword">in</span> URLS&#125;</span><br><span class="line">    <span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> future_to_url.copy().keys():</span><br><span class="line">            <span class="keyword">if</span> i._state == <span class="string">"FINISHED"</span>:</span><br><span class="line">                print(i.get_result())</span><br><span class="line">                future_to_url.pop(i)</span><br><span class="line">        <span class="keyword">if</span> len(future_to_url) == <span class="number">0</span>:</span><br><span class="line">            <span class="keyword">break</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">with</span> ThreadPoolExecutor(max_workers=<span class="number">5</span>) <span class="keyword">as</span> executor:</span><br><span class="line">    future_to_url = &#123;executor.submit(load_url, url, <span class="number">1</span>): url <span class="keyword">for</span> url <span class="keyword">in</span> URLS&#125;</span><br><span class="line">    <span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> future_to_url.copy().keys():</span><br><span class="line">            <span class="keyword">if</span> i._state == <span class="string">&quot;FINISHED&quot;</span>:</span><br><span class="line">                print(i.get_result())</span><br><span class="line">                future_to_url.pop(i)</span><br><span class="line">        <span class="keyword">if</span> <span class="built_in">len</span>(future_to_url) == <span class="number">0</span>:</span><br><span class="line">            <span class="keyword">break</span></span><br></pre></td></tr></table></figure>
 
 <p><span style="color:red"><strong>但是可能作者觉得这种方式太low,效率太低。实现了一个as_completed函数，直接让理解难度提升一个数量级。。。。</strong></span></p>
 <p>大概就是先生成了一个waiters对象(这个对象有threading.Event)，并将这些对象添加到所有的未完成的Futures中。任一对象完成则会触发事件的设置。这样阻塞被暂时取消，可以得到结果返回，代码注释如下</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">as_completed</span><span class="params">(fs, timeout=None)</span>:</span></span><br><span class="line">    <span class="keyword">if</span> timeout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        end_time = timeout + time.time()</span><br><span class="line"></span><br><span class="line">    fs = set(fs)</span><br><span class="line">    <span class="keyword">with</span> _AcquireFutures(fs):</span><br><span class="line">        <span class="comment"># 先挑选出所有已经有结果的Future</span></span><br><span class="line">        finished = set(</span><br><span class="line">                f <span class="keyword">for</span> f <span class="keyword">in</span> fs</span><br><span class="line">                <span class="keyword">if</span> f._state <span class="keyword">in</span> [CANCELLED_AND_NOTIFIED, FINISHED])</span><br><span class="line">        pending = fs - finished</span><br><span class="line">        <span class="comment"># 创建了一个waiter对象。该对象用于threading.Event。然后将自身添加到了所有的Futures上面</span></span><br><span class="line">        waiter = _create_and_install_waiters(fs, _AS_COMPLETED)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="comment"># 先依次返回已完成的Future</span></span><br><span class="line">        <span class="keyword">yield</span> <span class="keyword">from</span> finished</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> pending:</span><br><span class="line">            <span class="keyword">if</span> timeout <span class="keyword">is</span> <span class="literal">None</span>:</span><br><span class="line">                wait_timeout = <span class="literal">None</span></span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                wait_timeout = end_time - time.time()</span><br><span class="line">                <span class="keyword">if</span> wait_timeout &lt; <span class="number">0</span>:</span><br><span class="line">                    <span class="keyword">raise</span> TimeoutError(</span><br><span class="line">                            <span class="string">'%d (of %d) futures unfinished'</span> % (</span><br><span class="line">                            len(pending), len(fs)))</span><br><span class="line">            </span><br><span class="line">            <span class="comment"># 当Future被进行设置结果会触发threading.Event.set</span></span><br><span class="line">            <span class="comment"># 那么该处的阻塞就会被取消</span></span><br><span class="line">            waiter.event.wait(wait_timeout)</span><br><span class="line"></span><br><span class="line">            <span class="keyword">with</span> waiter.lock:</span><br><span class="line">                <span class="comment"># 又得到一批已完成的Futures</span></span><br><span class="line">                finished = waiter.finished_futures</span><br><span class="line">                waiter.finished_futures = []</span><br><span class="line">                <span class="comment"># 取消状态,等待下一次的set</span></span><br><span class="line">                waiter.event.clear()</span><br><span class="line">            </span><br><span class="line">            <span class="comment"># 依次返回并从pending队列中移出</span></span><br><span class="line">            <span class="keyword">for</span> future <span class="keyword">in</span> finished:</span><br><span class="line">                <span class="keyword">yield</span> future</span><br><span class="line">                pending.remove(future)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">finally</span>:</span><br><span class="line">        <span class="keyword">for</span> f <span class="keyword">in</span> fs:</span><br><span class="line">            <span class="keyword">with</span> f._condition:</span><br><span class="line">                f._waiters.remove(waiter)</span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">as_completed</span>(<span class="params">fs, timeout=<span class="literal">None</span></span>):</span></span><br><span class="line">    <span class="keyword">if</span> timeout <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">None</span>:</span><br><span class="line">        end_time = timeout + time.time()</span><br><span class="line"></span><br><span class="line">    fs = <span class="built_in">set</span>(fs)</span><br><span class="line">    <span class="keyword">with</span> _AcquireFutures(fs):</span><br><span class="line">        <span class="comment"># 先挑选出所有已经有结果的Future</span></span><br><span class="line">        finished = <span class="built_in">set</span>(</span><br><span class="line">                f <span class="keyword">for</span> f <span class="keyword">in</span> fs</span><br><span class="line">                <span class="keyword">if</span> f._state <span class="keyword">in</span> [CANCELLED_AND_NOTIFIED, FINISHED])</span><br><span class="line">        pending = fs - finished</span><br><span class="line">        <span class="comment"># 创建了一个waiter对象。该对象用于threading.Event。然后将自身添加到了所有的Futures上面</span></span><br><span class="line">        waiter = _create_and_install_waiters(fs, _AS_COMPLETED)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">try</span>:</span><br><span class="line">        <span class="comment"># 先依次返回已完成的Future</span></span><br><span class="line">        <span class="keyword">yield</span> <span class="keyword">from</span> finished</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> pending:</span><br><span class="line">            <span class="keyword">if</span> timeout <span class="keyword">is</span> <span class="literal">None</span>:</span><br><span class="line">                wait_timeout = <span class="literal">None</span></span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                wait_timeout = end_time - time.time()</span><br><span class="line">                <span class="keyword">if</span> wait_timeout &lt; <span class="number">0</span>:</span><br><span class="line">                    <span class="keyword">raise</span> TimeoutError(</span><br><span class="line">                            <span class="string">&#x27;%d (of %d) futures unfinished&#x27;</span> % (</span><br><span class="line">                            <span class="built_in">len</span>(pending), <span class="built_in">len</span>(fs)))</span><br><span class="line">            </span><br><span class="line">            <span class="comment"># 当Future被进行设置结果会触发threading.Event.set</span></span><br><span class="line">            <span class="comment"># 那么该处的阻塞就会被取消</span></span><br><span class="line">            waiter.event.wait(wait_timeout)</span><br><span class="line"></span><br><span class="line">            <span class="keyword">with</span> waiter.lock:</span><br><span class="line">                <span class="comment"># 又得到一批已完成的Futures</span></span><br><span class="line">                finished = waiter.finished_futures</span><br><span class="line">                waiter.finished_futures = []</span><br><span class="line">                <span class="comment"># 取消状态,等待下一次的set</span></span><br><span class="line">                waiter.event.clear()</span><br><span class="line">            </span><br><span class="line">            <span class="comment"># 依次返回并从pending队列中移出</span></span><br><span class="line">            <span class="keyword">for</span> future <span class="keyword">in</span> finished:</span><br><span class="line">                <span class="keyword">yield</span> future</span><br><span class="line">                pending.remove(future)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">finally</span>:</span><br><span class="line">        <span class="keyword">for</span> f <span class="keyword">in</span> fs:</span><br><span class="line">            <span class="keyword">with</span> f._condition:</span><br><span class="line">                f._waiters.remove(waiter)</span><br></pre></td></tr></table></figure>
 
 
 <p>多线程的方式相较多进程要简单很多。多进程的实现有机会再写续篇~~</p>
@@ -434,7 +485,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -679,7 +730,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -703,7 +754,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -752,7 +803,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -777,8 +828,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -895,7 +946,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -903,8 +956,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

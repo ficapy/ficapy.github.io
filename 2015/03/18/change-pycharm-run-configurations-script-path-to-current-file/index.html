@@ -11,21 +11,19 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~\n使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置*，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣还是记录下来吧 临时发现这个也算是福气哇~~\n\n\n每次右键点击再执行文件的时候都会生成一个python运行配置，这一步骤只是运行配置中的script项有所改变。假如你有很多个文件。那么执行多个文件后就将有多个运行配置了，看着真是相当不爽，如果你知道pycharm的externaltool，里面有insertmacros，其中$FilePath$就代表当前选择的文件绝对路径。可惜该参数无法填入script项，否则就能减少非常多python运行配置，大部分项目仅一个就可以了。\n如果项目使用的是本地python解释器&amp;没有复杂的配置，那么直接右键点击再执行会自动生成一个python运行配置可以正常执行，也就不会有俺最开始的苦恼了。我使用的是vagrant开发环境，代码是从本机映射到虚拟机上，所以直接执行会显示路径错误~~~我的处理流程是这样的\n\n最开始选择照旧执行，报错后进入运行设置添加路径映射\n可是特喵每次都添加映射好烦啊，映射路径好长的好咩，反正其他的不变，仅仅是运行文件改变了，于是乎选择要运行的时候就将一个好的运行设置修改文件路径为当前就好了\n就是现在了，觉得2也好烦。。。。\n\n以上烦恼就是因为忘记了针对每一个项目都有默认的环境设置，其实将默认的环境设置设置好以后自动继承就ok了&gt;_&lt;当想到3的时候总体方针就是自动修改script参数为当前文件路径。最开始是想写脚本找出该项目下所有py文件中最后修改的那个，然后就想可能pycharm对于每个项目都有一个配置文件，修改配置文件中script的地址就好了~~~可是最后没找到。最后就想到了模拟点击到设置页面修改了。然后就试了以下几个sikulix、aauto(快手)、按键精灵、Automa。第一四个一看便可上手，就和上手python的库那么简单，就几个特好理解的函数，二看了一下虽有auto但不适合做模拟点击，而且想立马使用也是没多大可能的，按键精灵我咋看着想吐呢，宁可去背几个函数也不想插入插入插入。。。。\n最后还是亮上用sikulix和automa写的代码吧，炒鸡简单https://github.com/aec4d/ScriptLet/tree/master/pycharm\\_script\\_path\\_autochange需要注意的是需按照官网提示配置好环境。2个都是使用绝对坐标定位然后点击，屏幕分辨率1366*768，pycharm版本4.0.5\nbingo~~~~~~~~~~~~`\n","dateCreated":"2015-03-18T00:47:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2015-03-18T00:47:00+08:00","description":"这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~\n使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置*，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣还是记录下来吧 临时发现这个也算是福气哇~~","headline":"将pycharm的运行配置脚本路径修改为当前选中文件","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/"}</script>
-    <meta name="description" content="这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~ 使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置*，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺">
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~\n使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置***，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣还是记录下来吧 临时发现这个也算是福气哇~~\n\n\n每次右键点击再执行文件的时候都会生成一个python运行配置，这一步骤只是运行配置中的script项有所改变。假如你有很多个文件。那么执行多个文件后就将有多个运行配置了，看着真是相当不爽，如果你知道pycharm的externaltool，里面有insertmacros，其中$FilePath$就代表当前选择的文件绝对路径。可惜该参数无法填入script项，否则就能减少非常多python运行配置，大部分项目仅一个就可以了。\n如果项目使用的是本地python解释器&amp;没有复杂的配置，那么直接右键点击再执行会自动生成一个python运行配置可以正常执行，也就不会有俺最开始的苦恼了。我使用的是vagrant开发环境，代码是从本机映射到虚拟机上，所以直接执行会显示路径错误~~~我的处理流程是这样的\n\n 最开始选择照旧执行，报错后进入运行设置添加路径映射\n 可是特喵每次都添加映射好烦啊，映射路径好长的好咩，反正其他的不变，仅仅是运行文件改变了，于是乎选择要运行的时候就将一个好的运行设置修改文件路径为当前就好了\n 就是现在了，觉得2也好烦。。。。\n\n以上烦恼就是因为忘记了针对每一个项目都有默认的环境设置，其实将默认的环境设置设置好以后自动继承就ok了&gt;_&lt;当想到3的时候总体方针就是自动修改script参数为当前文件路径。最开始是想写脚本找出该项目下所有py文件中最后修改的那个，然后就想可能pycharm对于每个项目都有一个配置文件，修改配置文件中script的地址就好了~~~可是最后没找到。最后就想到了模拟点击到设置页面修改了。然后就试了以下几个sikulix、aauto(快手)、按键精灵、Automa。第一四个一看便可上手，就和上手python的库那么简单，就几个特好理解的函数，二看了一下虽有auto但不适合做模拟点击，而且想立马使用也是没多大可能的，按键精灵我咋看着想吐呢，宁可去背几个函数也不想插入插入插入。。。。\n最后还是亮上用sikulix和automa写的代码吧，炒鸡简单https://github.com/aec4d/ScriptLet/tree/master/pycharm\\_script\\_path\\_autochange需要注意的是需按照官网提示配置好环境。2个都是使用绝对坐标定位然后点击，屏幕分辨率1366*768，pycharm版本4.0.5\nbingo~~~~~~~~~~~~`\n \n","dateCreated":"2015-03-18T00:47:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2015-03-18T00:47:00+08:00","description":"这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~\n使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置***，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣还是记录下来吧 临时发现这个也算是福气哇~~","headline":"将pycharm的运行配置脚本路径修改为当前选中文件","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/"}</script>
+    <meta name="description" content="这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~ 使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置***，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="将pycharm的运行配置脚本路径修改为当前选中文件">
 <meta property="og:url" content="https://www.zoulei.net/2015/03/18/change-pycharm-run-configurations-script-path-to-current-file/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~ 使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置*，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺">
-<meta property="og:locale" content="zh-cn">
+<meta property="og:description" content="这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~ 使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置***，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得">
+<meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://blogimg.ficapy.com/blogimg/865uap38l.png">
-<meta property="og:updated_time" content="2019-07-26T06:53:30.600Z">
+<meta property="article:published_time" content="2015-03-17T16:47:00.000Z">
+<meta property="article:modified_time" content="2019-07-26T06:53:30.600Z">
+<meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="将pycharm的运行配置脚本路径修改为当前选中文件">
-<meta name="twitter:description" content="这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~ 使用pycharm的时候每次运行脚本都会有一个*基于默认设置的python运行环境设置*，如下图所示哈哈哈哈哈哈~~~~~~~~对着这张图看了好久突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺">
 <meta name="twitter:image" content="https://blogimg.ficapy.com/blogimg/865uap38l.png">
     
     
@@ -36,7 +34,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -59,7 +59,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -89,12 +89,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -102,12 +103,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -115,12 +117,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -128,12 +131,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -141,12 +145,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -154,12 +159,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -171,8 +177,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -180,8 +193,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -189,8 +209,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -198,8 +225,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -207,8 +241,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -216,8 +257,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -225,11 +273,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -241,12 +291,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -282,7 +333,7 @@
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/随笔/">随笔</a>
+    <a class="category-link" href="/categories/%E9%9A%8F%E7%AC%94/">随笔</a>
 
 
     
@@ -295,19 +346,22 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>这标题看着都挺让人蛋疼的，可能很少人会遇到这个问题。但是我觉得pycharm用多了应该是会遇到的~~~~~</p>
-<p>使用pycharm的时候每次运行脚本都会有一个<strong><span style="text-decoration: underline;">*<span style="color: #ff0000; text-decoration: underline;">基于默认设置的python运行环境设置</span>*</span></strong>，如下图所示<img src="https://blogimg.ficapy.com/blogimg/865uap38l.png" alt><br>哈哈哈哈哈哈~~~~~~~~对着这张图看了好久<br>突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣<br>还是记录下来吧 临时发现这个也算是福气哇~~</p>
+<p>使用pycharm的时候每次运行脚本都会有一个*<em><span
+style="text-decoration: underline;"></em><span
+style="color: #ff0000; text-decoration: underline;">基于默认设置的python运行环境设置</span>*</span>**，如下图所示<img src="https://blogimg.ficapy.com/blogimg/865uap38l.png"><br>哈哈哈哈哈哈~~~~~~~~对着这张图看了好久<br>突然意识到这篇博文都没啥写的必要了，是不幸还是幸运呢。反正以前也问过一些人问题不怎么好描述都一直没得到方案，促使今天自己写了个小脚本。想想觉得也挺有趣<br>还是记录下来吧 临时发现这个也算是福气哇~~</p>
 <a id="more"></a>
 
 <p>每次右键点击再执行文件的时候都会生成一个python运行配置，这一步骤只是运行配置中的script项有所改变。假如你有很多个文件。那么执行多个文件后就将有多个运行配置了，看着真是相当不爽，如果你知道pycharm的external<br>tool，里面有insert<br>macros，其中$FilePath$就代表当前选择的文件绝对路径。可惜该参数无法填入script项，否则就能减少非常多python运行配置，大部分项目仅一个就可以了。</p>
 <p>如果项目使用的是本地python解释器&amp;没有复杂的配置，那么直接右键点击再执行会自动生成一个python运行配置可以正常执行，也就不会有俺最开始的苦恼了。我使用的是vagrant开发环境，代码是从本机映射到虚拟机上，所以直接执行会显示路径错误~~~我的处理流程是这样的</p>
 <ol>
-<li>最开始选择照旧执行，报错后进入运行设置添加路径映射</li>
-<li>可是特喵每次都添加映射好烦啊，映射路径好长的好咩，反正其他的不变，仅仅是运行文件改变了，于是乎选择要运行的时候就将一个好的运行设置修改文件路径为当前就好了</li>
-<li>就是现在了，觉得2也好烦。。。。</li>
+<li> 最开始选择照旧执行，报错后进入运行设置添加路径映射</li>
+<li> 可是特喵每次都添加映射好烦啊，映射路径好长的好咩，反正其他的不变，仅仅是运行文件改变了，于是乎选择要运行的时候就将一个好的运行设置修改文件路径为当前就好了</li>
+<li> 就是现在了，觉得2也好烦。。。。</li>
 </ol>
 <p>以上烦恼就是因为忘记了针对每一个项目都有默认的环境设置，其实将默认的环境设置设置好以后自动继承就ok了&gt;_&lt;当想到3的时候总体方针就是自动修改script参数为当前文件路径。最开始是想写脚本找出该项目下所有py文件中最后修改的那个，然后就想可能pycharm对于每个项目都有一个配置文件，修改配置文件中script的地址就好了~~~可是最后没找到。最后就想到了模拟点击到设置页面修改了。然后就试了以下几个sikulix、aauto(快手)、按键精灵、Automa。第一四个一看便可上手，就和上手python的库那么简单，就几个特好理解的函数，二看了一下虽有auto但不适合做模拟点击，而且想立马使用也是没多大可能的，按键精灵我咋看着想吐呢，宁可去背几个函数也不想插入插入插入。。。。</p>
-<p>最后还是亮上用sikulix和automa写的代码吧，炒鸡简单<a href="https://github.com/aec4d/ScriptLet/tree/master/pycharm\_script\_path\_autochange" target="_blank" rel="noopener">https://github.com/aec4d/ScriptLet/tree/master/pycharm\_script\_path\_autochange</a><br>需要注意的是需按照官网提示配置好环境。2个都是使用绝对坐标定位然后点击，屏幕分辨率1366*768，pycharm版本4.0.5</p>
+<p>最后还是亮上用sikulix和automa写的代码吧，炒鸡简单<a href="https://github.com/aec4d/ScriptLet/tree/master/pycharm/_script/_path/_autochange">https://github.com/aec4d/ScriptLet/tree/master/pycharm\_script\_path\_autochange</a><br>需要注意的是需按照官网提示配置好环境。2个都是使用绝对坐标定位然后点击，屏幕分辨率1366*768，pycharm版本4.0.5</p>
 <p>bingo~~~~~~~~~~~~`</p>
+<p> </p>
 
             
 
@@ -425,7 +479,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -670,7 +724,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -694,7 +748,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -743,7 +797,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -768,8 +822,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -886,7 +940,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -894,8 +950,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

@@ -11,20 +11,18 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。\n\n\n说一下第三种方案相对前两种方案的特点。\n\n集中化管理。第一二种方案都需要将脚本放在对应的应用机器上面。第三种不需要，它集中化了。所有的webhook都在可持续集成平台处理。由平台再来操控应用。而且每一次触发操作都有详尽的日志。集中在一起比较容易看出哪里出了什么问题\n不需要在每一台应用机处理webhook(处理意味着每个应用机都需要绑定一个域名)，可能和上面的集中化管理的优点是一个意思吧\n对于一个良好的架构。可持续集成平台比零散的脚本无疑更合适\n算是一个缺点。单独写脚本独立处理webhook相对可持续集成更容易\n\nDrone配置docker-compose我都不大用了，直接用docker stack deploy替代。后者相对前者实际没有什么区别。或者说前者是因为docker网络配置欠发达的产物。docker-compose适合单机部署，docker-swarm适合多主机。开启docker-swarm只需要docker swarm init大概就可以了，更详细的知识请查看官方文档\ndrone.yml 文件大概如下\n12345678910111213141516171819202122232425262728version: &apos;3&apos;services:  drone-server:    image: drone/drone:0.7    ports:      - 82:8000    volumes:      - /data/github_drone:/var/lib/drone/    environment:      - DRONE_OPEN=false      - DRONE_ADMIN=ficapy      - DRONE_GITLAB=true      - DRONE_GITHUB_CLIENT=xxxxxxxxx      - DRONE_GITHUB_SECRET=xxxxxxxxxx      - DRONE_SECRET=xxxpwdxxx  drone-agent:    image: drone/drone:0.7    command: agent    depends_on:      - drone-server    volumes:      - /var/run/docker.sock:/var/run/docker.sock    environment:      - DRONE_SERVER=ws://drone-server:8000/ws/broker      - DRONE_SECRET=xxxpwdxxx\n\n然后执行docker stack deploy --compose-file=drone.yml drone，整个程序就运行起来了。此处是监听81端口。从配置文件中也可以猜一个大概。了解下drone的流程。service主要用来响应浏览器端的请求。接收到请求后使用websocket和agent通信用来下发任务获取结果。agent通过/var/run/docker.sock来和docker daemon进行通信。执行创建容器。执行命令等一系列过程。\n有几点需要注意的\n\n最好指定管理员用户DRONE_ADMIN，因为有些操作需要admin权限\nDRONE_OPEN设置为true的时候所有的用户都能授权后使用你的Drone进行集成测试。这往往是你\u000e不愿意的，个人的诉求往往是私有的\ngithub和gitlab在一个drone不能同时使用，所以我部署了两套，使用了不同的域名\n起码了解OAuth流程和webhook的过程，才能更好的理解整套流程\n其他事宜可以查看Drone的安装文档\n\n之所以监听81端口，是因为我使用的Caddy当做前置web服务器。配置如下Caddyfile\n123456drone.ficapy.com &#123;    proxy / dockerhost:81 &#123;        websocket        transparent    &#125;&#125;\n\n对应的docker-compose文件如下\n12345678910111213version: &quot;3&quot;services:  Caddy:    image: &quot;abiosoft/caddy&quot;    volumes:      - /root/caddy/Caddyfile:/etc/Caddyfile      - /root/.caddy:/root/.caddy    ports:      - &quot;80:80&quot;      - &quot;443:443&quot;    extra_hosts:      - &quot;dockerhost:$&#123;dockerhost&#125;&quot;\n\n此处使用了环境变量dockerhost，我将它写入了zshrc配置文件中export dockerhost=&quot;172.17.0.1&quot;,不难看出只是为了转发请求, 和drone一样。执行docker stack deploy --compose-file=caddy_compose.yml caddy启动\n持续集成部署当使用Drone，并授权之后。Drone会自动给你的项目加上webhook地址。我们在项目根目录放置.drone.yml文件后会使用docker自动构建\n实现本文开头说的需求.drone.yml文件如下\n123456789101112pipeline:  build:    image: ruby:2.3    commands:      - bundle config mirror.https://rubygems.org https://gems.ruby-china.org      - bundle install      - apt-get update &amp;&amp; apt-get install nodejs rsync -y &amp;&amp; bundle exec middleman build --clean      - rsync -r --rsh=&apos;ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /data/id_rsa -p 22&apos; build/* user@host:~/docs --progress --delete    volumes:      - /data:/data    when:      branch: master\n\n在使用之前。我现在/data目录使用ssh-agent生成了密匙对。在目标主机上放上公钥，让我们能够ssh连接远端主机。然后容器创建的时候将密匙挂载到容器目录(此处需要管理员权限将项目设置为可信)。然后就顺理成章了。搭建环境，生成静态文件，rsync同步就完成了。\n","dateCreated":"2017-07-05T21:51:26+08:00","dateModified":"2017-07-06T00:21:28+08:00","datePublished":"2017-07-05T21:51:26+08:00","description":"最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。","headline":"Docker CD初探-Drone","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/07/05/drone/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/07/05/drone/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。\n\n\n说一下第三种方案相对前两种方案的特点。\n\n集中化管理。第一二种方案都需要将脚本放在对应的应用机器上面。第三种不需要，它集中化了。所有的webhook都在可持续集成平台处理。由平台再来操控应用。而且每一次触发操作都有详尽的日志。集中在一起比较容易看出哪里出了什么问题\n不需要在每一台应用机处理webhook(处理意味着每个应用机都需要绑定一个域名)，可能和上面的集中化管理的优点是一个意思吧\n对于一个良好的架构。可持续集成平台比零散的脚本无疑更合适\n算是一个缺点。单独写脚本独立处理webhook相对可持续集成更容易\n\nDrone配置docker-compose我都不大用了，直接用docker stack deploy替代。后者相对前者实际没有什么区别。或者说前者是因为docker网络配置欠发达的产物。docker-compose适合单机部署，docker-swarm适合多主机。开启docker-swarm只需要docker swarm init大概就可以了，更详细的知识请查看官方文档\ndrone.yml 文件大概如下\n12345678910111213141516171819202122232425262728version: &#x27;3&#x27;services:  drone-server:    image: drone/drone:0.7    ports:      - 82:8000    volumes:      - /data/github_drone:/var/lib/drone/    environment:      - DRONE_OPEN=false      - DRONE_ADMIN=ficapy      - DRONE_GITLAB=true      - DRONE_GITHUB_CLIENT=xxxxxxxxx      - DRONE_GITHUB_SECRET=xxxxxxxxxx      - DRONE_SECRET=xxxpwdxxx  drone-agent:    image: drone/drone:0.7    command: agent    depends_on:      - drone-server    volumes:      - /var/run/docker.sock:/var/run/docker.sock    environment:      - DRONE_SERVER=ws://drone-server:8000/ws/broker      - DRONE_SECRET=xxxpwdxxx\n然后执行docker stack deploy --compose-file=drone.yml drone，整个程序就运行起来了。此处是监听81端口。从配置文件中也可以猜一个大概。了解下drone的流程。service主要用来响应浏览器端的请求。接收到请求后使用websocket和agent通信用来下发任务获取结果。agent通过/var/run/docker.sock来和docker daemon进行通信。执行创建容器。执行命令等一系列过程。\n有几点需要注意的\n\n最好指定管理员用户DRONE_ADMIN，因为有些操作需要admin权限\nDRONE_OPEN设置为true的时候所有的用户都能授权后使用你的Drone进行集成测试。这往往是你\u000e不愿意的，个人的诉求往往是私有的\ngithub和gitlab在一个drone不能同时使用，所以我部署了两套，使用了不同的域名\n起码了解OAuth流程和webhook的过程，才能更好的理解整套流程\n其他事宜可以查看Drone的安装文档\n\n之所以监听81端口，是因为我使用的Caddy当做前置web服务器。配置如下Caddyfile\n123456drone.ficapy.com &#123;    proxy &#x2F; dockerhost:81 &#123;        websocket        transparent    &#125;&#125;\n对应的docker-compose文件如下\n12345678910111213version: &quot;3&quot;services:  Caddy:    image: &quot;abiosoft/caddy&quot;    volumes:      - /root/caddy/Caddyfile:/etc/Caddyfile      - /root/.caddy:/root/.caddy    ports:      - &quot;80:80&quot;      - &quot;443:443&quot;    extra_hosts:      - &quot;dockerhost:$&#123;dockerhost&#125;&quot;\n此处使用了环境变量dockerhost，我将它写入了zshrc配置文件中export dockerhost=&quot;172.17.0.1&quot;,不难看出只是为了转发请求, 和drone一样。执行docker stack deploy --compose-file=caddy_compose.yml caddy启动\n持续集成部署当使用Drone，并授权之后。Drone会自动给你的项目加上webhook地址。我们在项目根目录放置.drone.yml文件后会使用docker自动构建\n实现本文开头说的需求.drone.yml文件如下\n123456789101112pipeline:  build:    image: ruby:2.3    commands:      - bundle config mirror.https://rubygems.org https://gems.ruby-china.org      - bundle install      - apt-get update &amp;&amp; apt-get install nodejs rsync -y &amp;&amp; bundle exec middleman build --clean      - rsync -r --rsh=&#x27;ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /data/id_rsa -p 22&#x27; build/* user@host:~/docs --progress --delete    volumes:      - /data:/data    when:      branch: master\n在使用之前。我现在/data目录使用ssh-agent生成了密匙对。在目标主机上放上公钥，让我们能够ssh连接远端主机。然后容器创建的时候将密匙挂载到容器目录(此处需要管理员权限将项目设置为可信)。然后就顺理成章了。搭建环境，生成静态文件，rsync同步就完成了。\n","dateCreated":"2017-07-05T21:51:26+08:00","dateModified":"2021-02-17T11:12:31+08:00","datePublished":"2017-07-05T21:51:26+08:00","description":"最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。","headline":"Docker CD初探-Drone","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/07/05/drone/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/07/05/drone/"}</script>
     <meta name="description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Docker CD初探-Drone">
 <meta property="og:url" content="https://www.zoulei.net/2017/07/05/drone/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
-<meta property="og:locale" content="zh-cn">
-<meta property="og:updated_time" content="2017-07-05T16:21:28.000Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2017-07-05T13:51:26.000Z">
+<meta property="article:modified_time" content="2021-02-17T03:12:31.043Z">
+<meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Docker CD初探-Drone">
-<meta name="twitter:description" content="最近有个小需求，我们公司写文档是通过slate来的。每一次文档编写完成之后都需要执行bundle exec middleman build --clean生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webho">
     
     
         
@@ -34,7 +32,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -57,7 +57,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -87,12 +87,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -100,12 +101,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -113,12 +115,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -126,12 +129,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -139,12 +143,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -152,12 +157,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -169,8 +175,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -178,8 +191,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -187,8 +207,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -196,8 +223,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -205,8 +239,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -214,8 +255,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -223,11 +271,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -239,12 +289,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -292,7 +343,7 @@
     
     <div class="post-content markdown">
         <div class="main-content-wrap">
-            <p>最近有个小需求，我们公司写文档是通过<a href="https://github.com/lord/slate" target="_blank" rel="noopener">slate</a>来的。每一次文档编写完成之后都需要执行<code>bundle exec middleman build --clean</code>生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。</p>
+            <p>最近有个小需求，我们公司写文档是通过<a href="https://github.com/lord/slate">slate</a>来的。每一次文档编写完成之后都需要执行<code>bundle exec middleman build --clean</code>生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。</p>
 <a id="more"></a>
 
 <p>说一下第三种方案相对前两种方案的特点。</p>
@@ -304,8 +355,7 @@
 </ul>
 <h3 id="Drone配置"><a href="#Drone配置" class="headerlink" title="Drone配置"></a>Drone配置</h3><p>docker-compose我都不大用了，直接用docker stack deploy替代。后者相对前者实际没有什么区别。或者说前者是因为docker网络配置欠发达的产物。docker-compose适合单机部署，docker-swarm适合多主机。开启docker-swarm只需要docker swarm init大概就可以了，更详细的知识请查看官方文档</p>
 <p>drone.yml 文件大概如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">version: &apos;3&apos;</span><br><span class="line"></span><br><span class="line">services:</span><br><span class="line">  drone-server:</span><br><span class="line">    image: drone/drone:0.7</span><br><span class="line">    ports:</span><br><span class="line">      - 82:8000</span><br><span class="line">    volumes:</span><br><span class="line">      - /data/github_drone:/var/lib/drone/</span><br><span class="line">    environment:</span><br><span class="line">      - DRONE_OPEN=false</span><br><span class="line">      - DRONE_ADMIN=ficapy</span><br><span class="line">      - DRONE_GITLAB=true</span><br><span class="line">      - DRONE_GITHUB_CLIENT=xxxxxxxxx</span><br><span class="line">      - DRONE_GITHUB_SECRET=xxxxxxxxxx</span><br><span class="line">      - DRONE_SECRET=xxxpwdxxx</span><br><span class="line"></span><br><span class="line">  drone-agent:</span><br><span class="line">    image: drone/drone:0.7</span><br><span class="line">    command: agent</span><br><span class="line">    depends_on:</span><br><span class="line">      - drone-server</span><br><span class="line">    volumes:</span><br><span class="line">      - /var/run/docker.sock:/var/run/docker.sock</span><br><span class="line">    environment:</span><br><span class="line">      - DRONE_SERVER=ws://drone-server:8000/ws/broker</span><br><span class="line">      - DRONE_SECRET=xxxpwdxxx</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">&#x27;3&#x27;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">drone-server:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">drone/drone:0.7</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="number">82</span><span class="string">:8000</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/data/github_drone:/var/lib/drone/</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DRONE_OPEN=false</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DRONE_ADMIN=ficapy</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DRONE_GITLAB=true</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DRONE_GITHUB_CLIENT=xxxxxxxxx</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DRONE_GITHUB_SECRET=xxxxxxxxxx</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DRONE_SECRET=xxxpwdxxx</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">drone-agent:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">drone/drone:0.7</span></span><br><span class="line">    <span class="attr">command:</span> <span class="string">agent</span></span><br><span class="line">    <span class="attr">depends_on:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">drone-server</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/var/run/docker.sock:/var/run/docker.sock</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DRONE_SERVER=ws://drone-server:8000/ws/broker</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DRONE_SECRET=xxxpwdxxx</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
 <p>然后执行<code>docker stack deploy --compose-file=drone.yml drone</code>，整个程序就运行起来了。此处是监听81端口。从配置文件中也可以猜一个大概。了解下drone的流程。service主要用来响应浏览器端的请求。接收到请求后使用websocket和agent通信用来下发任务获取结果。agent通过/var/run/docker.sock来和docker daemon进行通信。执行创建容器。执行命令等一系列过程。</p>
 <p>有几点需要注意的</p>
 <ul>
@@ -313,19 +363,16 @@
 <li>DRONE_OPEN设置为true的时候所有的用户都能授权后使用你的Drone进行集成测试。这往往是你不愿意的，个人的诉求往往是私有的</li>
 <li>github和gitlab在一个drone不能同时使用，所以我部署了两套，使用了不同的域名</li>
 <li>起码了解OAuth流程和webhook的过程，才能更好的理解整套流程</li>
-<li>其他事宜可以查看Drone的<a href="http://docs.drone.io/installation/" target="_blank" rel="noopener">安装文档</a></li>
+<li>其他事宜可以查看Drone的<a href="http://docs.drone.io/installation/">安装文档</a></li>
 </ul>
 <p>之所以监听81端口，是因为我使用的Caddy当做前置web服务器。配置如下Caddyfile</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">drone.ficapy.com &#123;</span><br><span class="line">    proxy / dockerhost:81 &#123;</span><br><span class="line">        websocket</span><br><span class="line">        transparent</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">drone.ficapy.com &#123;</span><br><span class="line">    proxy &#x2F; dockerhost:81 &#123;</span><br><span class="line">        websocket</span><br><span class="line">        transparent</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>对应的docker-compose文件如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">version: &quot;3&quot;</span><br><span class="line"></span><br><span class="line">services:</span><br><span class="line">  Caddy:</span><br><span class="line">    image: &quot;abiosoft/caddy&quot;</span><br><span class="line">    volumes:</span><br><span class="line">      - /root/caddy/Caddyfile:/etc/Caddyfile</span><br><span class="line">      - /root/.caddy:/root/.caddy</span><br><span class="line">    ports:</span><br><span class="line">      - &quot;80:80&quot;</span><br><span class="line">      - &quot;443:443&quot;</span><br><span class="line">    extra_hosts:</span><br><span class="line">      - &quot;dockerhost:$&#123;dockerhost&#125;&quot;</span><br></pre></td></tr></table></figure>
-
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">version:</span> <span class="string">&quot;3&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">Caddy:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">&quot;abiosoft/caddy&quot;</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/root/caddy/Caddyfile:/etc/Caddyfile</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/root/.caddy:/root/.caddy</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;80:80&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;443:443&quot;</span></span><br><span class="line">    <span class="attr">extra_hosts:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;dockerhost:$&#123;dockerhost&#125;&quot;</span></span><br></pre></td></tr></table></figure>
 <p>此处使用了环境变量dockerhost，我将它写入了zshrc配置文件中<code>export dockerhost=&quot;172.17.0.1&quot;</code>,不难看出只是为了转发请求, 和drone一样。执行<code>docker stack deploy --compose-file=caddy_compose.yml caddy</code>启动</p>
 <h3 id="持续集成部署"><a href="#持续集成部署" class="headerlink" title="持续集成部署"></a>持续集成部署</h3><p>当使用Drone，并授权之后。Drone会自动给你的项目加上webhook地址。我们在项目根目录放置.drone.yml文件后会使用docker自动构建</p>
 <p>实现本文开头说的需求.drone.yml文件如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">pipeline:</span><br><span class="line">  build:</span><br><span class="line">    image: ruby:2.3</span><br><span class="line">    commands:</span><br><span class="line">      - bundle config mirror.https://rubygems.org https://gems.ruby-china.org</span><br><span class="line">      - bundle install</span><br><span class="line">      - apt-get update &amp;&amp; apt-get install nodejs rsync -y &amp;&amp; bundle exec middleman build --clean</span><br><span class="line">      - rsync -r --rsh=&apos;ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes -i /data/id_rsa -p 22&apos; build/* user@host:~/docs --progress --delete</span><br><span class="line">    volumes:</span><br><span class="line">      - /data:/data</span><br><span class="line">    when:</span><br><span class="line">      branch: master</span><br></pre></td></tr></table></figure>
-
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">pipeline:</span></span><br><span class="line">  <span class="attr">build:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">ruby:2.3</span></span><br><span class="line">    <span class="attr">commands:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">bundle</span> <span class="string">config</span> <span class="string">mirror.https://rubygems.org</span> <span class="string">https://gems.ruby-china.org</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">bundle</span> <span class="string">install</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">apt-get</span> <span class="string">update</span> <span class="string">&amp;&amp;</span> <span class="string">apt-get</span> <span class="string">install</span> <span class="string">nodejs</span> <span class="string">rsync</span> <span class="string">-y</span> <span class="string">&amp;&amp;</span> <span class="string">bundle</span> <span class="string">exec</span> <span class="string">middleman</span> <span class="string">build</span> <span class="string">--clean</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">rsync</span> <span class="string">-r</span> <span class="string">--rsh=&#x27;ssh</span> <span class="string">-o</span> <span class="string">LogLevel=ERROR</span> <span class="string">-o</span> <span class="string">StrictHostKeyChecking=no</span> <span class="string">-o</span> <span class="string">UserKnownHostsFile=/dev/null</span> <span class="string">-o</span> <span class="string">IdentitiesOnly=yes</span> <span class="string">-i</span> <span class="string">/data/id_rsa</span> <span class="string">-p</span> <span class="number">22</span><span class="string">&#x27; build/* user@host:~/docs --progress --delete</span></span><br><span class="line"><span class="string">    volumes:</span></span><br><span class="line"><span class="string">      - /data:/data</span></span><br><span class="line"><span class="string">    when:</span></span><br><span class="line"><span class="string">      branch: master</span></span><br></pre></td></tr></table></figure>
 <p>在使用之前。我现在/data目录使用ssh-agent生成了密匙对。在目标主机上放上公钥，让我们能够ssh连接远端主机。然后容器创建的时候将密匙挂载到容器目录(此处需要管理员权限将项目设置为可信)。然后就顺理成章了。搭建环境，生成静态文件，rsync同步就完成了。</p>
 
             
@@ -444,7 +491,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -689,7 +736,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -713,7 +760,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -762,7 +809,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -787,8 +834,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -905,7 +952,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -913,8 +962,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

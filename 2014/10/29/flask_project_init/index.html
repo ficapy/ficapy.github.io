@@ -11,22 +11,22 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：\n\nwindows7 X64\nvagrant\nubuntu14\nxshell\ncmder(可选)\npycharm\n\n\n\n准备步骤：\n1.环境搭建1234vagrant box add ubuntu14 URL(或者先下载box文件用文件名替代)  vagrant init ubuntu14  vagrant up  vagrant halt  \n\nNOTE.vagrant使用可谓相当简单了,使用单文件配置,整个周期分为add/init/up/reload/suspend/halt/destroy;\n另外推荐将22端口进行转发。默认转发到2222，但是当打开多个虚拟机的时候因为2222端口被占用所有会随机指定一个端口。So，固定一下对自己的设置是相当有利的。当然因为Flask默认使用5000端口进行测试，对它进行转发也是理所当然的;\n至于使用vagrantssh登陆,用系统自带的CMD那是相当难受滴,使用cmder全功能版不错。用过一段时间不得不说相对CMD真实赏心悦目,在我的使用中感觉确定有两个。毕竟不是专业的SSH客户端，对于中文文件名无能为力，或许是我不会设置，其二是无法设置代理而且连接到远程VPS时候输入卡顿严重。所以最后还是回归了Xshell。\n开机关机每次进入cmder cd c:\\path 进入vagrant 在运行vagrantup是相当厌烦的，用python脚本启动它是个不错的选择\n12345import osos.system('cd \"c:\\\\\\\\ficapy\\\\\\\\microblog\" &amp;&amp; vagrant reload')  #是不是异常简单呢 切换到目录执行reload操作→不一定要先启动再重载！  # &amp;&amp;表示上个操作执行完毕后在执行下面的操作  \n\n2.Linux配置123456789 sudo apt-get update upgrade \\#更新源&amp;升级系统  sudo apt-get install git git-core python python-dev python-setuptools  sudo easy\\_install pip  sudo pip install virtualenv virtualenvwrapper  nano \\~/.bashrc  添加下面两行配置后重新运行(source \\~/.bashrc)  export WORKON\\_HOME=\\$HOME/.virtualenvs  source /usr/local/bin/virtualenvwrapper.sh  \n\nNOTE:virtualenvwarpper顾名思义是对virtualenv的二次包装,给我的赶脚就是环境不是在放在开发文件夹下面了，而且命令行直观友好容易记忆，还有TAB自动补全哟。常用的大致有mkvirtualenv/rmvirtualenv/lsvirtualenv/workon/deactive;\n另外使用pip安装第三方包的时候不要使用sudo pipinstall,该操作会导致安装到全局，而不是安装到当前环境中.直接使用pipinstall安装.Linux比较小白，暂时我也不知道为什么\nubuntu14自带python2.7可以不用安装python。可是python-dev这个必装，否则pip安装一些需要编译安装的第三方包的时候会报一些莫名其妙的错误，比如pycurl等。同时直接使用二进制包python-pip安装pip有时候安装包会出错（一朝被蛇咬，十年怕井绳啊，所以我还是使用官方推荐的easy_install方式安装了，还有一种是下载get.py方式）\n3.windows端Pycharm设置使用vagrant后，默认设置文件将该目录映射到虚拟的的/vagrant文件夹。我们就将项目统一放在该文件夹下\n不得不说的是pycharm上的vagrant插件在windows上是无法使用的,至少对我来说是这样，手动配置远端python解释器，如下图\nNote.在这里点击fillfrom vagrant config就有用了,改变2222端口是一个很好的选择\n设置远端python解释器后就可以在本地调用了，这还不够，同时还需要设置项目目录映射，以便解释器能够根据本地文件映射到虚拟机文件的地址让解释器执行。选择Run→Configureations,最主要的设置是一、选择解释器；二、设置workdirectory和Path mapping之后就能正确的使用虚拟机的python运行本地文件了;\n另外，有时候不想用xshell连接后运行python。这时候使用pycharm也是相当方便的。Tools→runpythonconsole就够了,会默认添加当前目录到python的包索引列表方便导入,只是有时候这个目录并不完全正确,可能是设置还是有错误吧，我每次都重运行sys.path.extend([‘/vagrant/path~~~~~~‘])手动解决\n~~~~~~~~还想写个安装heroku客户端的,自己还没有很好的实践,以后试试吧，至少测试部署还是相当方便的\n参考：http://blog.segmentfault.com/fenbox/1190000000264347http://pedrokroger.net/getting-started-pycharm-python-ide/http://bliker.github.io/cmder/\n","dateCreated":"2014-10-29T22:19:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2014-10-29T22:19:00+08:00","description":"记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：\n\nwindows7 X64\nvagrant\nubuntu14\nxshell\ncmder(可选)\npycharm\n","headline":"Flask项目初始配置","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/10/29/flask_project_init/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/10/29/flask_project_init/","keywords":"Flask配置, pycharm, vagrant"}</script>
-    <meta name="description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：  windows7 X64 vagrant ubuntu14 xshell cmder(可选) pycharm">
-<meta name="keywords" content="Flask配置,pycharm,vagrant">
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：\n\n  windows7 X64\n  vagrant\n  ubuntu14\n  xshell\n  cmder(可选)\n  pycharm\n\n\n\n准备步骤：\n1.环境搭建1234vagrant box add ubuntu14 URL(或者先下载box文件用文件名替代)  vagrant init ubuntu14  vagrant up  vagrant halt  \nNOTE.vagrant使用可谓相当简单了,使用单文件配置,整个周期分为add/init/up/reload/suspend/halt/destroy;\n另外推荐将22端口进行转发。默认转发到2222，但是当打开多个虚拟机的时候因为2222端口被占用所有会随机指定一个端口。So，固定一下对自己的设置是相当有利的。当然因为Flask默认使用5000端口进行测试，对它进行转发也是理所当然的;\n至于使用vagrantssh登陆,用系统自带的CMD那是相当难受滴,使用cmder全功能版不错。用过一段时间不得不说相对CMD真实赏心悦目,在我的使用中感觉确定有两个。毕竟不是专业的SSH客户端，对于中文文件名无能为力，或许是我不会设置，其二是无法设置代理而且连接到远程VPS时候输入卡顿严重。所以最后还是回归了Xshell。\n开机关机每次进入cmder cd c:\\path 进入vagrant 在运行vagrantup是相当厌烦的，用python脚本启动它是个不错的选择\n12345import osos.system(&#x27;cd &quot;c:\\\\\\\\ficapy\\\\\\\\microblog&quot; &amp;&amp; vagrant reload&#x27;)  #是不是异常简单呢 切换到目录执行reload操作→不一定要先启动再重载！  # &amp;&amp;表示上个操作执行完毕后在执行下面的操作  \n2.Linux配置12345678sudo apt-get update upgrade \\#更新源&amp;升级系统  sudo apt-get install git git-core python python-dev python-setuptools  sudo easy\\_install pip  sudo pip install virtualenv virtualenvwrapper  nano \\~/.bashrc  添加下面两行配置后重新运行(source \\~/.bashrc)  export WORKON\\_HOME=\\$HOME/.virtualenvs  source /usr/local/bin/virtualenvwrapper.sh  \nNOTE:virtualenvwarpper顾名思义是对virtualenv的二次包装,给我的赶脚就是环境不是在放在开发文件夹下面了，而且命令行直观友好容易记忆，还有TAB自动补全哟。常用的大致有mkvirtualenv/rmvirtualenv/lsvirtualenv/workon/deactive;\n另外使用pip安装第三方包的时候不要使用sudo pipinstall,该操作会导致安装到全局，而不是安装到当前环境中.直接使用pipinstall安装.Linux比较小白，暂时我也不知道为什么\nubuntu14自带python2.7可以不用安装python。可是python-dev这个必装，否则pip安装一些需要编译安装的第三方包的时候会报一些莫名其妙的错误，比如pycurl等。同时直接使用二进制包python-pip安装pip有时候安装包会出错（一朝被蛇咬，十年怕井绳啊，所以我还是使用官方推荐的easy_install方式安装了，还有一种是下载get.py方式）\n3.windows端Pycharm设置使用vagrant后，默认设置文件将该目录映射到虚拟的的/vagrant文件夹。我们就将项目统一放在该文件夹下\n不得不说的是pycharm上的vagrant插件在windows上是无法使用的,至少对我来说是这样，手动配置远端python解释器，如下图\nNote.在这里点击fillfrom vagrant config就有用了,改变2222端口是一个很好的选择\n设置远端python解释器后就可以在本地调用了，这还不够，同时还需要设置项目目录映射，以便解释器能够根据本地文件映射到虚拟机文件的地址让解释器执行。选择Run→Configureations,最主要的设置是一、选择解释器；二、设置workdirectory和Path mapping之后就能正确的使用虚拟机的python运行本地文件了;\n另外，有时候不想用xshell连接后运行python。这时候使用pycharm也是相当方便的。Tools→runpythonconsole就够了,会默认添加当前目录到python的包索引列表方便导入,只是有时候这个目录并不完全正确,可能是设置还是有错误吧，我每次都重运行sys.path.extend([‘/vagrant/path~~~~~~‘])手动解决\n~~~~~~~~还想写个安装heroku客户端的,自己还没有很好的实践,以后试试吧，至少测试部署还是相当方便的\n参考：http://blog.segmentfault.com/fenbox/1190000000264347http://pedrokroger.net/getting-started-pycharm-python-ide/http://bliker.github.io/cmder/\n","dateCreated":"2014-10-29T22:19:00+08:00","dateModified":"2021-02-17T10:52:12+08:00","datePublished":"2014-10-29T22:19:00+08:00","description":"记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：\n\n  windows7 X64\n  vagrant\n  ubuntu14\n  xshell\n  cmder(可选)\n  pycharm\n","headline":"Flask项目初始配置","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/10/29/flask_project_init/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/10/29/flask_project_init/","keywords":"Flask配置, pycharm, vagrant"}</script>
+    <meta name="description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：    windows7 X64   vagrant   ubuntu14   xshell   cmder(可选)   pycharm">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Flask项目初始配置">
 <meta property="og:url" content="https://www.zoulei.net/2014/10/29/flask_project_init/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：  windows7 X64 vagrant ubuntu14 xshell cmder(可选) pycharm">
-<meta property="og:locale" content="zh-cn">
+<meta property="og:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：    windows7 X64   vagrant   ubuntu14   xshell   cmder(可选)   pycharm">
+<meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://blogimg.ficapy.com/blogimg/pycharm_remote_interoreters_config.png">
-<meta property="og:updated_time" content="2019-07-26T06:53:30.740Z">
+<meta property="article:published_time" content="2014-10-29T14:19:00.000Z">
+<meta property="article:modified_time" content="2021-02-17T02:52:12.516Z">
+<meta property="article:author" content="ficapy">
+<meta property="article:tag" content="Flask配置">
+<meta property="article:tag" content="pycharm">
+<meta property="article:tag" content="vagrant">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Flask项目初始配置">
-<meta name="twitter:description" content="记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！使用工具：  windows7 X64 vagrant ubuntu14 xshell cmder(可选) pycharm">
 <meta name="twitter:image" content="https://blogimg.ficapy.com/blogimg/pycharm_remote_interoreters_config.png">
     
     
@@ -37,7 +37,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -60,7 +62,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -90,12 +92,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -103,12 +106,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -116,12 +120,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -129,12 +134,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -142,12 +148,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -155,12 +162,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -172,8 +180,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -181,8 +196,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -190,8 +212,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -199,8 +228,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -208,8 +244,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -217,8 +260,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -226,11 +276,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -242,12 +294,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -297,26 +350,23 @@
         <div class="main-content-wrap">
             <p>记录一下flask项目的配置，做个笔记。适合我等小白习惯windows却喜欢dpkg友好的包管理安装软件的童鞋,其实开源项目总是优先满足Unix系统的，确实比在windows上用着舒服哇！<br>使用工具：</p>
 <ul>
-<li>windows7 X64</li>
-<li>vagrant</li>
-<li>ubuntu14</li>
-<li>xshell</li>
-<li>cmder(可选)</li>
-<li>pycharm</li>
+<li>  windows7 X64</li>
+<li>  vagrant</li>
+<li>  ubuntu14</li>
+<li>  xshell</li>
+<li>  cmder(可选)</li>
+<li>  pycharm</li>
 </ul>
 <a id="more"></a>
 
 <p>准备步骤：</p>
 <h2 id="1-环境搭建"><a href="#1-环境搭建" class="headerlink" title="1.环境搭建"></a><strong>1.环境搭建</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">vagrant box add ubuntu14 URL(或者先下载box文件用文件名替代)  </span><br><span class="line">vagrant init ubuntu14  </span><br><span class="line">vagrant up  </span><br><span class="line">vagrant halt  </span><br></pre></td></tr></table></figure>
-
 <p><strong>NOTE.</strong><br>vagrant使用可谓相当简单了,使用单文件配置,整个周期分为add/init/up/reload/suspend/halt/destroy;</p>
 <p>另外推荐将22端口进行转发。默认转发到2222，但是当打开多个虚拟机的时候因为2222端口被占用所有会随机指定一个端口。So，固定一下对自己的设置是相当有利的。当然因为Flask默认使用5000端口进行测试，对它进行转发也是理所当然的;</p>
 <p>至于使用vagrant<br>ssh登陆,用系统自带的CMD那是相当难受滴,使用cmder全功能版不错。用过一段时间不得不说相对CMD真实赏心悦目,在我的使用中感觉确定有两个。毕竟不是专业的SSH客户端，对于中文文件名无能为力，或许是我不会设置，其二是无法设置代理而且连接到远程VPS时候输入卡顿严重。所以最后还是回归了Xshell。</p>
 <p>开机关机每次进入cmder cd c:\path 进入vagrant 在运行vagrant<br>up是相当厌烦的，用python脚本启动它是个不错的选择</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> os</span><br><span class="line"></span><br><span class="line">os.system(<span class="string">'cd "c:\\\\ficapy\\\\microblog" &amp;&amp; vagrant reload'</span>)  </span><br><span class="line"><span class="comment">#是不是异常简单呢 切换到目录执行reload操作→不一定要先启动再重载！  </span></span><br><span class="line"><span class="comment"># &amp;&amp;表示上个操作执行完毕后在执行下面的操作  </span></span><br></pre></td></tr></table></figure>
-
-<h2 id="2-Linux配置"><a href="#2-Linux配置" class="headerlink" title="2.Linux配置"></a><strong>2.Linux配置</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"> </span><br><span class="line">sudo apt-get update upgrade \<span class="comment">#更新源&amp;升级系统  </span></span><br><span class="line">sudo apt-get install git git-core python python-dev python-setuptools  </span><br><span class="line">sudo easy\_install pip  </span><br><span class="line">sudo pip install virtualenv virtualenvwrapper  </span><br><span class="line">nano \~/.bashrc  </span><br><span class="line">添加下面两行配置后重新运行(<span class="built_in">source</span> \~/.bashrc)  </span><br><span class="line"><span class="built_in">export</span> WORKON\_HOME=\<span class="variable">$HOME</span>/.virtualenvs  </span><br><span class="line"><span class="built_in">source</span> /usr/<span class="built_in">local</span>/bin/virtualenvwrapper.sh  </span><br></pre></td></tr></table></figure>
-
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> os</span><br><span class="line"></span><br><span class="line">os.system(<span class="string">&#x27;cd &quot;c:\\\\ficapy\\\\microblog&quot; &amp;&amp; vagrant reload&#x27;</span>)  </span><br><span class="line"><span class="comment">#是不是异常简单呢 切换到目录执行reload操作→不一定要先启动再重载！  </span></span><br><span class="line"><span class="comment"># &amp;&amp;表示上个操作执行完毕后在执行下面的操作  </span></span><br></pre></td></tr></table></figure>
+<h2 id="2-Linux配置"><a href="#2-Linux配置" class="headerlink" title="2.Linux配置"></a><strong>2.Linux配置</strong></h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">sudo apt-get update upgrade \<span class="comment">#更新源&amp;升级系统  </span></span><br><span class="line">sudo apt-get install git git-core python python-dev python-setuptools  </span><br><span class="line">sudo easy\_install pip  </span><br><span class="line">sudo pip install virtualenv virtualenvwrapper  </span><br><span class="line">nano \~/.bashrc  </span><br><span class="line">添加下面两行配置后重新运行(<span class="built_in">source</span> \~/.bashrc)  </span><br><span class="line"><span class="built_in">export</span> WORKON\_HOME=\<span class="variable">$HOME</span>/.virtualenvs  </span><br><span class="line"><span class="built_in">source</span> /usr/<span class="built_in">local</span>/bin/virtualenvwrapper.sh  </span><br></pre></td></tr></table></figure>
 <p><strong>NOTE:</strong><br>virtualenvwarpper顾名思义是对virtualenv的二次包装,给我的赶脚就是环境不是在放在开发文件夹下面了，而且命令行直观友好容易记忆，还有TAB自动补全哟。常用的大致有mkvirtualenv/rmvirtualenv/lsvirtualenv/workon/deactive;</p>
 <p>另外使用pip安装第三方包的时候不要使用sudo pip<br>install,该操作会导致安装到全局，而不是安装到当前环境中.直接使用pip<br>install安装.Linux比较小白，暂时我也不知道为什么</p>
 <p>ubuntu14自带python2.7可以不用安装python。可是python-dev这个必装，否则pip安装一些需要编译安装的第三方包的时候会报一些莫名其妙的错误，比如pycurl等。同时直接使用二进制包python-pip安装pip有时候安装包会出错（一朝被蛇咬，十年怕井绳啊，所以我还是使用官方推荐的easy_install方式安装了，还有一种是下载get.py方式）</p>
@@ -326,7 +376,7 @@
 <p>设置远端python解释器后就可以在本地调用了，这还不够，同时还需要设置项目目录映射，以便解释器能够根据本地文件映射到虚拟机文件的地址让解释器执行。选择Run→Configureations,最主要的设置是一、选择解释器；二、设置work<br>directory和Path mapping之后就能正确的使用虚拟机的python运行本地文件了;</p>
 <p>另外，有时候不想用xshell连接后运行python。这时候使用pycharm也是相当方便的。Tools→run<br>python<br>console就够了,会默认添加当前目录到python的包索引列表方便导入,只是有时候这个目录并不完全正确,可能是设置还是有错误吧，我每次都重运行sys.path.extend([‘/vagrant/path~~~~~~‘])手动解决</p>
 <p>~~~~~~~~还想写个安装heroku客户端的,自己还没有很好的实践,以后试试吧，至少测试部署还是相当方便的</p>
-<p>参考：<br><a href="http://blog.segmentfault.com/fenbox/1190000000264347" target="_blank" rel="noopener">http://blog.segmentfault.com/fenbox/1190000000264347</a><br><a href="http://pedrokroger.net/getting-started-pycharm-python-ide/" target="_blank" rel="noopener">http://pedrokroger.net/getting-started-pycharm-python-ide/</a><br><a href="http://bliker.github.io/cmder/" target="_blank" rel="noopener">http://bliker.github.io/cmder/</a></p>
+<p>参考：<br><a href="http://blog.segmentfault.com/fenbox/1190000000264347">http://blog.segmentfault.com/fenbox/1190000000264347</a><br><a href="http://pedrokroger.net/getting-started-pycharm-python-ide/">http://pedrokroger.net/getting-started-pycharm-python-ide/</a><br><a href="http://bliker.github.io/cmder/">http://bliker.github.io/cmder/</a></p>
 
             
 
@@ -338,7 +388,7 @@
             <div class="post-footer-tags">
                 <span class="text-color-light text-small">标签</span><br/>
                 
-    <a class="tag tag--primary tag--small t-link" href="/tags/Flask配置/">Flask配置</a> <a class="tag tag--primary tag--small t-link" href="/tags/pycharm/">pycharm</a> <a class="tag tag--primary tag--small t-link" href="/tags/vagrant/">vagrant</a>
+    <a class="tag tag--primary tag--small t-none-link" href="/tags/Flask%E9%85%8D%E7%BD%AE/" rel="tag">Flask配置</a> <a class="tag tag--primary tag--small t-none-link" href="/tags/pycharm/" rel="tag">pycharm</a> <a class="tag tag--primary tag--small t-none-link" href="/tags/vagrant/" rel="tag">vagrant</a>
 
             </div>
         
@@ -451,7 +501,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -696,7 +746,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -720,7 +770,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -769,7 +819,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -794,8 +844,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -912,7 +962,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -920,8 +972,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

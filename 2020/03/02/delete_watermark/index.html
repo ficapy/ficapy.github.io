@@ -11,20 +11,18 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下\n\n\n先表明，由于PDF格式的复杂性和水印的多样性。水印情况不一样，处理方式不一样。甚至不同的处理方式对原文件造成的破坏也不一样。如果让一个专家针对特定的文件进行特定的处理肯定可以得到很好的效果，据我记忆所知可以对PDF文件进行追加，给已有对象设置可见性。达到去水印的效果且对文件无任何影响\n在找资料的时候我也看到有些小伙伴通过将PDF转换成图片。再采取图片去水印的方式，最后再转换成PDF文件。可以说这种方式可操作性很强，效果也很好，大多数情况能适用，但是对文件有很大的破坏性。emmm, 废话了这么多，说说我遇到的情况吧。该PDF文件有图片水印，且每个图片长宽都固定。所以我找的方案是，找到所有这些长宽的图片，然后隐藏, 解决思路是我先找到一个能够编辑PDF的软件，查看水印由哪些元素组成，总结发现是一些图片\n使用PyMuPDF使用代码如下\n1234567891011121314151617181920212223242526272829303132import fitzimport osdef delete_watermark(src, dst, width=963, height=215):    doc = fitz.open(src)    for page in range(doc.pageCount):        images = doc.getPageImageList(page)        for content in doc[page]._getContents():            c = doc._getXrefStream(content)            for _, _, width, height, _, _, _, img, _ in images:                if width == width and height == height:                    c = c.replace(\"/&#123;&#125; Do\".format(img).encode(), b\"\")            doc._updateStream(content, c)    dir = os.path.dirname(dst)    if not os.path.exists(os.path.dirname(dst)):        os.makedirs(dir)    doc.save(dst)SRC = \"/Users/ficapy/Downloads/pdf\"DST = \"/Users/ficapy/Downloads/pdf_handle\"for root, dirs, files in os.walk(SRC):    for file in files:        if not file.endswith(\"pdf\"):            continue        src = os.path.join(root, file)        dst = os.path.join(root.replace(SRC, DST), file)        delete_watermark(src, dst)\n\n最后再次强调，具体情况具体分析，想要做到PDF去水印，大多数情况下稍微编码都是能够做到的，但是期待一份代码能够处理所有的去水印情况是不现实的\n参考How to remove an image from PDF?\n","dateCreated":"2020-03-02T18:00:00+08:00","dateModified":"2020-03-28T20:54:08+08:00","datePublished":"2020-03-02T18:00:00+08:00","description":"最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下","headline":"利用python去除PDF水印","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2020/03/02/delete_watermark/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2020/03/02/delete_watermark/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下\n\n\n先表明，由于PDF格式的复杂性和水印的多样性。水印情况不一样，处理方式不一样。甚至不同的处理方式对原文件造成的破坏也不一样。如果让一个专家针对特定的文件进行特定的处理肯定可以得到很好的效果，据我记忆所知可以对PDF文件进行追加，给已有对象设置可见性。达到去水印的效果且对文件无任何影响\n在找资料的时候我也看到有些小伙伴通过将PDF转换成图片。再采取图片去水印的方式，最后再转换成PDF文件。可以说这种方式可操作性很强，效果也很好，大多数情况能适用，但是对文件有很大的破坏性。emmm, 废话了这么多，说说我遇到的情况吧。该PDF文件有图片水印，且每个图片长宽都固定。所以我找的方案是，找到所有这些长宽的图片，然后隐藏, 解决思路是我先找到一个能够编辑PDF的软件，查看水印由哪些元素组成，总结发现是一些图片\n使用PyMuPDF使用代码如下\n1234567891011121314151617181920212223242526272829303132import fitzimport osdef delete_watermark(src, dst, width=963, height=215):    doc = fitz.open(src)    for page in range(doc.pageCount):        images = doc.getPageImageList(page)        for content in doc[page]._getContents():            c = doc._getXrefStream(content)            for _, _, width, height, _, _, _, img, _ in images:                if width == width and height == height:                    c = c.replace(&quot;/&#123;&#125; Do&quot;.format(img).encode(), b&quot;&quot;)            doc._updateStream(content, c)    dir = os.path.dirname(dst)    if not os.path.exists(os.path.dirname(dst)):        os.makedirs(dir)    doc.save(dst)SRC = &quot;/Users/ficapy/Downloads/pdf&quot;DST = &quot;/Users/ficapy/Downloads/pdf_handle&quot;for root, dirs, files in os.walk(SRC):    for file in files:        if not file.endswith(&quot;pdf&quot;):            continue        src = os.path.join(root, file)        dst = os.path.join(root.replace(SRC, DST), file)        delete_watermark(src, dst)\n最后再次强调，具体情况具体分析，想要做到PDF去水印，大多数情况下稍微编码都是能够做到的，但是期待一份代码能够处理所有的去水印情况是不现实的\n参考How to remove an image from PDF?\n","dateCreated":"2020-03-02T18:00:00+08:00","dateModified":"2021-02-17T10:47:21+08:00","datePublished":"2020-03-02T18:00:00+08:00","description":"最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下","headline":"利用python去除PDF水印","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2020/03/02/delete_watermark/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2020/03/02/delete_watermark/"}</script>
     <meta name="description" content="最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="利用python去除PDF水印">
 <meta property="og:url" content="https://www.zoulei.net/2020/03/02/delete_watermark/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下">
-<meta property="og:locale" content="zh-cn">
-<meta property="og:updated_time" content="2020-03-28T12:54:08.045Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-03-02T10:00:00.000Z">
+<meta property="article:modified_time" content="2021-02-17T02:47:21.675Z">
+<meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="利用python去除PDF水印">
-<meta name="twitter:description" content="最近手上有一份PDF资料，水印太多。非常影响阅读。所以写了一个脚本去掉水印。在两年前我折腾过给PDF增加隐藏的文本，说实话，个人感觉PDF格式还是很复杂的。好在很多PDF常见需求都有无数前人躺过坑。在网上搜了一下找了一个比较靠谱的改了一下">
     
     
         
@@ -34,7 +32,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -57,7 +57,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -87,12 +87,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -100,12 +101,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -113,12 +115,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -126,12 +129,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -139,12 +143,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -152,12 +157,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -169,8 +175,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -178,8 +191,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -187,8 +207,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -196,8 +223,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -205,8 +239,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -214,8 +255,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -223,11 +271,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -239,12 +289,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -297,11 +348,10 @@
 
 <p>先表明，由于PDF格式的复杂性和水印的多样性。水印情况不一样，处理方式不一样。甚至不同的处理方式对原文件造成的破坏也不一样。如果让一个专家针对特定的文件进行特定的处理肯定可以得到很好的效果，据我记忆所知可以对PDF文件进行追加，给已有对象设置可见性。达到去水印的效果且对文件无任何影响</p>
 <p>在找资料的时候我也看到有些小伙伴通过将PDF转换成图片。再采取图片去水印的方式，最后再转换成PDF文件。可以说这种方式可操作性很强，效果也很好，大多数情况能适用，但是对文件有很大的破坏性。emmm, 废话了这么多，说说我遇到的情况吧。<span style="color:red"><strong>该PDF文件有图片水印，且每个图片长宽都固定。所以我找的方案是，找到所有这些长宽的图片，然后隐藏</strong></span>, 解决思路是我先找到一个能够编辑PDF的软件，查看水印由哪些元素组成，总结发现是一些图片</p>
-<p>使用<a href="https://github.com/pymupdf/PyMuPDF" target="_blank" rel="noopener">PyMuPDF</a>使用代码如下</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> fitz</span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">delete_watermark</span><span class="params">(src, dst, width=<span class="number">963</span>, height=<span class="number">215</span>)</span>:</span></span><br><span class="line">    doc = fitz.open(src)</span><br><span class="line">    <span class="keyword">for</span> page <span class="keyword">in</span> range(doc.pageCount):</span><br><span class="line">        images = doc.getPageImageList(page)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> content <span class="keyword">in</span> doc[page]._getContents():</span><br><span class="line">            c = doc._getXrefStream(content)</span><br><span class="line">            <span class="keyword">for</span> _, _, width, height, _, _, _, img, _ <span class="keyword">in</span> images:</span><br><span class="line">                <span class="keyword">if</span> width == width <span class="keyword">and</span> height == height:</span><br><span class="line">                    c = c.replace(<span class="string">"/&#123;&#125; Do"</span>.format(img).encode(), <span class="string">b""</span>)</span><br><span class="line">            doc._updateStream(content, c)</span><br><span class="line"></span><br><span class="line">    dir = os.path.dirname(dst)</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> os.path.exists(os.path.dirname(dst)):</span><br><span class="line">        os.makedirs(dir)</span><br><span class="line">    doc.save(dst)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">SRC = <span class="string">"/Users/ficapy/Downloads/pdf"</span></span><br><span class="line">DST = <span class="string">"/Users/ficapy/Downloads/pdf_handle"</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> root, dirs, files <span class="keyword">in</span> os.walk(SRC):</span><br><span class="line">    <span class="keyword">for</span> file <span class="keyword">in</span> files:</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> file.endswith(<span class="string">"pdf"</span>):</span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        src = os.path.join(root, file)</span><br><span class="line">        dst = os.path.join(root.replace(SRC, DST), file)</span><br><span class="line">        delete_watermark(src, dst)</span><br></pre></td></tr></table></figure>
-
+<p>使用<a href="https://github.com/pymupdf/PyMuPDF">PyMuPDF</a>使用代码如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> fitz</span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">delete_watermark</span>(<span class="params">src, dst, width=<span class="number">963</span>, height=<span class="number">215</span></span>):</span></span><br><span class="line">    doc = fitz.<span class="built_in">open</span>(src)</span><br><span class="line">    <span class="keyword">for</span> page <span class="keyword">in</span> <span class="built_in">range</span>(doc.pageCount):</span><br><span class="line">        images = doc.getPageImageList(page)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> content <span class="keyword">in</span> doc[page]._getContents():</span><br><span class="line">            c = doc._getXrefStream(content)</span><br><span class="line">            <span class="keyword">for</span> _, _, width, height, _, _, _, img, _ <span class="keyword">in</span> images:</span><br><span class="line">                <span class="keyword">if</span> width == width <span class="keyword">and</span> height == height:</span><br><span class="line">                    c = c.replace(<span class="string">&quot;/&#123;&#125; Do&quot;</span>.<span class="built_in">format</span>(img).encode(), <span class="string">b&quot;&quot;</span>)</span><br><span class="line">            doc._updateStream(content, c)</span><br><span class="line"></span><br><span class="line">    <span class="built_in">dir</span> = os.path.dirname(dst)</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> os.path.exists(os.path.dirname(dst)):</span><br><span class="line">        os.makedirs(<span class="built_in">dir</span>)</span><br><span class="line">    doc.save(dst)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">SRC = <span class="string">&quot;/Users/ficapy/Downloads/pdf&quot;</span></span><br><span class="line">DST = <span class="string">&quot;/Users/ficapy/Downloads/pdf_handle&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> root, dirs, files <span class="keyword">in</span> os.walk(SRC):</span><br><span class="line">    <span class="keyword">for</span> file <span class="keyword">in</span> files:</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> file.endswith(<span class="string">&quot;pdf&quot;</span>):</span><br><span class="line">            <span class="keyword">continue</span></span><br><span class="line">        src = os.path.join(root, file)</span><br><span class="line">        dst = os.path.join(root.replace(SRC, DST), file)</span><br><span class="line">        delete_watermark(src, dst)</span><br></pre></td></tr></table></figure>
 <p>最后再次强调，具体情况具体分析，想要做到PDF去水印，<span style="color:red"><strong>大多数情况下稍微编码都是能够做到的，但是期待一份代码能够处理所有的去水印情况是不现实的</strong></span></p>
-<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://github.com/pymupdf/PyMuPDF/issues/338#issuecomment-517686621" target="_blank" rel="noopener">How to remove an image from PDF?</a></p>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://github.com/pymupdf/PyMuPDF/issues/338#issuecomment-517686621">How to remove an image from PDF?</a></p>
 
             
 
@@ -419,7 +469,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -664,7 +714,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -688,7 +738,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -737,7 +787,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -762,8 +812,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -880,7 +930,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -888,8 +940,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

@@ -11,21 +11,21 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本\n顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫\n凑字数完毕→_→\n哦，情人节！！！\n\n\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475// ==UserScript==// @name        V2EX签到// @description V2EX任意页面自动签到// @include     http*://*.v2ex.com/*// @include     http*://v2ex.com/*// @author      ficapy// @grant       GM_getValue// @grant       GM_setValue// @grant       GM_xmlhttpRequest// @version     2014.7.18// @namespace   None// ==/UserScript==// 注：参照 http://www.v2ex.com/t/80927 所修改 //在V2EX搜索框显示需要提示的信息var showInformation = function (text) &#123;    document.getElementById(\"q\").value = text;&#125;; //检测是否登录if (document.getElementsByClassName(\"bigger\").length)&#123;    var userId = document.getElementsByClassName(\"bigger\")[0].textContent;&#125;else&#123;    var userId = 0;&#125; // 间隔上次签到一天并且登陆再进行操作(或者切换了账号)→_→if ((new Date().getUTCDate() != GM_getValue(\"sign\", \"25:name\").split(\":\")[0] || userId != GM_getValue(\"sign\", \"25:name\").split(\":\")[1]) &amp;&amp; userId )&#123;    showInformation(\"正在检测每日签到状态...\");    GM_xmlhttpRequest(&#123;        \"method\" : \"GET\",        \"url\" : \"/mission/daily\",        \"onload\" : function(response)&#123;            if (response.responseText.match(\"领取 X 铜币\"))&#123;                var days = response.responseText.match(/已连续登录.+天/)[0];                showInformation(\"正在领取今日签到奖励\");                GM_xmlhttpRequest(&#123;                        \"method\" : \"GET\",                        \"url\" : response.responseText.match(/(?=\\/).+?(?=\\')/g)[1],                        \"onload\" : function (resp) &#123;                            showInformation(\"正在提交\");                            days = \"已连续登陆\" + (parseInt(days.slice(5,-1)) + 1) + \"天\";//返回连续登陆天数                            GM_xmlhttpRequest(&#123;                                \"method\" : \"GET\",                                \"url\" : \"/balance\",                                \"onload\" : function(res)&#123;                                    //格式化日期，将缺0补齐.网站很坑爹的时间是GTM+8，后面的描述文件却没有加上，凌晨测试发现                                    function p(s) &#123;return s&lt;10 ? \"0\"+s :s; &#125;                                    var today = new Date().getUTCFullYear() + p(new Date().getUTCMonth()+1) +p(new Date().getUTCDate());                                    if (res.responseText.match(today + \" 的每日登录奖励\"))&#123;                                        showInformation(days + \"，本次领取到\" + res.responseText.match(eval(\"/\"+today+\".+铜币/\"))[0].split(\"奖励\")[1].replace(/ /g, \"\"));                                        GM_setValue(\"sign\", new Date().getUTCDate() + \":\" + userId);                                    &#125;else&#123;                                        showInformation(\"自动领取遇到意外，你可以手动领取试试\")                                    &#125;                                &#125;                            &#125;)                        &#125;,                        \"onerror\" : function () &#123; showInformation(\"网络异常\");&#125;                    &#125;                )             &#125;else&#123;                if (response.responseText.match(\"已领取\").length)&#123;                    showInformation(\"今日已经领取过了\");                    GM_setValue(\"sign\", new Date().getUTCDate() + \":\" + userId);                &#125;else&#123;                    showInformation(\"无法找到领奖按钮，请检查\");                &#125;            &#125;         &#125;,        \"onerror\" : function()&#123;showInformation(\"签到页面无法打开，请手动领取\");&#125;    &#125;);&#125;\n\n\n","dateCreated":"2014-08-02T22:18:00+08:00","dateModified":"2016-06-29T11:48:48+08:00","datePublished":"2014-08-02T22:18:00+08:00","description":"本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本\n顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫\n凑字数完毕→_→\n哦，情人节！！！","headline":"V2EX签到脚本","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/08/02/v2ex_signin/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/08/02/v2ex_signin/","keywords":"javascript, V2EX, 签到"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本\n顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫\n凑字数完毕→_→\n哦，情人节！！！\n\n   \n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475// ==UserScript==// @name        V2EX签到// @description V2EX任意页面自动签到// @include     http*://*.v2ex.com/*// @include     http*://v2ex.com/*// @author      ficapy// @grant       GM_getValue// @grant       GM_setValue// @grant       GM_xmlhttpRequest// @version     2014.7.18// @namespace   None// ==/UserScript==// 注：参照 http://www.v2ex.com/t/80927 所修改 //在V2EX搜索框显示需要提示的信息var showInformation = function (text) &#123;    document.getElementById(&quot;q&quot;).value = text;&#125;; //检测是否登录if (document.getElementsByClassName(&quot;bigger&quot;).length)&#123;    var userId = document.getElementsByClassName(&quot;bigger&quot;)[0].textContent;&#125;else&#123;    var userId = 0;&#125; // 间隔上次签到一天并且登陆再进行操作(或者切换了账号)→_→if ((new Date().getUTCDate() != GM_getValue(&quot;sign&quot;, &quot;25:name&quot;).split(&quot;:&quot;)[0] || userId != GM_getValue(&quot;sign&quot;, &quot;25:name&quot;).split(&quot;:&quot;)[1]) &amp;&amp; userId )&#123;    showInformation(&quot;正在检测每日签到状态...&quot;);    GM_xmlhttpRequest(&#123;        &quot;method&quot; : &quot;GET&quot;,        &quot;url&quot; : &quot;/mission/daily&quot;,        &quot;onload&quot; : function(response)&#123;            if (response.responseText.match(&quot;领取 X 铜币&quot;))&#123;                var days = response.responseText.match(/已连续登录.+天/)[0];                showInformation(&quot;正在领取今日签到奖励&quot;);                GM_xmlhttpRequest(&#123;                        &quot;method&quot; : &quot;GET&quot;,                        &quot;url&quot; : response.responseText.match(/(?=\\/).+?(?=\\&#x27;)/g)[1],                        &quot;onload&quot; : function (resp) &#123;                            showInformation(&quot;正在提交&quot;);                            days = &quot;已连续登陆&quot; + (parseInt(days.slice(5,-1)) + 1) + &quot;天&quot;;//返回连续登陆天数                            GM_xmlhttpRequest(&#123;                                &quot;method&quot; : &quot;GET&quot;,                                &quot;url&quot; : &quot;/balance&quot;,                                &quot;onload&quot; : function(res)&#123;                                    //格式化日期，将缺0补齐.网站很坑爹的时间是GTM+8，后面的描述文件却没有加上，凌晨测试发现                                    function p(s) &#123;return s&lt;10 ? &quot;0&quot;+s :s; &#125;                                    var today = new Date().getUTCFullYear() + p(new Date().getUTCMonth()+1) +p(new Date().getUTCDate());                                    if (res.responseText.match(today + &quot; 的每日登录奖励&quot;))&#123;                                        showInformation(days + &quot;，本次领取到&quot; + res.responseText.match(eval(&quot;/&quot;+today+&quot;.+铜币/&quot;))[0].split(&quot;奖励&quot;)[1].replace(/ /g, &quot;&quot;));                                        GM_setValue(&quot;sign&quot;, new Date().getUTCDate() + &quot;:&quot; + userId);                                    &#125;else&#123;                                        showInformation(&quot;自动领取遇到意外，你可以手动领取试试&quot;)                                    &#125;                                &#125;                            &#125;)                        &#125;,                        &quot;onerror&quot; : function () &#123; showInformation(&quot;网络异常&quot;);&#125;                    &#125;                )             &#125;else&#123;                if (response.responseText.match(&quot;已领取&quot;).length)&#123;                    showInformation(&quot;今日已经领取过了&quot;);                    GM_setValue(&quot;sign&quot;, new Date().getUTCDate() + &quot;:&quot; + userId);                &#125;else&#123;                    showInformation(&quot;无法找到领奖按钮，请检查&quot;);                &#125;            &#125;         &#125;,        &quot;onerror&quot; : function()&#123;showInformation(&quot;签到页面无法打开，请手动领取&quot;);&#125;    &#125;);&#125;\n\n","dateCreated":"2014-08-02T22:18:00+08:00","dateModified":"2021-02-17T11:06:37+08:00","datePublished":"2014-08-02T22:18:00+08:00","description":"本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本\n顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫\n凑字数完毕→_→\n哦，情人节！！！","headline":"V2EX签到脚本","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/08/02/v2ex_signin/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2014/08/02/v2ex_signin/","keywords":"javascript, V2EX, 签到"}</script>
     <meta name="description" content="本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本 顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫 凑字数完毕→_→ 哦，情人节！！！">
-<meta name="keywords" content="javascript,V2EX,签到">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="V2EX签到脚本">
 <meta property="og:url" content="https://www.zoulei.net/2014/08/02/v2ex_signin/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本 顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫 凑字数完毕→_→ 哦，情人节！！！">
-<meta property="og:locale" content="zh-cn">
-<meta property="og:updated_time" content="2016-06-29T03:48:48.000Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2014-08-02T14:18:00.000Z">
+<meta property="article:modified_time" content="2021-02-17T03:06:37.019Z">
+<meta property="article:author" content="ficapy">
+<meta property="article:tag" content="javascript">
+<meta property="article:tag" content="V2EX">
+<meta property="article:tag" content="签到">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="V2EX签到脚本">
-<meta name="twitter:description" content="本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本 顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫 凑字数完毕→_→ 哦，情人节！！！">
     
     
         
@@ -35,7 +35,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -58,7 +60,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -88,12 +90,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -101,12 +104,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -114,12 +118,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -127,12 +132,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -140,12 +146,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -153,12 +160,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -170,8 +178,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -179,8 +194,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -188,8 +210,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -197,8 +226,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -206,8 +242,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -215,8 +258,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -224,11 +274,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -240,12 +292,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -281,7 +334,7 @@
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/伪技术/">伪技术</a>
+    <a class="category-link" href="/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/">伪技术</a>
 
 
     
@@ -298,9 +351,8 @@
 <p>凑字数完毕→_→</p>
 <p>哦，情人节！！！</p>
 <a id="more"></a>
-
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ==UserScript==</span></span><br><span class="line"><span class="comment">// @name        V2EX签到</span></span><br><span class="line"><span class="comment">// @description V2EX任意页面自动签到</span></span><br><span class="line"><span class="comment">// @include     http*://*.v2ex.com/*</span></span><br><span class="line"><span class="comment">// @include     http*://v2ex.com/*</span></span><br><span class="line"><span class="comment">// @author      ficapy</span></span><br><span class="line"><span class="comment">// @grant       GM_getValue</span></span><br><span class="line"><span class="comment">// @grant       GM_setValue</span></span><br><span class="line"><span class="comment">// @grant       GM_xmlhttpRequest</span></span><br><span class="line"><span class="comment">// @version     2014.7.18</span></span><br><span class="line"><span class="comment">// @namespace   None</span></span><br><span class="line"><span class="comment">// ==/UserScript==</span></span><br><span class="line"><span class="comment">// 注：参照 http://www.v2ex.com/t/80927 所修改</span></span><br><span class="line"> </span><br><span class="line"><span class="comment">//在V2EX搜索框显示需要提示的信息</span></span><br><span class="line"><span class="keyword">var</span> showInformation = <span class="function"><span class="keyword">function</span> (<span class="params">text</span>) </span>&#123;</span><br><span class="line">    <span class="built_in">document</span>.getElementById(<span class="string">"q"</span>).value = text;</span><br><span class="line">&#125;;</span><br><span class="line"> </span><br><span class="line"><span class="comment">//检测是否登录</span></span><br><span class="line"><span class="keyword">if</span> (<span class="built_in">document</span>.getElementsByClassName(<span class="string">"bigger"</span>).length)&#123;</span><br><span class="line">    <span class="keyword">var</span> userId = <span class="built_in">document</span>.getElementsByClassName(<span class="string">"bigger"</span>)[<span class="number">0</span>].textContent;</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    <span class="keyword">var</span> userId = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment">// 间隔上次签到一天并且登陆再进行操作(或者切换了账号)→_→</span></span><br><span class="line"><span class="keyword">if</span> ((<span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate() != GM_getValue(<span class="string">"sign"</span>, <span class="string">"25:name"</span>).split(<span class="string">":"</span>)[<span class="number">0</span>] || userId != GM_getValue(<span class="string">"sign"</span>, <span class="string">"25:name"</span>).split(<span class="string">":"</span>)[<span class="number">1</span>]) &amp;&amp; userId )&#123;</span><br><span class="line">    showInformation(<span class="string">"正在检测每日签到状态..."</span>);</span><br><span class="line">    GM_xmlhttpRequest(&#123;</span><br><span class="line">        <span class="string">"method"</span> : <span class="string">"GET"</span>,</span><br><span class="line">        <span class="string">"url"</span> : <span class="string">"/mission/daily"</span>,</span><br><span class="line">        <span class="string">"onload"</span> : <span class="function"><span class="keyword">function</span>(<span class="params">response</span>)</span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (response.responseText.match(<span class="string">"领取 X 铜币"</span>))&#123;</span><br><span class="line">                <span class="keyword">var</span> days = response.responseText.match(<span class="regexp">/已连续登录.+天/</span>)[<span class="number">0</span>];</span><br><span class="line">                showInformation(<span class="string">"正在领取今日签到奖励"</span>);</span><br><span class="line">                GM_xmlhttpRequest(&#123;</span><br><span class="line">                        <span class="string">"method"</span> : <span class="string">"GET"</span>,</span><br><span class="line">                        <span class="string">"url"</span> : response.responseText.match(<span class="regexp">/(?=\/).+?(?=\')/g</span>)[<span class="number">1</span>],</span><br><span class="line">                        <span class="string">"onload"</span> : <span class="function"><span class="keyword">function</span> (<span class="params">resp</span>) </span>&#123;</span><br><span class="line">                            showInformation(<span class="string">"正在提交"</span>);</span><br><span class="line">                            days = <span class="string">"已连续登陆"</span> + (<span class="built_in">parseInt</span>(days.slice(<span class="number">5</span>,<span class="number">-1</span>)) + <span class="number">1</span>) + <span class="string">"天"</span>;<span class="comment">//返回连续登陆天数</span></span><br><span class="line">                            GM_xmlhttpRequest(&#123;</span><br><span class="line">                                <span class="string">"method"</span> : <span class="string">"GET"</span>,</span><br><span class="line">                                <span class="string">"url"</span> : <span class="string">"/balance"</span>,</span><br><span class="line">                                <span class="string">"onload"</span> : <span class="function"><span class="keyword">function</span>(<span class="params">res</span>)</span>&#123;</span><br><span class="line">                                    <span class="comment">//格式化日期，将缺0补齐.网站很坑爹的时间是GTM+8，后面的描述文件却没有加上，凌晨测试发现</span></span><br><span class="line">                                    <span class="function"><span class="keyword">function</span> <span class="title">p</span>(<span class="params">s</span>) </span>&#123;<span class="keyword">return</span> s&lt;<span class="number">10</span> ? <span class="string">"0"</span>+s :s; &#125;</span><br><span class="line">                                    <span class="keyword">var</span> today = <span class="keyword">new</span> <span class="built_in">Date</span>().getUTCFullYear() + p(<span class="keyword">new</span> <span class="built_in">Date</span>().getUTCMonth()+<span class="number">1</span>) +p(<span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate());</span><br><span class="line">                                    <span class="keyword">if</span> (res.responseText.match(today + <span class="string">" 的每日登录奖励"</span>))&#123;</span><br><span class="line">                                        showInformation(days + <span class="string">"，本次领取到"</span> + res.responseText.match(<span class="built_in">eval</span>(<span class="string">"/"</span>+today+<span class="string">".+铜币/"</span>))[<span class="number">0</span>].split(<span class="string">"奖励"</span>)[<span class="number">1</span>].replace(<span class="regexp">/ /g</span>, <span class="string">""</span>));</span><br><span class="line">                                        GM_setValue(<span class="string">"sign"</span>, <span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate() + <span class="string">":"</span> + userId);</span><br><span class="line">                                    &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                                        showInformation(<span class="string">"自动领取遇到意外，你可以手动领取试试"</span>)</span><br><span class="line">                                    &#125;</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;)</span><br><span class="line">                        &#125;,</span><br><span class="line">                        <span class="string">"onerror"</span> : <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123; showInformation(<span class="string">"网络异常"</span>);&#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                )</span><br><span class="line"> </span><br><span class="line">            &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                <span class="keyword">if</span> (response.responseText.match(<span class="string">"已领取"</span>).length)&#123;</span><br><span class="line">                    showInformation(<span class="string">"今日已经领取过了"</span>);</span><br><span class="line">                    GM_setValue(<span class="string">"sign"</span>, <span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate() + <span class="string">":"</span> + userId);</span><br><span class="line">                &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                    showInformation(<span class="string">"无法找到领奖按钮，请检查"</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"> </span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"onerror"</span> : <span class="function"><span class="keyword">function</span>(<span class="params"></span>)</span>&#123;showInformation(<span class="string">"签到页面无法打开，请手动领取"</span>);&#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
+<p>   </p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// ==UserScript==</span></span><br><span class="line"><span class="comment">// @name        V2EX签到</span></span><br><span class="line"><span class="comment">// @description V2EX任意页面自动签到</span></span><br><span class="line"><span class="comment">// @include     http*://*.v2ex.com/*</span></span><br><span class="line"><span class="comment">// @include     http*://v2ex.com/*</span></span><br><span class="line"><span class="comment">// @author      ficapy</span></span><br><span class="line"><span class="comment">// @grant       GM_getValue</span></span><br><span class="line"><span class="comment">// @grant       GM_setValue</span></span><br><span class="line"><span class="comment">// @grant       GM_xmlhttpRequest</span></span><br><span class="line"><span class="comment">// @version     2014.7.18</span></span><br><span class="line"><span class="comment">// @namespace   None</span></span><br><span class="line"><span class="comment">// ==/UserScript==</span></span><br><span class="line"><span class="comment">// 注：参照 http://www.v2ex.com/t/80927 所修改</span></span><br><span class="line"> </span><br><span class="line"><span class="comment">//在V2EX搜索框显示需要提示的信息</span></span><br><span class="line"><span class="keyword">var</span> showInformation = <span class="function"><span class="keyword">function</span> (<span class="params">text</span>) </span>&#123;</span><br><span class="line">    <span class="built_in">document</span>.getElementById(<span class="string">&quot;q&quot;</span>).value = text;</span><br><span class="line">&#125;;</span><br><span class="line"> </span><br><span class="line"><span class="comment">//检测是否登录</span></span><br><span class="line"><span class="keyword">if</span> (<span class="built_in">document</span>.getElementsByClassName(<span class="string">&quot;bigger&quot;</span>).length)&#123;</span><br><span class="line">    <span class="keyword">var</span> userId = <span class="built_in">document</span>.getElementsByClassName(<span class="string">&quot;bigger&quot;</span>)[<span class="number">0</span>].textContent;</span><br><span class="line">&#125;<span class="keyword">else</span>&#123;</span><br><span class="line">    <span class="keyword">var</span> userId = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="comment">// 间隔上次签到一天并且登陆再进行操作(或者切换了账号)→_→</span></span><br><span class="line"><span class="keyword">if</span> ((<span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate() != GM_getValue(<span class="string">&quot;sign&quot;</span>, <span class="string">&quot;25:name&quot;</span>).split(<span class="string">&quot;:&quot;</span>)[<span class="number">0</span>] || userId != GM_getValue(<span class="string">&quot;sign&quot;</span>, <span class="string">&quot;25:name&quot;</span>).split(<span class="string">&quot;:&quot;</span>)[<span class="number">1</span>]) &amp;&amp; userId )&#123;</span><br><span class="line">    showInformation(<span class="string">&quot;正在检测每日签到状态...&quot;</span>);</span><br><span class="line">    GM_xmlhttpRequest(&#123;</span><br><span class="line">        <span class="string">&quot;method&quot;</span> : <span class="string">&quot;GET&quot;</span>,</span><br><span class="line">        <span class="string">&quot;url&quot;</span> : <span class="string">&quot;/mission/daily&quot;</span>,</span><br><span class="line">        <span class="string">&quot;onload&quot;</span> : <span class="function"><span class="keyword">function</span>(<span class="params">response</span>)</span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (response.responseText.match(<span class="string">&quot;领取 X 铜币&quot;</span>))&#123;</span><br><span class="line">                <span class="keyword">var</span> days = response.responseText.match(<span class="regexp">/已连续登录.+天/</span>)[<span class="number">0</span>];</span><br><span class="line">                showInformation(<span class="string">&quot;正在领取今日签到奖励&quot;</span>);</span><br><span class="line">                GM_xmlhttpRequest(&#123;</span><br><span class="line">                        <span class="string">&quot;method&quot;</span> : <span class="string">&quot;GET&quot;</span>,</span><br><span class="line">                        <span class="string">&quot;url&quot;</span> : response.responseText.match(<span class="regexp">/(?=\/).+?(?=\&#x27;)/g</span>)[<span class="number">1</span>],</span><br><span class="line">                        <span class="string">&quot;onload&quot;</span> : <span class="function"><span class="keyword">function</span> (<span class="params">resp</span>) </span>&#123;</span><br><span class="line">                            showInformation(<span class="string">&quot;正在提交&quot;</span>);</span><br><span class="line">                            days = <span class="string">&quot;已连续登陆&quot;</span> + (<span class="built_in">parseInt</span>(days.slice(<span class="number">5</span>,-<span class="number">1</span>)) + <span class="number">1</span>) + <span class="string">&quot;天&quot;</span>;<span class="comment">//返回连续登陆天数</span></span><br><span class="line">                            GM_xmlhttpRequest(&#123;</span><br><span class="line">                                <span class="string">&quot;method&quot;</span> : <span class="string">&quot;GET&quot;</span>,</span><br><span class="line">                                <span class="string">&quot;url&quot;</span> : <span class="string">&quot;/balance&quot;</span>,</span><br><span class="line">                                <span class="string">&quot;onload&quot;</span> : <span class="function"><span class="keyword">function</span>(<span class="params">res</span>)</span>&#123;</span><br><span class="line">                                    <span class="comment">//格式化日期，将缺0补齐.网站很坑爹的时间是GTM+8，后面的描述文件却没有加上，凌晨测试发现</span></span><br><span class="line">                                    <span class="function"><span class="keyword">function</span> <span class="title">p</span>(<span class="params">s</span>) </span>&#123;<span class="keyword">return</span> s&lt;<span class="number">10</span> ? <span class="string">&quot;0&quot;</span>+s :s; &#125;</span><br><span class="line">                                    <span class="keyword">var</span> today = <span class="keyword">new</span> <span class="built_in">Date</span>().getUTCFullYear() + p(<span class="keyword">new</span> <span class="built_in">Date</span>().getUTCMonth()+<span class="number">1</span>) +p(<span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate());</span><br><span class="line">                                    <span class="keyword">if</span> (res.responseText.match(today + <span class="string">&quot; 的每日登录奖励&quot;</span>))&#123;</span><br><span class="line">                                        showInformation(days + <span class="string">&quot;，本次领取到&quot;</span> + res.responseText.match(<span class="built_in">eval</span>(<span class="string">&quot;/&quot;</span>+today+<span class="string">&quot;.+铜币/&quot;</span>))[<span class="number">0</span>].split(<span class="string">&quot;奖励&quot;</span>)[<span class="number">1</span>].replace(<span class="regexp">/ /g</span>, <span class="string">&quot;&quot;</span>));</span><br><span class="line">                                        GM_setValue(<span class="string">&quot;sign&quot;</span>, <span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate() + <span class="string">&quot;:&quot;</span> + userId);</span><br><span class="line">                                    &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                                        showInformation(<span class="string">&quot;自动领取遇到意外，你可以手动领取试试&quot;</span>)</span><br><span class="line">                                    &#125;</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;)</span><br><span class="line">                        &#125;,</span><br><span class="line">                        <span class="string">&quot;onerror&quot;</span> : <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123; showInformation(<span class="string">&quot;网络异常&quot;</span>);&#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                )</span><br><span class="line"> </span><br><span class="line">            &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                <span class="keyword">if</span> (response.responseText.match(<span class="string">&quot;已领取&quot;</span>).length)&#123;</span><br><span class="line">                    showInformation(<span class="string">&quot;今日已经领取过了&quot;</span>);</span><br><span class="line">                    GM_setValue(<span class="string">&quot;sign&quot;</span>, <span class="keyword">new</span> <span class="built_in">Date</span>().getUTCDate() + <span class="string">&quot;:&quot;</span> + userId);</span><br><span class="line">                &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                    showInformation(<span class="string">&quot;无法找到领奖按钮，请检查&quot;</span>);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"> </span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">&quot;onerror&quot;</span> : <span class="function"><span class="keyword">function</span>(<span class="params"></span>)</span>&#123;showInformation(<span class="string">&quot;签到页面无法打开，请手动领取&quot;</span>);&#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 
             
@@ -313,7 +365,7 @@
             <div class="post-footer-tags">
                 <span class="text-color-light text-small">标签</span><br/>
                 
-    <a class="tag tag--primary tag--small t-link" href="/tags/V2EX/">V2EX</a> <a class="tag tag--primary tag--small t-link" href="/tags/javascript/">javascript</a> <a class="tag tag--primary tag--small t-link" href="/tags/签到/">签到</a>
+    <a class="tag tag--primary tag--small t-none-link" href="/tags/V2EX/" rel="tag">V2EX</a> <a class="tag tag--primary tag--small t-none-link" href="/tags/javascript/" rel="tag">javascript</a> <a class="tag tag--primary tag--small t-none-link" href="/tags/%E7%AD%BE%E5%88%B0/" rel="tag">签到</a>
 
             </div>
         
@@ -426,7 +478,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -671,7 +723,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -695,7 +747,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -744,7 +796,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -769,8 +821,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -887,7 +939,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -895,8 +949,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

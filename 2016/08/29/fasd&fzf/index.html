@@ -11,22 +11,20 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找\n\n\nfasd目录快速跳转工具挺多的autojump,z.我最开始用的是z，用长了感觉好像有bug,然后就换fasd.好像感觉好用那么一点点。这种工具原理都差不多。对你的历史输入进行统计，放入数据库。然后根据你输入的结果从数据库匹配达到快速cd的结果。安装好后直接输入fasd,就可以看到得分以及目录/文件。从它的原理也能可以看出来。它只能对有记录的快速切换(从你安装这个软件开始记录)。对于一个新的目录首次访问还是需要用cd。这个软件个常用的命令也就2个z和v，分别代表切换目录和使用$EDITOR打开文件.所以:\n\n当你需要快速cd到以前打开过的目录用z,当你首次打开一个目录用cd(或者打开当前目录)；\n当你需要用vim打开以前打开的文件用v,首次打开或确定目录vim\n它真的很方便了,我看到有些人把它和fzf合起来一起用。我想了很久，除了装逼降低效率。我没想到有什么用\n\nfzf这款软件对于提高命令行效率也是很牛逼,而且看github上面的提交记录，依旧非常活跃(对于一个小白没什么比项目的活跃更重要了，因为它意味着你可能遇到的坑前人都可能已经趟过).而且这个项目的作者好像非常自信,项目说明里面居然只列举了优点，丝毫没有缺点.\n这是一款安装上去就能让你眼前一亮的软件。比如Ctrl+R，完美替换了shell默认的历史记录功能,当输入指令的时候使用ctrl+T就能列出当前目录下所有的文件。当然这只是列举的2个最常用的功能,实际上，它的潜力远不止这么点，如果你用过osx上被人吹成神的alfred,那么fzf的概念可能和它有一定的相似性(取得一些结果,然后使用列表排除出来),举个例子,IDE中我们经常使用全局替换,用以下命令也能搞定grep -rn &#39;python&#39;| fzf -m | awk -F &#39;:&#39; &#39;{print $1}&#39; | xargs -L 1 sed -i -e &#39;s/python/hello/g&#39;效果如下解释一下，\n\n使用grep递归匹配当前目录含有python的文件,-r为递归，-n为显示行号。\n使用fzf显示出来,-m为多行模式,使用tab为选择或者取消选择。\n使用awk对选择的的结果进行处理,-F为选择分隔符，结果为多个目录\n使用xargs对结果执行sed替换,-L为对每一个非空行执行后续命令(Call utility for every number non-empty lines read.  A line ending with a space continues to the next non-empty line)\n另外grep的效率是非常高的,如果你直接用sed进行全局替换-_-文件一多还是很花费时间滴,比如这种sed -i -- &#39;s/foo/bar/g&#39; **/*(D.)\n\n缺点虽然作者没有列举出来,我还是就我的个人感觉说一下\n\n蠢到家的匹配效果,你很难理解它是根据什么给你匹配的,放一张图，就这匪夷所思的匹配，你不得不使用^$!等额外的规则或者多输入一些字符然后上下键选择\n看着炫酷,有时候没必要那么炫酷，比如使用z的时候tab如果有多个选择，这个时候如果你用fzf替代，他会使用curses全屏让你选择,其实整个过程已经多输入了好多字符.\n\n总结fasd和fzf的很好用，而且它们都不需要任何配置都能让你感到高效!对于fzf如果你花时间配置是有特别多玩法的，可以参照官网fzf_examples和gotbletu的视频教程体验它的强大。另外，如果你喜欢这2个软件，那么你一定会喜欢zsh-autosuggestions试一试吧~~\n","dateCreated":"2016-08-29T21:55:24+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-08-29T21:55:24+08:00","description":"来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找","headline":"fasd和fzf","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/29/fasd&fzf/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/08/29/fasd&fzf/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找\n\n\nfasd目录快速跳转工具挺多的autojump,z.我最开始用的是z，用长了感觉好像有bug,然后就换fasd.好像感觉好用那么一点点。这种工具原理都差不多。对你的历史输入进行统计，放入数据库。然后根据你输入的结果从数据库匹配达到快速cd的结果。安装好后直接输入fasd,就可以看到得分以及目录/文件。从它的原理也能可以看出来。它只能对有记录的快速切换(从你安装这个软件开始记录)。对于一个新的目录首次访问还是需要用cd。这个软件个常用的命令也就2个z和v，分别代表切换目录和使用$EDITOR打开文件.所以:\n\n当你需要快速cd到以前打开过的目录用z,当你首次打开一个目录用cd(或者打开当前目录)；\n当你需要用vim打开以前打开的文件用v,首次打开或确定目录vim\n它真的很方便了,我看到有些人把它和fzf合起来一起用。我想了很久，除了装逼降低效率。我没想到有什么用\n\nfzf这款软件对于提高命令行效率也是很牛逼,而且看github上面的提交记录，依旧非常活跃(对于一个小白没什么比项目的活跃更重要了，因为它意味着你可能遇到的坑前人都可能已经趟过).而且这个项目的作者好像非常自信,项目说明里面居然只列举了优点，丝毫没有缺点.\n这是一款安装上去就能让你眼前一亮的软件。比如Ctrl+R，完美替换了shell默认的历史记录功能,当输入指令的时候使用ctrl+T就能列出当前目录下所有的文件。当然这只是列举的2个最常用的功能,实际上，它的潜力远不止这么点，如果你用过osx上被人吹成神的alfred,那么fzf的概念可能和它有一定的相似性(取得一些结果,然后使用列表排除出来),举个例子,IDE中我们经常使用全局替换,用以下命令也能搞定grep -rn &#39;python&#39;| fzf -m | awk -F &#39;:&#39; &#39;&#123;print $1&#125;&#39; | xargs -L 1 sed -i -e &#39;s/python/hello/g&#39;效果如下解释一下，\n\n使用grep递归匹配当前目录含有python的文件,-r为递归，-n为显示行号。\n使用fzf显示出来,-m为多行模式,使用tab为选择或者取消选择。\n使用awk对选择的的结果进行处理,-F为选择分隔符，结果为多个目录\n使用xargs对结果执行sed替换,-L为对每一个非空行执行后续命令(Call utility for every number non-empty lines read.  A line ending with a space continues to the next non-empty line)\n另外grep的效率是非常高的,如果你直接用sed进行全局替换-_-文件一多还是很花费时间滴,比如这种sed -i -- &#39;s/foo/bar/g&#39; **/*(D.)\n\n缺点虽然作者没有列举出来,我还是就我的个人感觉说一下\n\n蠢到家的匹配效果,你很难理解它是根据什么给你匹配的,放一张图，就这匪夷所思的匹配，你不得不使用^$!等额外的规则或者多输入一些字符然后上下键选择\n看着炫酷,有时候没必要那么炫酷，比如使用z的时候tab如果有多个选择，这个时候如果你用fzf替代，他会使用curses全屏让你选择,其实整个过程已经多输入了好多字符.\n\n总结fasd和fzf的很好用，而且它们都不需要任何配置都能让你感到高效!对于fzf如果你花时间配置是有特别多玩法的，可以参照官网fzf_examples和gotbletu的视频教程体验它的强大。另外，如果你喜欢这2个软件，那么你一定会喜欢zsh-autosuggestions试一试吧~~\n","dateCreated":"2016-08-29T21:55:24+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-08-29T21:55:24+08:00","description":"来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找","headline":"fasd和fzf","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/29/fasd&fzf/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/08/29/fasd&fzf/"}</script>
     <meta name="description" content="来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="fasd和fzf">
 <meta property="og:url" content="https://www.zoulei.net/2016/08/29/fasd&fzf/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找">
-<meta property="og:locale" content="zh-cn">
+<meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://blogimg.ficapy.com/blogimg/fzf_grep_sed.gif">
 <meta property="og:image" content="http://blogimg.ficapy.com/blogimg/fzf_match.png">
-<meta property="og:updated_time" content="2019-07-26T06:53:30.632Z">
+<meta property="article:published_time" content="2016-08-29T13:55:24.000Z">
+<meta property="article:modified_time" content="2019-07-26T06:53:30.632Z">
+<meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="fasd和fzf">
-<meta name="twitter:description" content="来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找">
 <meta name="twitter:image" content="https://blogimg.ficapy.com/blogimg/fzf_grep_sed.gif">
     
     
@@ -37,7 +35,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -60,7 +60,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -90,12 +90,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -103,12 +104,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -116,12 +118,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -129,12 +132,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -142,12 +146,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -155,12 +160,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -172,8 +178,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -181,8 +194,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -190,8 +210,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -199,8 +226,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -208,8 +242,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -217,8 +258,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -226,11 +274,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -242,12 +292,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -298,14 +349,14 @@
             <p>来2个日常使用命令行工具玩一玩，前一个是目录快速跳转，后一个是使用curses模糊查找</p>
 <a id="more"></a>
 
-<h2 id="fasd"><a href="#fasd" class="headerlink" title="fasd"></a><a href="https://github.com/clvv/fasd" target="_blank" rel="noopener">fasd</a></h2><p>目录快速跳转工具挺多的autojump,z.我最开始用的是z，用长了感觉好像有bug,然后就换fasd.<code>好像</code>感觉好用那么一点点。这种工具原理都差不多。对你的历史输入进行统计，放入数据库。然后根据你输入的结果从数据库匹配达到快速cd的结果。安装好后直接输入fasd,就可以看到得分以及目录/文件。从它的原理也能可以看出来。它只能对有记录的快速切换(从你安装这个软件开始记录)。对于一个新的目录首次访问还是需要用cd。这个软件个常用的命令也就2个<br>z和v，分别代表切换目录和使用$EDITOR打开文件.所以:</p>
+<h2 id="fasd"><a href="#fasd" class="headerlink" title="fasd"></a><a href="https://github.com/clvv/fasd">fasd</a></h2><p>目录快速跳转工具挺多的autojump,z.我最开始用的是z，用长了感觉好像有bug,然后就换fasd.<code>好像</code>感觉好用那么一点点。这种工具原理都差不多。对你的历史输入进行统计，放入数据库。然后根据你输入的结果从数据库匹配达到快速cd的结果。安装好后直接输入fasd,就可以看到得分以及目录/文件。从它的原理也能可以看出来。它只能对有记录的快速切换(从你安装这个软件开始记录)。对于一个新的目录首次访问还是需要用cd。这个软件个常用的命令也就2个<br>z和v，分别代表切换目录和使用$EDITOR打开文件.所以:</p>
 <ul>
 <li>当你需要快速cd到以前打开过的目录用z,当你首次打开一个目录用cd(或者打开当前目录)；</li>
 <li>当你需要用vim打开以前打开的文件用v,首次打开或确定目录vim</li>
 <li>它真的很方便了,我看到有些人把它和fzf合起来一起用。我想了很久，除了装逼降低效率。我没想到有什么用</li>
 </ul>
-<h2 id="fzf"><a href="#fzf" class="headerlink" title="fzf"></a><a href="https://github.com/junegunn/fzf" target="_blank" rel="noopener">fzf</a></h2><p>这款软件对于提高命令行效率也是很牛逼,而且看github上面的提交记录，依旧非常活跃(对于一个小白没什么比项目的活跃更重要了，因为它意味着你可能遇到的坑前人都可能已经趟过).而且这个项目的作者好像非常自信,项目说明里面居然只列举了优点，丝毫没有缺点.</p>
-<p>这是一款安装上去就能让你眼前一亮的软件。比如Ctrl+R，完美替换了shell默认的历史记录功能,当输入指令的时候使用ctrl+T就能列出当前目录下所有的文件。当然这只是列举的2个最常用的功能,实际上，它的潜力远不止这么点，如果你用过osx上被人吹成神的alfred,那么fzf的概念可能和它有一定的相似性(取得一些结果,然后使用列表排除出来),举个例子,IDE中我们经常使用全局替换,用以下命令也能搞定<br><code>grep -rn &#39;python&#39;| fzf -m | awk -F &#39;:&#39; &#39;{print $1}&#39; | xargs -L 1 sed -i -e &#39;s/python/hello/g&#39;</code><br>效果如下<img src="https://blogimg.ficapy.com/blogimg/fzf_grep_sed.gif" alt="fzf_grep_sed"><br>解释一下，</p>
+<h2 id="fzf"><a href="#fzf" class="headerlink" title="fzf"></a><a href="https://github.com/junegunn/fzf">fzf</a></h2><p>这款软件对于提高命令行效率也是很牛逼,而且看github上面的提交记录，依旧非常活跃(对于一个小白没什么比项目的活跃更重要了，因为它意味着你可能遇到的坑前人都可能已经趟过).而且这个项目的作者好像非常自信,项目说明里面居然只列举了优点，丝毫没有缺点.</p>
+<p>这是一款安装上去就能让你眼前一亮的软件。比如Ctrl+R，完美替换了shell默认的历史记录功能,当输入指令的时候使用ctrl+T就能列出当前目录下所有的文件。当然这只是列举的2个最常用的功能,实际上，它的潜力远不止这么点，如果你用过osx上被人吹成神的alfred,那么fzf的概念可能和它有一定的相似性(取得一些结果,然后使用列表排除出来),举个例子,IDE中我们经常使用全局替换,用以下命令也能搞定<br><code>grep -rn &#39;python&#39;| fzf -m | awk -F &#39;:&#39; &#39;&#123;print $1&#125;&#39; | xargs -L 1 sed -i -e &#39;s/python/hello/g&#39;</code><br>效果如下<img src="https://blogimg.ficapy.com/blogimg/fzf_grep_sed.gif" alt="fzf_grep_sed"><br>解释一下，</p>
 <ol>
 <li>使用grep递归匹配当前目录含有python的文件,-r为递归，-n为显示行号。</li>
 <li>使用fzf显示出来,-m为多行模式,使用tab为选择或者取消选择。</li>
@@ -318,7 +369,7 @@
 <li>蠢到家的匹配效果,你很难理解它是根据什么给你匹配的,放一张图<img src="http://blogimg.ficapy.com/blogimg/fzf_match.png" alt="fzf_match">，就这匪夷所思的匹配，你不得不使用^$!等额外的规则或者多输入一些字符然后上下键选择</li>
 <li>看着炫酷,有时候没必要那么炫酷，比如使用z的时候tab如果有多个选择，这个时候如果你用fzf替代，他会使用curses全屏让你选择,其实整个过程已经多输入了好多字符.</li>
 </ol>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>fasd和fzf的很好用，而且它们都不需要任何配置都能让你感到高效!对于fzf如果你花时间配置是有特别多玩法的，可以参照官网<a href="https://github.com/junegunn/fzf/wiki/examples" target="_blank" rel="noopener">fzf_examples</a>和<a href="https://www.youtube.com/playlist?list=PLqv94xWU9zZ2fMsMMDF4PjtNHCeBFbggD" target="_blank" rel="noopener">gotbletu的视频教程</a>体验它的强大。另外，如果你喜欢这2个软件，那么你一定会喜欢<a href="https://github.com/zsh-users/zsh-autosuggestions" target="_blank" rel="noopener">zsh-autosuggestions</a>试一试吧~~</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>fasd和fzf的很好用，而且它们都不需要任何配置都能让你感到高效!对于fzf如果你花时间配置是有特别多玩法的，可以参照官网<a href="https://github.com/junegunn/fzf/wiki/examples">fzf_examples</a>和<a href="https://www.youtube.com/playlist?list=PLqv94xWU9zZ2fMsMMDF4PjtNHCeBFbggD">gotbletu的视频教程</a>体验它的强大。另外，如果你喜欢这2个软件，那么你一定会喜欢<a href="https://github.com/zsh-users/zsh-autosuggestions">zsh-autosuggestions</a>试一试吧~~</p>
 
             
 
@@ -436,7 +487,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -681,7 +732,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -705,7 +756,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -754,7 +805,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -779,8 +830,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -897,7 +948,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -905,8 +958,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

@@ -11,20 +11,18 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"对ios app抓包的方式挺多的，最常规的方案就是本机开启一个http代理。然后手机进行设置，将本机内网ip以及端口设置上去。安装一个https证书，设置为信任就可以开始抓包了。这个方案非常通用。类似的实现以Fiddler、charles为代表，它们确实很好用，也很好理解。但是缺点也是有的\n\n最大的缺点就是每一次使用都需要设置代理，你需要查看本机内网ip，然后填写到手机上。调试完成后再将手机的代理设置清除\nFiddler只有windows版本可用，意味着mac需要使用虚拟机，charles并没有Fiddler好用，然而还卖的贼贵\n\n同类型的开源方案最常见的是Python实现的mitmproxy。mitmweb也提供图形界面，别说，只要你不嫌弃还是挺好用的\nosx上还有个比较奇葩的所谓网络调试软件Surge。99美刀，卖的还是挺贵的，功能还行，界面也挺花哨，忽悠小白是足够了。用它也能够远程调试，代价是需要用有线连接到mac电脑上，然后mac端软件就能捕获远程手机的网络请求数据，这个软件界面确实挺不错，然而请求过滤查找对比下Fiddler而言就是个渣渣吧。\n因此想了一个比较另类的方案，手机使用mac电脑的网络，同时使用pf对请求进行转发。使用mitmproxy的透明代理模式获得手机端的数据，使用mitmweb进行展示\n\n\n本篇环境\n机器 MBP 2015/ ipad mini\n系统  osx 10.13/ ios 11.3\n\n1. 让ipad通过蓝牙连上osx的网络参照https://www.zhihu.com/question/24480413，先让手机通过蓝牙连接上电脑，在电脑设置网络共享，选择蓝牙的方式，这一步基本就配置好了\n接下来是验证。通过ifconfig命令查看目前存在哪些网络接口，查看active状态的接口，自己排除一下。像我的就是bridge100。然后可以使用wireshark看一下这个网络接口是否正常收到了手机端的数据请求sudo /Applications/Wireshark.app/Contents/MacOS/Wireshark。待能正常通过电脑网络访问后进行后续操作\n通过PF对网络数据进行转发\n允许ip转发\n 1sudo sysctl -w net.inet.ip.forwarding=1\n\n设置pf转发规则(将80、443端口的内容转发到本地8080端口)\n 1234sudo vim /etc/pf.conf添加如下行(记住使用对应的网络接口)另外pf的配置对顺序有要求，像我本机就需要将它放到rdr-anchor &quot;com.apple/*&quot;下一行rdr on bridge100 inet proto tcp to any port &#123;80, 443&#125; -&gt; 127.0.0.1 port 8080\n\n启用pf规则\n 1sudo pfctl -e\n\n配置sudoer文件允许mitmproxy访问pfctl\n 123sudo vim /etc/sudoers添加以下行ALL ALL=NOPASSWD: /sbin/pfctl -s state\n\n\n\n\n安装mitmproxy使用12brew install mitmproxymitmweb -T --ignore apple\n\n手机端访问http://mimt.it点击安装https证书。除此之外还需要设置-&gt; 通用 -&gt; 关于  -&gt; 信任证书设置 -&gt; 设置为可信。上面ignore参数是正则匹配。忽略对域名包含apple的处理。因为在客户端强制证书验证的时候伪造证书是过不了的，这样会在调试的时候影响ios消息推送啥的bingo~~ 结束了\n不足之处就是它并不会显示访问的域名，只会显示ip(感觉这是一个bug，因为mitmproxy使用–host参数是能够看到正确的地址的)\n然后就是学习一下mitmproxy的过滤语句了，很简单，在web操作上会有提示\n整个过程就是这样，让手机通过电脑进行上网，用mitmproxy的透明代理模式从三层网络上捕获数据(这样就避免了在手机端设置代理)，希望能对你们有所帮助┑(￣Д ￣)┍\n参考https://docs.mitmproxy.org/stable/howto-transparent/https://medium.com/bugbountywriteup/intercepting-network-data-with-mitmproxy-on-macos-3e3f2f0123b2\n","dateCreated":"2018-05-25T17:45:59+08:00","dateModified":"2018-05-25T18:52:46+08:00","datePublished":"2018-05-25T17:45:59+08:00","description":"对ios app抓包的方式挺多的，最常规的方案就是本机开启一个http代理。然后手机进行设置，将本机内网ip以及端口设置上去。安装一个https证书，设置为信任就可以开始抓包了。这个方案非常通用。类似的实现以Fiddler、charles为代表，它们确实很好用，也很好理解。但是缺点也是有的\n\n最大的缺点就是每一次使用都需要设置代理，你需要查看本机内网ip，然后填写到手机上。调试完成后再将手机的代理设置清除\nFiddler只有windows版本可用，意味着mac需要使用虚拟机，charles并没有Fiddler好用，然而还卖的贼贵\n\n同类型的开源方案最常见的是Python实现的mitmproxy。mitmweb也提供图形界面，别说，只要你不嫌弃还是挺好用的\nosx上还有个比较奇葩的所谓网络调试软件Surge。99美刀，卖的还是挺贵的，功能还行，界面也挺花哨，忽悠小白是足够了。用它也能够远程调试，代价是需要用有线连接到mac电脑上，然后mac端软件就能捕获远程手机的网络请求数据，这个软件界面确实挺不错，然而请求过滤查找对比下Fiddler而言就是个渣渣吧。\n因此想了一个比较另类的方案，手机使用mac电脑的网络，同时使用pf对请求进行转发。使用mitmproxy的透明代理模式获得手机端的数据，使用mitmweb进行展示","headline":"mac上使用mitmproxy对ios app进行抓包","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/05/25/mitmproxy_transparent_model_network_capture/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/05/25/mitmproxy_transparent_model_network_capture/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"对ios app抓包的方式挺多的，最常规的方案就是本机开启一个http代理。然后手机进行设置，将本机内网ip以及端口设置上去。安装一个https证书，设置为信任就可以开始抓包了。这个方案非常通用。类似的实现以Fiddler、charles为代表，它们确实很好用，也很好理解。但是缺点也是有的\n\n最大的缺点就是每一次使用都需要设置代理，你需要查看本机内网ip，然后填写到手机上。调试完成后再将手机的代理设置清除\nFiddler只有windows版本可用，意味着mac需要使用虚拟机，charles并没有Fiddler好用，然而还卖的贼贵\n\n同类型的开源方案最常见的是Python实现的mitmproxy。mitmweb也提供图形界面，别说，只要你不嫌弃还是挺好用的\nosx上还有个比较奇葩的所谓网络调试软件Surge。99美刀，卖的还是挺贵的，功能还行，界面也挺花哨，忽悠小白是足够了。用它也能够远程调试，代价是需要用有线连接到mac电脑上，然后mac端软件就能捕获远程手机的网络请求数据，这个软件界面确实挺不错，然而请求过滤查找对比下Fiddler而言就是个渣渣吧。\n因此想了一个比较另类的方案，手机使用mac电脑的网络，同时使用pf对请求进行转发。使用mitmproxy的透明代理模式获得手机端的数据，使用mitmweb进行展示\n\n\n本篇环境\n机器 MBP 2015/ ipad mini\n系统  osx 10.13/ ios 11.3\n\n1. 让ipad通过蓝牙连上osx的网络参照https://www.zhihu.com/question/24480413，先让手机通过蓝牙连接上电脑，在电脑设置网络共享，选择蓝牙的方式，这一步基本就配置好了\n接下来是验证。通过ifconfig命令查看目前存在哪些网络接口，查看active状态的接口，自己排除一下。像我的就是bridge100。然后可以使用wireshark看一下这个网络接口是否正常收到了手机端的数据请求sudo /Applications/Wireshark.app/Contents/MacOS/Wireshark。待能正常通过电脑网络访问后进行后续操作\n通过PF对网络数据进行转发\n允许ip转发\n 1sudo sysctl -w net.inet.ip.forwarding&#x3D;1\n设置pf转发规则(将80、443端口的内容转发到本地8080端口)\n 1234sudo vim &#x2F;etc&#x2F;pf.conf添加如下行(记住使用对应的网络接口)另外pf的配置对顺序有要求，像我本机就需要将它放到rdr-anchor &quot;com.apple&#x2F;*&quot;下一行rdr on bridge100 inet proto tcp to any port &#123;80, 443&#125; -&gt; 127.0.0.1 port 8080\n启用pf规则\n 1sudo pfctl -e\n配置sudoer文件允许mitmproxy访问pfctl\n 123sudo vim &#x2F;etc&#x2F;sudoers添加以下行ALL ALL&#x3D;NOPASSWD: &#x2F;sbin&#x2F;pfctl -s state\n安装mitmproxy使用\n\n12brew install mitmproxymitmweb -T --ignore apple\n手机端访问http://mimt.it点击安装https证书。除此之外还需要设置-&gt; 通用 -&gt; 关于  -&gt; 信任证书设置 -&gt; 设置为可信。上面ignore参数是正则匹配。忽略对域名包含apple的处理。因为在客户端强制证书验证的时候伪造证书是过不了的，这样会在调试的时候影响ios消息推送啥的bingo~~ 结束了\n不足之处就是它并不会显示访问的域名，只会显示ip(感觉这是一个bug，因为mitmproxy使用–host参数是能够看到正确的地址的)\n然后就是学习一下mitmproxy的过滤语句了，很简单，在web操作上会有提示\n整个过程就是这样，让手机通过电脑进行上网，用mitmproxy的透明代理模式从三层网络上捕获数据(这样就避免了在手机端设置代理)，希望能对你们有所帮助┑(￣Д ￣)┍\n参考https://docs.mitmproxy.org/stable/howto-transparent/https://medium.com/bugbountywriteup/intercepting-network-data-with-mitmproxy-on-macos-3e3f2f0123b2\n","dateCreated":"2018-05-25T17:45:59+08:00","dateModified":"2018-05-25T18:52:46+08:00","datePublished":"2018-05-25T17:45:59+08:00","description":"对ios app抓包的方式挺多的，最常规的方案就是本机开启一个http代理。然后手机进行设置，将本机内网ip以及端口设置上去。安装一个https证书，设置为信任就可以开始抓包了。这个方案非常通用。类似的实现以Fiddler、charles为代表，它们确实很好用，也很好理解。但是缺点也是有的\n\n最大的缺点就是每一次使用都需要设置代理，你需要查看本机内网ip，然后填写到手机上。调试完成后再将手机的代理设置清除\nFiddler只有windows版本可用，意味着mac需要使用虚拟机，charles并没有Fiddler好用，然而还卖的贼贵\n\n同类型的开源方案最常见的是Python实现的mitmproxy。mitmweb也提供图形界面，别说，只要你不嫌弃还是挺好用的\nosx上还有个比较奇葩的所谓网络调试软件Surge。99美刀，卖的还是挺贵的，功能还行，界面也挺花哨，忽悠小白是足够了。用它也能够远程调试，代价是需要用有线连接到mac电脑上，然后mac端软件就能捕获远程手机的网络请求数据，这个软件界面确实挺不错，然而请求过滤查找对比下Fiddler而言就是个渣渣吧。\n因此想了一个比较另类的方案，手机使用mac电脑的网络，同时使用pf对请求进行转发。使用mitmproxy的透明代理模式获得手机端的数据，使用mitmweb进行展示","headline":"mac上使用mitmproxy对ios app进行抓包","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2018/05/25/mitmproxy_transparent_model_network_capture/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2018/05/25/mitmproxy_transparent_model_network_capture/"}</script>
     <meta name="description" content="对ios app抓包的方式挺多的，最常规的方案就是本机开启一个http代理。然后手机进行设置，将本机内网ip以及端口设置上去。安装一个https证书，设置为信任就可以开始抓包了。这个方案非常通用。类似的实现以Fiddler、charles为代表，它们确实很好用，也很好理解。但是缺点也是有的  最大的缺点就是每一次使用都需要设置代理，你需要查看本机内网ip，然后填写到手机上。调试完成后再将手机的代理">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="mac上使用mitmproxy对ios app进行抓包">
 <meta property="og:url" content="https://www.zoulei.net/2018/05/25/mitmproxy_transparent_model_network_capture/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="对ios app抓包的方式挺多的，最常规的方案就是本机开启一个http代理。然后手机进行设置，将本机内网ip以及端口设置上去。安装一个https证书，设置为信任就可以开始抓包了。这个方案非常通用。类似的实现以Fiddler、charles为代表，它们确实很好用，也很好理解。但是缺点也是有的  最大的缺点就是每一次使用都需要设置代理，你需要查看本机内网ip，然后填写到手机上。调试完成后再将手机的代理">
-<meta property="og:locale" content="zh-cn">
-<meta property="og:updated_time" content="2018-05-25T10:52:46.000Z">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2018-05-25T09:45:59.000Z">
+<meta property="article:modified_time" content="2018-05-25T10:52:46.000Z">
+<meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="mac上使用mitmproxy对ios app进行抓包">
-<meta name="twitter:description" content="对ios app抓包的方式挺多的，最常规的方案就是本机开启一个http代理。然后手机进行设置，将本机内网ip以及端口设置上去。安装一个https证书，设置为信任就可以开始抓包了。这个方案非常通用。类似的实现以Fiddler、charles为代表，它们确实很好用，也很好理解。但是缺点也是有的  最大的缺点就是每一次使用都需要设置代理，你需要查看本机内网ip，然后填写到手机上。调试完成后再将手机的代理">
     
     
         
@@ -34,7 +32,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -57,7 +57,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -87,12 +87,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -100,12 +101,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -113,12 +115,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -126,12 +129,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -139,12 +143,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -152,12 +157,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -169,8 +175,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -178,8 +191,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -187,8 +207,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -196,8 +223,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -205,8 +239,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -214,8 +255,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -223,11 +271,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -239,12 +289,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -306,31 +357,25 @@
 <li>机器 MBP 2015/ ipad mini</li>
 <li>系统  osx 10.13/ ios 11.3</li>
 </ul>
-<h3 id="1-让ipad通过蓝牙连上osx的网络"><a href="#1-让ipad通过蓝牙连上osx的网络" class="headerlink" title="1. 让ipad通过蓝牙连上osx的网络"></a>1. 让ipad通过蓝牙连上osx的网络</h3><p>参照<a href="https://www.zhihu.com/question/24480413" target="_blank" rel="noopener">https://www.zhihu.com/question/24480413</a>，先让手机通过蓝牙连接上电脑，在电脑设置网络共享，选择蓝牙的方式，这一步基本就配置好了</p>
+<h3 id="1-让ipad通过蓝牙连上osx的网络"><a href="#1-让ipad通过蓝牙连上osx的网络" class="headerlink" title="1. 让ipad通过蓝牙连上osx的网络"></a>1. 让ipad通过蓝牙连上osx的网络</h3><p>参照<a href="https://www.zhihu.com/question/24480413">https://www.zhihu.com/question/24480413</a>，先让手机通过蓝牙连接上电脑，在电脑设置网络共享，选择蓝牙的方式，这一步基本就配置好了</p>
 <p>接下来是验证。通过<code>ifconfig</code>命令查看目前存在哪些网络接口，查看active状态的接口，自己排除一下。像我的就是<code>bridge100</code>。然后可以使用wireshark看一下这个网络接口是否正常收到了手机端的数据请求<code>sudo /Applications/Wireshark.app/Contents/MacOS/Wireshark</code>。待能正常通过电脑网络访问后进行后续操作</p>
 <h3 id="通过PF对网络数据进行转发"><a href="#通过PF对网络数据进行转发" class="headerlink" title="通过PF对网络数据进行转发"></a>通过PF对网络数据进行转发</h3><ol>
 <li><p>允许ip转发</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo sysctl -w net.inet.ip.forwarding=1</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo sysctl -w net.inet.ip.forwarding&#x3D;1</span><br></pre></td></tr></table></figure></li>
 <li><p>设置pf转发规则(将80、443端口的内容转发到本地8080端口)</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sudo vim /etc/pf.conf</span><br><span class="line">添加如下行(记住使用对应的网络接口)</span><br><span class="line">另外pf的配置对顺序有要求，像我本机就需要将它放到rdr-anchor &quot;com.apple/*&quot;下一行</span><br><span class="line">rdr on bridge100 inet proto tcp to any port &#123;80, 443&#125; -&gt; 127.0.0.1 port 8080</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">sudo vim &#x2F;etc&#x2F;pf.conf</span><br><span class="line">添加如下行(记住使用对应的网络接口)</span><br><span class="line">另外pf的配置对顺序有要求，像我本机就需要将它放到rdr-anchor &quot;com.apple&#x2F;*&quot;下一行</span><br><span class="line">rdr on bridge100 inet proto tcp to any port &#123;80, 443&#125; -&gt; 127.0.0.1 port 8080</span><br></pre></td></tr></table></figure></li>
 <li><p>启用pf规则</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo pfctl -e</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo pfctl -e</span><br></pre></td></tr></table></figure></li>
 <li><p>配置sudoer文件允许mitmproxy访问pfctl</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo vim /etc/sudoers</span><br><span class="line">添加以下行</span><br><span class="line">ALL ALL=NOPASSWD: /sbin/pfctl -s state</span><br></pre></td></tr></table></figure>
-
-
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo vim &#x2F;etc&#x2F;sudoers</span><br><span class="line">添加以下行</span><br><span class="line">ALL ALL&#x3D;NOPASSWD: &#x2F;sbin&#x2F;pfctl -s state</span><br></pre></td></tr></table></figure>
+<h3 id="安装mitmproxy使用"><a href="#安装mitmproxy使用" class="headerlink" title="安装mitmproxy使用"></a>安装mitmproxy使用</h3></li>
 </ol>
-<h3 id="安装mitmproxy使用"><a href="#安装mitmproxy使用" class="headerlink" title="安装mitmproxy使用"></a>安装mitmproxy使用</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">brew install mitmproxy</span><br><span class="line">mitmweb -T --ignore apple</span><br></pre></td></tr></table></figure>
-
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">brew install mitmproxy</span><br><span class="line">mitmweb -T --ignore apple</span><br></pre></td></tr></table></figure>
 <p>手机端访问<code>http://mimt.it</code>点击安装https证书。除此之外还需要设置-&gt; 通用 -&gt; 关于  -&gt; 信任证书设置 -&gt; 设置为可信。<br>上面ignore参数是正则匹配。忽略对域名包含apple的处理。因为在客户端强制证书验证的时候伪造证书是过不了的，这样会在调试的时候影响ios消息推送啥的<br>bingo~~ 结束了</p>
 <p>不足之处就是它并不会显示访问的域名，只会显示ip(感觉这是一个bug，因为mitmproxy使用–host参数是能够看到正确的地址的)</p>
 <p>然后就是学习一下mitmproxy的过滤语句了，很简单，在web操作上会有提示</p>
 <p>整个过程就是这样，让手机通过电脑进行上网，用mitmproxy的透明代理模式从三层网络上捕获数据(这样就避免了在手机端设置代理)，希望能对你们有所帮助┑(￣Д ￣)┍</p>
-<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a href="https://docs.mitmproxy.org/stable/howto-transparent/" target="_blank" rel="noopener">https://docs.mitmproxy.org/stable/howto-transparent/</a><br><a href="https://medium.com/bugbountywriteup/intercepting-network-data-with-mitmproxy-on-macos-3e3f2f0123b2" target="_blank" rel="noopener">https://medium.com/bugbountywriteup/intercepting-network-data-with-mitmproxy-on-macos-3e3f2f0123b2</a></p>
+<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a href="https://docs.mitmproxy.org/stable/howto-transparent/">https://docs.mitmproxy.org/stable/howto-transparent/</a><br><a href="https://medium.com/bugbountywriteup/intercepting-network-data-with-mitmproxy-on-macos-3e3f2f0123b2">https://medium.com/bugbountywriteup/intercepting-network-data-with-mitmproxy-on-macos-3e3f2f0123b2</a></p>
 
             
 
@@ -448,7 +493,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -693,7 +738,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -717,7 +762,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -766,7 +811,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -791,8 +836,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -909,7 +954,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -917,8 +964,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

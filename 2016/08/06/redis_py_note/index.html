@@ -11,25 +11,23 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。\n\n\n文件结构123456789.├── __init__.py├── _compat.py          兼容性├── client.py           实现客户端,调用connectionpool├── connection.py       实现连接池，连接，解析器├── exceptions.py       异常类├── lock.py             实现分布式锁├── sentinel.py         配合redis sentinel机制实现高可用客户端└── utils.py            辅助类\n\n实现逻辑123import redisr = redis.Redis()r.set('foob', 'bar')\n看架构图看调用图(以下为5年前的2.4版本)第一步执行r=redis.Redis()没进行什么操作，同时隐式的初始化了ConnectionPool。等到执行set操作的时候。就是执行了execute_command，此时分为了几个步骤。看第5个函数调用，从连接池里面get_connection。如果没有可用的，那么则新建(redis.connection.Connection.init),此时并没有创建socket连接。第8个函数调用send_command,命令打包然后创建连接发送。该版本使用connection._sock.makefile(‘r’)便于读取。再到了第21个函数调用Connection.read_response.使用解析器从socket读取数据并转换成便于python使用的数据结构最后finally将该连接释放到线程池\n现在可以看到有这样一条关系，每一个redis.Redis()实例都有一个ConnectionPool对象,一个连接池至少含有一条连接。所以绝大多数情况没有必要写出连接池\n1234pool = redis.ConnectionPool()r = redis.Redis(connection_pool=pool)等价于r = redis.Redis()\n\n多线程如果你的程序是单线程的。那么没什么好说的，一个Redis实例，一个连接池，一个socket连接。多线程那我们主要考虑的是线程安全问题。对于redis客户端就是socket连接绝对要线程间隔离，否则一个线程解析了另外一个socket的返回内容，那么多线程也就没意义了。测试一下\n123456789101112131415161718192021import timeimport threadingimport redisr = redis.Redis()def main():    r.setex(threading.get_ident(), threading.get_ident(), 2)    while 1:        time.sleep(0.1)        assert r.get(threading.get_ident()) in [str(threading.get_ident()).encode(), None]for i in range(50):    threading.Thread(target=main).start()# watch -n 1 \"redis-cli INFO clients\"    # Every 1.0s: redis-cli INFO clients                                           Sat Aug  6 21:34:31 2016# # #Clients# connected_clients:26# client_longest_output_list:0# client_biggest_input_buf:0# blocked_clients:0\n可以看到结果并没有错误，而且创建的连接数和创建的线程数并不是一致的\n试想一下，每次执行一次类似set的指令。都会从连接池(List结构)取出(pop)一个连接。而list.pop是线程安全的。执行完毕命令后又会使用append加入到连接池，list.append也是线程安全的。所以针对socket的操作是线程隔离的。这一切好像和_in_use_connections并没有什么关系。对于一个简单的连接池。从连接池取出，用完加入到连接池。而_in_use_connections记录的是使用中的线程。啥子用呢。它用于一个接口(关闭连接池中的所有连接)。注意关闭连接并不会将_available_connections和_in_use_connections清空。它只会将connection对象中的_sock设置为None，而每次执行命令的时候connection都是会检查_sock是否为空，如果为空则会重新建立连接,如下示例\n123456789101112import redisr = redis.Redis()r.setex('key', 'value', 20)print(r.connection_pool._available_connections[0]._sock)r.connection_pool.disconnect()print(r.connection_pool._available_connections[0]._sock)r.setex('key','value',20)print(r.connection_pool._available_connections[0]._sock)# &lt;socket.socket fd=5, family=AddressFamily.AF_INET6, type=SocketKind.SOCK_STREAM, proto=6, laddr=('::1', 62900, 0, 0), raddr=('::1', 6379, 0, 0)&gt;# None# &lt;socket.socket fd=5, family=AddressFamily.AF_INET6, type=SocketKind.SOCK_STREAM, proto=6, laddr=('::1', 62901, 0, 0), raddr=('::1', 6379, 0, 0)&gt;\n因为它关闭连接的时候并没有将对应的connection对象从连接池中删除。那么会造成一个问题。如果你创建过100个连接，那么连接池将会一直复用这些对象。如果你高峰期创建过多的连接，而后又只需要几个连接就够了(虽然这样的问题估计极少会遇到)。你可以显式的pop出_available_connections并关闭。其实有一个地方是非线程安全的。在创建连接的时候有self._created_connections += 1,如果你访问这个值得到创建的连接数是不可靠的。不过这都无关紧要，因为你不可能在极短的时间内创建许多连接。即使这里不准。统计误差也不会有2个。\n为了避免无端创建出N多连接。该客户端后期加入了BlockingConnectionPool类。使用LifoQueue创建出连接队列，如果该队列被使用完，那么后续请求将会阻塞一段时间，过长则引发异常。\n多进程安全redis-py在2.4.12加入了多线程安全见issues。可以看到实现原理也是很简单的。fork进程的时候socket一样使用的。为了分开，使用了os.getpid()区分。如果进程号变了，则关闭所有的连接，重新连接后自然就分开了。同时为了防止一个进程有多个线程这种情况。一个线程关闭后，另外一个线程也可能执行关闭操作。所以此处使用了锁\n123456789def _checkpid(self):    if self.pid != os.getpid():        with self._check_lock:            if self.pid == os.getpid():                # another thread already did the work while we waited                # on the lock.                return            self.disconnect()            self.reset()\n\n插播一下当前2.10.5版本的调用图可以看到和最上面的调用图出入很小，仅仅加入了进程安全,将socket.makefile变成了SocketBuffer.\n分布式锁线程锁就是多线程间有线程间共享变量。进程锁就是多进程间有进程间共享变量。此处的共享变量就是将变量存储到redis数据库。实现也比较简单。截取一段acquire看看\n12345678def do_acquire(self, token):    if self.redis.setnx(self.name, token):        if self.timeout:            # convert to milliseconds            timeout = int(self.timeout * 1000)            self.redis.pexpire(self.name, timeout)        return True    return False\n另外它实现的只是最简单的锁。比如可重入锁啥的都是没有实现的。如果你想配合sentinel进行高可用。往下看…..\nSentinel得益于redis-py的松耦合，连接池、连接、解析器基本都很独立。客户端和监视器组创建一个上面说的Redis正常连接。它主要提供接口返回master的地址和返回salve的地址。然后我们使用master_for返回的也是一个Redis连接\n12return redis_class(connection_pool=connection_pool_class(            service_name, self, **connection_kwargs))\n\n不过它进行对连接池和连接对象都进行了一些修改。可以看到它将self传递给了底层连接池。而连接池也使用self.connection_kwargs[&#39;connection_pool&#39;] = weakref.proxy(self)将自己传递给了底层Connection，就这样它实现了高可用客户端，在底层连接的时候使用高层提供的函数提供正确的地址~~\n","dateCreated":"2016-08-06T19:39:07+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-08-06T19:39:07+08:00","description":"本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。","headline":"redis-py源码分析","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/06/redis_py_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/08/06/redis_py_note/","keywords":"python"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。\n\n\n文件结构123456789.├── __init__.py├── _compat.py          兼容性├── client.py           实现客户端,调用connectionpool├── connection.py       实现连接池，连接，解析器├── exceptions.py       异常类├── lock.py             实现分布式锁├── sentinel.py         配合redis sentinel机制实现高可用客户端└── utils.py            辅助类\n\n实现逻辑123import redisr = redis.Redis()r.set(&#x27;foob&#x27;, &#x27;bar&#x27;)\n看架构图看调用图(以下为5年前的2.4版本)第一步执行r=redis.Redis()没进行什么操作，同时隐式的初始化了ConnectionPool。等到执行set操作的时候。就是执行了execute_command，此时分为了几个步骤。看第5个函数调用，从连接池里面get_connection。如果没有可用的，那么则新建(redis.connection.Connection.init),此时并没有创建socket连接。第8个函数调用send_command,命令打包然后创建连接发送。该版本使用connection._sock.makefile(‘r’)便于读取。再到了第21个函数调用Connection.read_response.使用解析器从socket读取数据并转换成便于python使用的数据结构最后finally将该连接释放到线程池\n现在可以看到有这样一条关系，每一个redis.Redis()实例都有一个ConnectionPool对象,一个连接池至少含有一条连接。所以绝大多数情况没有必要写出连接池\n1234pool &#x3D; redis.ConnectionPool()r &#x3D; redis.Redis(connection_pool&#x3D;pool)等价于r &#x3D; redis.Redis()\n多线程如果你的程序是单线程的。那么没什么好说的，一个Redis实例，一个连接池，一个socket连接。多线程那我们主要考虑的是线程安全问题。对于redis客户端就是socket连接绝对要线程间隔离，否则一个线程解析了另外一个socket的返回内容，那么多线程也就没意义了。测试一下\n123456789101112131415161718192021import timeimport threadingimport redisr = redis.Redis()def main():    r.setex(threading.get_ident(), threading.get_ident(), 2)    while 1:        time.sleep(0.1)        assert r.get(threading.get_ident()) in [str(threading.get_ident()).encode(), None]for i in range(50):    threading.Thread(target=main).start()# watch -n 1 &quot;redis-cli INFO clients&quot;    # Every 1.0s: redis-cli INFO clients                                           Sat Aug  6 21:34:31 2016# # #Clients# connected_clients:26# client_longest_output_list:0# client_biggest_input_buf:0# blocked_clients:0\n可以看到结果并没有错误，而且创建的连接数和创建的线程数并不是一致的\n试想一下，每次执行一次类似set的指令。都会从连接池(List结构)取出(pop)一个连接。而list.pop是线程安全的。执行完毕命令后又会使用append加入到连接池，list.append也是线程安全的。所以针对socket的操作是线程隔离的。这一切好像和_in_use_connections并没有什么关系。对于一个简单的连接池。从连接池取出，用完加入到连接池。而_in_use_connections记录的是使用中的线程。啥子用呢。它用于一个接口(关闭连接池中的所有连接)。注意关闭连接并不会将_available_connections和_in_use_connections清空。它只会将connection对象中的_sock设置为None，而每次执行命令的时候connection都是会检查_sock是否为空，如果为空则会重新建立连接,如下示例\n123456789101112import redisr = redis.Redis()r.setex(&#x27;key&#x27;, &#x27;value&#x27;, 20)print(r.connection_pool._available_connections[0]._sock)r.connection_pool.disconnect()print(r.connection_pool._available_connections[0]._sock)r.setex(&#x27;key&#x27;,&#x27;value&#x27;,20)print(r.connection_pool._available_connections[0]._sock)# &lt;socket.socket fd=5, family=AddressFamily.AF_INET6, type=SocketKind.SOCK_STREAM, proto=6, laddr=(&#x27;::1&#x27;, 62900, 0, 0), raddr=(&#x27;::1&#x27;, 6379, 0, 0)&gt;# None# &lt;socket.socket fd=5, family=AddressFamily.AF_INET6, type=SocketKind.SOCK_STREAM, proto=6, laddr=(&#x27;::1&#x27;, 62901, 0, 0), raddr=(&#x27;::1&#x27;, 6379, 0, 0)&gt;\n因为它关闭连接的时候并没有将对应的connection对象从连接池中删除。那么会造成一个问题。如果你创建过100个连接，那么连接池将会一直复用这些对象。如果你高峰期创建过多的连接，而后又只需要几个连接就够了(虽然这样的问题估计极少会遇到)。你可以显式的pop出_available_connections并关闭。其实有一个地方是非线程安全的。在创建连接的时候有self._created_connections += 1,如果你访问这个值得到创建的连接数是不可靠的。不过这都无关紧要，因为你不可能在极短的时间内创建许多连接。即使这里不准。统计误差也不会有2个。\n为了避免无端创建出N多连接。该客户端后期加入了BlockingConnectionPool类。使用LifoQueue创建出连接队列，如果该队列被使用完，那么后续请求将会阻塞一段时间，过长则引发异常。\n多进程安全redis-py在2.4.12加入了多线程安全见issues。可以看到实现原理也是很简单的。fork进程的时候socket一样使用的。为了分开，使用了os.getpid()区分。如果进程号变了，则关闭所有的连接，重新连接后自然就分开了。同时为了防止一个进程有多个线程这种情况。一个线程关闭后，另外一个线程也可能执行关闭操作。所以此处使用了锁\n123456789def _checkpid(self):    if self.pid != os.getpid():        with self._check_lock:            if self.pid == os.getpid():                # another thread already did the work while we waited                # on the lock.                return            self.disconnect()            self.reset()\n\n插播一下当前2.10.5版本的调用图可以看到和最上面的调用图出入很小，仅仅加入了进程安全,将socket.makefile变成了SocketBuffer.\n分布式锁线程锁就是多线程间有线程间共享变量。进程锁就是多进程间有进程间共享变量。此处的共享变量就是将变量存储到redis数据库。实现也比较简单。截取一段acquire看看\n12345678def do_acquire(self, token):    if self.redis.setnx(self.name, token):        if self.timeout:            # convert to milliseconds            timeout = int(self.timeout * 1000)            self.redis.pexpire(self.name, timeout)        return True    return False\n另外它实现的只是最简单的锁。比如可重入锁啥的都是没有实现的。如果你想配合sentinel进行高可用。往下看…..\nSentinel得益于redis-py的松耦合，连接池、连接、解析器基本都很独立。客户端和监视器组创建一个上面说的Redis正常连接。它主要提供接口返回master的地址和返回salve的地址。然后我们使用master_for返回的也是一个Redis连接\n12return redis_class(connection_pool&#x3D;connection_pool_class(            service_name, self, **connection_kwargs))\n不过它进行对连接池和连接对象都进行了一些修改。可以看到它将self传递给了底层连接池。而连接池也使用self.connection_kwargs[&#39;connection_pool&#39;] = weakref.proxy(self)将自己传递给了底层Connection，就这样它实现了高可用客户端，在底层连接的时候使用高层提供的函数提供正确的地址~~\n","dateCreated":"2016-08-06T19:39:07+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2016-08-06T19:39:07+08:00","description":"本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。","headline":"redis-py源码分析","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/06/redis_py_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2016/08/06/redis_py_note/","keywords":"python"}</script>
     <meta name="description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。">
-<meta name="keywords" content="python">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="redis-py源码分析">
 <meta property="og:url" content="https://www.zoulei.net/2016/08/06/redis_py_note/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。">
-<meta property="og:locale" content="zh-cn">
+<meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://blogimg.ficapy.com/blogimg/redis_py_arch.png">
 <meta property="og:image" content="https://blogimg.ficapy.com/blogimg/redis_old_version.png">
 <meta property="og:image" content="http://blogimg.ficapy.com/blogimg/redis_pool.png">
 <meta property="og:image" content="https://blogimg.ficapy.com/blogimg/redis_sentinel.png">
-<meta property="og:updated_time" content="2019-07-26T06:53:30.656Z">
+<meta property="article:published_time" content="2016-08-06T11:39:07.000Z">
+<meta property="article:modified_time" content="2019-07-26T06:53:30.656Z">
+<meta property="article:author" content="ficapy">
+<meta property="article:tag" content="python">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="redis-py源码分析">
-<meta name="twitter:description" content="本文会简述该库的代码组织架构，会着重介绍它实现的连接池ConnectPool以及如何实现的线程、进程安全。">
 <meta name="twitter:image" content="https://blogimg.ficapy.com/blogimg/redis_py_arch.png">
     
     
@@ -40,7 +38,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -63,7 +63,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -93,12 +93,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -106,12 +107,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -119,12 +121,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -132,12 +135,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -145,12 +149,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -158,12 +163,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -175,8 +181,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -184,8 +197,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -193,8 +213,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -202,8 +229,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -211,8 +245,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -220,8 +261,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -229,11 +277,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -245,12 +295,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -286,7 +337,7 @@
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/源码解析/">源码解析</a>
+    <a class="category-link" href="/categories/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">源码解析</a>
 
 
     
@@ -303,28 +354,26 @@
 
 <h3 id="文件结构"><a href="#文件结构" class="headerlink" title="文件结构"></a>文件结构</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">.</span><br><span class="line">├── __init__.py</span><br><span class="line">├── _compat.py          兼容性</span><br><span class="line">├── client.py           实现客户端,调用connectionpool</span><br><span class="line">├── connection.py       实现连接池，连接，解析器</span><br><span class="line">├── exceptions.py       异常类</span><br><span class="line">├── lock.py             实现分布式锁</span><br><span class="line">├── sentinel.py         配合redis sentinel机制实现高可用客户端</span><br><span class="line">└── utils.py            辅助类</span><br></pre></td></tr></table></figure>
 
-<h3 id="实现逻辑"><a href="#实现逻辑" class="headerlink" title="实现逻辑"></a>实现逻辑</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> redis</span><br><span class="line">r = redis.Redis()</span><br><span class="line">r.set(<span class="string">'foob'</span>, <span class="string">'bar'</span>)</span><br></pre></td></tr></table></figure>
-<p>看架构图<br><img src="https://blogimg.ficapy.com/blogimg/redis_py_arch.png" alt="redis_client_arch"><br>看调用图(以下为5年前的<a href="https://github.com/andymccurdy/redis-py/tree/2.4" target="_blank" rel="noopener">2.4版本</a>)<br><img src="https://blogimg.ficapy.com/blogimg/redis_old_version.png" alt="redis_old_version"><br>第一步执行<code>r=redis.Redis()</code>没进行什么操作，同时隐式的初始化了ConnectionPool。<br>等到执行set操作的时候。就是执行了execute_command，此时分为了几个步骤。看第5个函数调用，从连接池里面get_connection。如果没有可用的，那么则新建(redis.connection.Connection.<strong>init</strong>),此时并没有创建socket连接。第8个函数调用send_command,命令打包然后创建连接发送。该版本使用connection._sock.makefile(‘r’)便于读取。<br>再到了第21个函数调用Connection.read_response.使用解析器从socket读取数据并转换成便于python使用的数据结构<br>最后finally将该连接释放到线程池</p>
+<h3 id="实现逻辑"><a href="#实现逻辑" class="headerlink" title="实现逻辑"></a>实现逻辑</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> redis</span><br><span class="line">r = redis.Redis()</span><br><span class="line">r.<span class="built_in">set</span>(<span class="string">&#x27;foob&#x27;</span>, <span class="string">&#x27;bar&#x27;</span>)</span><br></pre></td></tr></table></figure>
+<p>看架构图<br><img src="https://blogimg.ficapy.com/blogimg/redis_py_arch.png" alt="redis_client_arch"><br>看调用图(以下为5年前的<a href="https://github.com/andymccurdy/redis-py/tree/2.4">2.4版本</a>)<br><img src="https://blogimg.ficapy.com/blogimg/redis_old_version.png" alt="redis_old_version"><br>第一步执行<code>r=redis.Redis()</code>没进行什么操作，同时隐式的初始化了ConnectionPool。<br>等到执行set操作的时候。就是执行了execute_command，此时分为了几个步骤。看第5个函数调用，从连接池里面get_connection。如果没有可用的，那么则新建(redis.connection.Connection.<strong>init</strong>),此时并没有创建socket连接。第8个函数调用send_command,命令打包然后创建连接发送。该版本使用connection._sock.makefile(‘r’)便于读取。<br>再到了第21个函数调用Connection.read_response.使用解析器从socket读取数据并转换成便于python使用的数据结构<br>最后finally将该连接释放到线程池</p>
 <p>现在可以看到有这样一条关系，每一个redis.Redis()实例都有一个ConnectionPool对象,一个连接池至少含有一条连接。所以绝大多数情况没有必要写出连接池</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">pool = redis.ConnectionPool()</span><br><span class="line">r = redis.Redis(connection_pool=pool)</span><br><span class="line">等价于</span><br><span class="line">r = redis.Redis()</span><br></pre></td></tr></table></figure>
-
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">pool &#x3D; redis.ConnectionPool()</span><br><span class="line">r &#x3D; redis.Redis(connection_pool&#x3D;pool)</span><br><span class="line">等价于</span><br><span class="line">r &#x3D; redis.Redis()</span><br></pre></td></tr></table></figure>
 <h3 id="多线程"><a href="#多线程" class="headerlink" title="多线程"></a>多线程</h3><p>如果你的程序是单线程的。那么没什么好说的，一个Redis实例，一个连接池，一个socket连接。<br>多线程那我们主要考虑的是线程安全问题。对于redis客户端就是socket连接绝对要线程间隔离，否则一个线程解析了另外一个socket的返回内容，那么多线程也就没意义了。测试一下</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> time</span><br><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> redis</span><br><span class="line">r = redis.Redis()</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span><span class="params">()</span>:</span></span><br><span class="line">    r.setex(threading.get_ident(), threading.get_ident(), <span class="number">2</span>)</span><br><span class="line">    <span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">        time.sleep(<span class="number">0.1</span>)</span><br><span class="line">        <span class="keyword">assert</span> r.get(threading.get_ident()) <span class="keyword">in</span> [str(threading.get_ident()).encode(), <span class="literal">None</span>]</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">50</span>):</span><br><span class="line">    threading.Thread(target=main).start()</span><br><span class="line"><span class="comment"># watch -n 1 "redis-cli INFO clients"    </span></span><br><span class="line"><span class="comment"># Every 1.0s: redis-cli INFO clients                                           Sat Aug  6 21:34:31 2016</span></span><br><span class="line"><span class="comment"># </span></span><br><span class="line"><span class="comment"># #Clients</span></span><br><span class="line"><span class="comment"># connected_clients:26</span></span><br><span class="line"><span class="comment"># client_longest_output_list:0</span></span><br><span class="line"><span class="comment"># client_biggest_input_buf:0</span></span><br><span class="line"><span class="comment"># blocked_clients:0</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> time</span><br><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">import</span> redis</span><br><span class="line">r = redis.Redis()</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">main</span>():</span></span><br><span class="line">    r.setex(threading.get_ident(), threading.get_ident(), <span class="number">2</span>)</span><br><span class="line">    <span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">        time.sleep(<span class="number">0.1</span>)</span><br><span class="line">        <span class="keyword">assert</span> r.get(threading.get_ident()) <span class="keyword">in</span> [<span class="built_in">str</span>(threading.get_ident()).encode(), <span class="literal">None</span>]</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">50</span>):</span><br><span class="line">    threading.Thread(target=main).start()</span><br><span class="line"><span class="comment"># watch -n 1 &quot;redis-cli INFO clients&quot;    </span></span><br><span class="line"><span class="comment"># Every 1.0s: redis-cli INFO clients                                           Sat Aug  6 21:34:31 2016</span></span><br><span class="line"><span class="comment"># </span></span><br><span class="line"><span class="comment"># #Clients</span></span><br><span class="line"><span class="comment"># connected_clients:26</span></span><br><span class="line"><span class="comment"># client_longest_output_list:0</span></span><br><span class="line"><span class="comment"># client_biggest_input_buf:0</span></span><br><span class="line"><span class="comment"># blocked_clients:0</span></span><br></pre></td></tr></table></figure>
 <p>可以看到结果并没有错误，而且创建的连接数和创建的线程数并不是一致的</p>
 <p>试想一下，每次执行一次类似set的指令。都会从连接池(List结构)取出(pop)一个连接。而list.pop是线程安全的。执行完毕命令后又会使用append加入到连接池，list.append也是线程安全的。所以针对socket的操作是线程隔离的。这一切好像和_in_use_connections并没有什么关系。对于一个简单的连接池。从连接池取出，用完加入到连接池。而_in_use_connections记录的是使用中的线程。啥子用呢。它用于一个接口(关闭连接池中的所有连接)。注意关闭连接并不会将_available_connections和_in_use_connections清空。它只会将connection对象中的_sock设置为None，而每次执行命令的时候connection都是会检查_sock是否为空，如果为空则会重新建立连接,如下示例</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> redis</span><br><span class="line"></span><br><span class="line">r = redis.Redis()</span><br><span class="line">r.setex(<span class="string">'key'</span>, <span class="string">'value'</span>, <span class="number">20</span>)</span><br><span class="line">print(r.connection_pool._available_connections[<span class="number">0</span>]._sock)</span><br><span class="line">r.connection_pool.disconnect()</span><br><span class="line">print(r.connection_pool._available_connections[<span class="number">0</span>]._sock)</span><br><span class="line">r.setex(<span class="string">'key'</span>,<span class="string">'value'</span>,<span class="number">20</span>)</span><br><span class="line">print(r.connection_pool._available_connections[<span class="number">0</span>]._sock)</span><br><span class="line"><span class="comment"># &lt;socket.socket fd=5, family=AddressFamily.AF_INET6, type=SocketKind.SOCK_STREAM, proto=6, laddr=('::1', 62900, 0, 0), raddr=('::1', 6379, 0, 0)&gt;</span></span><br><span class="line"><span class="comment"># None</span></span><br><span class="line"><span class="comment"># &lt;socket.socket fd=5, family=AddressFamily.AF_INET6, type=SocketKind.SOCK_STREAM, proto=6, laddr=('::1', 62901, 0, 0), raddr=('::1', 6379, 0, 0)&gt;</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> redis</span><br><span class="line"></span><br><span class="line">r = redis.Redis()</span><br><span class="line">r.setex(<span class="string">&#x27;key&#x27;</span>, <span class="string">&#x27;value&#x27;</span>, <span class="number">20</span>)</span><br><span class="line">print(r.connection_pool._available_connections[<span class="number">0</span>]._sock)</span><br><span class="line">r.connection_pool.disconnect()</span><br><span class="line">print(r.connection_pool._available_connections[<span class="number">0</span>]._sock)</span><br><span class="line">r.setex(<span class="string">&#x27;key&#x27;</span>,<span class="string">&#x27;value&#x27;</span>,<span class="number">20</span>)</span><br><span class="line">print(r.connection_pool._available_connections[<span class="number">0</span>]._sock)</span><br><span class="line"><span class="comment"># &lt;socket.socket fd=5, family=AddressFamily.AF_INET6, type=SocketKind.SOCK_STREAM, proto=6, laddr=(&#x27;::1&#x27;, 62900, 0, 0), raddr=(&#x27;::1&#x27;, 6379, 0, 0)&gt;</span></span><br><span class="line"><span class="comment"># None</span></span><br><span class="line"><span class="comment"># &lt;socket.socket fd=5, family=AddressFamily.AF_INET6, type=SocketKind.SOCK_STREAM, proto=6, laddr=(&#x27;::1&#x27;, 62901, 0, 0), raddr=(&#x27;::1&#x27;, 6379, 0, 0)&gt;</span></span><br></pre></td></tr></table></figure>
 <p>因为它关闭连接的时候并没有将对应的connection对象从连接池中删除。那么会造成一个问题。如果你创建过100个连接，那么连接池将会一直复用这些对象。如果你高峰期创建过多的连接，而后又只需要几个连接就够了(虽然这样的问题估计极少会遇到)。你可以显式的pop出_available_connections并关闭。<br>其实有一个地方是非线程安全的。在创建连接的时候有self._created_connections += 1,如果你访问这个值得到创建的连接数是不可靠的。不过这都无关紧要，因为你不可能在极短的时间内创建许多连接。即使这里不准。统计误差也不会有2个。</p>
 <p>为了避免无端创建出N多连接。该客户端后期加入了BlockingConnectionPool类。使用LifoQueue创建出连接队列，如果该队列被使用完，那么后续请求将会阻塞一段时间，过长则引发异常。</p>
-<h3 id="多进程安全"><a href="#多进程安全" class="headerlink" title="多进程安全"></a>多进程安全</h3><p>redis-py在2.4.12加入了多线程安全<a href="https://github.com/andymccurdy/redis-py/issues/234" target="_blank" rel="noopener">见issues</a>。<br>可以看到实现原理也是很简单的。fork进程的时候socket一样使用的。为了分开，使用了os.getpid()区分。如果进程号变了，则关闭所有的连接，重新连接后自然就分开了。同时为了防止一个进程有多个线程这种情况。一个线程关闭后，另外一个线程也可能执行关闭操作。所以此处使用了锁</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">_checkpid</span><span class="params">(self)</span>:</span></span><br><span class="line">    <span class="keyword">if</span> self.pid != os.getpid():</span><br><span class="line">        <span class="keyword">with</span> self._check_lock:</span><br><span class="line">            <span class="keyword">if</span> self.pid == os.getpid():</span><br><span class="line">                <span class="comment"># another thread already did the work while we waited</span></span><br><span class="line">                <span class="comment"># on the lock.</span></span><br><span class="line">                <span class="keyword">return</span></span><br><span class="line">            self.disconnect()</span><br><span class="line">            self.reset()</span><br></pre></td></tr></table></figure>
+<h3 id="多进程安全"><a href="#多进程安全" class="headerlink" title="多进程安全"></a>多进程安全</h3><p>redis-py在2.4.12加入了多线程安全<a href="https://github.com/andymccurdy/redis-py/issues/234">见issues</a>。<br>可以看到实现原理也是很简单的。fork进程的时候socket一样使用的。为了分开，使用了os.getpid()区分。如果进程号变了，则关闭所有的连接，重新连接后自然就分开了。同时为了防止一个进程有多个线程这种情况。一个线程关闭后，另外一个线程也可能执行关闭操作。所以此处使用了锁</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">_checkpid</span>(<span class="params">self</span>):</span></span><br><span class="line">    <span class="keyword">if</span> self.pid != os.getpid():</span><br><span class="line">        <span class="keyword">with</span> self._check_lock:</span><br><span class="line">            <span class="keyword">if</span> self.pid == os.getpid():</span><br><span class="line">                <span class="comment"># another thread already did the work while we waited</span></span><br><span class="line">                <span class="comment"># on the lock.</span></span><br><span class="line">                <span class="keyword">return</span></span><br><span class="line">            self.disconnect()</span><br><span class="line">            self.reset()</span><br></pre></td></tr></table></figure>
 
 <p>插播一下当前2.10.5版本的调用图<br><img src="http://blogimg.ficapy.com/blogimg/redis_pool.png" alt="new_redis_pool"><br>可以看到和最上面的调用图出入很小，仅仅加入了进程安全,将socket.makefile变成了SocketBuffer.</p>
 <h3 id="分布式锁"><a href="#分布式锁" class="headerlink" title="分布式锁"></a>分布式锁</h3><p>线程锁就是多线程间有线程间共享变量。进程锁就是多进程间有进程间共享变量。此处的共享变量就是将变量存储到redis数据库。实现也比较简单。截取一段acquire看看</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">do_acquire</span><span class="params">(self, token)</span>:</span></span><br><span class="line">    <span class="keyword">if</span> self.redis.setnx(self.name, token):</span><br><span class="line">        <span class="keyword">if</span> self.timeout:</span><br><span class="line">            <span class="comment"># convert to milliseconds</span></span><br><span class="line">            timeout = int(self.timeout * <span class="number">1000</span>)</span><br><span class="line">            self.redis.pexpire(self.name, timeout)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">do_acquire</span>(<span class="params">self, token</span>):</span></span><br><span class="line">    <span class="keyword">if</span> self.redis.setnx(self.name, token):</span><br><span class="line">        <span class="keyword">if</span> self.timeout:</span><br><span class="line">            <span class="comment"># convert to milliseconds</span></span><br><span class="line">            timeout = <span class="built_in">int</span>(self.timeout * <span class="number">1000</span>)</span><br><span class="line">            self.redis.pexpire(self.name, timeout)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br></pre></td></tr></table></figure>
 <p>另外它实现的只是最简单的锁。比如可重入锁啥的都是没有实现的。如果你想配合sentinel进行高可用。往下看…..</p>
 <h3 id="Sentinel"><a href="#Sentinel" class="headerlink" title="Sentinel"></a>Sentinel</h3><p><img src="https://blogimg.ficapy.com/blogimg/redis_sentinel.png" alt="redis_sentinel"><br>得益于redis-py的松耦合，连接池、连接、解析器基本都很独立。<br>客户端和监视器组创建一个上面说的Redis正常连接。它主要提供接口返回master的地址和返回salve的地址。<br>然后我们使用master_for返回的也是一个Redis连接</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">return redis_class(connection_pool=connection_pool_class(</span><br><span class="line">            service_name, self, **connection_kwargs))</span><br></pre></td></tr></table></figure>
-
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">return redis_class(connection_pool&#x3D;connection_pool_class(</span><br><span class="line">            service_name, self, **connection_kwargs))</span><br></pre></td></tr></table></figure>
 <p>不过它进行对连接池和连接对象都进行了一些修改。可以看到它将self传递给了底层连接池。而连接池也使用<code>self.connection_kwargs[&#39;connection_pool&#39;] = weakref.proxy(self)</code>将自己传递给了底层Connection，就这样它实现了高可用客户端，在底层连接的时候使用高层提供的函数提供正确的地址~~</p>
 
             
@@ -337,7 +386,7 @@
             <div class="post-footer-tags">
                 <span class="text-color-light text-small">标签</span><br/>
                 
-    <a class="tag tag--primary tag--small t-link" href="/tags/python/">python</a>
+    <a class="tag tag--primary tag--small t-none-link" href="/tags/python/" rel="tag">python</a>
 
             </div>
         
@@ -450,7 +499,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -695,7 +744,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -719,7 +768,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -768,7 +817,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -793,8 +842,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -911,7 +960,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -919,8 +970,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');

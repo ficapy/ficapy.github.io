@@ -11,20 +11,18 @@
     
     
     
-        <link rel="alternate" type="application/atom+xml" title="RSS" href="/atom.xml">
-    
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~，来一篇水文记录下测试部署HTTPS的完整过程吧\n\nREADME\n首先有2种认证方式，生成一个指定的文件让letsencrypt访问。或者生成一个DNS记录让letsencrypt访问。第一种方式有非常大的局限性。比如你的80端口正在被使用。那么你需要先设置DNS解析，再修改下nginx的配置让网址能够被正常访问到。这就显得很麻烦了。主流的DNS服务提供商都已经提供了API接口，使用DNS的优势就是：\n\n任何电脑都能直接生成证书文件，不需要依赖本机能够被外部访问\n不需要对nginx做任何设置\n\n以下记录下我使用一个临时的digitalocean机器从0开始部署https的步骤(假设测试url为ssl.ficapy.com,操作环境为osx)\n我还是要安利下，临时使用digitalocean测试使用命令行工具tugboat灰常好啊\n\n安装tugboat用命令行快速创建机器以及测试完成后删除\n 1gem install tugboat\n\n将digitalocean的api写入让tugboat能够正常使用,并执行一些初始化设置\n 1tugboat authorize\n\n根据初始化默认设置创建一个vps\n 1tugboat create temp\n\nssh登陆\n 1tugboat ssh temp\n\n安装acme.sh\n 1curl https://get.acme.sh | sh\n\n参照acme.sh文档将dns的api信息作为环境变量写入(记得执行source ~/.bashrc)\n\n生成证书\n 1acme.sh --issue --dns dns_cf -d ssl.ficapy.com --debug\n\n将证书放置到位置并设置nginx重启命令\n 1234acme.sh --installcert -d ssl.ficapy.com \\           --keypath       /etc/nginx/ssl/ssl.ficapy.com.key  \\           --fullchainpath /etc/nginx/ssl/ssl.ficapy.com.pem \\           --reloadcmd     &quot;service nginx force-reload&quot;\n\n强制测试续约(该操作会自动执行注册过的事件，一般就是重启nginx咯，续约key是不会变的，变的是fullchain.cer文件)\n 1acme.sh --renew-all --force\n\n生成dhparam文件\n1openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048\n\n使用生成一个标准的nginx配置文件并放入/etc/nginx/site-enables目录，示例如下\n12345678910111213141516171819    server &#123;    listen 443 ssl;    server_name ssl.ficapy.com;    # certs sent to the client in SERVER HELLO are concatenated in ssl_certificate    ssl_certificate /etc/nginx/ssl/ssl.ficapy.com.pem;    ssl_certificate_key /etc/nginx/ssl/ssl.ficapy.com.key;    ssl_session_timeout 1d;    ssl_session_cache shared:SSL:50m;    # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits    ssl_dhparam /etc/nginx/ssl/dhparam.pem;    # intermediate configuration. tweak to your needs.    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;    ssl_ciphers &apos;ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS&apos;;    ssl_prefer_server_ciphers on;&#125;\n\n最后就是浏览器访问以下测试完毕啦。如果出现错误可以查看nginx的日志/var/log/error.log，肯定是哪一步出问题啦，最后就是测试完毕后删除vps啦tugboat destory temp\n\n\n额外说一下其他的吧。最开始我试过阿里云dns的api，用的是子账号。结果子账号是无法包含(注意)dns的操作权限的，就总是失败。后来不用子账号，直接用原账号的api密匙就完全没问题啦~~~。另外各大云平台大多都有负载均衡器，然后可以填写https证书。这种就不太适合letsencrypt这种短期证书了。否则总上去换证书不被麻烦死。如果在这种负载均衡器上不设置https证书。那么就需要在负载均衡器每一台机器都设置上https证书，嗯想想也挺头大啊~~~，所以这种自动化方式只比较适合在一台机器上生成并维护证书\n再额外，哪个时候写个Ansible的playbook就好哒，可能会更加方便┑(￣Д ￣)┍\n参考github tugboatmozilla ssl-config-generator使用 acme.sh 给 Nginx 安装 Let’ s Encrypt 提供的免费 SSL 证书\n","dateCreated":"2017-03-05T17:19:27+08:00","dateModified":"2017-07-29T23:18:25+08:00","datePublished":"2017-03-05T17:19:27+08:00","description":"letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~，来一篇水文记录下测试部署HTTPS的完整过程吧","headline":"使用acme.sh快速搭建https","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/03/05/acme.sh_quick_start/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/03/05/acme.sh_quick_start/"}</script>
-    <meta name="description" content="letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~，来一篇水文记录下测试部署HTTPS的完整过程吧">
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"articleBody":"letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧\n\nREADME\n首先有2种认证方式，生成一个指定的文件让letsencrypt访问。或者生成一个DNS记录让letsencrypt访问。第一种方式有非常大的局限性。比如你的80端口正在被使用。那么你需要先设置DNS解析，再修改下nginx的配置让网址能够被正常访问到。这就显得很麻烦了。主流的DNS服务提供商都已经提供了API接口，使用DNS的优势就是：\n\n任何电脑都能直接生成证书文件，不需要依赖本机能够被外部访问\n不需要对nginx做任何设置\n\n以下记录下我使用一个临时的digitalocean机器从0开始部署https的步骤(假设测试url为ssl.ficapy.com,操作环境为osx)\n我还是要安利下，临时使用digitalocean测试使用命令行工具tugboat灰常好啊\n\n安装tugboat用命令行快速创建机器以及测试完成后删除\n 1gem install tugboat\n将digitalocean的api写入让tugboat能够正常使用,并执行一些初始化设置\n 1tugboat authorize\n根据初始化默认设置创建一个vps\n 1tugboat create temp\nssh登陆\n 1tugboat ssh temp\n安装acme.sh\n 1curl https:&#x2F;&#x2F;get.acme.sh | sh\n参照acme.sh文档将dns的api信息作为环境变量写入(记得执行source ~/.bashrc)\n\n生成证书\n 1acme.sh --issue --dns dns_cf -d ssl.ficapy.com --debug\n将证书放置到位置并设置nginx重启命令\n 1234acme.sh --installcert -d ssl.ficapy.com \\           --keypath       &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.key  \\           --fullchainpath &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.pem \\           --reloadcmd     &quot;service nginx force-reload&quot;\n强制测试续约(该操作会自动执行注册过的事件，一般就是重启nginx咯，续约key是不会变的，变的是fullchain.cer文件)\n 1acme.sh --renew-all --force\n生成dhparam文件\n1openssl dhparam -out &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;dhparam.pem 2048\n使用生成一个标准的nginx配置文件并放入/etc/nginx/site-enables目录，示例如下\n123456789101112131415161718    server &#123;    listen 443 ssl;    server_name ssl.ficapy.com;    # certs sent to the client in SERVER HELLO are concatenated in ssl_certificate    ssl_certificate &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.pem;    ssl_certificate_key &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.key;    ssl_session_timeout 1d;    ssl_session_cache shared:SSL:50m;    # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits    ssl_dhparam &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;dhparam.pem;        # intermediate configuration. tweak to your needs.    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;    ssl_ciphers &#39;ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS&#39;;    ssl_prefer_server_ciphers on;&#125;\n最后就是浏览器访问以下测试完毕啦。如果出现错误可以查看nginx的日志/var/log/error.log，肯定是哪一步出问题啦，最后就是测试完毕后删除vps啦tugboat destory temp\n\n\n额外说一下其他的吧。最开始我试过阿里云dns的api，用的是子账号。结果子账号是无法包含(注意)dns的操作权限的，就总是失败。后来不用子账号，直接用原账号的api密匙就完全没问题啦~~~。另外各大云平台大多都有负载均衡器，然后可以填写https证书。这种就不太适合letsencrypt这种短期证书了。否则总上去换证书不被麻烦死。如果在这种负载均衡器上不设置https证书。那么就需要在负载均衡器每一台机器都设置上https证书，嗯想想也挺头大啊~~~，所以这种自动化方式只比较适合在一台机器上生成并维护证书\n再额外，哪个时候写个Ansible的playbook就好哒，可能会更加方便┑(￣Д ￣)┍\n参考github tugboatmozilla ssl-config-generator使用 acme.sh 给 Nginx 安装 Let’ s Encrypt 提供的免费 SSL 证书\n","dateCreated":"2017-03-05T17:19:27+08:00","dateModified":"2021-02-17T13:35:31+08:00","datePublished":"2017-03-05T17:19:27+08:00","description":"letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧","headline":"使用acme.sh快速搭建https","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/03/05/acme.sh_quick_start/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/","http://stackoverflow.com/users","https://twitter.com/","https://facebook.com/","https://plus.google.com/","https://www.linkedin.com/profile/","mailto"]},"url":"https://www.zoulei.net/2017/03/05/acme.sh_quick_start/"}</script>
+    <meta name="description" content="letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="使用acme.sh快速搭建https">
 <meta property="og:url" content="https://www.zoulei.net/2017/03/05/acme.sh_quick_start/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~，来一篇水文记录下测试部署HTTPS的完整过程吧">
-<meta property="og:locale" content="zh-cn">
-<meta property="og:updated_time" content="2017-07-29T15:18:25.000Z">
+<meta property="og:description" content="letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2017-03-05T09:19:27.000Z">
+<meta property="article:modified_time" content="2021-02-17T05:35:31.819Z">
+<meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="使用acme.sh快速搭建https">
-<meta name="twitter:description" content="letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~，来一篇水文记录下测试部署HTTPS的完整过程吧">
     
     
         
@@ -34,7 +32,9 @@
     
     
     <!--STYLES-->
-    <link rel="stylesheet" href="/assets/css/style-lmekjxan6w7cy91c9qult8tgu4ryn0nwdracy0rzt0dwtup2z3ke0the7hug.min.css">
+    
+<link rel="stylesheet" href="/assets/css/style-eps9wxvli2arw2qpvnc3057jwukoa6rgih58jpy4jqjcre3lrm29lkldli2z.min.css">
+
     <!--STYLES END-->
     
 
@@ -57,7 +57,7 @@
     <div class="header-title">
         <a
             class="header-title-link"
-            href="/ "
+            href="/"
             aria-label=""
         >
             邹雷
@@ -87,12 +87,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/ "
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
                             
+                            rel="noopener"
                             title="首页"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">首页</span>
                     </a>
@@ -100,12 +101,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-categories"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
                             
+                            rel="noopener"
                             title="分类"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">分类</span>
                     </a>
@@ -113,12 +115,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-tags"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
                             
+                            rel="noopener"
                             title="标签"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">标签</span>
                     </a>
@@ -126,12 +129,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/all-archives"
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
                             
+                            rel="noopener"
                             title="归档"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">归档</span>
                     </a>
@@ -139,12 +143,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link open-algolia-search"
-                             href="#search"
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
                             
+                            rel="noopener"
                             title="搜索"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">搜索</span>
                     </a>
@@ -152,12 +157,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="#about"
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
                             
+                            rel="noopener"
                             title="关于"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">关于</span>
                     </a>
@@ -169,8 +175,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://github.com/" target="_blank" rel="noopener" title="GitHub">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
                         <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">GitHub</span>
                     </a>
@@ -178,8 +191,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="http://stackoverflow.com/users" target="_blank" rel="noopener" title="Stack Overflow">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="http://stackoverflow.com/users"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Stack Overflow"
+                        >
                         <i class="sidebar-button-icon fab fa-stack-overflow" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Stack Overflow</span>
                     </a>
@@ -187,8 +207,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://twitter.com/" target="_blank" rel="noopener" title="Twitter">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://twitter.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Twitter"
+                        >
                         <i class="sidebar-button-icon fab fa-twitter" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Twitter</span>
                     </a>
@@ -196,8 +223,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://facebook.com/" target="_blank" rel="noopener" title="Facebook">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://facebook.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Facebook"
+                        >
                         <i class="sidebar-button-icon fab fa-facebook" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Facebook</span>
                     </a>
@@ -205,8 +239,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://plus.google.com/" target="_blank" rel="noopener" title="Google Plus">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://plus.google.com/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="Google Plus"
+                        >
                         <i class="sidebar-button-icon fab fa-google-plus" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">Google Plus</span>
                     </a>
@@ -214,8 +255,15 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link " href="https://www.linkedin.com/profile/" target="_blank" rel="noopener" title="LinkedIn">
-                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://www.linkedin.com/profile/"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="LinkedIn"
+                        >
                         <i class="sidebar-button-icon fab fa-linkedin" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">LinkedIn</span>
                     </a>
@@ -223,11 +271,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/mailto"
+                        <a
+                            class="sidebar-button-link "
+                            href="/mailto"
+                            
+                            rel="noopener"
                             title="邮箱"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">邮箱</span>
                     </a>
@@ -239,12 +289,13 @@
             
                 <li class="sidebar-button">
                     
-                        <a  class="sidebar-button-link "
-                             href="/atom.xml"
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
                             
+                            rel="noopener"
                             title="RSS"
                         >
-                    
                         <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
                         <span class="sidebar-button-desc">RSS</span>
                     </a>
@@ -292,7 +343,7 @@
     
     <div class="post-content markdown">
         <div class="main-content-wrap">
-            <p>letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊<del>~</del>，来一篇水文记录下测试部署HTTPS的完整过程吧</p>
+            <p>letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧</p>
 <a id="more"></a>
 <p><a href="media/README-1.md">README</a></p>
 <p>首先有2种认证方式，生成一个指定的文件让letsencrypt访问。或者生成一个DNS记录让letsencrypt访问。第一种方式有非常大的局限性。比如你的80端口正在被使用。那么你需要先设置DNS解析，再修改下nginx的配置让网址能够被正常访问到。这就显得很麻烦了。主流的DNS服务提供商都已经提供了API接口，使用DNS的优势就是：</p>
@@ -304,43 +355,33 @@
 <p>我还是要安利下，临时使用digitalocean测试使用命令行工具tugboat灰常好啊</p>
 <ol>
 <li><p>安装tugboat用命令行快速创建机器以及测试完成后删除</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gem install tugboat</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gem install tugboat</span><br></pre></td></tr></table></figure></li>
 <li><p>将digitalocean的api写入让tugboat能够正常使用,并执行一些初始化设置</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat authorize</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat authorize</span><br></pre></td></tr></table></figure></li>
 <li><p>根据初始化默认设置创建一个vps</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat create temp</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat create temp</span><br></pre></td></tr></table></figure></li>
 <li><p>ssh登陆</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat ssh temp</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tugboat ssh temp</span><br></pre></td></tr></table></figure></li>
 <li><p>安装acme.sh</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl https://get.acme.sh | sh</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl https:&#x2F;&#x2F;get.acme.sh | sh</span><br></pre></td></tr></table></figure></li>
 <li><p>参照acme.sh文档将dns的api信息作为环境变量写入(记得执行source ~/.bashrc)</p>
 </li>
 <li><p>生成证书</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --issue --dns dns_cf -d ssl.ficapy.com --debug</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --issue --dns dns_cf -d ssl.ficapy.com --debug</span><br></pre></td></tr></table></figure></li>
 <li><p>将证书放置到位置并设置nginx重启命令</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --installcert -d ssl.ficapy.com \</span><br><span class="line">           --keypath       /etc/nginx/ssl/ssl.ficapy.com.key  \</span><br><span class="line">           --fullchainpath /etc/nginx/ssl/ssl.ficapy.com.pem \</span><br><span class="line">           --reloadcmd     &quot;service nginx force-reload&quot;</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --installcert -d ssl.ficapy.com \</span><br><span class="line">           --keypath       &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.key  \</span><br><span class="line">           --fullchainpath &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.pem \</span><br><span class="line">           --reloadcmd     &quot;service nginx force-reload&quot;</span><br></pre></td></tr></table></figure></li>
 <li><p>强制测试续约(该操作会自动执行注册过的事件，一般就是重启nginx咯，续约key是不会变的，变的是fullchain.cer文件)</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --renew-all --force</span><br></pre></td></tr></table></figure>
-</li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --renew-all --force</span><br></pre></td></tr></table></figure></li>
 <li><p>生成dhparam文件</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl dhparam -out /etc/nginx/ssl/dhparam.pem 2048</span><br></pre></td></tr></table></figure>
-</li>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">openssl dhparam -out &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;dhparam.pem 2048</span><br></pre></td></tr></table></figure></li>
 <li><p>使用生成一个标准的nginx配置文件并放入/etc/nginx/site-enables目录，示例如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">    server &#123;</span><br><span class="line">    listen 443 ssl;</span><br><span class="line"></span><br><span class="line">    server_name ssl.ficapy.com;</span><br><span class="line">    # certs sent to the client in SERVER HELLO are concatenated in ssl_certificate</span><br><span class="line">    ssl_certificate /etc/nginx/ssl/ssl.ficapy.com.pem;</span><br><span class="line">    ssl_certificate_key /etc/nginx/ssl/ssl.ficapy.com.key;</span><br><span class="line">    ssl_session_timeout 1d;</span><br><span class="line">    ssl_session_cache shared:SSL:50m;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits</span><br><span class="line">    ssl_dhparam /etc/nginx/ssl/dhparam.pem;</span><br><span class="line"></span><br><span class="line">    # intermediate configuration. tweak to your needs.</span><br><span class="line">    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;</span><br><span class="line">    ssl_ciphers &apos;ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS&apos;;</span><br><span class="line">    ssl_prefer_server_ciphers on;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">    server &#123;</span><br><span class="line">    listen 443 ssl;</span><br><span class="line"></span><br><span class="line">    server_name ssl.ficapy.com;</span><br><span class="line">    # certs sent to the client in SERVER HELLO are concatenated in ssl_certificate</span><br><span class="line">    ssl_certificate &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.pem;</span><br><span class="line">    ssl_certificate_key &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;ssl.ficapy.com.key;</span><br><span class="line">    ssl_session_timeout 1d;</span><br><span class="line">    ssl_session_cache shared:SSL:50m;</span><br><span class="line"></span><br><span class="line">    # Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits</span><br><span class="line">    ssl_dhparam &#x2F;etc&#x2F;nginx&#x2F;ssl&#x2F;dhparam.pem;</span><br><span class="line">    </span><br><span class="line">    # intermediate configuration. tweak to your needs.</span><br><span class="line">    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;</span><br><span class="line">    ssl_ciphers &#39;ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS&#39;;</span><br><span class="line">    ssl_prefer_server_ciphers on;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
 <li><p>最后就是浏览器访问以下测试完毕啦。如果出现错误可以查看nginx的日志/var/log/error.log，肯定是哪一步出问题啦，最后就是测试完毕后删除vps啦<code>tugboat destory temp</code></p>
 </li>
 </ol>
 <p>额外说一下其他的吧。最开始我试过阿里云dns的api，用的是子账号。结果子账号是无法包含(注意)dns的操作权限的，就总是失败。后来不用子账号，直接用原账号的api密匙就完全没问题啦~~~。另外各大云平台大多都有负载均衡器，然后可以填写https证书。这种就不太适合letsencrypt这种短期证书了。否则总上去换证书不被麻烦死。如果在这种负载均衡器上不设置https证书。那么就需要在负载均衡器每一台机器都设置上https证书，嗯想想也挺头大啊~~~，所以这种自动化方式只比较适合在一台机器上生成并维护证书</p>
 <p>再额外，哪个时候写个Ansible的playbook就好哒，可能会更加方便┑(￣Д ￣)┍</p>
-<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://github.com/pearkes/tugboat" target="_blank" rel="noopener">github tugboat</a><br><a href="https://mozilla.github.io/server-side-tls/ssl-config-generator/" target="_blank" rel="noopener">mozilla ssl-config-generator</a><br><a href="https://ruby-china.org/topics/31983" target="_blank" rel="noopener">使用 acme.sh 给 Nginx 安装 Let’ s Encrypt 提供的免费 SSL 证书</a></p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p><a href="https://github.com/pearkes/tugboat">github tugboat</a><br><a href="https://mozilla.github.io/server-side-tls/ssl-config-generator/">mozilla ssl-config-generator</a><br><a href="https://ruby-china.org/topics/31983">使用 acme.sh 给 Nginx 安装 Let’ s Encrypt 提供的免费 SSL 证书</a></p>
 
             
 
@@ -458,7 +499,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2020 ficapy. <a href="http://beian.miit.gov.cn/">备案号: 粤ICP备17077609号-1 </a>
+        Copyrights &copy; 2021 ficapy. All Rights Reserved.
     </span>
 </footer>
 
@@ -703,7 +744,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
-<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/" target="_blank" rel="noopener">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -727,7 +768,7 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
-<p>官方网站:<a href="http://www.voidtools.com/" target="_blank" rel="noopener">www.voidtools.com</a></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
 <p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -776,7 +817,7 @@
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
 <p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/" target="_blank" rel="noopener">http://www.techsmith.com/</a></p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
 <p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
                     </div>
                     <div style="clear:both;"></div>
@@ -801,8 +842,8 @@
                             </span>
                         </span>
                         <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
-<p>官网地址：<a href="http://www.xnview.com" target="_blank" rel="noopener">http://www.xnview.com</a></p>
-<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView" target="_blank" rel="noopener">维基百科</a></p></div>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
                     </div>
                     <div style="clear:both;"></div>
                     <hr>
@@ -919,7 +960,9 @@
         
 <div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
         <!--SCRIPTS-->
-<script src="/assets/js/script-2syqcokp4ydg7ltjxjqmxixpl0uihu5jqdm4c9nk0kwa52vtrw4oq9yh2h9r.min.js"></script>
+
+<script src="/assets/js/script-j6wsjrbcd8eruh5sqvytq2zyyk8nqdmg5425tvkyyayxanlxziyuhml3qalg.min.js"></script>
+
 <!--SCRIPTS END-->
 
 
@@ -927,8 +970,12 @@
 
 
 
-    <script src="/assets/js/moment-with-locales.js"></script>
-    <script src="/assets/js/algoliasearch.js"></script>
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
     <script>
       var algoliaClient = algoliasearch('CREC5R0ZWC', '64a7e5eda349fbe7f5a8987e8a7c834e');
       var algoliaIndex = algoliaClient.initIndex('my-hexo-blog');
