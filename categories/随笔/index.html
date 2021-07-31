@@ -235,6 +235,72 @@
     <section class="postShorten-group main-content-wrap">
     
     
+    <article class="postShorten postShorten--thumbnailimg-bottom">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title">
+                    
+                        <a
+                            class="link-unstyled"
+                            href="/2021/07/31/anki_osx_shortcuts_note/"
+                            aria-label=": Anki快捷键在MAC上的注意事项"
+                        >
+                            Anki快捷键在MAC上的注意事项
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time datetime="2021-07-31T12:00:00+08:00">
+	
+		    7月 31, 2021
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/%E9%9A%8F%E7%AC%94/">随笔</a>
+
+
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-content">
+                    <p>在使用Anki制作卡片的时候为了醒目起见，需要修改文字颜色，最好是多种颜色交替，所以找了个插件<a href="https://ankiweb.net/shared/info/2491935955">Quick Colour Changing</a>. 按照文档修改了配置，快捷键设置为了<code>Ctrl+1/2/3/4</code>. 结果发现完全没有反应。</p>
+<p>看了下代码，只有十来行是很好理解的。代码逻辑正常，但就是没办法使用。想来一定是快捷键映射的问题。因为Anki基于PyQt构建，最后翻了下PyQt的<a href="https://doc.qt.io/qtforpython-5/PySide2/QtGui/QKeySequence.html#more">文档</a>. 有以下这句高亮标识</p>
+<p><code>On macOS, references to “Ctrl”, CTRL , Key_Control and ControlModifier correspond to the Command keys on the Macintosh keyboard, and references to “Meta”, META , Key_Meta and MetaModifier correspond to the Control keys. Developers on macOS can use the same shortcut descriptions across all platforms, and their applications will automatically work as expected on macOS.</code></p>
+<p>还是挺奇葩的，你写<code>Ctrl</code>会映射到Command, 写<code>Command</code>无效，写<code>Meta</code>映射到Command…..</p>
+<p>所以在Mac上使用这个插件配置的时候需要特别小心…… 毕竟看起来非常违反直觉</p>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://doc.qt.io/qtforpython-5/PySide2/QtGui/QKeySequence.html#more">https://doc.qt.io/qtforpython-5/PySide2/QtGui/QKeySequence.html#more</a></p>
+<p><a href="https://zetcode.com/pyqt/qshortcut/">PyQt QShortcut</a></p>
+<p><a href="https://ankiweb.net/shared/info/2491935955">Quick Colour Changing</a></p>
+<p><a href="https://stackoverflow.com/a/8020660/2924144">PyQt print event</a></p>
+
+                    
+                        
+
+
+                    
+                    
+                        <p>
+                            <a
+                                href="/2021/07/31/anki_osx_shortcuts_note/#post-footer"
+                                class="postShorten-excerpt_link link"
+                                aria-label=""
+                            >
+                                评论和共享
+                            </a>
+                        </p>
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
     <article class="postShorten postShorten--thumbnailimg-right">
         <div class="postShorten-wrap">
             
@@ -874,7 +940,7 @@ style="color: #ff0000; text-decoration: underline;">基于默认设置的python�
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 97 篇文章
+                找到 98 篇文章
             </p>
         </div>
     </div>
