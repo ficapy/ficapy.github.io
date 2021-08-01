@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"在使用Anki制作卡片的时候为了醒目起见，需要修改文字颜色，最好是多种颜色交替，所以找了个插件Quick Colour Changing. 按照文档修改了配置，快捷键设置为了Ctrl+1/2/3/4. 结果发现完全没有反应。\n看了下代码，只有十来行是很好理解的。代码逻辑正常，但就是没办法使用。想来一定是快捷键映射的问题。因为Anki基于PyQt构建，最后翻了下PyQt的文档. 有以下这句高亮标识\nOn macOS, references to “Ctrl”, CTRL , Key_Control and ControlModifier correspond to the Command keys on the Macintosh keyboard, and references to “Meta”, META , Key_Meta and MetaModifier correspond to the Control keys. Developers on macOS can use the same shortcut descriptions across all platforms, and their applications will automatically work as expected on macOS.\n还是挺奇葩的，你写Ctrl会映射到Command, 写Command无效，写Meta映射到Command…..\n所以在Mac上使用这个插件配置的时候需要特别小心…… 毕竟看起来非常违反直觉\n参考https://doc.qt.io/qtforpython-5/PySide2/QtGui/QKeySequence.html#more\nPyQt QShortcut\nQuick Colour Changing\nPyQt print event\n","dateCreated":"2021-07-31T12:00:00+08:00","dateModified":"2021-07-31T13:05:42+08:00","datePublished":"2021-07-31T12:00:00+08:00","description":"","headline":"Anki快捷键在MAC上的注意事项","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2021/07/31/anki_osx_shortcuts_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2021/07/31/anki_osx_shortcuts_note/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"在使用Anki制作卡片的时候为了醒目起见，需要修改文字颜色，最好是多种颜色交替，所以找了个插件Quick Colour Changing. 按照文档修改了配置，快捷键设置为了Ctrl+1/2/3/4. 结果发现完全没有反应。\n看了下代码，只有十来行是很好理解的。代码逻辑正常，但就是没办法使用。想来一定是快捷键映射的问题。因为Anki基于PyQt构建，最后翻了下PyQt的文档. 有以下这句高亮标识\nOn macOS, references to “Ctrl”, CTRL , Key_Control and ControlModifier correspond to the Command keys on the Macintosh keyboard, and references to “Meta”, META , Key_Meta and MetaModifier correspond to the Control keys. Developers on macOS can use the same shortcut descriptions across all platforms, and their applications will automatically work as expected on macOS.\n还是挺奇葩的，你写Ctrl会映射到Command, 写Command无效，写Meta映射到Command…..\n所以在Mac上使用这个插件配置的时候需要特别小心…… 毕竟看起来非常违反直觉\n参考https://doc.qt.io/qtforpython-5/PySide2/QtGui/QKeySequence.html#more\nPyQt QShortcut\nQuick Colour Changing\nPyQt print event\n","dateCreated":"2021-07-31T12:00:00+08:00","dateModified":"2021-08-01T19:00:04+08:00","datePublished":"2021-07-31T12:00:00+08:00","description":"","headline":"Anki快捷键在MAC上的注意事项","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2021/07/31/anki_osx_shortcuts_note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2021/07/31/anki_osx_shortcuts_note/"}</script>
     <meta name="description" content="在使用Anki制作卡片的时候为了醒目起见，需要修改文字颜色，最好是多种颜色交替，所以找了个插件Quick Colour Changing. 按照文档修改了配置，快捷键设置为了Ctrl+1&#x2F;2&#x2F;3&#x2F;4. 结果发现完全没有反应。 看了下代码，只有十来行是很好理解的。代码逻辑正常，但就是没办法使用。想来一定是快捷键映射的问题。因为Anki基于PyQt构建，最后翻了下PyQt的文档. 有以下这句高亮标识">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="Anki快捷键在MAC上的注意事项">
@@ -20,7 +20,7 @@
 <meta property="og:description" content="在使用Anki制作卡片的时候为了醒目起见，需要修改文字颜色，最好是多种颜色交替，所以找了个插件Quick Colour Changing. 按照文档修改了配置，快捷键设置为了Ctrl+1&#x2F;2&#x2F;3&#x2F;4. 结果发现完全没有反应。 看了下代码，只有十来行是很好理解的。代码逻辑正常，但就是没办法使用。想来一定是快捷键映射的问题。因为Anki基于PyQt构建，最后翻了下PyQt的文档. 有以下这句高亮标识">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-07-31T04:00:00.000Z">
-<meta property="article:modified_time" content="2021-07-31T05:05:42.094Z">
+<meta property="article:modified_time" content="2021-08-01T11:00:04.738Z">
 <meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
     
@@ -292,11 +292,14 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a
-                        class="post-action-btn btn btn--disabled"
-                        aria-hidden="true"
-                    >
-                        
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2021/08/01/chrome_external_control/"
+                    data-tooltip="Chrome播放视频外部控制"
+                    aria-label="上一篇: Chrome播放视频外部控制"
+                >
+                    
                         <i class="fa fa-angle-left" aria-hidden="true"></i>
                         <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
                     </a>
@@ -404,11 +407,14 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    <a
-                        class="post-action-btn btn btn--disabled"
-                        aria-hidden="true"
-                    >
-                        
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2021/08/01/chrome_external_control/"
+                    data-tooltip="Chrome播放视频外部控制"
+                    aria-label="上一篇: Chrome播放视频外部控制"
+                >
+                    
                         <i class="fa fa-angle-left" aria-hidden="true"></i>
                         <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
                     </a>
@@ -846,7 +852,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 98 篇文章
+                找到 99 篇文章
             </p>
         </div>
     </div>
