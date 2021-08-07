@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>分类: DevOps - 邹雷</title>
+    <title>分类: devops - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
@@ -14,7 +14,7 @@
     <script type="application/ld+json">{}</script>
     <meta property="og:type" content="blog">
 <meta property="og:title" content="邹雷">
-<meta property="og:url" content="https://www.zoulei.net/categories/DevOps/index.html">
+<meta property="og:url" content="https://www.zoulei.net/categories/devops/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:author" content="ficapy">
@@ -243,23 +243,23 @@
                     
                         <a
                             class="link-unstyled"
-                            href="/2017/03/12/ssh-port-forward/"
-                            aria-label=": ssh端口映射"
+                            href="/2018/05/25/mitmproxy_transparent_model_network_capture/"
+                            aria-label=": mac上使用mitmproxy对ios app进行抓包"
                         >
-                            ssh端口映射
+                            mac上使用mitmproxy对ios app进行抓包
                         </a>
                     
                 </h1>
                 <div class="postShorten-meta">
-    <time datetime="2017-03-12T11:40:30+08:00">
+    <time datetime="2018-05-25T17:45:59+08:00">
 	
-		    3月 12, 2017
+		    5月 25, 2018
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/DevOps/">DevOps</a>
+    <a class="category-link" href="/categories/devops/">devops</a>
 
 
     
@@ -268,12 +268,19 @@
             </div>
             
                 <div class="postShorten-excerpt">
-                    <p>开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下</p>
+                    <p>对ios app抓包的方式挺多的，最常规的方案就是本机开启一个http代理。然后手机进行设置，将本机内网ip以及端口设置上去。安装一个https证书，设置为信任就可以开始抓包了。这个方案非常通用。类似的实现以Fiddler、charles为代表，它们确实很好用，也很好理解。但是缺点也是有的</p>
+<ul>
+<li>最大的缺点就是每一次使用都需要设置代理，你需要查看本机内网ip，然后填写到手机上。调试完成后再将手机的代理设置清除</li>
+<li>Fiddler只有windows版本可用，意味着mac需要使用虚拟机，charles并没有Fiddler好用，然而还卖的贼贵</li>
+</ul>
+<p>同类型的开源方案最常见的是Python实现的mitmproxy。mitmweb也提供图形界面，别说，只要你不嫌弃还是挺好用的</p>
+<p>osx上还有个比较奇葩的所谓网络调试软件Surge。99美刀，卖的还是挺贵的，功能还行，界面也挺花哨，忽悠小白是足够了。用它也能够远程调试，代价是需要用有线连接到mac电脑上，然后mac端软件就能捕获远程手机的网络请求数据，这个软件界面确实挺不错，然而请求过滤查找对比下Fiddler而言就是个渣渣吧。</p>
+<p>因此想了一个比较另类的方案，手机使用mac电脑的网络，同时使用pf对请求进行转发。使用mitmproxy的透明代理模式获得手机端的数据，使用mitmweb进行展示</p>
                     
                         <a
-                            href="/2017/03/12/ssh-port-forward/"
+                            href="/2018/05/25/mitmproxy_transparent_model_network_capture/"
                             class="postShorten-excerpt_link link"
-                            aria-label=": ssh端口映射"
+                            aria-label=": mac上使用mitmproxy对ios app进行抓包"
                         >
                             阅读全文
                         </a>
@@ -294,23 +301,23 @@
                     
                         <a
                             class="link-unstyled"
-                            href="/2017/03/05/acme.sh_quick_start/"
-                            aria-label=": 使用acme.sh快速搭建https"
+                            href="/2017/12/25/GitLabCICD_quickstart/"
+                            aria-label=": 开始GitLab CI/CD"
                         >
-                            使用acme.sh快速搭建https
+                            开始GitLab CI/CD
                         </a>
                     
                 </h1>
                 <div class="postShorten-meta">
-    <time datetime="2017-03-05T17:19:27+08:00">
+    <time datetime="2017-12-25T20:38:35+08:00">
 	
-		    3月 05, 2017
+		    12月 25, 2017
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/DevOps/">DevOps</a>
+    <a class="category-link" href="/categories/devops/">devops</a>
 
 
     
@@ -319,12 +326,120 @@
             </div>
             
                 <div class="postShorten-excerpt">
-                    <p>letsencrypt刚出来的时候写了一篇它的认证签发原理。自那过后就没有真正的去实践过了。最近有部署HTTPS的需求就又考察了一番。发现acme.sh灰常好用啊~~~，来一篇水文记录下测试部署HTTPS的完整过程吧</p>
+                    <h3 id="GitLabCI-CD流程"><a href="#GitLabCI-CD流程" class="headerlink" title="GitLabCI/CD流程"></a>GitLabCI/CD流程</h3><p>gitlab如果没有和Docker很好的结合。那么它会是一个很平凡的产品。但是有了CI对比其他产品Gogs、github等它还算可堪一用。上一篇文章写了gitlab_ci.yml配置文件的一些参数的含义。本篇文章记录一下如何从零在Gitlab上完成简单的CI/CD流程。基础流程如下Build流程构建我们需要的镜像上传到镜像仓库。部署的时候从镜像仓库直接拉取重启容器<br><img src="https://blogimg.ficapy.com/blogimg/GitlabCI.jpg" alt="GitlabCI"></p>
                     
                         <a
-                            href="/2017/03/05/acme.sh_quick_start/"
+                            href="/2017/12/25/GitLabCICD_quickstart/"
                             class="postShorten-excerpt_link link"
-                            aria-label=": 使用acme.sh快速搭建https"
+                            aria-label=": 开始GitLab CI/CD"
+                        >
+                            阅读全文
+                        </a>
+                        
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
+    <article class="postShorten postShorten--thumbnailimg-right">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title">
+                    
+                        <a
+                            class="link-unstyled"
+                            href="/2017/12/25/gitlabciyml_note/"
+                            aria-label=": gitlabci yml 笔记"
+                        >
+                            gitlabci yml 笔记
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time datetime="2017-12-25T12:17:56+08:00">
+	
+		    12月 25, 2017
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/devops/">devops</a>
+
+
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-excerpt">
+                    <p>以下内容来自GitlabCI官方文档</p>
+<h2 id="最基础的"><a href="#最基础的" class="headerlink" title="最基础的"></a>最基础的</h2><ul>
+<li><p>jobs作为最顶级的元素。每个job至少包含一个script</p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">job1:</span><br><span class="line">    script1: pwd</span><br></pre></td></tr></table></figure>
+<p>  每个job的执行都是完全独立于其他的job</p>
+</li>
+</ul>
+                    
+                        <a
+                            href="/2017/12/25/gitlabciyml_note/"
+                            class="postShorten-excerpt_link link"
+                            aria-label=": gitlabci yml 笔记"
+                        >
+                            阅读全文
+                        </a>
+                        
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
+    <article class="postShorten postShorten--thumbnailimg-right">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title">
+                    
+                        <a
+                            class="link-unstyled"
+                            href="/2017/11/28/ansible-note/"
+                            aria-label=": ansible笔记"
+                        >
+                            ansible笔记
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time datetime="2017-11-28T11:28:42+08:00">
+	
+		    11月 28, 2017
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/devops/">devops</a>
+
+
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-excerpt">
+                    <p>以下为观看<a href="https://www.youtube.com/playlist?list=PL7hgvWUGJtUsT74AXZgVhr37riphKjzkD">Ansible-Configuration Management</a>的笔记。不适合初学者查看。可以作为温习使用</p>
+                    
+                        <a
+                            href="/2017/11/28/ansible-note/"
+                            class="postShorten-excerpt_link link"
+                            aria-label=": ansible笔记"
                         >
                             阅读全文
                         </a>
@@ -659,112 +774,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 99 篇文章
-            </p>
-        </div>
-    </div>
-</div>
-
-        
-        
-<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
-        <!--SCRIPTS-->
-
-<script src="/assets/js/script-mdmhmndjqtxgrnbcqxwfotdukip0lyvqjtoun1q59tiszh2pjvmu0dun2kvx.min.js"></script>
-
-<!--SCRIPTS END-->
-
-
-
-
-    
-<script src="/assets/js/moment-with-locales.js"></script>
-
-    
-<script src="/assets/js/algoliasearch.js"></script>
-
-    <script>
-      var algoliaClient = algoliasearch('CX8LZHBELF', '3fcc4f94219bf4d5f5714b449373ba3c');
-      var algoliaIndex = algoliaClient.initIndex('Blog');
-    </script>
-
-
-    </body>
-</html>
-tps://www.zoulei.net/2013/11/28/disktool_recommend/"
-                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
-                        >
-                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
-                        </a>
-                        <span class="media-meta">
-                            <span class="media-date text-small">
-                                
-                                    2013年11月28日
-                                
-                            </span>
-                        </span>
-                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
-                    </div>
-                    <div style="clear:both;"></div>
-                    <hr>
-                </div>
-                
-                <div class="media">
-                    
-                    <div class="media-body">
-                        <a
-                            class="link-unstyled"
-                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
-                            aria-label=": excel数字递增批量打印"
-                        >
-                            <h3 class="media-heading">excel数字递增批量打印</h3>
-                        </a>
-                        <span class="media-meta">
-                            <span class="media-date text-small">
-                                
-                                    2013年12月20日
-                                
-                            </span>
-                        </span>
-                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
-<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
-                    </div>
-                    <div style="clear:both;"></div>
-                    <hr>
-                </div>
-                
-                <div class="media">
-                    
-                    <div class="media-body">
-                        <a
-                            class="link-unstyled"
-                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
-                            aria-label=": pip使用国内镜像"
-                        >
-                            <h3 class="media-heading">pip使用国内镜像</h3>
-                        </a>
-                        <span class="media-meta">
-                            <span class="media-date text-small">
-                                
-                                    2013年12月27日
-                                
-                            </span>
-                        </span>
-                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
-<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
-                    </div>
-                    <div style="clear:both;"></div>
-                    <hr>
-                </div>
-                
-            </div>
-        </div>
-        <div class="modal-footer">
-            <p class="results-count text-medium"
-                data-message-zero="没有找到文章"
-                data-message-one="找到 1 篇文章"
-                data-message-other="找到 {n} 篇文章">
-                找到 99 篇文章
+                找到 100 篇文章
             </p>
         </div>
     </div>
