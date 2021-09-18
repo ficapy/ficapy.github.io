@@ -6,22 +6,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>ansible笔记 - 邹雷</title>
+    <title> - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用\n\n\nAnsible总结\n单个Module是基石，将机器分组，严重依靠变量\ntask\b组成任务\n全部的task组成playbooks.\b将所有的机器定义到一个\b确定的\b状态\n使用role对playbooks进行拆分.role有约定好的目录结构\nansible galaxy来分享role.\b使用时完全使用变量\b来\b覆盖原有变量,严重依赖社区水平(比如国情安装许多软件都需要使用镜像,而外国作者编写role并不会考虑这些)\n\n特点\nchange management(定义一个特定的系统状态，change_event用于回调)\nProvisioning(role。\b服务划分。比如一个webserver会依次执行某些步骤)\nAutomation(playbook同时设置上千台)\nOrchestration(编排\b多个tasks让其协调coordinates执行。\b多个系统配置。解决task间的依赖性)\n\n\b为什么使用它\nNo agents\nNo database\nNo residual software\nNo complex upgrades\n题外话。使用yaml文件描述而无法使用编程控制。我认为迟早药丸。只不过目前还没找到更好的替代品\b\n\bssh/root/encrypted vault(共享到github仓库成标配了,几乎所有的软件都是这个套路)\n\beasy to extend:http call、shell commands(挺有用)、scripts(暂时不太懂，感觉是扩充model)、Ansible-Galaxy\n\nAnsible 架构\n\b\u001bVariables:\n\nHost Variables: 在资产中给host或者group设置的变量\nFacts: ansible进行的第一步就是setup。获取机器的基础信息。\b比如内网ip\nDynamic Variables: \b收集tasks数据或者运行时获取？比如将上一个task的结果作为参数\n\n\b执行过程中将model发送到远方机器临时目录执行。\b返回json结果。然后删除临时目录内容\n学习环境搭建(视频19)\nVagrant、Virtualbox、Ansible\nRemote、Local(基本不使用Local模式。仅有一次无法远程ssh我用过)\n\nInventory Features\nBehavioral Parameters\nGroups\nGroups of Groups\nAssign Variables\nScaling out using multiple files\nStatic/Dynamic分组、组合、\b赋予变量(和python里面变量作用域LEGB差不多)\n\n12345678910[db]db1.company.com ansible_ssh_user&#x3D;aarom xx&#x3D;xxdb2.company.com[datacenter-west:children]db[datacenter-west:vars]ansible_ssh_user&#x3D;ansible_userxx&#x3D;xx\n\b分组的套路(group_vars、host_vars\b下面的文件必须和inventory相对应)\n1234567├── group_vars   # \b全局│   ├── all│   ├── db├── host_vars   # 单个host│   └── web1├── inventory_prod├── inventory_test\n12345# variable file example---     # 标记# key-value pairsntp:  ntp-west.company.comsyslog: logger-west.company.com\n\bAd-Hoc 临时使用1234ansible -m ping allansible -m shell -a &quot;hostname&quot; allansible -m shell -a &quot;getent passwd | grep deploy&quot; allansible -b -K -m shell -a &quot;whoami&quot; all -vvv -T 30 -c paramiko\n参数注解\n\n-b become\b变成某用户一般是root\n-K 配合-b输入密码\n-m 使用某个模块\n-vvv 和ssh -vvv一样查看详细日志\n-T timeout 设置超时\n-c 选择连接的模块. 3.5使用默认值搞sudo可能会有问题\n\n12使用\b变量(估计使用janja2模板\b引擎是会python的人使用ansible的唯一优势了-_-)ansible webservers -i inventory_prod -m user -a &quot;name&#x3D;&#123;&#123;username&#125;&#125; password&#x3D;1234 -b&quot;\nansible-doc可以查看文档  \nHost/Group Target Patterns\nOR (group1:group2)\nNOT (!group2)\nWildcard (web*.ex.com)\nRegex (~web[0-9]+)\nComplex Patterns AND (group1:&amp;group2) # 求交集、中间出现一个:有点奇葩\n\nAnaible Playbooks\n组合ansible modules组成play,多个play组成playbooks\nlogic controls &amp; error handle\ninclude 合并多个\nGrab output of task for another task(register)\nDebug Module(debug/msg or var)\nPromptins for input(类似与input,vars_prompt)\nPlaybook Handlers(notify)\nTasks with asynchronous execution\nOnly runs tasks when notified\nTasks Only notify when state=changed\nDoes not run until all playbook tasks have executed\nMost common for restarting services to load changes(if changes are made)\n\n\nContitional Clause(when: ansible_os_family == “Debian”,搭配register使用)\nJinja2 Template Module(template)\n\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950---- hosts: webservres  sudo: yes  vars:    http_port: 80    doc_dir: &#x2F;ansible&#x2F;    doc_root: &#x2F;var&#x2F;www&#x2F;html&#x2F;ansible&#x2F;    max_clients: 5    vars_prompt:    - name: username      prompt: what is your name?  tasks:  - name: Ensure that Apache is installed    yum: name&#x3D;httpd state&#x3D;present    when: ansible_os_family &#x3D;&#x3D; &quot;RedHat&quot;  - name: Start Apache Services    service: name&#x3D;httpd enabled&#x3D;yes state&#x3D;started  - name: Deploy configuration File    template: src&#x3D;templates&#x2F;httpd.j2 dest&#x3D;&#x2F;etc&#x2F;httpd&#x2F;conf&#x2F;httpd.conf    notify:      - Restart Apache      - name: Copy Site Files      template: src&#x3D;templates&#x2F;index.j2 dest&#x3D;&#123;&#123; doc_root &#125;&#125;&#x2F;index.html  handlers:    - name: Restart Apache      service: name&#x3D;httpd state&#x3D;restarted- hosts: dbservers  sudo: yes  tasks:  - name: Ensure MySQL is installed    yum: name&#x3D;mysql-server state&#x3D;present    - name: Start MySQL    service: name&#x3D;mysqld state&#x3D;started- hosts: webservers:dbservers  sudo: yes  tasks:  - name: Stop IPTABLES NOW!!!    service: name&#x3D;iptables state&#x3D;stopped\nansible-playbook -i inventory web_db.yaml\nRoles\nPredefined directory structure\n\ndefaults、files、handlers、meta、tasks、templates、vars\n\nmain.yml,使用include.vars除外\n\nuse tags to define categories within your playbooks\n\nAdding Roles to Playbook\n  12345678---- hosts: code-devroles:    - server-common    - buildersgather_facts: notasks:    # Build your extra tasks here like\nPre-tasks and Post-tasks(executes plays before or after roles)\n\nansible-playbook site.yml -tags &quot;web&quot; -limit atlanta\n\nansible galaxy(ansible-galaxy install username.role)\n\n\n最佳实践ansible-best-practises\n","dateCreated":"2017-11-28T11:28:42+08:00","dateModified":"2021-02-17T13:35:30+08:00","datePublished":"2017-11-28T11:28:42+08:00","description":"以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用","headline":"ansible笔记","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/11/28/ansible-note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/11/28/ansible-note/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用\n\n\nAnsible总结\n单个Module是基石，将机器分组，严重依靠变量\ntask\b组成任务\n全部的task组成playbooks.\b将所有的机器定义到一个\b确定的\b状态\n使用role对playbooks进行拆分.role有约定好的目录结构\nansible galaxy来分享role.\b使用时完全使用变量\b来\b覆盖原有变量,严重依赖社区水平(比如国情安装许多软件都需要使用镜像,而外国作者编写role并不会考虑这些)\n\n特点\nchange management(定义一个特定的系统状态，change_event用于回调)\nProvisioning(role。\b服务划分。比如一个webserver会依次执行某些步骤)\nAutomation(playbook同时设置上千台)\nOrchestration(编排\b多个tasks让其协调coordinates执行。\b多个系统配置。解决task间的依赖性)\n\n\b为什么使用它\nNo agents\nNo database\nNo residual software\nNo complex upgrades\n题外话。使用yaml文件描述而无法使用编程控制。我认为迟早药丸。只不过目前还没找到更好的替代品\b\n\bssh/root/encrypted vault(共享到github仓库成标配了,几乎所有的软件都是这个套路)\n\beasy to extend:http call、shell commands(挺有用)、scripts(暂时不太懂，感觉是扩充model)、Ansible-Galaxy\n\nAnsible 架构\n\b\u001bVariables:\n\nHost Variables: 在资产中给host或者group设置的变量\nFacts: ansible进行的第一步就是setup。获取机器的基础信息。\b比如内网ip\nDynamic Variables: \b收集tasks数据或者运行时获取？比如将上一个task的结果作为参数\n\n\b执行过程中将model发送到远方机器临时目录执行。\b返回json结果。然后删除临时目录内容\n学习环境搭建(视频19)\nVagrant、Virtualbox、Ansible\nRemote、Local(基本不使用Local模式。仅有一次无法远程ssh我用过)\n\nInventory Features\nBehavioral Parameters\nGroups\nGroups of Groups\nAssign Variables\nScaling out using multiple files\nStatic/Dynamic分组、组合、\b赋予变量(和python里面变量作用域LEGB差不多)\n\n12345678910[db]db1.company.com ansible_ssh_user&#x3D;aarom xx&#x3D;xxdb2.company.com[datacenter-west:children]db[datacenter-west:vars]ansible_ssh_user&#x3D;ansible_userxx&#x3D;xx\n\b分组的套路(group_vars、host_vars\b下面的文件必须和inventory相对应)\n1234567├── group_vars   # \b全局│   ├── all│   ├── db├── host_vars   # 单个host│   └── web1├── inventory_prod├── inventory_test\n12345# variable file example---     # 标记# key-value pairsntp:  ntp-west.company.comsyslog: logger-west.company.com\n\bAd-Hoc 临时使用1234ansible -m ping allansible -m shell -a &quot;hostname&quot; allansible -m shell -a &quot;getent passwd | grep deploy&quot; allansible -b -K -m shell -a &quot;whoami&quot; all -vvv -T 30 -c paramiko\n参数注解\n\n-b become\b变成某用户一般是root\n-K 配合-b输入密码\n-m 使用某个模块\n-vvv 和ssh -vvv一样查看详细日志\n-T timeout 设置超时\n-c 选择连接的模块. 3.5使用默认值搞sudo可能会有问题\n\n12使用\b变量(估计使用janja2模板\b引擎是会python的人使用ansible的唯一优势了-_-)ansible webservers -i inventory_prod -m user -a &quot;name&#x3D;&#123;&#123;username&#125;&#125; password&#x3D;1234 -b&quot;\nansible-doc可以查看文档  \nHost/Group Target Patterns\nOR (group1:group2)\nNOT (!group2)\nWildcard (web*.ex.com)\nRegex (~web[0-9]+)\nComplex Patterns AND (group1:&amp;group2) # 求交集、中间出现一个:有点奇葩\n\nAnaible Playbooks\n组合ansible modules组成play,多个play组成playbooks\nlogic controls &amp; error handle\ninclude 合并多个\nGrab output of task for another task(register)\nDebug Module(debug/msg or var)\nPromptins for input(类似与input,vars_prompt)\nPlaybook Handlers(notify)\nTasks with asynchronous execution\nOnly runs tasks when notified\nTasks Only notify when state=changed\nDoes not run until all playbook tasks have executed\nMost common for restarting services to load changes(if changes are made)\n\n\nContitional Clause(when: ansible_os_family == “Debian”,搭配register使用)\nJinja2 Template Module(template)\n\n1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950---- hosts: webservres  sudo: yes  vars:    http_port: 80    doc_dir: &#x2F;ansible&#x2F;    doc_root: &#x2F;var&#x2F;www&#x2F;html&#x2F;ansible&#x2F;    max_clients: 5    vars_prompt:    - name: username      prompt: what is your name?  tasks:  - name: Ensure that Apache is installed    yum: name&#x3D;httpd state&#x3D;present    when: ansible_os_family &#x3D;&#x3D; &quot;RedHat&quot;  - name: Start Apache Services    service: name&#x3D;httpd enabled&#x3D;yes state&#x3D;started  - name: Deploy configuration File    template: src&#x3D;templates&#x2F;httpd.j2 dest&#x3D;&#x2F;etc&#x2F;httpd&#x2F;conf&#x2F;httpd.conf    notify:      - Restart Apache      - name: Copy Site Files      template: src&#x3D;templates&#x2F;index.j2 dest&#x3D;&#123;&#123; doc_root &#125;&#125;&#x2F;index.html  handlers:    - name: Restart Apache      service: name&#x3D;httpd state&#x3D;restarted- hosts: dbservers  sudo: yes  tasks:  - name: Ensure MySQL is installed    yum: name&#x3D;mysql-server state&#x3D;present    - name: Start MySQL    service: name&#x3D;mysqld state&#x3D;started- hosts: webservers:dbservers  sudo: yes  tasks:  - name: Stop IPTABLES NOW!!!    service: name&#x3D;iptables state&#x3D;stopped\nansible-playbook -i inventory web_db.yaml\nRoles\nPredefined directory structure\n\ndefaults、files、handlers、meta、tasks、templates、vars\n\nmain.yml,使用include.vars除外\n\nuse tags to define categories within your playbooks\n\nAdding Roles to Playbook\n  12345678---- hosts: code-devroles:    - server-common    - buildersgather_facts: notasks:    # Build your extra tasks here like\nPre-tasks and Post-tasks(executes plays before or after roles)\n\nansible-playbook site.yml -tags &quot;web&quot; -limit atlanta\n\nansible galaxy(ansible-galaxy install username.role)\n\n\n最佳实践ansible-best-practises\n","dateCreated":"2017-11-28T11:28:42+08:00","dateModified":"2021-09-18T09:24:11+08:00","datePublished":"2017-11-28T11:28:42+08:00","description":"以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用","headline":"","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/11/28/ansible-note/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/11/28/ansible-note/"}</script>
     <meta name="description" content="以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="ansible笔记">
+<meta property="og:title" content="邹雷">
 <meta property="og:url" content="https://www.zoulei.net/2017/11/28/ansible-note/index.html">
 <meta property="og:site_name" content="邹雷">
 <meta property="og:description" content="以下为观看Ansible-Configuration Management的笔记。不适合初学者查看。可以作为温习使用">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://blogimg.ficapy.com/capture/ansible_arch.jpg">
 <meta property="article:published_time" content="2017-11-28T03:28:42.000Z">
-<meta property="article:modified_time" content="2021-02-17T05:35:30.868Z">
+<meta property="article:modified_time" content="2021-09-18T01:24:11.071Z">
 <meta property="article:author" content="ficapy">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://blogimg.ficapy.com/capture/ansible_arch.jpg">
@@ -246,7 +246,7 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title">
-            ansible笔记
+            (无标题)
         </h1>
     
     
@@ -425,7 +425,7 @@
             <a
                 class="post-action-btn btn btn--default btn-open-shareoptions"
                 href="#btn-open-shareoptions"
-                aria-label="Share this post"
+                aria-label="Diesen Beitrag teilen"
             >
                 <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
@@ -475,7 +475,7 @@
         
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
                 <i class="fa fa-list" aria-hidden="true"></i>
             </a>
@@ -540,7 +540,7 @@
             <a
                 class="post-action-btn btn btn--default btn-open-shareoptions"
                 href="#btn-open-shareoptions"
-                aria-label="Share this post"
+                aria-label="Diesen Beitrag teilen"
             >
                 <i class="fa fa-share-alt" aria-hidden="true"></i>
             </a>
@@ -590,7 +590,7 @@
         
         <li class="post-action">
             
-                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
             
                 <i class="fa fa-list" aria-hidden="true"></i>
             </a>
@@ -952,7 +952,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 101 篇文章
+                找到 102 篇文章
             </p>
         </div>
     </div>
