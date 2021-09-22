@@ -6,27 +6,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>Snagit-截图兼图片转换软件 - 邹雷</title>
+    <title>使用OSC52实现远程写入本地粘贴板 - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~\n今天介绍的是一款据说主打截图的软件-snagit\n 官方网站：http://www.techsmith.com/\n主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasiastudio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~\n\n\n它的截图功能的定位我真的感觉很怪异，最简便截图我们会用系统自带的printscreen或者alt+printscreen。如果不用snagit的图片后期处理功能和系统自带截图没什么区别。若是要添加简便的箭头或者文本说明。用QQ也不在话下~~~~~~不在这2者之类的要用到这个软件的截图功能的人我想应该不多.就我看来，这个软件的截图功能算是小众吧。\n我比较喜欢的是它的另外2个功能\n1.图片格式转换功能，因为可选参数比较多，比较傻瓜。对于图片压缩效果立竿见影，打开也及其方便，就在右键菜单栏，对比需要调用它的截图功能需要打开软件简直太方便了。   可批量转换，转换的时候也可以添加一些效果\n可选格式多，可调空间大\n2.附带虚拟打印机。能够打印出来的文件就能使用它打印出各种格式的图片~~但也有个缺点,不支持A3输出。而且调用速度慢。so，一般用虚拟打印机它只能当做备胎。\n虽然这是一款主打截图的软件，但是我觉得图片格式转换压缩远比截图好用，用来加强photoshop的图片输出功能是一种不错的选择（吐槽下ps对图片的输出实在太坑爹了，我也没找到牛X的输出增强插件）\n下载地址:http://user.qzone.qq.com/562844847/blog/1370396108#!app=2&amp;via=QZ.HashRefresh&amp;pos=1370396108\n","dateCreated":"2013-10-12T19:17:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2013-10-12T19:17:00+08:00","description":"好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~\n今天介绍的是一款据说主打截图的软件-snagit\n 官方网站：http://www.techsmith.com/\n主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasiastudio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~","headline":"Snagit-截图兼图片转换软件","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/","keywords":"snagit, 图片格式转换"}</script>
-    <meta name="description" content="好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~ 今天介绍的是一款据说主打截图的软件-snagit  官方网站：http:&#x2F;&#x2F;www.techsmith.com&#x2F; 主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入">
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"经常在本地电脑上使用pbcopy和pbpaste十分方便，但是ssh连接到远程机器后需要拷贝远程内容到本地相对就比较麻烦，以前总是需要采用ssh remote &#39;cat file&#39; | pbcopy，搞多了就很烦，今天搜索了一下remote pbcopy之后发现了OSC52这个东西，用起来十分方便\n本质就是输出一段特定格式的转义字符串，终端识别这个转移字符串得到原始内容，写入本机的粘贴板\n远程主机123456sudo dd of=/usr/local/bin/osc52 &lt;&lt;&#x27;EOF&#x27;#!/bin/bashprintf &quot;\\033]52;c;$(base64 | tr -d &#x27;\\r\\n&#x27;)\\a&quot;EOFsudo chmod +x /usr/local/bin/osc52\n本机Iterm2开启粘贴板访问权限\n\n如果需要搭配tmux一起使用，需要在配置文件添加\n1set -g set-clipboard on\n至此只需要在远程执行类似语句echo 123 | osc52 ，本机粘贴板就成功复制了\n参考OSC52的支持范围很广\nRemote Copy via OSC52\n","dateCreated":"2021-09-22T19:00:00+08:00","dateModified":"2021-09-22T17:29:31+08:00","datePublished":"2021-09-22T19:00:00+08:00","description":"","headline":"使用OSC52实现远程写入本地粘贴板","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2021/09/22/osc52_remote_copy/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2021/09/22/osc52_remote_copy/"}</script>
+    <meta name="description" content="经常在本地电脑上使用pbcopy和pbpaste十分方便，但是ssh连接到远程机器后需要拷贝远程内容到本地相对就比较麻烦，以前总是需要采用ssh remote &#39;cat file&#39; | pbcopy，搞多了就很烦，今天搜索了一下remote pbcopy之后发现了OSC52这个东西，用起来十分方便 本质就是输出一段特定格式的转义字符串，终端识别这个转移字符串得到原始内容，写入本机的">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="Snagit-截图兼图片转换软件">
-<meta property="og:url" content="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/index.html">
+<meta property="og:title" content="使用OSC52实现远程写入本地粘贴板">
+<meta property="og:url" content="https://www.zoulei.net/2021/09/22/osc52_remote_copy/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~ 今天介绍的是一款据说主打截图的软件-snagit  官方网站：http:&#x2F;&#x2F;www.techsmith.com&#x2F; 主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入">
+<meta property="og:description" content="经常在本地电脑上使用pbcopy和pbpaste十分方便，但是ssh连接到远程机器后需要拷贝远程内容到本地相对就比较麻烦，以前总是需要采用ssh remote &#39;cat file&#39; | pbcopy，搞多了就很烦，今天搜索了一下remote pbcopy之后发现了OSC52这个东西，用起来十分方便 本质就是输出一段特定格式的转义字符串，终端识别这个转移字符串得到原始内容，写入本机的">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://blogimg.ficapy.com/blogimg/snagit.png">
-<meta property="article:published_time" content="2013-10-12T11:17:00.000Z">
-<meta property="article:modified_time" content="2019-07-26T06:53:30.668Z">
+<meta property="og:image" content="https://blogimg.ficapy.com/capture/2021_09_22_17_25_38.png">
+<meta property="article:published_time" content="2021-09-22T11:00:00.000Z">
+<meta property="article:modified_time" content="2021-09-22T09:29:31.455Z">
 <meta property="article:author" content="ficapy">
-<meta property="article:tag" content="snagit">
-<meta property="article:tag" content="图片格式转换">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://blogimg.ficapy.com/blogimg/snagit.png">
+<meta name="twitter:image" content="https://blogimg.ficapy.com/capture/2021_09_22_17_25_38.png">
     
     
         
@@ -248,20 +246,20 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title">
-            Snagit-截图兼图片转换软件
+            使用OSC52实现远程写入本地粘贴板
         </h1>
     
     
         <div class="post-meta">
-    <time datetime="2013-10-12T19:17:00+08:00">
+    <time datetime="2021-09-22T19:00:00+08:00">
 	
-		    10月 12, 2013
+		    9月 22, 2021
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/%E5%96%84%E7%94%A8%E4%BD%B3%E8%BD%AF/">善用佳软</a>
+    <a class="category-link" href="/categories/linux/">linux</a>
 
 
     
@@ -273,19 +271,16 @@
     
     <div class="post-content markdown">
         <div class="main-content-wrap">
-            <p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
-<p>今天介绍的是一款据说主打截图的软件-snagit</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
-<p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p>
-<a id="more"></a>
-
-<p>它的截图功能的定位我真的感觉很怪异，最简便截图我们会用系统自带的print<br>screen或者alt+print<br>screen。如果不用snagit的图片后期处理功能和系统自带截图没什么区别。若是要添加简便的箭头或者文本说明。用QQ也不在话下~~~~~~不在这2者之类的要用到这个软件的截图功能的人我想应该不多.就我看来，这个软件的截图功能算是小众吧。</p>
-<p>我比较喜欢的是它的另外2个功能</p>
-<p>1.图片格式转换功能，因为可选参数比较多，比较傻瓜。对于图片压缩效果立竿见影，打开也及其方便，就在右键菜单栏，对比需要调用它的截图功能需要打开软件简直太方便了。<br>   <br><strong>可批量转换，转换的时候也可以添加一些效果</strong></p>
-<p><strong>可选格式多，可调空间大</strong></p>
-<p>2.附带虚拟打印机。能够打印出来的文件就能使用它打印出各种格式的图片~~但也有个缺点,不支持A3输出。而且调用速度慢。so，一般用虚拟打印机它只能当做备胎。</p>
-<p>虽然这是一款主打截图的软件，但是我觉得图片格式转换压缩远比截图好用，用来加强photoshop的图片输出功能是一种不错的选择（吐槽下ps对图片的输出实在太坑爹了，我也没找到牛X的输出增强插件）</p>
-<p>下载地址:<a href="http://user.qzone.qq.com/562844847/blog/1370396108#!app=2&amp;via=QZ.HashRefresh&amp;pos=1370396108">http://user.qzone.qq.com/562844847/blog/1370396108#!app=2&amp;via=QZ.HashRefresh&amp;pos=1370396108</a></p>
+            <p>经常在本地电脑上使用pbcopy和pbpaste十分方便，但是ssh连接到远程机器后需要拷贝远程内容到本地相对就比较麻烦，以前总是需要采用<code>ssh remote &#39;cat file&#39; | pbcopy</code>，搞多了就很烦，今天搜索了一下remote pbcopy之后发现了OSC52这个东西，用起来十分方便</p>
+<p>本质就是输出一段特定格式的转义字符串，终端识别这个转移字符串得到原始内容，写入本机的粘贴板</p>
+<h3 id="远程主机"><a href="#远程主机" class="headerlink" title="远程主机"></a>远程主机</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">sudo dd of=/usr/<span class="built_in">local</span>/bin/osc52 &lt;&lt;<span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="built_in">printf</span> <span class="string">&quot;\033]52;c;<span class="subst">$(base64 | tr -d &#x27;\r\n&#x27;)</span>\a&quot;</span></span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">sudo chmod +x /usr/<span class="built_in">local</span>/bin/osc52</span><br></pre></td></tr></table></figure>
+<h3 id="本机"><a href="#本机" class="headerlink" title="本机"></a>本机</h3><p>Iterm2开启粘贴板访问权限</p>
+<p><img src="https://blogimg.ficapy.com/capture/2021_09_22_17_25_38.png" alt="https://blogimg.ficapy.com/capture/2021_09_22_17_25_38.png"></p>
+<p>如果需要搭配tmux一起使用，需要在配置文件添加</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set -g set-clipboard on</span><br></pre></td></tr></table></figure>
+<p>至此只需要在远程执行类似语句<code>echo 123 | osc52</code> ，本机粘贴板就成功复制了</p>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://www.reddit.com/r/vim/comments/k1ydpn/a_guide_on_how_to_copy_text_from_anywhere/">OSC52的支持范围很广</a></p>
+<p><a href="https://github-wiki-see.page/m/laktak/extrakto/wiki/Remote-Copy-via-OSC52">Remote Copy via OSC52</a></p>
 
             
 
@@ -294,27 +289,17 @@
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-            <div class="post-footer-tags">
-                <span class="text-color-light text-small">标签</span><br/>
-                
-    <a class="tag tag--primary tag--small t-none-link" href="/tags/snagit/" rel="tag">snagit</a> <a class="tag tag--primary tag--small t-none-link" href="/tags/%E5%9B%BE%E7%89%87%E6%A0%BC%E5%BC%8F%E8%BD%AC%E6%8D%A2/" rel="tag">图片格式转换</a>
-
-            </div>
-        
         
             <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    
-                <a
-                    class="post-action-btn btn btn--default tooltip--top"
-                    href="/2013/10/25/xnview_image_view/"
-                    data-tooltip="xnview-图片查看"
-                    aria-label="上一篇: xnview-图片查看"
-                >
-                    
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
                         <i class="fa fa-angle-left" aria-hidden="true"></i>
                         <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
                     </a>
@@ -324,9 +309,9 @@
                     
                 <a
                     class="post-action-btn btn btn--default tooltip--top"
-                    href="/2013/10/06/everything_tutorial/"
-                    data-tooltip="everything进阶教程"
-                    aria-label="下一篇: everything进阶教程"
+                    href="/2021/09/18/pls_disable_quic/"
+                    data-tooltip="请关闭浏览器的QUIC"
+                    aria-label="下一篇: 请关闭浏览器的QUIC"
                 >
                     
                         <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
@@ -351,7 +336,7 @@
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2021/09/22/osc52_remote_copy/"
                     title="分享到 Facebook"
                     aria-label="分享到 Facebook"
                 >
@@ -364,7 +349,7 @@
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2021/09/22/osc52_remote_copy/"
                     title="分享到 Twitter"
                     aria-label="分享到 Twitter"
                 >
@@ -377,7 +362,7 @@
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2021/09/22/osc52_remote_copy/"
                     title="分享到 Google+"
                     aria-label="分享到 Google+"
                 >
@@ -422,14 +407,11 @@
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    
-                <a
-                    class="post-action-btn btn btn--default tooltip--top"
-                    href="/2013/10/25/xnview_image_view/"
-                    data-tooltip="xnview-图片查看"
-                    aria-label="上一篇: xnview-图片查看"
-                >
-                    
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
                         <i class="fa fa-angle-left" aria-hidden="true"></i>
                         <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
                     </a>
@@ -439,9 +421,9 @@
                     
                 <a
                     class="post-action-btn btn btn--default tooltip--top"
-                    href="/2013/10/06/everything_tutorial/"
-                    data-tooltip="everything进阶教程"
-                    aria-label="下一篇: everything进阶教程"
+                    href="/2021/09/18/pls_disable_quic/"
+                    data-tooltip="请关闭浏览器的QUIC"
+                    aria-label="下一篇: 请关闭浏览器的QUIC"
                 >
                     
                         <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
@@ -466,7 +448,7 @@
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2021/09/22/osc52_remote_copy/"
                     title="分享到 Facebook"
                     aria-label="分享到 Facebook"
                 >
@@ -479,7 +461,7 @@
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2021/09/22/osc52_remote_copy/"
                     title="分享到 Twitter"
                     aria-label="分享到 Twitter"
                 >
@@ -492,7 +474,7 @@
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2021/09/22/osc52_remote_copy/"
                     title="分享到 Google+"
                     aria-label="分享到 Google+"
                 >
@@ -526,7 +508,7 @@
                     <a
                         class="share-option-btn"
                         target="new"
-                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2021/09/22/osc52_remote_copy/"
                         aria-label="分享到 Facebook"
                     >
                         <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
@@ -539,7 +521,7 @@
                     <a
                         class="share-option-btn"
                         target="new"
-                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2021/09/22/osc52_remote_copy/"
                         aria-label="分享到 Twitter"
                     >
                         <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
@@ -552,7 +534,7 @@
                     <a
                         class="share-option-btn"
                         target="new"
-                        href="https://plus.google.com/share?url=https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2021/09/22/osc52_remote_copy/"
                         aria-label="分享到 Google+"
                     >
                         <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
