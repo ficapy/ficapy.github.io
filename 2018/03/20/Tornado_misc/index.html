@@ -270,7 +270,7 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>Tornado系列基本介绍的差不多了，本篇介绍一些零散的东西。有了前面的知识，本篇会讲的比较粗略</p>
-<a id="more"></a>
+<span id="more"></span>
 
 <h3 id="set-blocking-signal-threshold"><a href="#set-blocking-signal-threshold" class="headerlink" title="set_blocking_signal_threshold"></a>set_blocking_signal_threshold</h3><p>因为Tornado是单线程的，因此当一个任务被阻塞一两秒钟基本就是哪里出问题了，该函数给了我们一个机会察觉这些问题。可以当发生阻塞超过阈值的时候执行相关回调函数</p>
 <p>实现原理就是使用信号机制，先使用<code>signal.signal(signal.SIGALRM,callback)</code>注册信号回调函数。在ioloop主循环中每次事件完成后将实时计时器归零<code>signal.setitimer(signal.ITIMER_REAL, 0, 0)</code>后再重新开始计时。如果主循环被阻塞没有被执行计时器归零则会被触发</p>
@@ -395,7 +395,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -852,7 +852,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

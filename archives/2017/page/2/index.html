@@ -243,108 +243,6 @@
                     
                         <a
                             class="link-unstyled"
-                            href="/2017/03/23/tornado_wtforms/"
-                            aria-label=": tornado表单验证"
-                        >
-                            tornado表单验证
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time datetime="2017-03-23T20:17:29+08:00">
-	
-		    3月 23, 2017
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/python/">python</a>
-
-
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-excerpt">
-                    <p>工作中看到有一些不好的代码，想了个办法优化了一下，于是有了这篇博文。本文主要讲tornado的表单验证，使用的是wtforms。本文最终达到的效果是使用self.xx获取post传递过来的值。</p>
-                    
-                        <a
-                            href="/2017/03/23/tornado_wtforms/"
-                            class="postShorten-excerpt_link link"
-                            aria-label=": tornado表单验证"
-                        >
-                            阅读全文
-                        </a>
-                        
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-right">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title">
-                    
-                        <a
-                            class="link-unstyled"
-                            href="/2017/03/12/ssh-port-forward/"
-                            aria-label=": ssh端口映射"
-                        >
-                            ssh端口映射
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time datetime="2017-03-12T11:40:30+08:00">
-	
-		    3月 12, 2017
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/DevOps/">DevOps</a>
-
-
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-excerpt">
-                    <p>开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下</p>
-                    
-                        <a
-                            href="/2017/03/12/ssh-port-forward/"
-                            class="postShorten-excerpt_link link"
-                            aria-label=": ssh端口映射"
-                        >
-                            阅读全文
-                        </a>
-                        
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-right">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title">
-                    
-                        <a
-                            class="link-unstyled"
                             href="/2017/03/05/acme.sh_quick_start/"
                             aria-label=": 使用acme.sh快速搭建https"
                         >
@@ -425,7 +323,8 @@
 <p>原理也还是很简单的，git自身提供了一些hook功能，查看git/hooks目录下会发现有一些sample文件，这样在执行commit、push、merge的时候都是可以进行一些简单的检查等功能的。然而这个设定有一个缺点。没一个hook只能执行一个文件的内容，所以要么将各种功能放在一个文件里面，或者每个功能都放置在各自的文件里面。最后由一个文件一起执行。pre-commit就解决了我们的这个文件。将不同的任务分割成单个文件。然后只需要添加别人共享的脚本就能够很快的进行commit hook了，简要使用方法例举如下</p>
 <ol>
 <li><p>在项目根目录下编写配置文件(.pre-commit-config.yaml)</p>
- <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">-   repo: git:&#x2F;&#x2F;github.com&#x2F;pre-commit&#x2F;pre-commit-hooks</span><br><span class="line">    sha: v0.7.1</span><br><span class="line">    hooks:</span><br><span class="line">    -   id: trailing-whitespace</span><br><span class="line">    -   id: autopep8-wrapper</span><br></pre></td></tr></table></figure></li>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">-   repo: git:&#x2F;&#x2F;github.com&#x2F;pre-commit&#x2F;pre-commit-hooks</span><br><span class="line">    sha: v0.7.1</span><br><span class="line">    hooks:</span><br><span class="line">    -   id: trailing-whitespace</span><br><span class="line">    -   id: autopep8-wrapper</span><br></pre></td></tr></table></figure>
+</li>
 <li><p>进行初始化<code>pre-commit install</code>就可以了，以后每次执行commit的时候就会执行检查。配置文件的repo地址即为符合pre-commit框架的地址，id即为提供的功能~~，还是很好理解的。例如以上提供的autopep8-wrapper就可能够配置pep8规范进行一些代码风格检查，如果不符合风格就会自动格式化。pep8工具的默认配置文件是<code>~/.config/pep8</code></p>
 </li>
 </ol>
@@ -478,7 +377,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -787,7 +686,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

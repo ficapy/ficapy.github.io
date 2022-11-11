@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的\n\n\n步骤如下(服务端)：\n\n参照docker官方文档安装上docker,最耗时的就是这一步了，因为docker虽然发展几年了，可是还是处于不断完善中。连安装方式都不是简单的apt-get install xx搞定(另外现在docker支持的最低版本号是3.1,意味着openvz是无法使用的，因为openvz的内核版本号是2.6.32，且无法升级)\n在你存放静态文件的目录下执行 1docker run -d --restart&#x3D;always -p 80:80 -v &#96;pwd&#96;:&#x2F;usr&#x2F;share&#x2F;nginx&#x2F;html nginx\n解释一下:\n\n\nd参数表示以detach,以后台进程形式一直运行\n--restart=always当容器因为异常退出甚至被reboot重启操作后无限自动重启\np参数，用过vagrant的比较好理解，虚拟机都有这么个玩意儿。端口映射\nv参数。vagrant也有这个概念。文件夹共享\n至于共享的目录,那是因为容器内nginx默认的配置既如此。默认文件位置为/usr/share/nginx/html。这个地方前后的地址必须都是绝对地址。感觉要是能用相对就好了\n如果你要去容器内看看它nginx的配置啥的执行(exit退出)docker run -it --restart=always -p 80:80 -v `pwd`:/usr/share/nginx/html nginx /bin/bash\n\n至于客户端,用rsync同步就好了。我用的是hexo静态博客生成器。使用https://github.com/hexojs/hexo-deployer-rsync这个配合ssh config配置一下就好了。很简单O_o\n另外目前本人将这个静态博客放在了3个地方:\n\nhostker使用git部署https://www.zoulei.net\ngithub pages使用git部署https://ficapy.github.io\n128M vps rsync同步https://www.ficapy.com\n\n","dateCreated":"2016-08-21T09:29:29+08:00","dateModified":"2016-08-29T21:53:14+08:00","datePublished":"2016-08-21T09:29:29+08:00","description":"首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的","headline":"使用Docker配置静态博客","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/21/docker_static_blog/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/08/21/docker_static_blog/","keywords":"docker"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的\n\n\n步骤如下(服务端)：\n\n参照docker官方文档安装上docker,最耗时的就是这一步了，因为docker虽然发展几年了，可是还是处于不断完善中。连安装方式都不是简单的apt-get install xx搞定(另外现在docker支持的最低版本号是3.1,意味着openvz是无法使用的，因为openvz的内核版本号是2.6.32，且无法升级)\n在你存放静态文件的目录下执行 1docker run -d --restart&#x3D;always -p 80:80 -v &#96;pwd&#96;:&#x2F;usr&#x2F;share&#x2F;nginx&#x2F;html nginx\n\n\n\n解释一下:\n\nd参数表示以detach,以后台进程形式一直运行\n--restart=always当容器因为异常退出甚至被reboot重启操作后无限自动重启\np参数，用过vagrant的比较好理解，虚拟机都有这么个玩意儿。端口映射\nv参数。vagrant也有这个概念。文件夹共享\n至于共享的目录,那是因为容器内nginx默认的配置既如此。默认文件位置为/usr/share/nginx/html。这个地方前后的地址必须都是绝对地址。感觉要是能用相对就好了\n如果你要去容器内看看它nginx的配置啥的执行(exit退出)docker run -it --restart=always -p 80:80 -v `pwd`:/usr/share/nginx/html nginx /bin/bash\n\n至于客户端,用rsync同步就好了。我用的是hexo静态博客生成器。使用https://github.com/hexojs/hexo-deployer-rsync这个配合ssh config配置一下就好了。很简单O_o\n另外目前本人将这个静态博客放在了3个地方:\n\nhostker使用git部署https://www.zoulei.net\ngithub pages使用git部署https://ficapy.github.io\n128M vps rsync同步https://www.ficapy.com\n\n","dateCreated":"2016-08-21T09:29:29+08:00","dateModified":"2016-08-29T21:53:14+08:00","datePublished":"2016-08-21T09:29:29+08:00","description":"首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的","headline":"使用Docker配置静态博客","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2016/08/21/docker_static_blog/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2016/08/21/docker_static_blog/","keywords":"docker"}</script>
     <meta name="description" content="首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="使用Docker配置静态博客">
@@ -271,14 +271,16 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>首先这是篇水文:),仅记录下这2天使用docker的情况。实际上和docker没什么关系,静态博客嘛,生成之后上传到vps然后上面放个nginx就好了，没什么需要操心的</p>
-<a id="more"></a>
+<span id="more"></span>
 
 <p>步骤如下(服务端)：</p>
 <ol>
 <li>参照docker官方文档安装上docker,最耗时的就是这一步了，因为docker虽然发展几年了，可是还是处于不断完善中。连安装方式都不是简单的<code>apt-get install xx</code>搞定(另外现在docker支持的最低版本号是3.1,意味着openvz是无法使用的，因为openvz的内核版本号是2.6.32，且无法升级)</li>
 <li>在你存放静态文件的目录下执行 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run -d --restart&#x3D;always -p 80:80 -v &#96;pwd&#96;:&#x2F;usr&#x2F;share&#x2F;nginx&#x2F;html nginx</span><br></pre></td></tr></table></figure>
-解释一下:</li>
+
+</li>
 </ol>
+<p>解释一下:</p>
 <ul>
 <li>d参数表示以detach,以后台进程形式一直运行</li>
 <li><code>--restart=always</code>当容器因为异常退出甚至被reboot重启操作后无限自动重启</li>
@@ -418,7 +420,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -875,7 +877,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

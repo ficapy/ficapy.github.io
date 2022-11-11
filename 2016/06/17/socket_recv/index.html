@@ -272,7 +272,7 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>本文仅讨论阻塞socket的情况。在v2ex上看到了2个提问，<a href="https://www.v2ex.com/t/236313">socket.recv 完整接收数据</a>、<a href="https://www.v2ex.com/t/269954">python socket 一个很简单的问题把我难住了</a>.主要会有2个方面。怎么判断数据是否传输完成了进行下一步操作。recv什么时候返回数据，返回多少字节</p>
-<a id="more"></a>
+<span id="more"></span>
 
 <h3 id="从一个读取文件的例子开始说起"><a href="#从一个读取文件的例子开始说起" class="headerlink" title="从一个读取文件的例子开始说起"></a>从一个读取文件的例子开始说起</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;backup.py&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">    data = <span class="string">&#x27;&#x27;</span></span><br><span class="line">    <span class="keyword">while</span> <span class="number">1</span>:</span><br><span class="line">        buffer = f.read(<span class="number">1024</span>)</span><br><span class="line">        <span class="keyword">if</span> <span class="built_in">len</span>(buffer) == <span class="number">0</span>:</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        data += buffer</span><br></pre></td></tr></table></figure>
 
@@ -408,7 +408,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -865,7 +865,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

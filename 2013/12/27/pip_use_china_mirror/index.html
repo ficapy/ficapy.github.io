@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。\n今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.\n\n教程是这样的\n使用pip的用户可以如下配置：在unix和macos，配置文件为: $HOME/.pip/pip.conf在windows上，配置文件为：%HOME%\\pip\\pip.ini需要在配置文件内加上\n123[global]  timeout &#x3D; 60  index-url &#x3D; http:&#x2F;&#x2F;e.pypi.python.org&#x2F;simple\n首先我在everything里面搜索pip.ini这个文件，发现没有。在google上搜索无果（最可能是姿势不对~~）,怀疑是pycharm安装的pip和原版有差异~~~删除pip文件夹后在pypi上下载安装。还是发现没有，在卸载之从http://www.lfd.uci.edu/~gohlke/pythonlibs/上下载安装。。当然还是没有~~~\n最终的结果是自己新建pip.ini这特么完全是超过我认知范围类了。。。。配置文件居然不在带需要自己新建，再者%HOME%\\pip\\pip.ini这个地址也是错的，正确的为%USERPROFILE%\\pip\\pip.ini。网上搜到的教程基本都是错的（估计他们都在linux上开发吧，其本质是官网的说明文档没有更新，%HOME%目测是XP时代的产物）。最后也可能会遇到error: invalid command &#39;egg_info&#39;这种错误 解决的方案就是pip install --upgrade setuptools\n参考文档http://www.pip-installer.org/en/latest/configuration.htmlhttp://stackoverflow.com/questions/11425106/python-pip-install-fails-invalid-command-egg-infohttps://bitbucket.org/pypa/pypi/issue/5/pipini-directory-in-windows\n \n\n\n\n\n\n","dateCreated":"2013-12-27T18:54:00+08:00","dateModified":"2021-02-17T11:03:35+08:00","datePublished":"2013-12-27T18:54:00+08:00","description":"作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。\n今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.","headline":"pip使用国内镜像","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。\n今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.\n\n教程是这样的\n使用pip的用户可以如下配置：在unix和macos，配置文件为: $HOME/.pip/pip.conf在windows上，配置文件为：%HOME%\\pip\\pip.ini需要在配置文件内加上\n123[global]  timeout &#x3D; 60  index-url &#x3D; http:&#x2F;&#x2F;e.pypi.python.org&#x2F;simple\n\n首先我在everything里面搜索pip.ini这个文件，发现没有。在google上搜索无果（最可能是姿势不对~~）,怀疑是pycharm安装的pip和原版有差异~~~删除pip文件夹后在pypi上下载安装。还是发现没有，在卸载之从http://www.lfd.uci.edu/~gohlke/pythonlibs/上下载安装。。当然还是没有~~~\n最终的结果是自己新建pip.ini这特么完全是超过我认知范围类了。。。。配置文件居然不在带需要自己新建，再者%HOME%\\pip\\pip.ini这个地址也是错的，正确的为%USERPROFILE%\\pip\\pip.ini。网上搜到的教程基本都是错的（估计他们都在linux上开发吧，其本质是官网的说明文档没有更新，%HOME%目测是XP时代的产物）。最后也可能会遇到error: invalid command &#39;egg_info&#39;这种错误 解决的方案就是pip install --upgrade setuptools\n参考文档http://www.pip-installer.org/en/latest/configuration.htmlhttp://stackoverflow.com/questions/11425106/python-pip-install-fails-invalid-command-egg-infohttps://bitbucket.org/pypa/pypi/issue/5/pipini-directory-in-windows\n \n\n\n\n\n\n","dateCreated":"2013-12-27T18:54:00+08:00","dateModified":"2021-02-17T11:03:35+08:00","datePublished":"2013-12-27T18:54:00+08:00","description":"作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。\n今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.","headline":"pip使用国内镜像","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"}</script>
     <meta name="description" content="作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。 今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="pip使用国内镜像">
@@ -271,10 +271,11 @@
         <div class="main-content-wrap">
             <p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
 <p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p>
-<a id="more"></a>
+<span id="more"></span>
 <p>教程是这样的</p>
 <p>使用pip的用户可以如下配置：<br>在unix和macos，配置文件为: $HOME/.pip/pip.conf<br>在windows上，配置文件为：%HOME%\pip\pip.ini<br>需要在配置文件内加上</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[global]  </span><br><span class="line">timeout &#x3D; 60  </span><br><span class="line">index-url &#x3D; http:&#x2F;&#x2F;e.pypi.python.org&#x2F;simple</span><br></pre></td></tr></table></figure>
+
 <p>首先我在everything里面搜索pip.ini这个文件，发现没有。在google上搜索无果（最可能是姿势不对~~）,怀疑是pycharm安装的pip和原版有差异~~~删除pip文件夹后在pypi上下载安装。还是发现没有，在卸载之从<a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">http://www.lfd.uci.edu/~gohlke/pythonlibs/</a>上下载安装。。当然还是没有~~~</p>
 <p>最终的结果是自己新建pip.ini这特么完全是超过我认知范围类了。。。。配置文件居然不在带需要自己新建，再者%HOME%\pip\pip.ini这个地址也是错的，正确的为%USERPROFILE%\pip\pip.ini。网上搜到的教程基本都是错的（估计他们都在linux上开发吧，其本质是官网的说明文档没有更新，%HOME%目测是XP时代的产物）。最后也可能会遇到<code>error: invalid command &#39;egg_info&#39;</code><br>这种错误 解决的方案就是<code>pip install --upgrade setuptools</code></p>
 <p>参考文档<br><a href="http://www.pip-installer.org/en/latest/configuration.html">http://www.pip-installer.org/en/latest/configuration.html</a><br><a href="http://stackoverflow.com/questions/11425106/python-pip-install-fails-invalid-command-egg-info">http://stackoverflow.com/questions/11425106/python-pip-install-fails-invalid-command-egg-info</a><br><a href="https://bitbucket.org/pypa/pypi/issue/5/pipini-directory-in-windows">https://bitbucket.org/pypa/pypi/issue/5/pipini-directory-in-windows</a></p>
@@ -402,7 +403,7 @@ style="background-color: transparent; color: #000000; position: absolute; top: 3
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -859,7 +860,7 @@ style="background-color: transparent; color: #000000; position: absolute; top: 3
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

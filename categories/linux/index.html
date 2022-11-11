@@ -271,13 +271,15 @@
                     <p>经常在本地电脑上使用pbcopy和pbpaste十分方便，但是ssh连接到远程机器后需要拷贝远程内容到本地相对就比较麻烦，以前总是需要采用<code>ssh remote &#39;cat file&#39; | pbcopy</code>，搞多了就很烦，今天搜索了一下remote pbcopy之后发现了OSC52这个东西，用起来十分方便</p>
 <p>本质就是输出一段特定格式的转义字符串，终端识别这个转移字符串得到原始内容，写入本机的粘贴板</p>
 <h3 id="远程主机"><a href="#远程主机" class="headerlink" title="远程主机"></a>远程主机</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">sudo dd of=/usr/<span class="built_in">local</span>/bin/osc52 &lt;&lt;<span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="built_in">printf</span> <span class="string">&quot;\033]52;c;<span class="subst">$(base64 | tr -d &#x27;\r\n&#x27;)</span>\a&quot;</span></span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">sudo chmod +x /usr/<span class="built_in">local</span>/bin/osc52</span><br></pre></td></tr></table></figure>
+
 <h3 id="本机"><a href="#本机" class="headerlink" title="本机"></a>本机</h3><p>Iterm2开启粘贴板访问权限</p>
 <p><img src="https://blogimg.ficapy.com/capture/2021_09_22_17_25_38.png" alt="https://blogimg.ficapy.com/capture/2021_09_22_17_25_38.png"></p>
 <p>如果需要搭配tmux一起使用，需要在配置文件添加</p>
 <figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set -g set-clipboard on</span><br></pre></td></tr></table></figure>
+
 <p>至此只需要在远程执行类似语句<code>echo 123 | osc52</code> ，本机粘贴板就成功复制了</p>
 <h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://www.reddit.com/r/vim/comments/k1ydpn/a_guide_on_how_to_copy_text_from_anywhere/">OSC52的支持范围很广</a></p>
-<p><a href="https://github-wiki-see.page/m/laktak/extrakto/wiki/Remote-Copy-via-OSC52">Remote Copy via OSC52</a></p>
+<p>[Remote Copy via OSC52](<a href="https://github-wiki-see.page/m/laktak/extrakto/wiki/Remote-Copy-via-OSC5">https://github-wiki-see.page/m/laktak/extrakto/wiki/Remote-Copy-via-OSC5</a></p>
 
                     
                         
@@ -468,7 +470,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -777,7 +779,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

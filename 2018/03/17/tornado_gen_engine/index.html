@@ -270,7 +270,7 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>Tornado在2011年的2.1版本加入了gen.engine模块，该模块主要为了解决异步程序编写不够优雅的问题。力图让使用者离callback更远，这也是Tornado厉害的地方。本来内部各种事件处理，callback满天飞，可是在用户眼里，它那个class Handler(web.RequestHandler)下面get的写法和同步写法差不多嘛。和同步的写法一样，获得了更高的性能，我想这也是为什么Tornado能出彩的地方吧(本文代码基于v2.3.0)</p>
-<a id="more"></a>
+<span id="more"></span>
 
 <h3 id="起因"><a href="#起因" class="headerlink" title="起因"></a>起因</h3><p>主要起因就是不够优雅的callback,假设有一个需求，我们需要向第三方api请求数据，然后返回给客户端。此时写法是这样的</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">AsyncHandler</span>(<span class="params">RequestHandler</span>):</span></span><br><span class="line"><span class="meta">    @asynchronous</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get</span>(<span class="params">self</span>):</span></span><br><span class="line">        http_client = AsyncHTTPClient()</span><br><span class="line">        http_client.fetch(<span class="string">&quot;http://example.com&quot;</span>,</span><br><span class="line">                          callback=self.on_fetch)</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">on_fetch</span>(<span class="params">self, response</span>):</span></span><br><span class="line">        do_something_with_response(response)</span><br><span class="line">        self.render(<span class="string">&quot;template.html&quot;</span>)</span><br></pre></td></tr></table></figure>
@@ -418,7 +418,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -875,7 +875,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

@@ -270,7 +270,7 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>这是Tornado系列的开篇,Tornado作为异步web框架2010年发布1.0版本。可以说Python社区搞了这么多年，为了获得比多线程多进程更高的性能，经历了Twisted、Tornado、yield、gevent、yield from、asyncio。也不知道什么时候才是一个尽头~~。Tornado过了这么多年还算开发活跃(<a href="https://github.com/tornadoweb/tornado/graphs/contributors">一个大神扛起了一片天啊</a>)，不同于多线程模型的一潭死水，看它的代码你会发现它还是紧跟潮流的，而且有一点。它的内部虽然一直在变动，但是提供给用户的使用接口是很稳定的，后续就会发现这个坑有多大</p>
-<a id="more"></a>
+<span id="more"></span>
 
 <p>截止目前最新版本的代码是4.5，排除测试总代码量大约为12000行。我个人喜欢看精简版本的代码，所以本文为1.0.0版本。总代码量为4200行，比较容易看懂。毕竟别人优化了八年，期待一个星期精读能搞明白各种工程优化是不现实的。</p>
 <h3 id="IOLoop"><a href="#IOLoop" class="headerlink" title="IOLoop"></a>IOLoop</h3><p>说到异步非阻塞大多数人都知道是异步IO模型(select、poll、epoll、kqueue)。没错在阻塞模型中比如使用<code>socket.recv</code>它会主线程造成阻塞。这直接导致了在python中需要使用多线程或者多进程模型才能够同时处理多个请求。可是在异步模型中允许对文件描述符进行监听，操作系统提供功能，当文件的状态发生变化(可读、可写、异常)程序能够获得这一状态。对我们来说就是当明确知道某文件存在什么事件的时候去触发相应的处理函数。注意，这就是一个<span style="color:red"><strong>回调、回调、回调(重要的事情说三遍)</strong></span></p>
@@ -419,7 +419,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -876,7 +876,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

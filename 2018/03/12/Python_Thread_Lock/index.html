@@ -270,7 +270,7 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>多线程是个坑爹的课题，有多线程就有锁。Python中有低级线程模块_thread、再封装一下就是threading、再来一下就是<code>from concurrent.futures import ThreadPoolExecutor</code>。其中涉及到的锁大概有Lock、RLock、Condition、Semaphore、BoundedSeamphore、Event。这么多看起来怪吓人的，其实这么多的锁全部只是由Lock演化出来的</p>
-<a id="more"></a>
+<span id="more"></span>
 
 <h3 id="Lock"><a href="#Lock" class="headerlink" title="Lock"></a>Lock</h3><p><code>Lock = _thread._allocate_lock</code> 这个是直接由最低级别的_thread直接引用过来的。创建锁的时候是处于未被锁定的状态。这应该是最容易被理解和使用的一种锁了。刚学习的时候铁定写过类似下面这种示例。本质原因是python中的原子操作是针对单条指令。而a+=1被翻译成了多条指令。执行过程中任何时刻可能被打断</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">a = <span class="number">0</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">change</span>():</span></span><br><span class="line">    <span class="keyword">global</span> a</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">100000</span>):</span><br><span class="line">        a += <span class="number">1</span></span><br><span class="line"></span><br><span class="line">t = [threading.Thread(target=change) <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">100</span>)]</span><br><span class="line">[i.start() <span class="keyword">for</span> i <span class="keyword">in</span> t]</span><br><span class="line">[i.join() <span class="keyword">for</span> i <span class="keyword">in</span> t]</span><br><span class="line">print(a)</span><br></pre></td></tr></table></figure>
@@ -418,7 +418,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -875,7 +875,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

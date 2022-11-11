@@ -265,7 +265,7 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>个人认为python中描述符协议是一个比较神奇的存在，是因为如果你不去了解property的内部实现，没有深究别人写的__set__、__get__方法。或许写python很多年都对这个东西没什么了解。然而这玩意儿有时候真的挺好用的。本文不会详述描述符协议。会着重讲一个小例子。如果以前没有接触过描述符，请依次查看文末相关资料的两篇文章</p>
-<a id="more"></a>
+<span id="more"></span>
 
 <h3 id="适用范围"><a href="#适用范围" class="headerlink" title="适用范围"></a>适用范围</h3><p>描述符协议都是针对对象属性的访问。先要明白我们不会去针对一个全局的def使用property进行装饰。我们一般都是在类里面使用。可以对类的访问使用描述符(比较少用)，更常用的是针对类实例的访问使用描述符协议</p>
 <h3 id="资料描述符和非资料描述符的区别"><a href="#资料描述符和非资料描述符的区别" class="headerlink" title="资料描述符和非资料描述符的区别"></a>资料描述符和非资料描述符的区别</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">RevealAccess</span>(<span class="params"><span class="built_in">object</span></span>):</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__get__</span>(<span class="params">self, obj, objtype</span>):</span></span><br><span class="line">        <span class="keyword">try</span>:</span><br><span class="line">            <span class="keyword">return</span> self.val</span><br><span class="line">        <span class="keyword">except</span>:</span><br><span class="line">            <span class="keyword">return</span> <span class="string">&#x27;error&#x27;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># def __set__(self, obj, val):</span></span><br><span class="line">    <span class="comment">#     self.val = val</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MyClass</span>(<span class="params"><span class="built_in">object</span></span>):</span></span><br><span class="line">    x = RevealAccess()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">m = MyClass()</span><br><span class="line">print(m.x)</span><br><span class="line">m.x = <span class="number">20</span></span><br><span class="line">print(m.__dict__)</span><br><span class="line">m.__dict__[<span class="string">&#x27;x&#x27;</span>] = <span class="number">1</span></span><br><span class="line">print(m.__dict__)</span><br><span class="line">print(m.x)</span><br><span class="line">print(m.__class__ <span class="keyword">is</span> <span class="built_in">type</span>(m))</span><br></pre></td></tr></table></figure>
@@ -408,7 +408,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -865,7 +865,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

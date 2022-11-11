@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix\n\n\nipv4现状我先后尝试使用三个代理去连接Netflix，居然都成功被识别为代理，有点心灰意冷，心想这商家还做不做生意了，有必要这样赶尽杀绝吗？后来在网上搜索了一番，发现居然有好多代理商家用能看Netflix作为卖点，搞的好像用了很高深的黑科技的样子，后来网友反馈用ipv6可以连接，我试了一下居然还真可以了\nipv6 解决ipv4毕竟地址有限，也发展了这么多年，所以ipv4的地址归纳比较完善了，能准确的知道某个ip是否是云服务器厂商所拥有的，ipv6的地址范围明显就广的多，因此目前并不能很好的识别是否来自于云服务器，另外，商家也要赚钱，不能把路彻底堵死，我想这也是一个原因吧\nshadowsocks5本地提供socks5代理,socks5代理有dns解析选项，一个是本地dns解析，一个是远程dns解析，本地dns解析那得到的ip基本就是ipv4的，所以Netflix识别到的也是ipv4的ip,就被识别为代理了，远程dns解析，交由代理服务器解析，此时我们的目的是得到ipv6的地址，就能成功突破封锁了。\nshadowsocks的python原版和ssr都是自己实现了异步的dns解析功能，通过配置文件开启ipv6解析，ss是prefer_ipv6, ssr的是dns_ipv6，顺利的情况下把它们设置为true就解决问题了。可以使用如下地址连接测试是否正常使用http://v4v6.ipv6-test.com/json/defaultproto.php。或者使用命令行看到更详细一些的交互\n1curl -x socks5h:&#x2F;&#x2F;127.0.0.1:1086 http:&#x2F;&#x2F;v4v6.ipv6-test.com&#x2F;json&#x2F;defaultproto.php -v\n如果返回的ipv6的地址就成功了\n其他\n如果你使用docker运行，那么容器环境需要额外开启ipv6的支持\n如果是其他版本的shadowsocks实现，具体看一下代码应该也能实现类似的配置\n开启ipv6有缺点，具体在于极多网站对ipv6的支持不友好，为了Netflix开启ipv6相当于全局开启了ipv6，所以保险起见，你可以开两个代理端口，一个专门看Netflix开启ipv6\n测试了ios端，设置代理无效，可能ios端忽略了代理设置吧，可以尝试直接部署在路由器全局翻\n\n","dateCreated":"2019-01-01T11:45:26+08:00","dateModified":"2019-01-01T12:25:33+08:00","datePublished":"2019-01-01T11:45:26+08:00","description":"元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix","headline":"国内观看Netflix","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2019/01/01/ss_netflix/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2019/01/01/ss_netflix/"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix\n\n\nipv4现状我先后尝试使用三个代理去连接Netflix，居然都成功被识别为代理，有点心灰意冷，心想这商家还做不做生意了，有必要这样赶尽杀绝吗？后来在网上搜索了一番，发现居然有好多代理商家用能看Netflix作为卖点，搞的好像用了很高深的黑科技的样子，后来网友反馈用ipv6可以连接，我试了一下居然还真可以了\nipv6 解决ipv4毕竟地址有限，也发展了这么多年，所以ipv4的地址归纳比较完善了，能准确的知道某个ip是否是云服务器厂商所拥有的，ipv6的地址范围明显就广的多，因此目前并不能很好的识别是否来自于云服务器，另外，商家也要赚钱，不能把路彻底堵死，我想这也是一个原因吧\nshadowsocks5本地提供socks5代理,socks5代理有dns解析选项，一个是本地dns解析，一个是远程dns解析，本地dns解析那得到的ip基本就是ipv4的，所以Netflix识别到的也是ipv4的ip,就被识别为代理了，远程dns解析，交由代理服务器解析，此时我们的目的是得到ipv6的地址，就能成功突破封锁了。\nshadowsocks的python原版和ssr都是自己实现了异步的dns解析功能，通过配置文件开启ipv6解析，ss是prefer_ipv6, ssr的是dns_ipv6，顺利的情况下把它们设置为true就解决问题了。可以使用如下地址连接测试是否正常使用http://v4v6.ipv6-test.com/json/defaultproto.php。或者使用命令行看到更详细一些的交互\n1curl -x socks5h:&#x2F;&#x2F;127.0.0.1:1086 http:&#x2F;&#x2F;v4v6.ipv6-test.com&#x2F;json&#x2F;defaultproto.php -v\n\n如果返回的ipv6的地址就成功了\n其他\n如果你使用docker运行，那么容器环境需要额外开启ipv6的支持\n如果是其他版本的shadowsocks实现，具体看一下代码应该也能实现类似的配置\n开启ipv6有缺点，具体在于极多网站对ipv6的支持不友好，为了Netflix开启ipv6相当于全局开启了ipv6，所以保险起见，你可以开两个代理端口，一个专门看Netflix开启ipv6\n测试了ios端，设置代理无效，可能ios端忽略了代理设置吧，可以尝试直接部署在路由器全局翻\n\n","dateCreated":"2019-01-01T11:45:26+08:00","dateModified":"2019-01-01T12:25:33+08:00","datePublished":"2019-01-01T11:45:26+08:00","description":"元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix","headline":"国内观看Netflix","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2019/01/01/ss_netflix/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2019/01/01/ss_netflix/"}</script>
     <meta name="description" content="元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="国内观看Netflix">
@@ -270,13 +270,14 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>元旦三天假，比较无聊，看了两天的Netflix，起因是网上很多教程说这家视频网站对代理封杀很严重，即使付费还不一定能看，搞的好像很吸引人的样子，这勾起了我的好奇心，想看看这个视频网站是啥样的，去淘宝花十块钱买了一个月的共享账号，折腾了一下还是能看了！给我的感觉就是视频清晰不卡顿(即使代理一点也不卡)，至于视频数量，不敢恭维，可能网上找盗版资源下载更好一点，突破代理限制的方法就是服务器使用ipv6地址去连接Netflix</p>
-<a id="more"></a>
+<span id="more"></span>
 
 <h3 id="ipv4现状"><a href="#ipv4现状" class="headerlink" title="ipv4现状"></a>ipv4现状</h3><p>我先后尝试使用三个代理去连接Netflix，居然都成功被识别为代理，有点心灰意冷，心想这商家还做不做生意了，有必要这样赶尽杀绝吗？后来在网上搜索了一番，发现居然有好多代理商家用能看Netflix作为卖点，搞的好像用了很高深的黑科技的样子，后来网友反馈用ipv6可以连接，我试了一下居然还真可以了</p>
 <h3 id="ipv6-解决"><a href="#ipv6-解决" class="headerlink" title="ipv6 解决"></a>ipv6 解决</h3><p>ipv4毕竟地址有限，也发展了这么多年，所以ipv4的地址归纳比较完善了，能准确的知道某个ip是否是云服务器厂商所拥有的，ipv6的地址范围明显就广的多，因此目前并不能很好的识别是否来自于云服务器，另外，商家也要赚钱，不能把路彻底堵死，我想这也是一个原因吧</p>
 <p>shadowsocks5本地提供socks5代理,socks5代理有dns解析选项，一个是本地dns解析，一个是远程dns解析，本地dns解析那得到的ip基本就是ipv4的，所以Netflix识别到的也是ipv4的ip,就被识别为代理了，远程dns解析，交由代理服务器解析，此时我们的目的是得到ipv6的地址，就能成功突破封锁了。</p>
 <p>shadowsocks的python原版和ssr都是自己实现了异步的dns解析功能，通过配置文件<a href="https://github.com/shadowsocks/shadowsocks/blob/5ff694b2c2978b432918dea6ac104706b25cbf48/shadowsocks/asyncdns.py#L251">开启ipv6解析</a>，ss是prefer_ipv6, ssr的是dns_ipv6，顺利的情况下把它们设置为true就解决问题了。可以使用如下地址连接测试是否正常使用<a href="http://v4v6.ipv6-test.com/json/defaultproto.php">http://v4v6.ipv6-test.com/json/defaultproto.php</a>。或者使用命令行看到更详细一些的交互</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -x socks5h:&#x2F;&#x2F;127.0.0.1:1086 http:&#x2F;&#x2F;v4v6.ipv6-test.com&#x2F;json&#x2F;defaultproto.php -v</span><br></pre></td></tr></table></figure>
+
 <p>如果返回的ipv6的地址就成功了</p>
 <h3 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h3><ul>
 <li>如果你使用docker运行，那么容器环境需要<a href="https://docs.docker.com/config/daemon/ipv6/">额外开启ipv6的支持</a></li>
@@ -401,7 +402,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -858,7 +859,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

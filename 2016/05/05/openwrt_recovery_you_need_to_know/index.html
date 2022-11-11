@@ -270,7 +270,7 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>openwrt刷机教程非常多，可是很多的让人搞不清概念。不明白到底发生了什么，为什么会发生问题。我们最好能在遇到问题前预知为什么会发生问题。以下内容是本人花费一天时间收集到的一些概念内容。因为不是特别了解。可能理解会产生偏差，如有错误请指正。文末会用简短的内容讲一下笔者的刷机过程。</p>
-<a id="more"></a>
+<span id="more"></span>
 
 <h2 id="BootLoader"><a href="#BootLoader" class="headerlink" title="BootLoader"></a>BootLoader</h2><p>一般刷机教程中不大会出现该名词，可是它其实是非常重要的。它和我们常听到的BIOS是一类程序–<code>引导程序</code>，在我们给电脑重装系统的时候通常都是开机的时候按特定的功能键然后进入图形界面和BIOS交互。openwrt刷机中其实也非常类似，只是交互的方式不同→→→直接造成了下面几个名词的产生</p>
 <h2 id="不死UBoot"><a href="#不死UBoot" class="headerlink" title="不死UBoot"></a>不死UBoot</h2><p>即为上面描述的<code>引导程序</code>的一种(即还有别的引导程序)。试想我们给电脑装系统的时候。无论怎么失败，都是可以进入BIOS设置，然后一次次的重装系统的。可是有的openwrt的引导程序则不同。他们只给你一次失败的机会。如果失败就要用特殊的手段重装(比如TTL串口)，不死Uboot即相对那种失败就死的Bootloader而言的(其实感觉这应该是一个理所当然的自带功能,然而并没有)。不死UBoot提供这样的交互→→→如果刷机失败，无法ssh进入到openwrt系统，那么Uboot提供一个web服务，路由器运行的时候直接通过LAN接口连接电脑，然后通过web页面上传固件刷机。这样无论刷固件如何失败。都可以反复刷固件。<code>可以看出不死Uboot它只是提供了一种比较方便的和引导程序交互的途径</code>。其他常见途径还包括自动读取U盘里面的固件、使用TTL串口等</p>
@@ -406,7 +406,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -863,7 +863,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

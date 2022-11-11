@@ -11,13 +11,13 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"遇到有人反映可能是内网环境。无法访问外部网络。安装初始化环境的时候好像颇为不便。其实只要能ssh上去。这一切都不是问题。就是各种转发，以下以内网使用pip安装第三方依赖包为例说明该如何操作\n1.本机开启一个临时的http代理1pip install mitmproxy           # 安装\n1mitmproxy -p 8899 --ignore .+               #  使用\nmitmproxy是一个python编写的http/https中间人框架。这里我们单独的使用它的http proxy功能。参数p当然是port端口的意思了。监听8899端口加上ignore是因为中间人https连接需要客户端安装信任证书才可以。此处我们只是单纯的使用一下proxy不需要中间人。所以所有流量使用HTTP Connection隧道方式就达成目的了。使用正则表达式.+忽略所有域名。至于为什么使用http不是用socks。因为http使用更广泛\n2.ssh使用远程端口转发(参考ssh端口映射)1ssh -R 8899:localhost:8899 remote_server\n将远程主机上的8899端口映射到本机的8899端口\n3.远程主机使用本地的http代理进行环境初始化可以使用如下命令进行测验\n1curl -x http:&#x2F;&#x2F;localhost:8899 ip.cn\n比如使用pypi安装tornado执行如下命令即可\n1pip install -i https:&#x2F;&#x2F;pypi.tuna.tsinghua.edu.cn&#x2F;simple --proxy http:&#x2F;&#x2F;localhost:8899 tornado\n思路是这样。其它同理~~~\n","dateCreated":"2017-08-13T17:18:36+08:00","dateModified":"2017-08-13T17:46:27+08:00","datePublished":"2017-08-13T17:18:36+08:00","description":"","headline":"内网无网络环境初始化线上环境","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/"}</script>
-    <meta name="description" content="遇到有人反映可能是内网环境。无法访问外部网络。安装初始化环境的时候好像颇为不便。其实只要能ssh上去。这一切都不是问题。就是各种转发，以下以内网使用pip安装第三方依赖包为例说明该如何操作 1.本机开启一个临时的http代理1pip install mitmproxy           # 安装 1mitmproxy -p 8899 --ignore .+               #  使用">
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"遇到有人反映可能是内网环境。无法访问外部网络。安装初始化环境的时候好像颇为不便。其实只要能ssh上去。这一切都不是问题。就是各种转发，以下以内网使用pip安装第三方依赖包为例说明该如何操作\n1.本机开启一个临时的http代理1pip install mitmproxy           # 安装\n\n1mitmproxy -p 8899 --ignore .+               #  使用\n\nmitmproxy是一个python编写的http/https中间人框架。这里我们单独的使用它的http proxy功能。参数p当然是port端口的意思了。监听8899端口加上ignore是因为中间人https连接需要客户端安装信任证书才可以。此处我们只是单纯的使用一下proxy不需要中间人。所以所有流量使用HTTP Connection隧道方式就达成目的了。使用正则表达式.+忽略所有域名。至于为什么使用http不是用socks。因为http使用更广泛\n2.ssh使用远程端口转发(参考ssh端口映射)1ssh -R 8899:localhost:8899 remote_server\n\n将远程主机上的8899端口映射到本机的8899端口\n3.远程主机使用本地的http代理进行环境初始化可以使用如下命令进行测验\n1curl -x http:&#x2F;&#x2F;localhost:8899 ip.cn\n\n比如使用pypi安装tornado执行如下命令即可\n1pip install -i https:&#x2F;&#x2F;pypi.tuna.tsinghua.edu.cn&#x2F;simple --proxy http:&#x2F;&#x2F;localhost:8899 tornado\n\n思路是这样。其它同理~~~\n","dateCreated":"2017-08-13T17:18:36+08:00","dateModified":"2017-08-13T17:46:27+08:00","datePublished":"2017-08-13T17:18:36+08:00","description":"","headline":"内网无网络环境初始化线上环境","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/"}</script>
+    <meta name="description" content="遇到有人反映可能是内网环境。无法访问外部网络。安装初始化环境的时候好像颇为不便。其实只要能ssh上去。这一切都不是问题。就是各种转发，以下以内网使用pip安装第三方依赖包为例说明该如何操作 1.本机开启一个临时的http代理1pip install mitmproxy           # 安装  1mitmproxy -p 8899 --ignore .+               #  使">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="内网无网络环境初始化线上环境">
 <meta property="og:url" content="https://www.zoulei.net/2017/08/13/when_no_network_setup_environment/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="遇到有人反映可能是内网环境。无法访问外部网络。安装初始化环境的时候好像颇为不便。其实只要能ssh上去。这一切都不是问题。就是各种转发，以下以内网使用pip安装第三方依赖包为例说明该如何操作 1.本机开启一个临时的http代理1pip install mitmproxy           # 安装 1mitmproxy -p 8899 --ignore .+               #  使用">
+<meta property="og:description" content="遇到有人反映可能是内网环境。无法访问外部网络。安装初始化环境的时候好像颇为不便。其实只要能ssh上去。这一切都不是问题。就是各种转发，以下以内网使用pip安装第三方依赖包为例说明该如何操作 1.本机开启一个临时的http代理1pip install mitmproxy           # 安装  1mitmproxy -p 8899 --ignore .+               #  使">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2017-08-13T09:18:36.000Z">
 <meta property="article:modified_time" content="2017-08-13T09:46:27.000Z">
@@ -271,14 +271,19 @@
         <div class="main-content-wrap">
             <p>遇到有人反映可能是内网环境。无法访问外部网络。安装初始化环境的时候好像颇为不便。其实只要能ssh上去。这一切都不是问题。就是各种转发，以下以内网使用pip安装第三方依赖包为例说明该如何操作</p>
 <h2 id="1-本机开启一个临时的http代理"><a href="#1-本机开启一个临时的http代理" class="headerlink" title="1.本机开启一个临时的http代理"></a>1.本机开启一个临时的http代理</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install mitmproxy           # 安装</span><br></pre></td></tr></table></figure>
+
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mitmproxy -p 8899 --ignore .+               #  使用</span><br></pre></td></tr></table></figure>
+
 <p>mitmproxy是一个python编写的http/https中间人框架。这里我们单独的使用它的http proxy功能。<br>参数p当然是port端口的意思了。监听8899端口<br>加上ignore是因为中间人https连接需要客户端安装信任证书才可以。此处我们只是单纯的使用一下proxy不需要中间人。所以所有流量使用HTTP Connection隧道方式就达成目的了。使用正则表达式<code>.+</code>忽略所有域名。至于为什么使用http不是用socks。因为http使用更广泛</p>
 <h2 id="2-ssh使用远程端口转发-参考ssh端口映射"><a href="#2-ssh使用远程端口转发-参考ssh端口映射" class="headerlink" title="2.ssh使用远程端口转发(参考ssh端口映射)"></a>2.ssh使用远程端口转发(参考<a href="https://ficapy.com/2017/03/12/ssh-port-forward/">ssh端口映射</a>)</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh -R 8899:localhost:8899 remote_server</span><br></pre></td></tr></table></figure>
+
 <p>将远程主机上的8899端口映射到本机的8899端口</p>
 <h2 id="3-远程主机使用本地的http代理进行环境初始化"><a href="#3-远程主机使用本地的http代理进行环境初始化" class="headerlink" title="3.远程主机使用本地的http代理进行环境初始化"></a>3.远程主机使用本地的http代理进行环境初始化</h2><p>可以使用如下命令进行测验</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -x http:&#x2F;&#x2F;localhost:8899 ip.cn</span><br></pre></td></tr></table></figure>
+
 <p>比如使用pypi安装tornado执行如下命令即可</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install -i https:&#x2F;&#x2F;pypi.tuna.tsinghua.edu.cn&#x2F;simple --proxy http:&#x2F;&#x2F;localhost:8899 tornado</span><br></pre></td></tr></table></figure>
+
 <p>思路是这样。其它同理~~~</p>
 
             
@@ -397,7 +402,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -854,7 +859,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>

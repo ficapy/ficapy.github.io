@@ -1,0 +1,897 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>SSL证书管理 - 邹雷</title>
+    <meta name="author" content="ficapy">
+    
+    
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"在开发完毕部署过程中，SSL证书是避不开的一环，而且未来使用SSL证书的地方会越来越多。但是遍观互联网，大多数讲解SSL证书部署的文章都只是能用，却也只是当下能用，无法很好的扩展，也无法做到有效的管理。下面说说为什么\n\n\n最主流的SSL证书签发管理工具是certbot和acme.sh，前者是letsencrypt官方出品的工具，后者是流行的第三方acme实现(优势是纯shell实现，安装容易)。\n拿certbot举例, 网上的举例大多都是certbot --nginx 或者certbot certonly xxx . 确实，按照文章能正常生成证书,自动更新证书。但是这种方式可以说只顾眼前，不顾以后，拿certbot --nginx为例，你不需要有任何知识，按照提示一步步输入，理想情况下它能自动生成，自动管理证书，但是看看它存在的缺点\n\n针对nginx的每一个config文件生成一个证书文件，时间一长，certbot给你申请着几十个证书也不是特别奇怪的事情。但是很多时候明明只是一个泛域名证书就能解决的事情，certbot硬是按照nginx配置文件申请了许多证书。遍观大型网站，它们全部都采取一个证书包含N个泛域名+N个单域名的模式，没有人会采用certbot --nginx这种操作，管理一个证书总比管理几十个证书要方便\n上面说了泛域名比较好管理，但是泛域名要依靠dns api来获取，很多时候，Nginx会部署在N台机器上，每台机器都要放证书，那是否意味着每台机器都要各自使用dns api单独申请相同的泛域名证书，所以certbot的问题之二在于不管多台机器的证书同步问题\n网上很多使用certbot certonly -d xx -d xx -d xx  使用此命令来申请多域名证书，假设后续需要增加或者删除域名列表，该如何操作呢\n\n针对以上不方便的地方，我使用了如下方案\n\n使用类似以下命令申请证书，单证书包含了多个泛域名+单域名，--cert-name命令类似于k-v的k,每次修改域名列表可以使用k来操作\n\n12345678910111213certbot certonly \\    --agree-tos \\    --email demo@demo.com \\    --dns-route53 \\    --preferred-challenges=dns \\    --cert-name demo.com \\    --nginx-server-root /usr/local/nginx/conf/ \\    --nginx-ctl /usr/local/nginx/sbin/nginx \\    -d &quot;demo.com.cn&quot; \\    -d &quot;*.demo.com.cn&quot; \\    -d &quot;*.a.demo.com.cn&quot; \\    -d &quot;*.b.demo.com.cn&quot; \\    -d &quot;*.c.demo.com.cn&quot;\n\n\n对一个小型公司除特殊情况外，所有的域名都包含在内。使用额外的脚本，每天把证书的公钥和私钥打包加密，让它公网可访问，其他需要使用到证书的地方每天下载证书和已有的证书做对比，如果发现不一致则替换当前证书，并执行一条命令让依赖证书的服务重启\n\n其它如果你决定使用certbot，先读一遍certbot的官方文档 , 起码明白什么是Authenticator和Installer\n安全性问题: 加密后的公钥私钥公网可访问，最差最差的情况是对方知道了你的密码，能得到证书，但是得到证书有什么大用吗? 我个人觉得这个风险是可控的\n证书打包加密脚本如下, 需要以root权限运行，依赖age文件加密库和mholt/archiver打包\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119120121122123124125126127128129130131132133134135136137138139140141142143144145146147148149150151152153154155156157158159160161162163164165166167168169170171172173174175176177178179180181182183184185186187188189190191192193194195196197198199200201202203204205206207208209210211212213214215216217218219220221222223224225226227228229230231232233234235236237238239240241242243244245246247248249250251252253254package mainimport (\t&quot;bytes&quot;\t&quot;context&quot;\t&quot;crypto/tls&quot;\t&quot;filippo.io/age&quot;\t&quot;flag&quot;\t&quot;fmt&quot;\t&quot;github.com/mholt/archiver/v4&quot;\t&quot;io&quot;\t&quot;log&quot;\t&quot;net/http&quot;\t&quot;os&quot;\t&quot;os/exec&quot;\t&quot;os/user&quot;\t&quot;path&quot;\t&quot;time&quot;)var src = &quot;&quot;var dst = &quot;&quot;var post = &quot;&quot;var passphrase = &quot;&quot;func init() &#123;\t// 因为证书管理使用root, 所以该脚本只允许运行在root模式\tcurrentUser, err := user.Current()\tcheck(err)\tif currentUser.Username != &quot;root&quot; &#123;\t\tpanic(&quot;must be run with root user&quot;)\t&#125;&#125;func check(e error) &#123;\tif e != nil &#123;\t\tpanic(e)\t&#125;&#125;func generateTar() *bytes.Buffer &#123;\t// 将fullchain.pem和privkey.pem文件打包成tar放到临时目录\tfullchain := path.Join(src, &quot;fullchain.pem&quot;)\tif info, err := os.Lstat(fullchain); os.IsNotExist(err) || info == nil &#123;\t\tpanic(&quot;fullchain not exists or can&#x27;t readable&quot;)\t&#125; else &#123;\t\tisSymlink := info.Mode()&amp;os.ModeSymlink == os.ModeSymlink\t\tif isSymlink &#123;\t\t\tf, err := os.CreateTemp(&quot;/tmp&quot;, &quot;ssl&quot;)\t\t\tdefer os.Remove(f.Name())\t\t\tcheck(err)\t\t\tinput, err := os.Open(fullchain)\t\t\tdefer input.Close()\t\t\tcheck(err)\t\t\tio.Copy(f, input)\t\t\tfullchain = f.Name()\t\t&#125;\t&#125;\tprivkey := path.Join(src, &quot;privkey.pem&quot;)\tif info, err := os.Lstat(privkey); os.IsNotExist(err) &#123;\t\tpanic(&quot;privkey not exists or can&#x27;t readable&quot;)\t&#125; else &#123;\t\tisSymlink := info.Mode()&amp;os.ModeSymlink == os.ModeSymlink\t\tif isSymlink &#123;\t\t\tf, err := os.CreateTemp(&quot;/tmp&quot;, &quot;ssl&quot;)\t\t\tdefer os.Remove(f.Name())\t\t\tcheck(err)\t\t\tinput, err := os.Open(privkey)\t\t\tdefer input.Close()\t\t\tcheck(err)\t\t\tio.Copy(f, input)\t\t\tprivkey = f.Name()\t\t&#125;\t&#125;\t// 这个库没有实现对软链接的处理，所以遇到软链接先拷贝下\tfiles, err := archiver.FilesFromDisk(nil, map[string]string&#123;\t\tfullchain: &quot;fullchain.pem&quot;,\t\tprivkey:   &quot;privkey.pem&quot;,\t&#125;)\tcheck(err)\tbuf := bytes.NewBuffer(nil)\tformat := archiver.CompressedArchive&#123;\t\tCompression: archiver.Gz&#123;&#125;,\t\tArchival:    archiver.Tar&#123;&#125;,\t&#125;\terr = format.Archive(context.Background(), buf, files)\treturn buf&#125;func encryptFile(inputBuffer *bytes.Buffer) &#123;\t// 将tar目录加密\tr, err := age.NewScryptRecipient(passphrase)\tf, err := os.Create(dst)\tcheck(err)\tw, err := age.Encrypt(f, r)\tcheck(err)\tdefer w.Close()\tio.Copy(w, inputBuffer)&#125;func fileCompare(src, dst string) bool &#123;\tif _, err := os.Stat(dst); os.IsNotExist(err) &#123;\t\treturn false\t&#125;\tf1, err := os.Open(src)\tcheck(err)\tdefer f1.Close()\tf2, err := os.Open(dst)\tcheck(err)\tdefer f2.Close()\tfor &#123;\t\tb1 := make([]byte, 1024)\t\t_, err1 := f1.Read(b1)\t\tb2 := make([]byte, 1024)\t\t_, err2 := f2.Read(b2)\t\tif err1 != nil || err2 != nil &#123;\t\t\tif err1 == io.EOF &amp;&amp; err2 == io.EOF &#123;\t\t\t\treturn true\t\t\t&#125; else if err1 == io.EOF || err2 == io.EOF &#123;\t\t\t\treturn false\t\t\t&#125; else &#123;\t\t\t\tlog.Fatal(err1, err2)\t\t\t&#125;\t\t&#125;\t\tif !bytes.Equal(b1, b2) &#123;\t\t\treturn false\t\t&#125;\t&#125;&#125;func moveFile(sourcePath, destPath string) &#123;\tinputFile, err := os.Open(sourcePath)\tdefer inputFile.Close()\tcheck(err)\toutputFile, err := os.Create(destPath)\tdefer outputFile.Close()\tcheck(err)\t_, err = io.Copy(outputFile, inputFile)\tcheck(err)&#125;func downloadFile() &#123;\t// 直接下载，替换src\ttemp, err := os.CreateTemp(&quot;/tmp&quot;, &quot;ssl&quot;)\tdefer temp.Close()\tcheck(err)\ttransCfg := &amp;http.Transport&#123;\t\tTLSClientConfig: &amp;tls.Config&#123;InsecureSkipVerify: true&#125;, // ignore expired SSL certificates\t&#125;\tclient := http.Client&#123;\t\tTimeout:         10 * time.Second,\t\tTransport: transCfg,\t&#125;\tresp, err := client.Get(src)\tdefer resp.Body.Close()\tcheck(err)\tio.Copy(temp, resp.Body)\tsrc = temp.Name()&#125;func decryptFile() &#123;\t// 和目标地址进行对比，如果不一致则替换\tf, err := os.Open(src)\tcheck(err)\ti, err := age.NewScryptIdentity(passphrase)\tdefer f.Close()\tr, err := age.Decrypt(f, i)\tcheck(err)\ttemp, err := os.CreateTemp(&quot;/tmp&quot;, &quot;ssl&quot;)\tdefer os.Remove(temp.Name())\tcheck(err)\t_, err = io.Copy(temp, r)\tcheck(err)\ttemp.Seek(0, io.SeekStart)\tformat := archiver.CompressedArchive&#123;\t\tCompression: archiver.Gz&#123;&#125;,\t\tArchival:    archiver.Tar&#123;&#125;,\t&#125;\ttempfullchain, err := os.CreateTemp(&quot;/tmp&quot;, &quot;ssl&quot;)\tdefer os.Remove(tempfullchain.Name())\tcheck(err)\ttempprivkey, err := os.CreateTemp(&quot;/tmp&quot;, &quot;ssl&quot;)\tdefer os.Remove(tempprivkey.Name())\tcheck(err)\thandler := func(ctx context.Context, f archiver.File) error &#123;\t\trc, err := f.Open()\t\tcheck(err)\t\tdefer rc.Close()\t\tif f.Name() == &quot;fullchain.pem&quot; &#123;\t\t\tio.Copy(tempfullchain, rc)\t\t&#125;\t\tif f.Name() == &quot;privkey.pem&quot; &#123;\t\t\tio.Copy(tempprivkey, rc)\t\t&#125;\t\treturn nil\t&#125;\terr = format.Extract(context.Background(), temp, nil, handler)\tcheck(err)\tif _, err := os.Stat(dst); os.IsNotExist(err) &#123;\t\terr = os.MkdirAll(dst, 0700)\t\tcheck(err)\t&#125;\tif (fileCompare(tempfullchain.Name(), path.Join(dst, &quot;fullchain.pem&quot;)) == false) || (fileCompare(tempprivkey.Name(), path.Join(dst, &quot;privkey.pem&quot;)) == false) &#123;\t\tmoveFile(tempfullchain.Name(), path.Join(dst, &quot;fullchain.pem&quot;))\t\tmoveFile(tempprivkey.Name(), path.Join(dst, &quot;privkey.pem&quot;))\t\tif len(post) &gt; 0 &#123;\t\t\tcmd := exec.Command(&quot;sudo&quot;, &quot;bash&quot;, &quot;-c&quot;, post)\t\t\terr = cmd.Run()\t\t\tcheck(err)\t\t&#125;\t&#125;&#125;func main() &#123;\tc := flag.Bool(&quot;c&quot;, false, &quot;client role&quot;)\ts := flag.Bool(&quot;s&quot;, false, &quot;server role&quot;)\tsrcf := flag.String(&quot;src&quot;, &quot;&quot;, &quot;certificate source address&quot;)\tdstf := flag.String(&quot;dst&quot;, &quot;&quot;, &quot;certificate storage destination&quot;)\tpassphrasef := flag.String(&quot;p&quot;, &quot;&quot;, &quot;encryption/decryption password&quot;)\tpostf := flag.String(&quot;post&quot;, &quot;&quot;, &quot;commands executed after certificate update&quot;)\tflag.Usage = func() &#123;\t\tfmt.Fprintf(os.Stderr, &quot;for server:\\n&quot;)\t\tfmt.Fprintf(os.Stderr, &quot;sudo ./ssl_distribute -s -src /etc/letsencrypt/live/xx.com -dst file -p 123456\\n&quot;)\t\tfmt.Fprintf(os.Stderr, &quot;for client:\\n&quot;)\t\tfmt.Fprintf(os.Stderr, &quot;sudo ./ssl_distribute -c -src http://127.0.0.1:8000/file -dst . -p 123456 -post \\&quot;systemctl reload nginx\\&quot;\\n&quot;)\t\tflag.PrintDefaults()\t&#125;\tflag.Parse()\tsrc = *srcf\tdst = *dstf\tpassphrase = *passphrasef\tpost = *postf\tif *c &#123;\t\tdownloadFile()\t\tdecryptFile()\t\tdefer os.Remove(src)\t&#125; else if *s &#123;\t\tbuf := generateTar()\t\tencryptFile(buf)\t&#125; else &#123;\t\tpanic(&quot;must be client or server&quot;)\t&#125;&#125;\n\n","dateCreated":"2022-11-11T19:00:00+08:00","dateModified":"2022-11-11T15:37:26+08:00","datePublished":"2022-11-11T19:00:00+08:00","description":"在开发完毕部署过程中，SSL证书是避不开的一环，而且未来使用SSL证书的地方会越来越多。但是遍观互联网，大多数讲解SSL证书部署的文章都只是能用，却也只是当下能用，无法很好的扩展，也无法做到有效的管理。下面说说为什么","headline":"SSL证书管理","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2022/11/11/ssl_certificate_management/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2022/11/11/ssl_certificate_management/"}</script>
+    <meta name="description" content="在开发完毕部署过程中，SSL证书是避不开的一环，而且未来使用SSL证书的地方会越来越多。但是遍观互联网，大多数讲解SSL证书部署的文章都只是能用，却也只是当下能用，无法很好的扩展，也无法做到有效的管理。下面说说为什么">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="SSL证书管理">
+<meta property="og:url" content="https://www.zoulei.net/2022/11/11/ssl_certificate_management/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="在开发完毕部署过程中，SSL证书是避不开的一环，而且未来使用SSL证书的地方会越来越多。但是遍观互联网，大多数讲解SSL证书部署的文章都只是能用，却也只是当下能用，无法很好的扩展，也无法做到有效的管理。下面说说为什么">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-11-11T11:00:00.000Z">
+<meta property="article:modified_time" content="2022-11-11T07:37:26.015Z">
+<meta property="article:author" content="ficapy">
+<meta name="twitter:card" content="summary">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    
+<link rel="stylesheet" href="/assets/css/style-vmyldjpouxmbykub3bplp6yx2cdfiohdin8psfrhaiwtjsy1h8z42722ngua.min.css">
+
+    <!--STYLES END-->
+    
+
+    
+
+    
+        
+    
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            邹雷
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="首页"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="分类"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="标签"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="归档"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
+                            
+                            rel="noopener"
+                            title="搜索"
+                        >
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="关于"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/ficapy"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="mailto:afexcg@gmail.com"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="邮箱"
+                        >
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
+                            
+                            rel="noopener"
+                            title="RSS"
+                        >
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            SSL证书管理
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2022-11-11T19:00:00+08:00">
+	
+		    11月 11, 2022
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/DevOps/">DevOps</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>在开发完毕部署过程中，SSL证书是避不开的一环，而且未来使用SSL证书的地方会越来越多。但是遍观互联网，大多数讲解SSL证书部署的文章都只是能用，却也只是当下能用，无法很好的扩展，也无法做到有效的管理。下面说说为什么</p>
+<span id="more"></span>
+
+<p>最主流的SSL证书签发管理工具是certbot和acme.sh，前者是letsencrypt官方出品的工具，后者是流行的第三方acme实现(优势是纯shell实现，安装容易)。</p>
+<p>拿certbot举例, 网上的举例大多都是<code>certbot --nginx</code> 或者<code>certbot certonly xxx</code> . 确实，按照文章能正常生成证书,自动更新证书。但是这种方式可以说只顾眼前，不顾以后，拿<code>certbot --nginx</code>为例，你不需要有任何知识，按照提示一步步输入，理想情况下它能自动生成，自动管理证书，但是看看它存在的缺点</p>
+<ol>
+<li>针对nginx的每一个config文件生成一个证书文件，时间一长，certbot给你申请着几十个证书也不是特别奇怪的事情。但是很多时候明明只是一个泛域名证书就能解决的事情，certbot硬是按照nginx配置文件申请了许多证书。遍观大型网站，它们全部都采取一个证书包含N个泛域名+N个单域名的模式，没有人会采用<code>certbot --nginx</code>这种操作，管理一个证书总比管理几十个证书要方便</li>
+<li>上面说了泛域名比较好管理，但是泛域名要依靠dns api来获取，很多时候，Nginx会部署在N台机器上，每台机器都要放证书，那是否意味着每台机器都要各自使用dns api单独申请相同的泛域名证书，所以certbot的问题之二在于不管多台机器的证书同步问题</li>
+<li>网上很多使用<code>certbot certonly -d xx -d xx -d xx</code>  使用此命令来申请多域名证书，假设后续需要增加或者删除域名列表，该如何操作呢</li>
+</ol>
+<p>针对以上不方便的地方，我使用了如下方案</p>
+<ol>
+<li>使用类似以下命令申请证书，单证书包含了多个泛域名+单域名，<code>--cert-name</code>命令类似于k-v的k,每次修改域名列表可以使用k来操作</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">certbot certonly \</span><br><span class="line">    --agree-tos \</span><br><span class="line">    --email demo@demo.com \</span><br><span class="line">    --dns-route53 \</span><br><span class="line">    --preferred-challenges=dns \</span><br><span class="line">    --cert-name demo.com \</span><br><span class="line">    --nginx-server-root /usr/<span class="built_in">local</span>/nginx/conf/ \</span><br><span class="line">    --nginx-ctl /usr/<span class="built_in">local</span>/nginx/sbin/nginx \</span><br><span class="line">    -d <span class="string">&quot;demo.com.cn&quot;</span> \</span><br><span class="line">    -d <span class="string">&quot;*.demo.com.cn&quot;</span> \</span><br><span class="line">    -d <span class="string">&quot;*.a.demo.com.cn&quot;</span> \</span><br><span class="line">    -d <span class="string">&quot;*.b.demo.com.cn&quot;</span> \</span><br><span class="line">    -d <span class="string">&quot;*.c.demo.com.cn&quot;</span></span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>对一个小型公司除特殊情况外，所有的域名都包含在内。使用额外的脚本，每天把证书的公钥和私钥打包加密，让它公网可访问，其他需要使用到证书的地方每天下载证书和已有的证书做对比，如果发现不一致则替换当前证书，并执行一条命令让依赖证书的服务重启</li>
+</ol>
+<h4 id="其它"><a href="#其它" class="headerlink" title="其它"></a>其它</h4><p>如果你决定使用certbot，先读一遍certbot的<a href="https://eff-certbot.readthedocs.io/en/stable/using.html">官方文档</a> , 起码明白什么是<strong>Authenticator</strong>和<strong>Installer</strong></p>
+<p>安全性问题: 加密后的公钥私钥公网可访问，最差最差的情况是对方知道了你的密码，能得到证书，但是得到证书有什么大用吗? 我个人觉得这个风险是可控的</p>
+<p>证书打包加密脚本如下, 需要以root权限运行，依赖age文件加密库和mholt/archiver打包</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;bytes&quot;</span></span><br><span class="line">	<span class="string">&quot;context&quot;</span></span><br><span class="line">	<span class="string">&quot;crypto/tls&quot;</span></span><br><span class="line">	<span class="string">&quot;filippo.io/age&quot;</span></span><br><span class="line">	<span class="string">&quot;flag&quot;</span></span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;github.com/mholt/archiver/v4&quot;</span></span><br><span class="line">	<span class="string">&quot;io&quot;</span></span><br><span class="line">	<span class="string">&quot;log&quot;</span></span><br><span class="line">	<span class="string">&quot;net/http&quot;</span></span><br><span class="line">	<span class="string">&quot;os&quot;</span></span><br><span class="line">	<span class="string">&quot;os/exec&quot;</span></span><br><span class="line">	<span class="string">&quot;os/user&quot;</span></span><br><span class="line">	<span class="string">&quot;path&quot;</span></span><br><span class="line">	<span class="string">&quot;time&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> src = <span class="string">&quot;&quot;</span></span><br><span class="line"><span class="keyword">var</span> dst = <span class="string">&quot;&quot;</span></span><br><span class="line"><span class="keyword">var</span> post = <span class="string">&quot;&quot;</span></span><br><span class="line"><span class="keyword">var</span> passphrase = <span class="string">&quot;&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">init</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="comment">// 因为证书管理使用root, 所以该脚本只允许运行在root模式</span></span><br><span class="line">	currentUser, err := user.Current()</span><br><span class="line">	check(err)</span><br><span class="line">	<span class="keyword">if</span> currentUser.Username != <span class="string">&quot;root&quot;</span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;must be run with root user&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">check</span><span class="params">(e error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> e != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(e)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">generateTar</span><span class="params">()</span> *<span class="title">bytes</span>.<span class="title">Buffer</span></span> &#123;</span><br><span class="line">	<span class="comment">// 将fullchain.pem和privkey.pem文件打包成tar放到临时目录</span></span><br><span class="line">	fullchain := path.Join(src, <span class="string">&quot;fullchain.pem&quot;</span>)</span><br><span class="line">	<span class="keyword">if</span> info, err := os.Lstat(fullchain); os.IsNotExist(err) || info == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;fullchain not exists or can&#x27;t readable&quot;</span>)</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		isSymlink := info.Mode()&amp;os.ModeSymlink == os.ModeSymlink</span><br><span class="line">		<span class="keyword">if</span> isSymlink &#123;</span><br><span class="line">			f, err := os.CreateTemp(<span class="string">&quot;/tmp&quot;</span>, <span class="string">&quot;ssl&quot;</span>)</span><br><span class="line">			<span class="keyword">defer</span> os.Remove(f.Name())</span><br><span class="line">			check(err)</span><br><span class="line">			input, err := os.Open(fullchain)</span><br><span class="line">			<span class="keyword">defer</span> input.Close()</span><br><span class="line">			check(err)</span><br><span class="line">			io.Copy(f, input)</span><br><span class="line">			fullchain = f.Name()</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	privkey := path.Join(src, <span class="string">&quot;privkey.pem&quot;</span>)</span><br><span class="line">	<span class="keyword">if</span> info, err := os.Lstat(privkey); os.IsNotExist(err) &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;privkey not exists or can&#x27;t readable&quot;</span>)</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		isSymlink := info.Mode()&amp;os.ModeSymlink == os.ModeSymlink</span><br><span class="line">		<span class="keyword">if</span> isSymlink &#123;</span><br><span class="line">			f, err := os.CreateTemp(<span class="string">&quot;/tmp&quot;</span>, <span class="string">&quot;ssl&quot;</span>)</span><br><span class="line">			<span class="keyword">defer</span> os.Remove(f.Name())</span><br><span class="line">			check(err)</span><br><span class="line">			input, err := os.Open(privkey)</span><br><span class="line">			<span class="keyword">defer</span> input.Close()</span><br><span class="line">			check(err)</span><br><span class="line">			io.Copy(f, input)</span><br><span class="line">			privkey = f.Name()</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// 这个库没有实现对软链接的处理，所以遇到软链接先拷贝下</span></span><br><span class="line">	files, err := archiver.FilesFromDisk(<span class="literal">nil</span>, <span class="keyword">map</span>[<span class="keyword">string</span>]<span class="keyword">string</span>&#123;</span><br><span class="line">		fullchain: <span class="string">&quot;fullchain.pem&quot;</span>,</span><br><span class="line">		privkey:   <span class="string">&quot;privkey.pem&quot;</span>,</span><br><span class="line">	&#125;)</span><br><span class="line">	check(err)</span><br><span class="line">	buf := bytes.NewBuffer(<span class="literal">nil</span>)</span><br><span class="line">	format := archiver.CompressedArchive&#123;</span><br><span class="line">		Compression: archiver.Gz&#123;&#125;,</span><br><span class="line">		Archival:    archiver.Tar&#123;&#125;,</span><br><span class="line">	&#125;</span><br><span class="line">	err = format.Archive(context.Background(), buf, files)</span><br><span class="line">	<span class="keyword">return</span> buf</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">encryptFile</span><span class="params">(inputBuffer *bytes.Buffer)</span></span> &#123;</span><br><span class="line">	<span class="comment">// 将tar目录加密</span></span><br><span class="line">	r, err := age.NewScryptRecipient(passphrase)</span><br><span class="line">	f, err := os.Create(dst)</span><br><span class="line">	check(err)</span><br><span class="line"></span><br><span class="line">	w, err := age.Encrypt(f, r)</span><br><span class="line">	check(err)</span><br><span class="line">	<span class="keyword">defer</span> w.Close()</span><br><span class="line">	io.Copy(w, inputBuffer)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">fileCompare</span><span class="params">(src, dst <span class="keyword">string</span>)</span> <span class="title">bool</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> _, err := os.Stat(dst); os.IsNotExist(err) &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">	&#125;</span><br><span class="line">	f1, err := os.Open(src)</span><br><span class="line">	check(err)</span><br><span class="line">	<span class="keyword">defer</span> f1.Close()</span><br><span class="line"></span><br><span class="line">	f2, err := os.Open(dst)</span><br><span class="line">	check(err)</span><br><span class="line">	<span class="keyword">defer</span> f2.Close()</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> &#123;</span><br><span class="line">		b1 := <span class="built_in">make</span>([]<span class="keyword">byte</span>, <span class="number">1024</span>)</span><br><span class="line">		_, err1 := f1.Read(b1)</span><br><span class="line"></span><br><span class="line">		b2 := <span class="built_in">make</span>([]<span class="keyword">byte</span>, <span class="number">1024</span>)</span><br><span class="line">		_, err2 := f2.Read(b2)</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> err1 != <span class="literal">nil</span> || err2 != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">if</span> err1 == io.EOF &amp;&amp; err2 == io.EOF &#123;</span><br><span class="line">				<span class="keyword">return</span> <span class="literal">true</span></span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> err1 == io.EOF || err2 == io.EOF &#123;</span><br><span class="line">				<span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				log.Fatal(err1, err2)</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> !bytes.Equal(b1, b2) &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">false</span></span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">moveFile</span><span class="params">(sourcePath, destPath <span class="keyword">string</span>)</span></span> &#123;</span><br><span class="line">	inputFile, err := os.Open(sourcePath)</span><br><span class="line">	<span class="keyword">defer</span> inputFile.Close()</span><br><span class="line">	check(err)</span><br><span class="line"></span><br><span class="line">	outputFile, err := os.Create(destPath)</span><br><span class="line">	<span class="keyword">defer</span> outputFile.Close()</span><br><span class="line">	check(err)</span><br><span class="line"></span><br><span class="line">	_, err = io.Copy(outputFile, inputFile)</span><br><span class="line">	check(err)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">downloadFile</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="comment">// 直接下载，替换src</span></span><br><span class="line">	temp, err := os.CreateTemp(<span class="string">&quot;/tmp&quot;</span>, <span class="string">&quot;ssl&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> temp.Close()</span><br><span class="line">	check(err)</span><br><span class="line">	transCfg := &amp;http.Transport&#123;</span><br><span class="line">		TLSClientConfig: &amp;tls.Config&#123;InsecureSkipVerify: <span class="literal">true</span>&#125;, <span class="comment">// ignore expired SSL certificates</span></span><br><span class="line">	&#125;</span><br><span class="line">	client := http.Client&#123;</span><br><span class="line">		Timeout:         <span class="number">10</span> * time.Second,</span><br><span class="line">		Transport: transCfg,</span><br><span class="line">	&#125;</span><br><span class="line">	resp, err := client.Get(src)</span><br><span class="line">	<span class="keyword">defer</span> resp.Body.Close()</span><br><span class="line">	check(err)</span><br><span class="line">	io.Copy(temp, resp.Body)</span><br><span class="line">	src = temp.Name()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">decryptFile</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="comment">// 和目标地址进行对比，如果不一致则替换</span></span><br><span class="line">	f, err := os.Open(src)</span><br><span class="line">	check(err)</span><br><span class="line">	i, err := age.NewScryptIdentity(passphrase)</span><br><span class="line">	<span class="keyword">defer</span> f.Close()</span><br><span class="line">	r, err := age.Decrypt(f, i)</span><br><span class="line">	check(err)</span><br><span class="line">	temp, err := os.CreateTemp(<span class="string">&quot;/tmp&quot;</span>, <span class="string">&quot;ssl&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> os.Remove(temp.Name())</span><br><span class="line">	check(err)</span><br><span class="line">	_, err = io.Copy(temp, r)</span><br><span class="line">	check(err)</span><br><span class="line">	temp.Seek(<span class="number">0</span>, io.SeekStart)</span><br><span class="line">	format := archiver.CompressedArchive&#123;</span><br><span class="line">		Compression: archiver.Gz&#123;&#125;,</span><br><span class="line">		Archival:    archiver.Tar&#123;&#125;,</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	tempfullchain, err := os.CreateTemp(<span class="string">&quot;/tmp&quot;</span>, <span class="string">&quot;ssl&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> os.Remove(tempfullchain.Name())</span><br><span class="line">	check(err)</span><br><span class="line">	tempprivkey, err := os.CreateTemp(<span class="string">&quot;/tmp&quot;</span>, <span class="string">&quot;ssl&quot;</span>)</span><br><span class="line">	<span class="keyword">defer</span> os.Remove(tempprivkey.Name())</span><br><span class="line">	check(err)</span><br><span class="line"></span><br><span class="line">	handler := <span class="function"><span class="keyword">func</span><span class="params">(ctx context.Context, f archiver.File)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">		rc, err := f.Open()</span><br><span class="line">		check(err)</span><br><span class="line">		<span class="keyword">defer</span> rc.Close()</span><br><span class="line">		<span class="keyword">if</span> f.Name() == <span class="string">&quot;fullchain.pem&quot;</span> &#123;</span><br><span class="line">			io.Copy(tempfullchain, rc)</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> f.Name() == <span class="string">&quot;privkey.pem&quot;</span> &#123;</span><br><span class="line">			io.Copy(tempprivkey, rc)</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">	&#125;</span><br><span class="line">	err = format.Extract(context.Background(), temp, <span class="literal">nil</span>, handler)</span><br><span class="line">	check(err)</span><br><span class="line">	<span class="keyword">if</span> _, err := os.Stat(dst); os.IsNotExist(err) &#123;</span><br><span class="line">		err = os.MkdirAll(dst, <span class="number">0700</span>)</span><br><span class="line">		check(err)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> (fileCompare(tempfullchain.Name(), path.Join(dst, <span class="string">&quot;fullchain.pem&quot;</span>)) == <span class="literal">false</span>) || (fileCompare(tempprivkey.Name(), path.Join(dst, <span class="string">&quot;privkey.pem&quot;</span>)) == <span class="literal">false</span>) &#123;</span><br><span class="line">		moveFile(tempfullchain.Name(), path.Join(dst, <span class="string">&quot;fullchain.pem&quot;</span>))</span><br><span class="line">		moveFile(tempprivkey.Name(), path.Join(dst, <span class="string">&quot;privkey.pem&quot;</span>))</span><br><span class="line">		<span class="keyword">if</span> <span class="built_in">len</span>(post) &gt; <span class="number">0</span> &#123;</span><br><span class="line">			cmd := exec.Command(<span class="string">&quot;sudo&quot;</span>, <span class="string">&quot;bash&quot;</span>, <span class="string">&quot;-c&quot;</span>, post)</span><br><span class="line">			err = cmd.Run()</span><br><span class="line">			check(err)</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	c := flag.Bool(<span class="string">&quot;c&quot;</span>, <span class="literal">false</span>, <span class="string">&quot;client role&quot;</span>)</span><br><span class="line">	s := flag.Bool(<span class="string">&quot;s&quot;</span>, <span class="literal">false</span>, <span class="string">&quot;server role&quot;</span>)</span><br><span class="line">	srcf := flag.String(<span class="string">&quot;src&quot;</span>, <span class="string">&quot;&quot;</span>, <span class="string">&quot;certificate source address&quot;</span>)</span><br><span class="line">	dstf := flag.String(<span class="string">&quot;dst&quot;</span>, <span class="string">&quot;&quot;</span>, <span class="string">&quot;certificate storage destination&quot;</span>)</span><br><span class="line">	passphrasef := flag.String(<span class="string">&quot;p&quot;</span>, <span class="string">&quot;&quot;</span>, <span class="string">&quot;encryption/decryption password&quot;</span>)</span><br><span class="line">	postf := flag.String(<span class="string">&quot;post&quot;</span>, <span class="string">&quot;&quot;</span>, <span class="string">&quot;commands executed after certificate update&quot;</span>)</span><br><span class="line">	flag.Usage = <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">		fmt.Fprintf(os.Stderr, <span class="string">&quot;for server:\n&quot;</span>)</span><br><span class="line">		fmt.Fprintf(os.Stderr, <span class="string">&quot;sudo ./ssl_distribute -s -src /etc/letsencrypt/live/xx.com -dst file -p 123456\n&quot;</span>)</span><br><span class="line">		fmt.Fprintf(os.Stderr, <span class="string">&quot;for client:\n&quot;</span>)</span><br><span class="line">		fmt.Fprintf(os.Stderr, <span class="string">&quot;sudo ./ssl_distribute -c -src http://127.0.0.1:8000/file -dst . -p 123456 -post \&quot;systemctl reload nginx\&quot;\n&quot;</span>)</span><br><span class="line">		flag.PrintDefaults()</span><br><span class="line">	&#125;</span><br><span class="line">	flag.Parse()</span><br><span class="line"></span><br><span class="line">	src = *srcf</span><br><span class="line">	dst = *dstf</span><br><span class="line">	passphrase = *passphrasef</span><br><span class="line">	post = *postf</span><br><span class="line">	<span class="keyword">if</span> *c &#123;</span><br><span class="line">		downloadFile()</span><br><span class="line">		decryptFile()</span><br><span class="line">		<span class="keyword">defer</span> os.Remove(src)</span><br><span class="line">	&#125; <span class="keyword">else</span> <span class="keyword">if</span> *s &#123;</span><br><span class="line">		buf := generateTar()</span><br><span class="line">		encryptFile(buf)</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="built_in">panic</span>(<span class="string">&quot;must be client or server&quot;</span>)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2022/01/07/vps_root_disk_size/"
+                    data-tooltip="请勿将服务器系统盘设置的过小"
+                    aria-label="下一篇: 请勿将服务器系统盘设置的过小"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2022/11/11/ssl_certificate_management/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2022/11/11/ssl_certificate_management/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2022/11/11/ssl_certificate_management/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2022/01/07/vps_root_disk_size/"
+                    data-tooltip="请勿将服务器系统盘设置的过小"
+                    aria-label="下一篇: 请勿将服务器系统盘设置的过小"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2022/11/11/ssl_certificate_management/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2022/11/11/ssl_certificate_management/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2022/11/11/ssl_certificate_management/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2022/11/11/ssl_certificate_management/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2022/11/11/ssl_certificate_management/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2022/11/11/ssl_certificate_management/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">ficapy</h4>
+        
+            <div id="about-card-bio"><p>author.bio</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
+    </div>
+</div>
+
+        
+            <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    />
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">没有找到文章</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
+                            <h3 class="media-heading">博客起航</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月29日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
+<p>：</p>
+<p>为了占行此处无耻的掠过N个字</p>
+<p>:</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
+                            <h3 class="media-heading">IDM-Internet Download Manager</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月30日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
+                            <h3 class="media-heading">everything--文件搜索神器</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月2日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
+                            <h3 class="media-heading">everything进阶教程</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月6日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
+                            <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月12日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
+<p>今天介绍的是一款据说主打截图的软件-snagit</p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
+                            <h3 class="media-heading">xnview-图片查看</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月25日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/05/deskpins_top_window/"
+                            aria-label=": DeskPins-窗口置顶"
+                        >
+                            <h3 class="media-heading">DeskPins-窗口置顶</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月5日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/28/disktool_recommend/"
+                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
+                        >
+                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月28日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
+                            aria-label=": excel数字递增批量打印"
+                        >
+                            <h3 class="media-heading">excel数字递增批量打印</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月20日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
+<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
+                            aria-label=": pip使用国内镜像"
+                        >
+                            <h3 class="media-heading">pip使用国内镜像</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月27日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
+<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="没有找到文章"
+                data-message-one="找到 1 篇文章"
+                data-message-other="找到 {n} 篇文章">
+                找到 105 篇文章
+            </p>
+        </div>
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+
+<script src="/assets/js/script-mdmhmndjqtxgrnbcqxwfotdukip0lyvqjtoun1q59tiszh2pjvmu0dun2kvx.min.js"></script>
+
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
+    <script>
+      var algoliaClient = algoliasearch('CX8LZHBELF', '3fcc4f94219bf4d5f5714b449373ba3c');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
+    </script>
+
+
+    </body>
+</html>

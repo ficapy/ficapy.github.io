@@ -11,7 +11,7 @@
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试http://bbs.hshy.net/  p.s. 该网站已关闭注册\n\n至于实现原理，就是先使用fiddler抓取登陆和打卡的网址及参数，用python的requests模块实现构造请求网址以及对网址进行POST和GET操作\n\n中间需要注意的一些小细节：\n①fiddler搜索功能很强大，在所有会话中快速找到某个参数是如何来的很有用；\n②进行登陆POST操作的时候如果用户名是中文，需要先解码，这个例子里面是GBK（当初困扰了我一些时间），密码进行了MD5加密；\n③针对签到失败的处理，本例可选使用nexmo发送短信提醒  \n \n\n在ubuntu远程VPS下的使用：\n先安装python-pip\n1apt-get install python-pip\n安装python第三方模块requests\n1pip install requests\n设置定时任务(路径改成放置文件的路径)\n12crontab -e  0 12 \\* \\* \\* python /root/XXX/hshy_checkin.py\nok，大功告成~~~~~~从此妈妈再也不担心我天天惦记着签到打卡了\n","dateCreated":"2014-04-21T22:07:00+08:00","dateModified":"2021-02-17T10:51:25+08:00","datePublished":"2014-04-21T22:07:00+08:00","description":"断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试http://bbs.hshy.net/  p.s. 该网站已关闭注册","headline":"python简单实现网站打卡签到","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/","keywords":"python签到, 打卡"}</script>
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试http://bbs.hshy.net/  p.s. 该网站已关闭注册\n\n至于实现原理，就是先使用fiddler抓取登陆和打卡的网址及参数，用python的requests模块实现构造请求网址以及对网址进行POST和GET操作\n\n中间需要注意的一些小细节：\n①fiddler搜索功能很强大，在所有会话中快速找到某个参数是如何来的很有用；\n②进行登陆POST操作的时候如果用户名是中文，需要先解码，这个例子里面是GBK（当初困扰了我一些时间），密码进行了MD5加密；\n③针对签到失败的处理，本例可选使用nexmo发送短信提醒  \n \n\n在ubuntu远程VPS下的使用：\n先安装python-pip\n1apt-get install python-pip\n\n安装python第三方模块requests\n1pip install requests\n\n设置定时任务(路径改成放置文件的路径)\n12crontab -e  0 12 \\* \\* \\* python /root/XXX/hshy_checkin.py\n\nok，大功告成~~~~~~从此妈妈再也不担心我天天惦记着签到打卡了\n","dateCreated":"2014-04-21T22:07:00+08:00","dateModified":"2021-02-17T10:51:25+08:00","datePublished":"2014-04-21T22:07:00+08:00","description":"断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试http://bbs.hshy.net/  p.s. 该网站已关闭注册","headline":"python简单实现网站打卡签到","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2014/04/21/python_implement_login_and_check_in/","keywords":"python签到, 打卡"}</script>
     <meta name="description" content="断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站">
 <meta property="og:type" content="blog">
 <meta property="og:title" content="python简单实现网站打卡签到">
@@ -274,7 +274,7 @@
     <div class="post-content markdown">
         <div class="main-content-wrap">
             <p>断断续续学习python也有一段时间，偶尔也会有点小想法。和当年疯狂的挂QQ升级一样，也有很多人对论坛的每日打卡签到比较痴迷。我当年也会有去论坛打卡的习惯，时至今日虽然对打卡签到不再执着，但自学编程这条寂寞的路能用它来完成偶尔的一些小想法无疑是让我兴奋的。我有很多小想法，呵呵~~~每日自动打卡签到就是其中的一个，而且实现这个也是异常简单的事情。所以公开在俺博客的第一个python脚本就选它了。网站选择了一个网友的作为测试<a href="http://bbs.hshy.net/">http://bbs.hshy.net/</a>  <br>p.s. 该网站已关闭注册</p>
-<a id="more"></a>
+<span id="more"></span>
 <p>至于实现原理，就是先使用fiddler抓取登陆和打卡的网址及参数，用python的requests模块实现构造请求网址以及对网址进行POST和GET操作</p>
 <p><img src="https://blogimg.ficapy.com/blogimg/fiddler.png" alt="fiddler"></p>
 <p>中间需要注意的一些小细节：</p>
@@ -286,10 +286,13 @@
 <p>在ubuntu远程VPS下的使用：</p>
 <p>先安装python-pip</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">apt-get install python-pip</span><br></pre></td></tr></table></figure>
+
 <p>安装python第三方模块requests</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install requests</span><br></pre></td></tr></table></figure>
+
 <p>设置定时任务(路径改成放置文件的路径)</p>
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">crontab -e  </span><br><span class="line">0 12 \* \* \* python /root/XXX/hshy_checkin.py</span><br></pre></td></tr></table></figure>
+
 <p>ok，大功告成~~~~~~从此妈妈再也不担心我天天惦记着签到打卡了</p>
 
             
@@ -415,7 +418,7 @@
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2021 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -872,7 +875,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 103 篇文章
+                找到 105 篇文章
             </p>
         </div>
     </div>
