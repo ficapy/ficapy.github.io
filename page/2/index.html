@@ -354,6 +354,60 @@ mjx-container[display="true"] + br {
                     
                         <a
                             class="link-unstyled"
+                            href="/2021/04/11/kotlin-dsl/"
+                            aria-label=": Kotlin DSL"
+                        >
+                            Kotlin DSL
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time datetime="2021-04-11T16:00:00+08:00">
+	
+		    4月 11, 2021
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/kotlin/">kotlin</a>
+
+
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-excerpt">
+                    <p>最近在看Kotlin，看到DSL部分觉得比较有意思，记录一下自己的理解</p>
+<p>最简单的DSL就是各种大括号嵌套，<strong>每一个括号提供了一个独立的上下文，在该括号内使用这个上下文提供的api来影响上下文或者产生一些副作用。</strong></p>
+<p>Kotlin 天生就对DSL写法有比较好的支持，典型的scoping function: run、with、let、also、apply 就让大括号嵌套在Kotlin中无所不在</p>
+<p>编写本文是因为看到了一段几十行的实现DSL的代码，觉得实现很简单，用法很炫酷，值得记录。代码链接在此 <a href="https://github.com/nazmulidris/color-console/blob/4d4503e183ab18434a9c86afd5ebdc66744c3451/src/main/kotlin/color_console_log/ColorConsoleLogUtils.kt#L91-L125">https://github.com/nazmulidris/color-console/blob/4d4503e183ab18434a9c86afd5ebdc66744c3451/src/main/kotlin/color_console_log/ColorConsoleLogUtils.kt#L91-L125</a></p>
+                    
+                        <a
+                            href="/2021/04/11/kotlin-dsl/"
+                            class="postShorten-excerpt_link link"
+                            aria-label=": Kotlin DSL"
+                        >
+                            阅读全文
+                        </a>
+                        
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
+    <article class="postShorten postShorten--thumbnailimg-right">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title">
+                    
+                        <a
+                            class="link-unstyled"
                             href="/2021/02/23/recursion-to-iteration5/"
                             aria-label=": 递归转非递归-用栈完全模拟"
                         >
@@ -632,57 +686,6 @@ mjx-container[display="true"] + br {
                     
                         <a
                             class="link-unstyled"
-                            href="/2021/02/17/drone/"
-                            aria-label=": Docker CD初探-Drone"
-                        >
-                            Docker CD初探-Drone
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time datetime="2021-02-17T11:12:31+08:00">
-	
-		    2月 17, 2021
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/Docker/">Docker</a>
-
-
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-excerpt">
-                    <p>最近有个小需求，我们公司写文档是通过<a href="https://github.com/lord/slate">slate</a>来的。每一次文档编写完成之后都需要执行<code>bundle exec middleman build --clean</code>生成静态文件。然后再使用rsync来进行上传操作。虽然只有2步。但是做的次数多了难免也让人觉得厌烦。萌生了自动化处理的想法。比较粗暴的方式有。每隔几分钟去检测一次git版本库是否有更新(以前本人真这样实现过)，自己写个小web程序。设置webhook。接收到webhook再拉取进行操作(我也实现过，目前一切运行良好)。现在尝试下使用可持续集成的套路去实现。</p>
-                    
-                        <a
-                            href="/2021/02/17/drone/"
-                            class="postShorten-excerpt_link link"
-                            aria-label=": Docker CD初探-Drone"
-                        >
-                            阅读全文
-                        </a>
-                        
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
-    
-    <article class="postShorten postShorten--thumbnailimg-right">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title">
-                    
-                        <a
-                            class="link-unstyled"
                             href="/2020/03/28/analysis_stackoverflow/"
                             aria-label=": 分析stackoverflow热门问答"
                         >
@@ -836,23 +839,23 @@ mjx-container[display="true"] + br {
                     
                         <a
                             class="link-unstyled"
-                            href="/2019/08/05/ssh-port-forward/"
-                            aria-label=": ssh端口映射"
+                            href="/2019/07/29/scp_speedup/"
+                            aria-label=": scp加速传输"
                         >
-                            ssh端口映射
+                            scp加速传输
                         </a>
                     
                 </h1>
                 <div class="postShorten-meta">
-    <time datetime="2019-08-05T15:40:01+08:00">
+    <time datetime="2019-07-29T21:58:21+08:00">
 	
-		    8月 05, 2019
+		    7月 29, 2019
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/DevOps/">DevOps</a>
+    <a class="category-link" href="/categories/network/">network</a>
 
 
     
@@ -861,12 +864,16 @@ mjx-container[display="true"] + br {
             </div>
             
                 <div class="postShorten-excerpt">
-                    <p>开发中经常会需要用到端口映射这种事情。以前觉得好容易混淆。其实用习惯了就会发现如此简单┑(￣Д ￣)┍，下面联系到我日常使用到的一些ssh映射实例讲解一下</p>
+                    <p>今天有15G的资料需要先传递到服务器上，琢磨着怎么能更快的上传完成，最后总结了一下方法，确实比直接scp传递效率高很多,从直接scp速度是40M/s，到参照参考文章利用lz4变成93M，最后换成zstd变成了152M,效果很棒，语句如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">tar -c gh&#x2F; |pv| zstd -9 -T0 |ssh -c chacha20-poly1305@openssh.com  </span><br><span class="line">-o &quot;MACs umac-64@openssh.com&quot; clickhouse &quot;zstd -d | tar -xC &#x2F;tmp&#x2F;xx&quot;</span><br></pre></td></tr></table></figure>
+
+<p>反向</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ssh -c chacha20-poly1305@openssh.com  -o &quot;MACs umac-64@openssh.com&quot; remote </span><br><span class="line">&quot;cat &#x2F;data&#x2F;filename | zstd -T0&quot; | pv | zstd -d &gt; filename</span><br></pre></td></tr></table></figure>
                     
                         <a
-                            href="/2019/08/05/ssh-port-forward/"
+                            href="/2019/07/29/scp_speedup/"
                             class="postShorten-excerpt_link link"
-                            aria-label=": ssh端口映射"
+                            aria-label=": scp加速传输"
                         >
                             阅读全文
                         </a>
@@ -913,7 +920,7 @@ mjx-container[display="true"] + br {
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2022 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2023 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -1222,7 +1229,7 @@ mjx-container[display="true"] + br {
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 106 篇文章
+                找到 107 篇文章
             </p>
         </div>
     </div>
