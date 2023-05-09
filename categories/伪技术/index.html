@@ -243,6 +243,70 @@
                     
                         <a
                             class="link-unstyled"
+                            href="/2023/05/09/net_Dial_bandwidth_limit/"
+                            aria-label=": net.Dial限速"
+                        >
+                            net.Dial限速
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time datetime="2023-05-09T10:00:00+08:00">
+	
+		    5月 09, 2023
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/">伪技术</a>
+
+
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-content">
+                    <p>访问外网的时候为了避免被风控，所以长久以来，我是用了一台廉价的vps作为固定出口ip的，有多廉价呢，每月1T流量，192M内存，单核，OpenVZ，每年15刀。因为是几年前买的，现在甚至都停售了。但是日前使用上出了问题，表现为网速过快的时候会断网几分钟，遇到后还觉得挺神奇，后来登陆上去用wget下载文件测试了下，稳定复现，下载热门资源，速度很容易跑到50M/s+，最后询问客服得知，对外部进入的流量做了限制，说是防止DDOS攻击…. 但是说真的，明眼人都能看得出来，是觉得价格太低，所以服务降级，不允许大流量下载</p>
+<p>因为贫穷，加上它这个网络质量+ip质量还可以，我就琢磨着自我限速得了，一开始打算用tc之类的，后来发现openvz对这方面有很大限制，后来，就直接改一下代理源码得了</p>
+<p>得益于ss的源码质量挺高，也挺好改，直接在对外部进行read的时候限速就好，在令牌桶和漏桶之间选择了漏桶，因为令牌桶允许瞬时流量超过阈值，漏桶没有这个情况，添加代码如下</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;go.uber.org/ratelimit&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> GlobalLimit <span class="keyword">struct</span> &#123;</span><br><span class="line">	limiter   ratelimit.Limiter</span><br><span class="line">	readBytes <span class="keyword">int</span></span><br><span class="line">	lock      sync.Mutex</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> globalLimit = GlobalLimit&#123;</span><br><span class="line">	limiter: ratelimit.New(<span class="number">1024</span> * <span class="number">25</span>),</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> RateLimitedConn <span class="keyword">struct</span> &#123;</span><br><span class="line">	net.Conn</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(rlc *RateLimitedConn)</span> <span class="title">Read</span><span class="params">(p []<span class="keyword">byte</span>)</span> <span class="params">(<span class="keyword">int</span>, error)</span></span> &#123;</span><br><span class="line"></span><br><span class="line">	n, err := rlc.Conn.Read(p)</span><br><span class="line">	globalLimit.lock.Lock()</span><br><span class="line">	<span class="keyword">defer</span> globalLimit.lock.Unlock()</span><br><span class="line">	globalLimit.readBytes += n</span><br><span class="line"></span><br><span class="line">	loop := <span class="keyword">int</span>(<span class="keyword">float64</span>(globalLimit.readBytes) / <span class="number">1024</span>)</span><br><span class="line">	<span class="keyword">for</span> i := <span class="number">0</span>; i &lt; loop; i++ &#123;</span><br><span class="line">		globalLimit.limiter.Take()</span><br><span class="line">		globalLimit.readBytes -= <span class="number">1024</span></span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> n, err</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">NewRateLimitedConn</span><span class="params">(conn net.Conn)</span> *<span class="title">RateLimitedConn</span></span> &#123;</span><br><span class="line">	<span class="keyword">return</span> &amp;RateLimitedConn&#123;</span><br><span class="line">		Conn: conn,</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以上限制下载速度为25M/s</p>
+<p>最后，在<code>tcpRemote</code>函数内部<code>defer rc.Close()</code>下面添加<code>rc = NewRateLimitedConn(rc)</code>就OK了</p>
+
+                    
+                        
+
+
+                    
+                    
+                        <p>
+                            <a
+                                href="/2023/05/09/net_Dial_bandwidth_limit/#post-footer"
+                                class="postShorten-excerpt_link link"
+                                aria-label=""
+                            >
+                                评论和共享
+                            </a>
+                        </p>
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
+    <article class="postShorten postShorten--thumbnailimg-bottom">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title">
+                    
+                        <a
+                            class="link-unstyled"
                             href="/2017/08/13/when_no_network_setup_environment/"
                             aria-label=": 内网无网络环境初始化线上环境"
                         >
@@ -757,60 +821,6 @@
         
     </article>
     
-    
-    <article class="postShorten postShorten--thumbnailimg-right">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title">
-                    
-                        <a
-                            class="link-unstyled"
-                            href="/2014/08/02/v2ex_signin/"
-                            aria-label=": V2EX签到脚本"
-                        >
-                            V2EX签到脚本
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time datetime="2014-08-02T22:18:00+08:00">
-	
-		    8月 02, 2014
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/">伪技术</a>
-
-
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-excerpt">
-                    <p>本来打算上个月发的，一直没管博客，不管是啥来凑个文章数吧，刚学js仿照别人的脚本改写的签到脚本</p>
-<p>顺便说一下，写脚本真的很有趣，更有趣的是打开网页的时候Greasemonkey可以运行自己写的脚本，就酱紫</p>
-<p>凑字数完毕→_→</p>
-<p>哦，情人节！！！</p>
-                    
-                        <a
-                            href="/2014/08/02/v2ex_signin/"
-                            class="postShorten-excerpt_link link"
-                            aria-label=": V2EX签到脚本"
-                        >
-                            阅读全文
-                        </a>
-                        
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
     <div class="pagination-bar">
     <ul class="pagination">
         
@@ -1145,7 +1155,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 107 篇文章
+                找到 108 篇文章
             </p>
         </div>
     </div>
