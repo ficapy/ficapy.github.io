@@ -1,0 +1,910 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>个人文件夹备份 - 邹雷</title>
+    <meta name="author" content="ficapy">
+    
+    
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"虽然现在各大云存储遍地，但是将自己的重要资料在资金允许的情况下，多异地备份几次不会有错，毕竟，电脑有价资料无价。今天写了个备份目录到backblaze的小脚本，分享记录一下\n流程很简单，使用tar打包，使用zstd压缩，再使用age加密，最后上传, 成功后让pushover给自己发通知\n\n\n代码如下\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119120121122123124125126127128129130131132133134135136137138139140141142package mainimport (\t&quot;bytes&quot;\t&quot;flag&quot;\t&quot;fmt&quot;\t&quot;github.com/aws/aws-sdk-go/aws&quot;\t&quot;github.com/aws/aws-sdk-go/aws/credentials&quot;\t&quot;github.com/aws/aws-sdk-go/aws/session&quot;\t&quot;github.com/aws/aws-sdk-go/service/s3/s3manager&quot;\t&quot;gopkg.in/yaml.v2&quot;\t&quot;io&quot;\t&quot;io/ioutil&quot;\t&quot;log&quot;\t&quot;net/http&quot;\t&quot;net/url&quot;\t&quot;os&quot;\t&quot;os/exec&quot;\t&quot;path/filepath&quot;\t&quot;time&quot;)type Config struct &#123;\tKeyID         string `yaml:&quot;key_id&quot;`\tKeySec        string `yaml:&quot;key_sec&quot;`\tEndpoint      string `yaml:&quot;endpoint&quot;`\tSrcFolderPath string `yaml:&quot;src_folder_path&quot;`\tTarPath       string `yaml:&quot;tar_path&quot;`\tZstdPath      string `yaml:&quot;zstd_path&quot;`\tAgePath       string `yaml:&quot;age_path&quot;`\tAgeKey        string `yaml:&quot;age_key&quot;`\tDstName       string `yaml:&quot;dst_name&quot;`\tBucketName    string `yaml:&quot;bucket_name&quot;`\tPushOverUser  string `yaml:&quot;push_over_user&quot;`\tPushOverToken string `yaml:&quot;push_over_token&quot;`&#125;func main() &#123;\t// 打包 tar -c folder | zstd | age -r xx &gt; folder.tar.zst.age\t// 拆包 age -d -i key.txt folder.tar.zst.age | unzstd | tar -xf -\tconfigFile := flag.String(&quot;f&quot;, &quot;config.yaml&quot;, &quot;Path to config file&quot;)\tflag.Parse()\tdata, err := ioutil.ReadFile(*configFile)\tif err != nil &#123;\t\tlog.Fatalf(&quot;Error reading config file: %v&quot;, err)\t&#125;\tvar config Config\terr = yaml.Unmarshal(data, &amp;config)\tif err != nil &#123;\t\tlog.Fatalf(&quot;Error parsing config file: %v&quot;, err)\t&#125;\ttarCmd := exec.Command(config.TarPath, &quot;-c&quot;, config.SrcFolderPath)\tzstdCmd := exec.Command(config.ZstdPath)\tageCmd := exec.Command(config.AgePath, &quot;-r&quot;, config.AgeKey)\ttarOut, _ := tarCmd.StdoutPipe()\tzstdCmd.Stdin = tarOut\tzstdOut, _ := zstdCmd.StdoutPipe()\tageCmd.Stdin = zstdOut\tencryptedFile := fmt.Sprintf(&quot;/tmp/%s_%s.tar.zst.age&quot;, time.Now().UTC().Format(&quot;20060102150405&quot;), config.DstName)\tf, err := os.Create(encryptedFile)\tif err != nil &#123;\t\tlog.Fatalf(&quot;os.Create: %v&quot;, err)\t&#125;\tdefer f.Close()\t// set up the pipe between age and the encrypted file\tvar buffer bytes.Buffer\tageCmd.Stdout = &amp;buffer\tif err := tarCmd.Start(); err != nil &#123;\t\tlog.Fatalf(&quot;tarCmd.Start: %v&quot;, err)\t&#125;\tif err := zstdCmd.Start(); err != nil &#123;\t\tlog.Fatalf(&quot;zstdCmd.Start: %v&quot;, err)\t&#125;\tif err := ageCmd.Start(); err != nil &#123;\t\tlog.Fatalf(&quot;ageCmd.Start: %v&quot;, err)\t&#125;\t// wait for all commands to finish\tif err := tarCmd.Wait(); err != nil &#123;\t\tlog.Fatalf(&quot;tarCmd.Wait: %v&quot;, err)\t&#125;\ttarOut.Close()\tif err := zstdCmd.Wait(); err != nil &#123;\t\tlog.Fatalf(&quot;zstdCmd.Wait: %v&quot;, err)\t&#125;\tzstdOut.Close()\tif err := ageCmd.Wait(); err != nil &#123;\t\tlog.Fatalf(&quot;ageCmd.Wait: %v&quot;, err)\t&#125;\tio.Copy(f, &amp;buffer)\terr = uploadToS3(encryptedFile, config)\tif err != nil &#123;\t\tlog.Fatalf(&quot;error uploading file to s3: %v&quot;, err)\t&#125;\tpushNotify(config)&#125;func uploadToS3(filename string, config Config) error &#123;\tsess, _ := session.NewSession(&amp;aws.Config&#123;\t\tEndpoint:    aws.String(config.Endpoint),\t\tRegion:      aws.String(&quot;us-west-000&quot;),\t\tCredentials: credentials.NewStaticCredentials(config.KeyID, config.KeySec, &quot;&quot;),\t&#125;)\tfile, err := os.Open(filename)\tif err != nil &#123;\t\treturn err\t&#125;\tdefer file.Close()\tuploader := s3manager.NewUploader(sess)\t_, err = uploader.Upload(&amp;s3manager.UploadInput&#123;\t\tBucket: aws.String(config.BucketName),\t\tKey:    aws.String(filepath.Base(filename)),\t\tBody:   file,\t&#125;)\treturn err&#125;func pushNotify(conf Config) &#123;\tmessage := fmt.Sprintf(&quot;Project %s Backup Success&quot;, conf.DstName)\tclient := &amp;http.Client&#123;&#125;\t_, err := client.PostForm(&quot;https://api.pushover.net/1/messages.json&quot;,\t\turl.Values&#123;&quot;token&quot;: &#123;conf.PushOverToken&#125;, &quot;user&quot;: &#123;conf.PushOverUser&#125;, &quot;message&quot;: &#123;message&#125;&#125;)\tif err != nil &#123;\t\tlog.Fatal(err)\t\treturn\t&#125;&#125;\n\nconfig.yaml 配置文件如下\n12345678910111213141516171819# B2 配置endpoint: &quot;s3.us-west-000.backblazeb2.com&quot;key_id: &quot;&quot;key_sec: &quot;&quot;bucket_name: &quot;&quot;src_folder_path: &quot;&quot;dst_name: &quot;note&quot;# 可执行文件配置tar_path: &quot;/usr/bin/tar&quot;zstd_path: &quot;/opt/homebrew/bin/zstd&quot;age_path: &quot;/opt/homebrew/bin/age&quot;age_key: &quot;&quot;# 通知配置push_over_user: &quot;&quot;push_over_token: &quot;&quot;\n\n\n\n其中涉及到了age加密的东西，可以参照https://github.com/FiloSottile/age\nMac 系统设置代码写完后，就是运维了，我主力桌面操作系统是Mac，因此我拿它举例，会每个月1号的早上九点进行备份，即使那个时候电脑没开也没关系，它会在合适的时候执行一次\n\n编写一个配置文件放到~/Library/LaunchAgents/com.ficapy.notebackup.plist\n\n1234567891011121314151617181920212223&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&lt;!DOCTYPE plist PUBLIC &quot;-//Apple//DTD PLIST 1.0//EN&quot; &quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;&gt;&lt;plist version=&quot;1.0&quot;&gt;&lt;dict&gt;    &lt;key&gt;Label&lt;/key&gt;    &lt;string&gt;com.ficapy.notebackup&lt;/string&gt;    &lt;key&gt;ProgramArguments&lt;/key&gt;    &lt;array&gt;        &lt;string&gt;/usr/local/script/s3_backup&lt;/string&gt;        &lt;string&gt;-f&lt;/string&gt;        &lt;string&gt;/usr/local/script/notebackup.yaml&lt;/string&gt;    &lt;/array&gt;    &lt;key&gt;StartCalendarInterval&lt;/key&gt;    &lt;dict&gt;        &lt;key&gt;Day&lt;/key&gt;        &lt;integer&gt;1&lt;/integer&gt;        &lt;key&gt;Hour&lt;/key&gt;        &lt;integer&gt;9&lt;/integer&gt;        &lt;key&gt;Minute&lt;/key&gt;        &lt;integer&gt;0&lt;/integer&gt;    &lt;/dict&gt;&lt;/dict&gt;&lt;/plist&gt;\n\n\n管理\n\n12345678910### 加载launchctl load ~/Library/LaunchAgents/com.ficapy.notebackup.plist### 卸载(修改了该plist文件后，需要先卸载，再执行加载)launchctl unload ~/Library/LaunchAgents/com.ficapy.notebackup.plist### 查看状态launchctl list | grep com.ficapy.notebackup### 手动触发，马上执行launchctl kickstart -k gui/$(id -u)/com.ficapy.notebackup### 检查plist文件是否有误launchctl load ~/Library/LaunchAgents/com.ficapy.notebackup.plist\n\n建议使用launchctl手动触发一次，因为因为权限限制，执行的时候可能会让你提示啥的，所以先执行一次确保真的能跑通\n\n其他\n\n使用系统自带app reminders创建个提醒，提醒自己每个月的1号，pushover是否真的收到了备份成功的通知\n","dateCreated":"2023-05-12T12:00:00+08:00","dateModified":"2023-05-12T15:02:32+08:00","datePublished":"2023-05-12T12:00:00+08:00","description":"虽然现在各大云存储遍地，但是将自己的重要资料在资金允许的情况下，多异地备份几次不会有错，毕竟，电脑有价资料无价。今天写了个备份目录到backblaze的小脚本，分享记录一下\n流程很简单，使用tar打包，使用zstd压缩，再使用age加密，最后上传, 成功后让pushover给自己发通知","headline":"个人文件夹备份","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2023/05/12/s3_backup/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2023/05/12/s3_backup/","keywords":"Go"}</script>
+    <meta name="description" content="虽然现在各大云存储遍地，但是将自己的重要资料在资金允许的情况下，多异地备份几次不会有错，毕竟，电脑有价资料无价。今天写了个备份目录到backblaze的小脚本，分享记录一下 流程很简单，使用tar打包，使用zstd压缩，再使用age加密，最后上传, 成功后让pushover给自己发通知">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="个人文件夹备份">
+<meta property="og:url" content="https://www.zoulei.net/2023/05/12/s3_backup/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="虽然现在各大云存储遍地，但是将自己的重要资料在资金允许的情况下，多异地备份几次不会有错，毕竟，电脑有价资料无价。今天写了个备份目录到backblaze的小脚本，分享记录一下 流程很简单，使用tar打包，使用zstd压缩，再使用age加密，最后上传, 成功后让pushover给自己发通知">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2023-05-12T04:00:00.000Z">
+<meta property="article:modified_time" content="2023-05-12T07:02:32.251Z">
+<meta property="article:author" content="ficapy">
+<meta property="article:tag" content="Go">
+<meta name="twitter:card" content="summary">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    
+<link rel="stylesheet" href="/assets/css/style-vmyldjpouxmbykub3bplp6yx2cdfiohdin8psfrhaiwtjsy1h8z42722ngua.min.css">
+
+    <!--STYLES END-->
+    
+
+    
+
+    
+        
+    
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            邹雷
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="首页"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="分类"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="标签"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="归档"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
+                            
+                            rel="noopener"
+                            title="搜索"
+                        >
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="关于"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/ficapy"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="mailto:afexcg@gmail.com"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="邮箱"
+                        >
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
+                            
+                            rel="noopener"
+                            title="RSS"
+                        >
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            个人文件夹备份
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2023-05-12T12:00:00+08:00">
+	
+		    5月 12, 2023
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/">伪技术</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>虽然现在各大云存储遍地，但是将自己的重要资料在资金允许的情况下，多异地备份几次不会有错，毕竟，电脑有价资料无价。今天写了个备份目录到backblaze的小脚本，分享记录一下</p>
+<p>流程很简单，使用tar打包，使用zstd压缩，再使用age加密，最后上传, 成功后让pushover给自己发通知</p>
+<span id="more"></span>
+
+<p>代码如下</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;bytes&quot;</span></span><br><span class="line">	<span class="string">&quot;flag&quot;</span></span><br><span class="line">	<span class="string">&quot;fmt&quot;</span></span><br><span class="line">	<span class="string">&quot;github.com/aws/aws-sdk-go/aws&quot;</span></span><br><span class="line">	<span class="string">&quot;github.com/aws/aws-sdk-go/aws/credentials&quot;</span></span><br><span class="line">	<span class="string">&quot;github.com/aws/aws-sdk-go/aws/session&quot;</span></span><br><span class="line">	<span class="string">&quot;github.com/aws/aws-sdk-go/service/s3/s3manager&quot;</span></span><br><span class="line">	<span class="string">&quot;gopkg.in/yaml.v2&quot;</span></span><br><span class="line">	<span class="string">&quot;io&quot;</span></span><br><span class="line">	<span class="string">&quot;io/ioutil&quot;</span></span><br><span class="line">	<span class="string">&quot;log&quot;</span></span><br><span class="line">	<span class="string">&quot;net/http&quot;</span></span><br><span class="line">	<span class="string">&quot;net/url&quot;</span></span><br><span class="line">	<span class="string">&quot;os&quot;</span></span><br><span class="line">	<span class="string">&quot;os/exec&quot;</span></span><br><span class="line">	<span class="string">&quot;path/filepath&quot;</span></span><br><span class="line">	<span class="string">&quot;time&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> Config <span class="keyword">struct</span> &#123;</span><br><span class="line">	KeyID         <span class="keyword">string</span> <span class="string">`yaml:&quot;key_id&quot;`</span></span><br><span class="line">	KeySec        <span class="keyword">string</span> <span class="string">`yaml:&quot;key_sec&quot;`</span></span><br><span class="line">	Endpoint      <span class="keyword">string</span> <span class="string">`yaml:&quot;endpoint&quot;`</span></span><br><span class="line">	SrcFolderPath <span class="keyword">string</span> <span class="string">`yaml:&quot;src_folder_path&quot;`</span></span><br><span class="line">	TarPath       <span class="keyword">string</span> <span class="string">`yaml:&quot;tar_path&quot;`</span></span><br><span class="line">	ZstdPath      <span class="keyword">string</span> <span class="string">`yaml:&quot;zstd_path&quot;`</span></span><br><span class="line">	AgePath       <span class="keyword">string</span> <span class="string">`yaml:&quot;age_path&quot;`</span></span><br><span class="line">	AgeKey        <span class="keyword">string</span> <span class="string">`yaml:&quot;age_key&quot;`</span></span><br><span class="line">	DstName       <span class="keyword">string</span> <span class="string">`yaml:&quot;dst_name&quot;`</span></span><br><span class="line">	BucketName    <span class="keyword">string</span> <span class="string">`yaml:&quot;bucket_name&quot;`</span></span><br><span class="line">	PushOverUser  <span class="keyword">string</span> <span class="string">`yaml:&quot;push_over_user&quot;`</span></span><br><span class="line">	PushOverToken <span class="keyword">string</span> <span class="string">`yaml:&quot;push_over_token&quot;`</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="comment">// 打包 tar -c folder | zstd | age -r xx &gt; folder.tar.zst.age</span></span><br><span class="line">	<span class="comment">// 拆包 age -d -i key.txt folder.tar.zst.age | unzstd | tar -xf -</span></span><br><span class="line">	configFile := flag.String(<span class="string">&quot;f&quot;</span>, <span class="string">&quot;config.yaml&quot;</span>, <span class="string">&quot;Path to config file&quot;</span>)</span><br><span class="line">	flag.Parse()</span><br><span class="line"></span><br><span class="line">	data, err := ioutil.ReadFile(*configFile)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatalf(<span class="string">&quot;Error reading config file: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">var</span> config Config</span><br><span class="line">	err = yaml.Unmarshal(data, &amp;config)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatalf(<span class="string">&quot;Error parsing config file: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	tarCmd := exec.Command(config.TarPath, <span class="string">&quot;-c&quot;</span>, config.SrcFolderPath)</span><br><span class="line">	zstdCmd := exec.Command(config.ZstdPath)</span><br><span class="line">	ageCmd := exec.Command(config.AgePath, <span class="string">&quot;-r&quot;</span>, config.AgeKey)</span><br><span class="line"></span><br><span class="line">	tarOut, _ := tarCmd.StdoutPipe()</span><br><span class="line">	zstdCmd.Stdin = tarOut</span><br><span class="line"></span><br><span class="line">	zstdOut, _ := zstdCmd.StdoutPipe()</span><br><span class="line">	ageCmd.Stdin = zstdOut</span><br><span class="line"></span><br><span class="line">	encryptedFile := fmt.Sprintf(<span class="string">&quot;/tmp/%s_%s.tar.zst.age&quot;</span>, time.Now().UTC().Format(<span class="string">&quot;20060102150405&quot;</span>), config.DstName)</span><br><span class="line">	f, err := os.Create(encryptedFile)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatalf(<span class="string">&quot;os.Create: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">defer</span> f.Close()</span><br><span class="line"></span><br><span class="line">	<span class="comment">// set up the pipe between age and the encrypted file</span></span><br><span class="line">	<span class="keyword">var</span> buffer bytes.Buffer</span><br><span class="line">	ageCmd.Stdout = &amp;buffer</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> err := tarCmd.Start(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatalf(<span class="string">&quot;tarCmd.Start: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> err := zstdCmd.Start(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatalf(<span class="string">&quot;zstdCmd.Start: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> err := ageCmd.Start(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatalf(<span class="string">&quot;ageCmd.Start: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// wait for all commands to finish</span></span><br><span class="line">	<span class="keyword">if</span> err := tarCmd.Wait(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatalf(<span class="string">&quot;tarCmd.Wait: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line">	tarOut.Close()</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> err := zstdCmd.Wait(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatalf(<span class="string">&quot;zstdCmd.Wait: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line">	zstdOut.Close()</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> err := ageCmd.Wait(); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatalf(<span class="string">&quot;ageCmd.Wait: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	io.Copy(f, &amp;buffer)</span><br><span class="line"></span><br><span class="line">	err = uploadToS3(encryptedFile, config)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatalf(<span class="string">&quot;error uploading file to s3: %v&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line">	pushNotify(config)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">uploadToS3</span><span class="params">(filename <span class="keyword">string</span>, config Config)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">	sess, _ := session.NewSession(&amp;aws.Config&#123;</span><br><span class="line">		Endpoint:    aws.String(config.Endpoint),</span><br><span class="line">		Region:      aws.String(<span class="string">&quot;us-west-000&quot;</span>),</span><br><span class="line">		Credentials: credentials.NewStaticCredentials(config.KeyID, config.KeySec, <span class="string">&quot;&quot;</span>),</span><br><span class="line">	&#125;)</span><br><span class="line"></span><br><span class="line">	file, err := os.Open(filename)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">defer</span> file.Close()</span><br><span class="line"></span><br><span class="line">	uploader := s3manager.NewUploader(sess)</span><br><span class="line"></span><br><span class="line">	_, err = uploader.Upload(&amp;s3manager.UploadInput&#123;</span><br><span class="line">		Bucket: aws.String(config.BucketName),</span><br><span class="line">		Key:    aws.String(filepath.Base(filename)),</span><br><span class="line">		Body:   file,</span><br><span class="line">	&#125;)</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> err</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">pushNotify</span><span class="params">(conf Config)</span></span> &#123;</span><br><span class="line">	message := fmt.Sprintf(<span class="string">&quot;Project %s Backup Success&quot;</span>, conf.DstName)</span><br><span class="line">	client := &amp;http.Client&#123;&#125;</span><br><span class="line">	_, err := client.PostForm(<span class="string">&quot;https://api.pushover.net/1/messages.json&quot;</span>,</span><br><span class="line">		url.Values&#123;<span class="string">&quot;token&quot;</span>: &#123;conf.PushOverToken&#125;, <span class="string">&quot;user&quot;</span>: &#123;conf.PushOverUser&#125;, <span class="string">&quot;message&quot;</span>: &#123;message&#125;&#125;)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatal(err)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>config.yaml 配置文件如下</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># B2 配置</span></span><br><span class="line"><span class="attr">endpoint:</span> <span class="string">&quot;s3.us-west-000.backblazeb2.com&quot;</span></span><br><span class="line"><span class="attr">key_id:</span> <span class="string">&quot;&quot;</span></span><br><span class="line"><span class="attr">key_sec:</span> <span class="string">&quot;&quot;</span></span><br><span class="line"><span class="attr">bucket_name:</span> <span class="string">&quot;&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">src_folder_path:</span> <span class="string">&quot;&quot;</span></span><br><span class="line"><span class="attr">dst_name:</span> <span class="string">&quot;note&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 可执行文件配置</span></span><br><span class="line"><span class="attr">tar_path:</span> <span class="string">&quot;/usr/bin/tar&quot;</span></span><br><span class="line"><span class="attr">zstd_path:</span> <span class="string">&quot;/opt/homebrew/bin/zstd&quot;</span></span><br><span class="line"><span class="attr">age_path:</span> <span class="string">&quot;/opt/homebrew/bin/age&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">age_key:</span> <span class="string">&quot;&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 通知配置</span></span><br><span class="line"><span class="attr">push_over_user:</span> <span class="string">&quot;&quot;</span></span><br><span class="line"><span class="attr">push_over_token:</span> <span class="string">&quot;&quot;</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>其中涉及到了age加密的东西，可以参照<a href="https://github.com/FiloSottile/age">https://github.com/FiloSottile/age</a></p>
+<h3 id="Mac-系统设置"><a href="#Mac-系统设置" class="headerlink" title="Mac 系统设置"></a>Mac 系统设置</h3><p>代码写完后，就是运维了，我主力桌面操作系统是Mac，因此我拿它举例，会每个月1号的早上九点进行备份，即使那个时候电脑没开也没关系，它会在合适的时候执行一次</p>
+<ol>
+<li>编写一个配置文件放到<code>~/Library/LaunchAgents/com.ficapy.notebackup.plist</code></li>
+</ol>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span></span><br><span class="line"><span class="meta">&lt;!DOCTYPE <span class="meta-keyword">plist</span> <span class="meta-keyword">PUBLIC</span> <span class="meta-string">&quot;-//Apple//DTD PLIST 1.0//EN&quot;</span> <span class="meta-string">&quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">plist</span> <span class="attr">version</span>=<span class="string">&quot;1.0&quot;</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dict</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">key</span>&gt;</span>Label<span class="tag">&lt;/<span class="name">key</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">string</span>&gt;</span>com.ficapy.notebackup<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">key</span>&gt;</span>ProgramArguments<span class="tag">&lt;/<span class="name">key</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">array</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">string</span>&gt;</span>/usr/local/script/s3_backup<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">string</span>&gt;</span>-f<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">string</span>&gt;</span>/usr/local/script/notebackup.yaml<span class="tag">&lt;/<span class="name">string</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">array</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">key</span>&gt;</span>StartCalendarInterval<span class="tag">&lt;/<span class="name">key</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dict</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">key</span>&gt;</span>Day<span class="tag">&lt;/<span class="name">key</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">integer</span>&gt;</span>1<span class="tag">&lt;/<span class="name">integer</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">key</span>&gt;</span>Hour<span class="tag">&lt;/<span class="name">key</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">integer</span>&gt;</span>9<span class="tag">&lt;/<span class="name">integer</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">key</span>&gt;</span>Minute<span class="tag">&lt;/<span class="name">key</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">integer</span>&gt;</span>0<span class="tag">&lt;/<span class="name">integer</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dict</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dict</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">plist</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>管理</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">### 加载</span></span><br><span class="line">launchctl load ~/Library/LaunchAgents/com.ficapy.notebackup.plist</span><br><span class="line"><span class="comment">### 卸载(修改了该plist文件后，需要先卸载，再执行加载)</span></span><br><span class="line">launchctl unload ~/Library/LaunchAgents/com.ficapy.notebackup.plist</span><br><span class="line"><span class="comment">### 查看状态</span></span><br><span class="line">launchctl list | grep com.ficapy.notebackup</span><br><span class="line"><span class="comment">### 手动触发，马上执行</span></span><br><span class="line">launchctl kickstart -k gui/$(id -u)/com.ficapy.notebackup</span><br><span class="line"><span class="comment">### 检查plist文件是否有误</span></span><br><span class="line">launchctl load ~/Library/LaunchAgents/com.ficapy.notebackup.plist</span><br></pre></td></tr></table></figure>
+
+<p>建议使用launchctl手动触发一次，因为因为权限限制，执行的时候可能会让你提示啥的，所以先执行一次确保真的能跑通</p>
+<ol start="3">
+<li>其他</li>
+</ol>
+<p>使用系统自带app reminders创建个提醒，提醒自己每个月的1号，pushover是否真的收到了备份成功的通知</p>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-none-link" href="/tags/Go/" rel="tag">Go</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2023/05/09/net_Dial_bandwidth_limit/"
+                    data-tooltip="net.Dial限速"
+                    aria-label="下一篇: net.Dial限速"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2023/05/12/s3_backup/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2023/05/12/s3_backup/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2023/05/12/s3_backup/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2023 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2023/05/09/net_Dial_bandwidth_limit/"
+                    data-tooltip="net.Dial限速"
+                    aria-label="下一篇: net.Dial限速"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2023/05/12/s3_backup/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2023/05/12/s3_backup/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2023/05/12/s3_backup/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2023/05/12/s3_backup/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2023/05/12/s3_backup/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2023/05/12/s3_backup/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">ficapy</h4>
+        
+            <div id="about-card-bio"><p>author.bio</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
+    </div>
+</div>
+
+        
+            <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    />
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">没有找到文章</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
+                            <h3 class="media-heading">博客起航</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月29日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
+<p>：</p>
+<p>为了占行此处无耻的掠过N个字</p>
+<p>:</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
+                            <h3 class="media-heading">IDM-Internet Download Manager</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月30日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
+                            <h3 class="media-heading">everything--文件搜索神器</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月2日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
+                            <h3 class="media-heading">everything进阶教程</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月6日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
+                            <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月12日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
+<p>今天介绍的是一款据说主打截图的软件-snagit</p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
+                            <h3 class="media-heading">xnview-图片查看</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月25日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/05/deskpins_top_window/"
+                            aria-label=": DeskPins-窗口置顶"
+                        >
+                            <h3 class="media-heading">DeskPins-窗口置顶</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月5日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/28/disktool_recommend/"
+                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
+                        >
+                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月28日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
+                            aria-label=": excel数字递增批量打印"
+                        >
+                            <h3 class="media-heading">excel数字递增批量打印</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月20日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
+<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
+                            aria-label=": pip使用国内镜像"
+                        >
+                            <h3 class="media-heading">pip使用国内镜像</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月27日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
+<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="没有找到文章"
+                data-message-one="找到 1 篇文章"
+                data-message-other="找到 {n} 篇文章">
+                找到 109 篇文章
+            </p>
+        </div>
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+
+<script src="/assets/js/script-mdmhmndjqtxgrnbcqxwfotdukip0lyvqjtoun1q59tiszh2pjvmu0dun2kvx.min.js"></script>
+
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
+    <script>
+      var algoliaClient = algoliasearch('CX8LZHBELF', '3fcc4f94219bf4d5f5714b449373ba3c');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
+    </script>
+
+
+    </body>
+</html>
