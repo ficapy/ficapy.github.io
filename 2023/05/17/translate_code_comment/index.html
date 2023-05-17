@@ -1,0 +1,907 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>英语渣,又想看源码? - 邹雷</title>
+    <meta name="author" content="ficapy">
+    
+    
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"有没有像我一样的，英语渣，翻源码看大段大段的注释有点慢，又必须得看，有时候会不得不把注释使用翻译引擎翻译一下，今天我就遇到了，后来我转念想了下，是否可以使用AI进行翻译呢！然后我直接把当前代码发给网页版GPT4，直接让它翻译注释，不能说效果不好，只能说响应很慢，另外配合上网页版GPT4那个4k版本的上下文，输出一点点内容就直接中断了，让它继续也接不上，总结而言就是能很好的处理将注释翻译成中文的任务，但是有诸多限制\n因此ChatGPT确实可以很好的理解代码，也能很好的翻译，那如果我自己把代码的注释提取出来让ChatGPT翻译是不是也行，在网页版测试了下，也行~~~，所以只需要提取出注释部分，再发给ChatGPT让它翻译，它就能得到不错的结果，又快，又省了上下文开销\n花了一点时间，使用tree_sitter解析得到注释，用GPT翻译，再替换原代码注释部分就可以了，以下是效果\n\n可以看到效果还行\n\n\n代码实现如下\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081828384858687888990919293949596979899100101102103104105106107108109110111112113114115116117118119120121122123124125126127128129130131132133134135136137138139140141import sqlite3from tree_sitter import Language, Parserfrom typing import NamedTuple, List, Optionalfrom concurrent.futures import ThreadPoolExecutor, as_completedfrom tenacity import (    retry,    stop_after_attempt,    wait_random_exponential,    stop_after_delay,)import openaiopenai.api_key = &quot;&quot;# 注意，得到的解析结果是包含start_byte，不包含end_byte的class COMMENT(NamedTuple):    start_byte: int    end_byte: intLanguage.build_library(    &#x27;build/my-languages.so&#x27;,    [        &#x27;vendor/tree-sitter-proto&#x27;,    ])with sqlite3.connect(&#x27;translations.db&#x27;) as conn:    c = conn.cursor()    c.execute(&#x27;&#x27;&#x27;        CREATE TABLE IF NOT EXISTS translations        (language text, text text, translation text)    &#x27;&#x27;&#x27;)    conn.commit()def get_translation_from_cache(language: str, text: str) -&gt; Optional[str]:    with sqlite3.connect(&#x27;translations.db&#x27;) as conn:        c = conn.cursor()        c.execute(&quot;SELECT translation FROM translations WHERE language=? AND text=?&quot;, (language, text))        result = c.fetchone()        return result[0] if result else Nonedef store_translation_in_cache(language: str, text: str, translation: str):    with sqlite3.connect(&#x27;translations.db&#x27;) as conn:        c = conn.cursor()        c.execute(&quot;INSERT INTO translations VALUES (?, ?, ?)&quot;, (language, text, translation))        conn.commit()@retry(wait=wait_random_exponential(min=1, max=60),       stop=(stop_after_delay(60) | stop_after_attempt(5)))def translate(language: str, text: str) -&gt; str:    translation = get_translation_from_cache(language, text)    if translation:        return translation    response = openai.ChatCompletion.create(        model=&quot;gpt-3.5-turbo&quot;,        request_timeout=200 * 60,        temperature=0,        messages=[            &#123;&quot;role&quot;: &quot;system&quot;,             &quot;content&quot;: f&quot;将以下&#123;language&#125;代码注释翻译到中文, 要求1: 翻译后单行文本最好不要超过60个字符 要求2: 保持注释格式 要求3: 只做翻译，不要解释内容&quot;&#125;,            &#123;&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: f&#x27;&#123;text&#125;&#x27;&#125;        ]    )    translation = response[&quot;choices&quot;][0][&quot;message&quot;][&quot;content&quot;]    store_translation_in_cache(language, text, translation)    return translationdef bulk_translate(language: str, texts: List[str]):    print(&quot;start translate&quot;)    with ThreadPoolExecutor(max_workers=8) as executor:        futures = &#123;executor.submit(translate, language, text): text for text in texts&#125;        result = &#123;futures[future]: future.result() for future in as_completed(futures)&#125;        return [result[i] for i in texts]def is_continue(text: bytes, start: int, end: int) -&gt; bool:    return text[start:end].strip() == b&#x27;&#x27;def merge_intervals(intervals: List[COMMENT], text: bytes, func=is_continue) -&gt; List[COMMENT]:    output: List[COMMENT] = []    for interval in intervals:        if not output or not func(text, output[-1].end_byte, interval.start_byte):            output.append(interval)        else:            output[-1] = COMMENT(start_byte=output[-1].start_byte, end_byte=interval.end_byte)    return outputdef trans_comments(tree, source_code: bytes) -&gt; bytes:    comments: List[COMMENT] = []    def traverse(node):        if node.type == &#x27;comment&#x27;:            comments.append(node)        else:            for child in node.children:                traverse(child)    traverse(tree.root_node)    comments = merge_intervals(comments, source_code)    comments.reverse()    translate_comments = bulk_translate(&quot;proto&quot;,                                        [source_code[comment.start_byte:comment.end_byte].decode(&quot;utf-8&quot;) for comment in                                         comments])    for index, comment in enumerate(comments):        start_byte = comment.start_byte        end_byte = comment.end_byte        raw_comment = source_code[start_byte:end_byte]        target_comment = translate_comments[index].encode(&quot;utf-8&quot;)        # TODO 区分行注释和块注释        # t = raw_comment + &quot;\\n&quot;.encode() + target_comment        t = target_comment        source_code = source_code[:start_byte] + t + source_code[end_byte:]    return source_codePROTO_LANGUAGE = Language(&#x27;build/my-languages.so&#x27;, &#x27;proto&#x27;)parser = Parser()parser.set_language(PROTO_LANGUAGE)source_code = open(&#x27;scip.proto&#x27;, &#x27;rb&#x27;).read()tree = parser.parse(source_code)source_code = trans_comments(tree, source_code)with open(&#x27;scip_trans.proto&#x27;, &#x27;wb&#x27;) as output_file:    output_file.write(source_code)\n\n注: 因为是临时起意，只处理了proto文件，按道理对其他任意语言(tree_sitter支持)的支持都是很容易添加的\n优点:\nChatGPT能够理解哪些该翻译，哪些不该，比如注释里面包含代码，代码部分是不需要翻译的，这种情况自己很难处理，翻译引擎更不可能给你处理\nChatGPT能理解最好不要超过60个字符这种要求，如果自己处理，还需要选择一个比较好的断句点\n格式保留\n\n缺点\nAI处理的结果并不是完全可信的，只是大部分可信，比如自己强行加戏\n\n12// `|`, `-`  处理得到  // `|`表示逻辑或，`-`表示减号// `\\b`      处理得到  // `\\b` 表示单词边界\n\n\n可能使用GPT4 api得到的结果会更好，但是GPT4 api贵啊😭\n\n","dateCreated":"2023-05-17T12:00:00+08:00","dateModified":"2023-05-17T17:02:33+08:00","datePublished":"2023-05-17T12:00:00+08:00","description":"有没有像我一样的，英语渣，翻源码看大段大段的注释有点慢，又必须得看，有时候会不得不把注释使用翻译引擎翻译一下，今天我就遇到了，后来我转念想了下，是否可以使用AI进行翻译呢！然后我直接把当前代码发给网页版GPT4，直接让它翻译注释，不能说效果不好，只能说响应很慢，另外配合上网页版GPT4那个4k版本的上下文，输出一点点内容就直接中断了，让它继续也接不上，总结而言就是能很好的处理将注释翻译成中文的任务，但是有诸多限制\n因此ChatGPT确实可以很好的理解代码，也能很好的翻译，那如果我自己把代码的注释提取出来让ChatGPT翻译是不是也行，在网页版测试了下，也行~~~，所以只需要提取出注释部分，再发给ChatGPT让它翻译，它就能得到不错的结果，又快，又省了上下文开销\n花了一点时间，使用tree_sitter解析得到注释，用GPT翻译，再替换原代码注释部分就可以了，以下是效果\n\n可以看到效果还行","headline":"英语渣,又想看源码?","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2023/05/17/translate_code_comment/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2023/05/17/translate_code_comment/","keywords":"python"}</script>
+    <meta name="description" content="有没有像我一样的，英语渣，翻源码看大段大段的注释有点慢，又必须得看，有时候会不得不把注释使用翻译引擎翻译一下，今天我就遇到了，后来我转念想了下，是否可以使用AI进行翻译呢！然后我直接把当前代码发给网页版GPT4，直接让它翻译注释，不能说效果不好，只能说响应很慢，另外配合上网页版GPT4那个4k版本的上下文，输出一点点内容就直接中断了，让它继续也接不上，总结而言就是能很好的处理将注释翻译成中文的任务">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="英语渣,又想看源码?">
+<meta property="og:url" content="https://www.zoulei.net/2023/05/17/translate_code_comment/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="有没有像我一样的，英语渣，翻源码看大段大段的注释有点慢，又必须得看，有时候会不得不把注释使用翻译引擎翻译一下，今天我就遇到了，后来我转念想了下，是否可以使用AI进行翻译呢！然后我直接把当前代码发给网页版GPT4，直接让它翻译注释，不能说效果不好，只能说响应很慢，另外配合上网页版GPT4那个4k版本的上下文，输出一点点内容就直接中断了，让它继续也接不上，总结而言就是能很好的处理将注释翻译成中文的任务">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://blogimg.ficapy.com/blogimg/chatgpt_code_comment_translate.avif">
+<meta property="article:published_time" content="2023-05-17T04:00:00.000Z">
+<meta property="article:modified_time" content="2023-05-17T09:02:33.819Z">
+<meta property="article:author" content="ficapy">
+<meta property="article:tag" content="python">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://blogimg.ficapy.com/blogimg/chatgpt_code_comment_translate.avif">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    
+<link rel="stylesheet" href="/assets/css/style-vmyldjpouxmbykub3bplp6yx2cdfiohdin8psfrhaiwtjsy1h8z42722ngua.min.css">
+
+    <!--STYLES END-->
+    
+
+    
+
+    
+        
+    
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            邹雷
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="首页"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="分类"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="标签"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="归档"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
+                            
+                            rel="noopener"
+                            title="搜索"
+                        >
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="关于"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/ficapy"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="mailto:afexcg@gmail.com"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="邮箱"
+                        >
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
+                            
+                            rel="noopener"
+                            title="RSS"
+                        >
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            英语渣,又想看源码?
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2023-05-17T12:00:00+08:00">
+	
+		    5月 17, 2023
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/">伪技术</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>有没有像我一样的，英语渣，翻源码看大段大段的注释有点慢，又必须得看，有时候会不得不把注释使用翻译引擎翻译一下，今天我就遇到了，后来我转念想了下，是否可以使用AI进行翻译呢！然后我直接把当前代码发给网页版GPT4，直接让它翻译注释，不能说效果不好，只能说响应很慢，另外配合上网页版GPT4那个4k版本的上下文，输出一点点内容就直接中断了，让它继续也接不上，总结而言就是能很好的处理将注释翻译成中文的任务，但是有诸多限制</p>
+<p>因此ChatGPT确实可以很好的理解代码，也能很好的翻译，那如果我自己把代码的注释提取出来让ChatGPT翻译是不是也行，在网页版测试了下，也行~~~，所以只需要提取出注释部分，再发给ChatGPT让它翻译，它就能得到不错的结果，又快，又省了上下文开销</p>
+<p>花了一点时间，使用tree_sitter解析得到注释，用GPT翻译，再替换原代码注释部分就可以了，以下是效果</p>
+<p><img src="http://blogimg.ficapy.com/blogimg/chatgpt_code_comment_translate.avif" alt="翻译效果"></p>
+<p>可以看到效果还行</p>
+<span id="more"></span>
+
+<p>代码实现如下</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> sqlite3</span><br><span class="line"><span class="keyword">from</span> tree_sitter <span class="keyword">import</span> Language, Parser</span><br><span class="line"><span class="keyword">from</span> typing <span class="keyword">import</span> NamedTuple, List, Optional</span><br><span class="line"><span class="keyword">from</span> concurrent.futures <span class="keyword">import</span> ThreadPoolExecutor, as_completed</span><br><span class="line"><span class="keyword">from</span> tenacity <span class="keyword">import</span> (</span><br><span class="line">    retry,</span><br><span class="line">    stop_after_attempt,</span><br><span class="line">    wait_random_exponential,</span><br><span class="line">    stop_after_delay,</span><br><span class="line">)</span><br><span class="line"><span class="keyword">import</span> openai</span><br><span class="line"></span><br><span class="line">openai.api_key = <span class="string">&quot;&quot;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 注意，得到的解析结果是包含start_byte，不包含end_byte的</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">COMMENT</span>(<span class="params">NamedTuple</span>):</span></span><br><span class="line">    start_byte: <span class="built_in">int</span></span><br><span class="line">    end_byte: <span class="built_in">int</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Language.build_library(</span><br><span class="line">    <span class="string">&#x27;build/my-languages.so&#x27;</span>,</span><br><span class="line"></span><br><span class="line">    [</span><br><span class="line">        <span class="string">&#x27;vendor/tree-sitter-proto&#x27;</span>,</span><br><span class="line">    ]</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> sqlite3.connect(<span class="string">&#x27;translations.db&#x27;</span>) <span class="keyword">as</span> conn:</span><br><span class="line">    c = conn.cursor()</span><br><span class="line"></span><br><span class="line">    c.execute(<span class="string">&#x27;&#x27;&#x27;</span></span><br><span class="line"><span class="string">        CREATE TABLE IF NOT EXISTS translations</span></span><br><span class="line"><span class="string">        (language text, text text, translation text)</span></span><br><span class="line"><span class="string">    &#x27;&#x27;&#x27;</span>)</span><br><span class="line">    conn.commit()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_translation_from_cache</span>(<span class="params">language: <span class="built_in">str</span>, text: <span class="built_in">str</span></span>) -&gt; Optional[str]:</span></span><br><span class="line">    <span class="keyword">with</span> sqlite3.connect(<span class="string">&#x27;translations.db&#x27;</span>) <span class="keyword">as</span> conn:</span><br><span class="line">        c = conn.cursor()</span><br><span class="line">        c.execute(<span class="string">&quot;SELECT translation FROM translations WHERE language=? AND text=?&quot;</span>, (language, text))</span><br><span class="line">        result = c.fetchone()</span><br><span class="line">        <span class="keyword">return</span> result[<span class="number">0</span>] <span class="keyword">if</span> result <span class="keyword">else</span> <span class="literal">None</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">store_translation_in_cache</span>(<span class="params">language: <span class="built_in">str</span>, text: <span class="built_in">str</span>, translation: <span class="built_in">str</span></span>):</span></span><br><span class="line">    <span class="keyword">with</span> sqlite3.connect(<span class="string">&#x27;translations.db&#x27;</span>) <span class="keyword">as</span> conn:</span><br><span class="line">        c = conn.cursor()</span><br><span class="line">        c.execute(<span class="string">&quot;INSERT INTO translations VALUES (?, ?, ?)&quot;</span>, (language, text, translation))</span><br><span class="line">        conn.commit()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@retry(<span class="params">wait=wait_random_exponential(<span class="params"><span class="built_in">min</span>=<span class="number">1</span>, <span class="built_in">max</span>=<span class="number">60</span></span>),</span></span></span><br><span class="line"><span class="meta"><span class="params">       stop=(<span class="params">stop_after_delay(<span class="params"><span class="number">60</span></span>) | stop_after_attempt(<span class="params"><span class="number">5</span></span>)</span>)</span>)</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">translate</span>(<span class="params">language: <span class="built_in">str</span>, text: <span class="built_in">str</span></span>) -&gt; str:</span></span><br><span class="line">    translation = get_translation_from_cache(language, text)</span><br><span class="line">    <span class="keyword">if</span> translation:</span><br><span class="line">        <span class="keyword">return</span> translation</span><br><span class="line">    response = openai.ChatCompletion.create(</span><br><span class="line">        model=<span class="string">&quot;gpt-3.5-turbo&quot;</span>,</span><br><span class="line">        request_timeout=<span class="number">200</span> * <span class="number">60</span>,</span><br><span class="line">        temperature=<span class="number">0</span>,</span><br><span class="line">        messages=[</span><br><span class="line">            &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>,</span><br><span class="line">             <span class="string">&quot;content&quot;</span>: <span class="string">f&quot;将以下<span class="subst">&#123;language&#125;</span>代码注释翻译到中文, 要求1: 翻译后单行文本最好不要超过60个字符 要求2: 保持注释格式 要求3: 只做翻译，不要解释内容&quot;</span>&#125;,</span><br><span class="line">            &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">f&#x27;<span class="subst">&#123;text&#125;</span>&#x27;</span>&#125;</span><br><span class="line">        ]</span><br><span class="line">    )</span><br><span class="line">    translation = response[<span class="string">&quot;choices&quot;</span>][<span class="number">0</span>][<span class="string">&quot;message&quot;</span>][<span class="string">&quot;content&quot;</span>]</span><br><span class="line"></span><br><span class="line">    store_translation_in_cache(language, text, translation)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> translation</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">bulk_translate</span>(<span class="params">language: <span class="built_in">str</span>, texts: List[<span class="built_in">str</span>]</span>):</span></span><br><span class="line">    print(<span class="string">&quot;start translate&quot;</span>)</span><br><span class="line">    <span class="keyword">with</span> ThreadPoolExecutor(max_workers=<span class="number">8</span>) <span class="keyword">as</span> executor:</span><br><span class="line">        futures = &#123;executor.submit(translate, language, text): text <span class="keyword">for</span> text <span class="keyword">in</span> texts&#125;</span><br><span class="line"></span><br><span class="line">        result = &#123;futures[future]: future.result() <span class="keyword">for</span> future <span class="keyword">in</span> as_completed(futures)&#125;</span><br><span class="line">        <span class="keyword">return</span> [result[i] <span class="keyword">for</span> i <span class="keyword">in</span> texts]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">is_continue</span>(<span class="params">text: <span class="built_in">bytes</span>, start: <span class="built_in">int</span>, end: <span class="built_in">int</span></span>) -&gt; bool:</span></span><br><span class="line">    <span class="keyword">return</span> text[start:end].strip() == <span class="string">b&#x27;&#x27;</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">merge_intervals</span>(<span class="params">intervals: List[COMMENT], text: <span class="built_in">bytes</span>, func=is_continue</span>) -&gt; List[COMMENT]:</span></span><br><span class="line">    output: List[COMMENT] = []</span><br><span class="line">    <span class="keyword">for</span> interval <span class="keyword">in</span> intervals:</span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> output <span class="keyword">or</span> <span class="keyword">not</span> func(text, output[-<span class="number">1</span>].end_byte, interval.start_byte):</span><br><span class="line">            output.append(interval)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            output[-<span class="number">1</span>] = COMMENT(start_byte=output[-<span class="number">1</span>].start_byte, end_byte=interval.end_byte)</span><br><span class="line">    <span class="keyword">return</span> output</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">trans_comments</span>(<span class="params">tree, source_code: <span class="built_in">bytes</span></span>) -&gt; bytes:</span></span><br><span class="line">    comments: List[COMMENT] = []</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">traverse</span>(<span class="params">node</span>):</span></span><br><span class="line">        <span class="keyword">if</span> node.<span class="built_in">type</span> == <span class="string">&#x27;comment&#x27;</span>:</span><br><span class="line">            comments.append(node)</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            <span class="keyword">for</span> child <span class="keyword">in</span> node.children:</span><br><span class="line">                traverse(child)</span><br><span class="line"></span><br><span class="line">    traverse(tree.root_node)</span><br><span class="line">    comments = merge_intervals(comments, source_code)</span><br><span class="line">    comments.reverse()</span><br><span class="line">    translate_comments = bulk_translate(<span class="string">&quot;proto&quot;</span>,</span><br><span class="line">                                        [source_code[comment.start_byte:comment.end_byte].decode(<span class="string">&quot;utf-8&quot;</span>) <span class="keyword">for</span> comment <span class="keyword">in</span></span><br><span class="line">                                         comments])</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> index, comment <span class="keyword">in</span> <span class="built_in">enumerate</span>(comments):</span><br><span class="line">        start_byte = comment.start_byte</span><br><span class="line">        end_byte = comment.end_byte</span><br><span class="line">        raw_comment = source_code[start_byte:end_byte]</span><br><span class="line">        target_comment = translate_comments[index].encode(<span class="string">&quot;utf-8&quot;</span>)</span><br><span class="line">        <span class="comment"># TODO 区分行注释和块注释</span></span><br><span class="line">        <span class="comment"># t = raw_comment + &quot;\n&quot;.encode() + target_comment</span></span><br><span class="line">        t = target_comment</span><br><span class="line">        source_code = source_code[:start_byte] + t + source_code[end_byte:]</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> source_code</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">PROTO_LANGUAGE = Language(<span class="string">&#x27;build/my-languages.so&#x27;</span>, <span class="string">&#x27;proto&#x27;</span>)</span><br><span class="line">parser = Parser()</span><br><span class="line">parser.set_language(PROTO_LANGUAGE)</span><br><span class="line"></span><br><span class="line">source_code = <span class="built_in">open</span>(<span class="string">&#x27;scip.proto&#x27;</span>, <span class="string">&#x27;rb&#x27;</span>).read()</span><br><span class="line">tree = parser.parse(source_code)</span><br><span class="line">source_code = trans_comments(tree, source_code)</span><br><span class="line"></span><br><span class="line"><span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;scip_trans.proto&#x27;</span>, <span class="string">&#x27;wb&#x27;</span>) <span class="keyword">as</span> output_file:</span><br><span class="line">    output_file.write(source_code)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>注: 因为是临时起意，只处理了proto文件，按道理对其他任意语言(<strong>tree_sitter</strong>支持)的支持都是很容易添加的</p>
+<h4 id="优点"><a href="#优点" class="headerlink" title="优点:"></a>优点:</h4><ol>
+<li>ChatGPT能够理解哪些该翻译，哪些不该，比如注释里面包含代码，代码部分是不需要翻译的，这种情况自己很难处理，翻译引擎更不可能给你处理</li>
+<li>ChatGPT能理解最好不要超过60个字符这种要求，如果自己处理，还需要选择一个比较好的断句点</li>
+<li>格式保留</li>
+</ol>
+<h4 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h4><ol>
+<li>AI处理的结果并不是完全可信的，只是大部分可信，比如自己强行加戏</li>
+</ol>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">// `|`, `-`  处理得到  // `|`表示逻辑或，`-`表示减号</span><br><span class="line">// `\b`      处理得到  // `\b` 表示单词边界</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>可能使用GPT4 api得到的结果会更好，但是GPT4 api贵啊😭</li>
+</ol>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+            <div class="post-footer-tags">
+                <span class="text-color-light text-small">标签</span><br/>
+                
+    <a class="tag tag--primary tag--small t-none-link" href="/tags/python/" rel="tag">python</a>
+
+            </div>
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2023/05/12/s3_backup/"
+                    data-tooltip="个人文件夹备份"
+                    aria-label="下一篇: 个人文件夹备份"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2023/05/17/translate_code_comment/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2023/05/17/translate_code_comment/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2023/05/17/translate_code_comment/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2023 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2023/05/12/s3_backup/"
+                    data-tooltip="个人文件夹备份"
+                    aria-label="下一篇: 个人文件夹备份"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Share this post"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2023/05/17/translate_code_comment/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2023/05/17/translate_code_comment/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2023/05/17/translate_code_comment/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Back to top">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2023/05/17/translate_code_comment/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2023/05/17/translate_code_comment/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2023/05/17/translate_code_comment/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">ficapy</h4>
+        
+            <div id="about-card-bio"><p>author.bio</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
+    </div>
+</div>
+
+        
+            <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    />
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">没有找到文章</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
+                            <h3 class="media-heading">博客起航</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月29日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
+<p>：</p>
+<p>为了占行此处无耻的掠过N个字</p>
+<p>:</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
+                            <h3 class="media-heading">IDM-Internet Download Manager</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月30日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
+                            <h3 class="media-heading">everything--文件搜索神器</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月2日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
+                            <h3 class="media-heading">everything进阶教程</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月6日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
+                            <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月12日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
+<p>今天介绍的是一款据说主打截图的软件-snagit</p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
+                            <h3 class="media-heading">xnview-图片查看</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月25日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/05/deskpins_top_window/"
+                            aria-label=": DeskPins-窗口置顶"
+                        >
+                            <h3 class="media-heading">DeskPins-窗口置顶</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月5日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/28/disktool_recommend/"
+                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
+                        >
+                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月28日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
+                            aria-label=": excel数字递增批量打印"
+                        >
+                            <h3 class="media-heading">excel数字递增批量打印</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月20日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
+<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
+                            aria-label=": pip使用国内镜像"
+                        >
+                            <h3 class="media-heading">pip使用国内镜像</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月27日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
+<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="没有找到文章"
+                data-message-one="找到 1 篇文章"
+                data-message-other="找到 {n} 篇文章">
+                找到 110 篇文章
+            </p>
+        </div>
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+
+<script src="/assets/js/script-mdmhmndjqtxgrnbcqxwfotdukip0lyvqjtoun1q59tiszh2pjvmu0dun2kvx.min.js"></script>
+
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
+    <script>
+      var algoliaClient = algoliasearch('CX8LZHBELF', '3fcc4f94219bf4d5f5714b449373ba3c');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
+    </script>
+
+
+    </body>
+</html>
