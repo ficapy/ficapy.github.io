@@ -235,6 +235,81 @@
     <section class="postShorten-group main-content-wrap">
     
     
+    <article class="postShorten postShorten--thumbnailimg-bottom">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title">
+                    
+                        <a
+                            class="link-unstyled"
+                            href="/2023/12/04/turso/"
+                            aria-label=": Turso 安利"
+                        >
+                            Turso 安利
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time datetime="2023-12-04T18:00:00+08:00">
+	
+		    12月 04, 2023
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/database/">database</a>
+
+
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-content">
+                    <p>我是一个Sqlite爱好者，作为世界上最广泛使用的数据库，它着实有很多优势，特别是对于小型项目来说。SQL语法兼容、项目成熟、每个语言毫无疑问都支持、速度也不慢、不需要运维。我有好几个小项目都用了Sqlite替代postgresql。但是在有些场景，因为它是嵌入式数据库，也影响了它的发挥</p>
+<p>比如我有一个小项目，需要同时在多台电脑上运行，它们都需要数据库。按照数据量大小，新建一个postgresql是不合适的，但是sqlite又不能被多台电脑共用，就很遗憾。直到今天看了<a href="https://turso.tech/libsql">https://turso.tech/libsql</a> ,觉得颇有新意，仔细读了一下它的文档，并把一个小项目迁移到了上面，完美符合我的需求…… 关键是<strong>免费</strong>, 成本极低。所以…. 我决定安利一下</p>
+<h2 id="创新点"><a href="#创新点" class="headerlink" title="创新点"></a>创新点</h2><p>很简单，将sqlite改成了允许<strong>CS架构</strong>，并增强了它的<strong>WAL能力</strong>。让它可以多副本同步，<strong>主要应用在serverless场景</strong>，用来给边缘计算提供快速的数据库访问，降低全球用户访问延迟。改成CS架构后，原有的编程语言SDK后就得适配。当前提供了TypeScript、Rust、Python、Go SDK。而且TypeScript的支持是最完善的。也可以看出对serverless的支持是它们的核心目标</p>
+<p>有了多副本能力，它的推荐架构就有了读写分离这种套路，本地时刻保留了一个可用的副本(理想情况下延迟几秒钟)。写的时候写到主数据库，再同步到本地，这样就能更快的返回数据</p>
+<p>看计划好像还有直接写到本地数据库，本地自动写到primary(不知道它的冲突问题准备怎么解决)</p>
+<p>我这种使用它避免数据库运维的用法大概率是异类……</p>
+<p>迁移已有Sqlite数据库超简单</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">turso db create --from-file olddb_file newdb</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="其他"><a href="#其他" class="headerlink" title="其他"></a>其他</h2><p>该数据库当前的计费方案也可谓是相当的良心，你只需要为你的存储和对数据的读写付费。这基本就是运行sqlite所需要的东西了，没有扣多余的费用。你所写的查询效率越高，触发的数据库查询读越少，成本越低。相对于RDS那种强制按月付费的服务，可谓是大善人…. 免费用户有9GB存储空间，每个月10亿读(并不是查询10亿次，而是查询触发对硬盘块读操作)，对于个人小项目基本是够用了….. 只希望别被羊毛党薅光了…..且用且珍惜</p>
+<p>其次，该项目服务端、SDK、CLI代码都是开源的。意味着可以自己部署，自己改进，还是挺友好的</p>
+<p>就当前，免费的serverless不少，搭配这种免费的serverless 数据库。意味着CPU资源+存储资源都有了。个人写点小项目想部署到serverless上面是没什么问题的，可谓是十分有想象空间了</p>
+<p>当然，缺点也不是完全没有的，因为该项目运营才半年时间。SDK未必有那么完善。没什么GUI(比如Datagrip)支持对它查询，只能自己使用typescript SDK sync api同步完整的数据库到本地(当前CLI不支持下载数据库)，再使用当前工作流的工具对数据库进行操作</p>
+<p>总之~~~ 我觉得这个服务很不错，特别是它<strong>当前的收费计划</strong>👍</p>
+<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a href="https://blog.turso.tech/introducing-embedded-replicas-deploy-turso-anywhere-2085aa0dc242">Introducing Embedded Replicas: Deploy Turso anywhere</a></p>
+<p><a href="https://blog.turso.tech/replicate-my-entire-production-database-you-must-be-mad-641d3f1ed9d8">提到了一种方案,搭配Postgresql的逻辑流复制能力将数据同步到Turso</a></p>
+
+                    
+                        
+
+
+                    
+                    
+                        <p>
+                            <a
+                                href="/2023/12/04/turso/#post-footer"
+                                class="postShorten-excerpt_link link"
+                                aria-label=""
+                            >
+                                评论和共享
+                            </a>
+                        </p>
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
     <article class="postShorten postShorten--thumbnailimg-right">
         <div class="postShorten-wrap">
             
@@ -731,75 +806,6 @@
         
     </article>
     
-    
-    <article class="postShorten postShorten--thumbnailimg-bottom">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title">
-                    
-                        <a
-                            class="link-unstyled"
-                            href="/2021/09/22/osc52_remote_copy/"
-                            aria-label=": 使用OSC52实现远程写入本地粘贴板"
-                        >
-                            使用OSC52实现远程写入本地粘贴板
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time datetime="2021-09-22T19:00:00+08:00">
-	
-		    9月 22, 2021
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/linux/">linux</a>
-
-
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-content">
-                    <p>经常在本地电脑上使用pbcopy和pbpaste十分方便，但是ssh连接到远程机器后需要拷贝远程内容到本地相对就比较麻烦，以前总是需要采用<code>ssh remote &#39;cat file&#39; | pbcopy</code>，搞多了就很烦，今天搜索了一下remote pbcopy之后发现了OSC52这个东西，用起来十分方便</p>
-<p>本质就是输出一段特定格式的转义字符串，终端识别这个转移字符串得到原始内容，写入本机的粘贴板</p>
-<h3 id="远程主机"><a href="#远程主机" class="headerlink" title="远程主机"></a>远程主机</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">sudo dd of=/usr/<span class="built_in">local</span>/bin/osc52 &lt;&lt;<span class="string">&#x27;EOF&#x27;</span></span><br><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="built_in">printf</span> <span class="string">&quot;\033]52;c;<span class="subst">$(base64 | tr -d &#x27;\r\n&#x27;)</span>\a&quot;</span></span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">sudo chmod +x /usr/<span class="built_in">local</span>/bin/osc52</span><br></pre></td></tr></table></figure>
-
-<h3 id="本机"><a href="#本机" class="headerlink" title="本机"></a>本机</h3><p>Iterm2开启粘贴板访问权限</p>
-<p><img src="https://blogimg.ficapy.com/capture/2021_09_22_17_25_38.png" alt="https://blogimg.ficapy.com/capture/2021_09_22_17_25_38.png"></p>
-<p>如果需要搭配tmux一起使用，需要在配置文件添加</p>
-<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">set -g set-clipboard on</span><br></pre></td></tr></table></figure>
-
-<p>至此只需要在远程执行类似语句<code>echo 123 | osc52</code> ，本机粘贴板就成功复制了</p>
-<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://www.reddit.com/r/vim/comments/k1ydpn/a_guide_on_how_to_copy_text_from_anywhere/">OSC52的支持范围很广</a></p>
-<p>[Remote Copy via OSC52](<a href="https://github-wiki-see.page/m/laktak/extrakto/wiki/Remote-Copy-via-OSC5">https://github-wiki-see.page/m/laktak/extrakto/wiki/Remote-Copy-via-OSC5</a></p>
-
-                    
-                        
-
-
-                    
-                    
-                        <p>
-                            <a
-                                href="/2021/09/22/osc52_remote_copy/#post-footer"
-                                class="postShorten-excerpt_link link"
-                                aria-label=""
-                            >
-                                评论和共享
-                            </a>
-                        </p>
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
     <div class="pagination-bar">
     <ul class="pagination">
         
@@ -1134,7 +1140,7 @@
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 112 篇文章
+                找到 113 篇文章
             </p>
         </div>
     </div>
