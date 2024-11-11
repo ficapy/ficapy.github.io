@@ -1,0 +1,900 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="邹雷">
+    <title>搭建tailscale自建derp - 邹雷</title>
+    <meta name="author" content="ficapy">
+    
+    
+    
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"tailscale比较好用，而且免费用户福利也没有什么大幅度缩水，由于国内网络和国外不互通，所以官方的DERP服务并不好用，有必要自建一个国内的私有DERP给自己用，几年前我就建过一个，最近整理服务器迁移事宜，所以写了一个更详尽的文档记录一下\n\n\n官方文档写的并不是很详细，但是还是有一定的参考价值，https://tailscale.com/kb/1118/custom-derp-servers ，我的思路是给STUN和HTTPS都设置了不知名的特殊端口，手动管理了TLS证书，所以并不需要开放80端口用于自动化申请证书同时，我采用了URL验证客户端的方案，防止有人白嫖….\n整体docker-compose.yml文件如下12345678910111213141516171819202122232425262728services:  derper:    image: fredliang/derper:208878d628c7c6cad604da7798b6deee3894c7a6    container_name: derper    environment:      - DERP_DOMAIN=xx.domain.com      - DERP_CERT_DIR=/etc/letsencrypt/live/domain.com      - DERP_CERT_MODE=manual      - DERP_ADDR=:port      - DERP_STUN=true      - DERP_STUN_PORT=stun_port      - DERP_HTTP_PORT=-1      - DERP_VERIFY_CLIENT_URL=http://verify_client:3000    ports:      - &quot;port:port&quot;      - &quot;stun_port:stun_port/udp&quot;    volumes:      - /etc/letsencrypt/live/domain.com:/etc/letsencrypt/live/domain.com:ro    restart: unless-stopped  verify_client:    build:      context: .      dockerfile: Dockerfile    container_name: verify_client    volumes:      - ./nodes.json:/app/nodes.json:ro    restart: unless-stopped\n\n此处使用了Github项目，免得自己构建docker镜像，此处TLS的证书，我是使用了certbot申请了泛域名证书，得到的文件名并不能直接被derper使用，因此有一个小脚本cp到了适合的文件名update_cert_and_restart_docker.sh\n12345678#!/bin/bash# 复制证书文件cp /etc/letsencrypt/live/domain.com/fullchain.pem /etc/letsencrypt/live/domain.com/xx.domain.com.crtcp /etc/letsencrypt/live/domain.com/privkey.pem /etc/letsencrypt/live/domain.com/xx.domain.com.key# 重建并重启 Docker 容器/usr/bin/docker compose -f /root/derper/docker-compose.yml up --build --force-recreate -d\n另外加入了cron定时任务，让它每半个月重启一次，以使用新证书\n10 2 1,15 * * /root/derper/update_cert_and_restart_docker.sh\n\n防白嫖配置放在公网上，derp还是有比较明显的特征的，因此我决定加一个鉴权，本来打算基于tailscale的API写一个的，但是它的API最多90天，这样限制就比较大，需要经常更新，我个人的节点很固定，所以我决定写死，有新设备加入手动修改\n获得当前网络中所有的节点，写入nodes.json文件\n1tailscale status --json | jq &#39;[recurse | objects | with_entries(select(.key &#x3D;&#x3D; &quot;PublicKey&quot;)) | .[]] | sort&#39;\n\n写了一个最简的鉴权脚本verify_client.go\n123456789101112131415161718192021222324252627282930313233343536373839404142434445464748495051525354555657585960616263646566676869707172737475767778798081package mainimport (\t&quot;encoding/json&quot;\t&quot;log&quot;\t&quot;net/http&quot;\t&quot;os&quot;)type DERPAdmitClientRequest struct &#123;\tNodePublic string\tSource     string&#125;type DERPAdmitClientResponse struct &#123;\tAllow bool&#125;var allowedNodes []stringfunc loadNodes(filename string) error &#123;\tdata, err := os.ReadFile(filename)\tif err != nil &#123;\t\treturn err\t&#125;\tvar nodeKeys []string\tif err := json.Unmarshal(data, &amp;nodeKeys); err != nil &#123;\t\treturn err\t&#125;\tfor _, nodeStr := range nodeKeys &#123;\t\tallowedNodes = append(allowedNodes, nodeStr)\t&#125;\treturn nil&#125;func handleAdmitRequest(w http.ResponseWriter, r *http.Request) &#123;\tif r.Method != http.MethodPost &#123;\t\tw.WriteHeader(http.StatusMethodNotAllowed)\t\treturn\t&#125;\tvar req DERPAdmitClientRequest\tif err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil &#123;\t\tw.WriteHeader(http.StatusBadRequest)\t\treturn\t&#125;\tallowed := false\tfor _, node := range allowedNodes &#123;\t\tif node == req.NodePublic &#123;\t\t\tallowed = true\t\t\tbreak\t\t&#125;\t&#125;\tresp := DERPAdmitClientResponse&#123;Allow: allowed&#125;\tif err := json.NewEncoder(w).Encode(resp); err != nil &#123;\t\tw.WriteHeader(http.StatusInternalServerError)\t\treturn\t&#125;\tif allowed &#123;\t\tlog.Printf(&quot;Node admitted: %x&quot;, req.NodePublic)\t&#125;&#125;func main() &#123;\tif err := loadNodes(&quot;nodes.json&quot;); err != nil &#123;\t\tlog.Fatal(&quot;Failed to load nodes:&quot;, err)\t&#125;\thttp.HandleFunc(&quot;/&quot;, handleAdmitRequest)\tlog.Println(&quot;Server listening on :3000&quot;)\tif err := http.ListenAndServe(&quot;:3000&quot;, nil); err != nil &#123;\t\tlog.Fatal(err)\t&#125;&#125;\n\n构建脚本\nDockerfile\n123456789FROM golang:alpine3.20 AS builderWORKDIR &#x2F;appCOPY verify_client.go .&#x2F;RUN go build -o verify_client verify_client.goFROM alpine:latestWORKDIR &#x2F;appCOPY --from&#x3D;builder &#x2F;app&#x2F;verify_client &#x2F;app&#x2F;CMD [&quot;.&#x2F;verify_client&quot;]\n\n至此，部署完毕，在Tailscale 后台设置一下，我个人是禁用了默认的DERP\n12345678910111213141516&quot;derpMap&quot;: &#123;    &quot;OmitDefaultRegions&quot;: true,    &quot;Regions&quot;: &#123;        &quot;900&quot;: &#123;            &quot;RegionID&quot;:   900,            &quot;RegionCode&quot;: &quot;my&quot;,            &quot;Nodes&quot;: [&#123;                &quot;Name&quot;:     &quot;1&quot;,                &quot;RegionID&quot;: 900,                &quot;HostName&quot;: &quot;xx.domain.com&quot;,                &quot;DERPPort&quot;: port,                &quot;STUNPort&quot;: stun_port,            &#125;],        &#125;,    &#125;,&#125;,\n\n参考如何利用 Caddy 搭建 Tailscale 的 Custom DERP Servers\ntailscale-derp-client-verifier\n","dateCreated":"2024-11-11T17:00:00+08:00","dateModified":"2024-11-11T17:21:21+08:00","datePublished":"2024-11-11T17:00:00+08:00","description":"tailscale比较好用，而且免费用户福利也没有什么大幅度缩水，由于国内网络和国外不互通，所以官方的DERP服务并不好用，有必要自建一个国内的私有DERP给自己用，几年前我就建过一个，最近整理服务器迁移事宜，所以写了一个更详尽的文档记录一下","headline":"搭建tailscale自建derp","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2024/11/11/derp_setup/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2024/11/11/derp_setup/"}</script>
+    <meta name="description" content="tailscale比较好用，而且免费用户福利也没有什么大幅度缩水，由于国内网络和国外不互通，所以官方的DERP服务并不好用，有必要自建一个国内的私有DERP给自己用，几年前我就建过一个，最近整理服务器迁移事宜，所以写了一个更详尽的文档记录一下">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="搭建tailscale自建derp">
+<meta property="og:url" content="https://www.zoulei.net/2024/11/11/derp_setup/index.html">
+<meta property="og:site_name" content="邹雷">
+<meta property="og:description" content="tailscale比较好用，而且免费用户福利也没有什么大幅度缩水，由于国内网络和国外不互通，所以官方的DERP服务并不好用，有必要自建一个国内的私有DERP给自己用，几年前我就建过一个，最近整理服务器迁移事宜，所以写了一个更详尽的文档记录一下">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2024-11-11T09:00:00.000Z">
+<meta property="article:modified_time" content="2024-11-11T09:21:21.537Z">
+<meta property="article:author" content="ficapy">
+<meta name="twitter:card" content="summary">
+    
+    
+        
+    
+    
+    
+    
+    
+    <!--STYLES-->
+    
+<link rel="stylesheet" href="/assets/css/style-vmyldjpouxmbykub3bplp6yx2cdfiohdin8psfrhaiwtjsy1h8z42722ngua.min.css">
+
+    <!--STYLES END-->
+    
+
+    
+
+    
+        
+    
+<!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --></head>
+
+    <body>
+        <div id="blog">
+            <!-- Define author's picture -->
+
+
+    
+
+<header id="header" data-behavior="4">
+    <i id="btn-open-sidebar" class="fa fa-lg fa-bars"></i>
+    <div class="header-title">
+        <a
+            class="header-title-link"
+            href="/"
+            aria-label=""
+        >
+            邹雷
+        </a>
+    </div>
+    
+        
+            <a
+                class="header-right-picture "
+                href="#about"
+                aria-label="打开链接: /#about"
+            >
+        
+        
+        </a>
+    
+</header>
+
+            <!-- Define author's picture -->
+
+
+<nav id="sidebar" data-behavior="4">
+    <div class="sidebar-container">
+        
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/"
+                            
+                            rel="noopener"
+                            title="首页"
+                        >
+                        <i class="sidebar-button-icon fa fa-home" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">首页</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-categories"
+                            
+                            rel="noopener"
+                            title="分类"
+                        >
+                        <i class="sidebar-button-icon fa fa-bookmark" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">分类</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-tags"
+                            
+                            rel="noopener"
+                            title="标签"
+                        >
+                        <i class="sidebar-button-icon fa fa-tags" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">标签</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/all-archives"
+                            
+                            rel="noopener"
+                            title="归档"
+                        >
+                        <i class="sidebar-button-icon fa fa-archive" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">归档</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link open-algolia-search"
+                            href="#search"
+                            
+                            rel="noopener"
+                            title="搜索"
+                        >
+                        <i class="sidebar-button-icon fa fa-search" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">搜索</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="#about"
+                            
+                            rel="noopener"
+                            title="关于"
+                        >
+                        <i class="sidebar-button-icon fa fa-question" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">关于</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="https://github.com/ficapy"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="GitHub"
+                        >
+                        <i class="sidebar-button-icon fab fa-github" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">GitHub</span>
+                    </a>
+            </li>
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="mailto:afexcg@gmail.com"
+                            
+                                target="_blank"
+                            
+                            rel="noopener"
+                            title="邮箱"
+                        >
+                        <i class="sidebar-button-icon fa fa-envelope" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">邮箱</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+            <ul class="sidebar-buttons">
+            
+                <li class="sidebar-button">
+                    
+                        <a
+                            class="sidebar-button-link "
+                            href="/atom.xml"
+                            
+                            rel="noopener"
+                            title="RSS"
+                        >
+                        <i class="sidebar-button-icon fa fa-rss" aria-hidden="true"></i>
+                        <span class="sidebar-button-desc">RSS</span>
+                    </a>
+            </li>
+            
+        </ul>
+        
+    </div>
+</nav>
+
+            
+            <div id="main" data-behavior="4"
+                 class="
+                        hasCoverMetaIn
+                        ">
+                
+<article class="post">
+    
+    
+        <div class="post-header main-content-wrap text-left">
+    
+        <h1 class="post-title">
+            搭建tailscale自建derp
+        </h1>
+    
+    
+        <div class="post-meta">
+    <time datetime="2024-11-11T17:00:00+08:00">
+	
+		    11月 11, 2024
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/linux/">linux</a>
+
+
+    
+</div>
+
+    
+</div>
+
+    
+    <div class="post-content markdown">
+        <div class="main-content-wrap">
+            <p>tailscale比较好用，而且免费用户福利也没有什么大幅度缩水，由于国内网络和国外不互通，所以官方的DERP服务并不好用，有必要自建一个国内的私有DERP给自己用，几年前我就建过一个，最近整理服务器迁移事宜，所以写了一个更详尽的文档记录一下</p>
+<span id="more"></span>
+
+<p>官方文档写的并不是很详细，但是还是有一定的参考价值，<a href="https://tailscale.com/kb/1118/custom-derp-servers">https://tailscale.com/kb/1118/custom-derp-servers</a> ，我的思路是给STUN和HTTPS都设置了不知名的特殊端口，手动管理了TLS证书，所以并不需要开放80端口用于自动化申请证书<br>同时，我采用了URL验证客户端的方案，防止有人白嫖….</p>
+<h3 id="整体docker-compose-yml文件如下"><a href="#整体docker-compose-yml文件如下" class="headerlink" title="整体docker-compose.yml文件如下"></a>整体docker-compose.yml文件如下</h3><figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">derper:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">fredliang/derper:208878d628c7c6cad604da7798b6deee3894c7a6</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">derper</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DERP_DOMAIN=xx.domain.com</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DERP_CERT_DIR=/etc/letsencrypt/live/domain.com</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DERP_CERT_MODE=manual</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DERP_ADDR=:port</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DERP_STUN=true</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DERP_STUN_PORT=stun_port</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DERP_HTTP_PORT=-1</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">DERP_VERIFY_CLIENT_URL=http://verify_client:3000</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;port:port&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;stun_port:stun_port/udp&quot;</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/etc/letsencrypt/live/domain.com:/etc/letsencrypt/live/domain.com:ro</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">verify_client:</span></span><br><span class="line">    <span class="attr">build:</span></span><br><span class="line">      <span class="attr">context:</span> <span class="string">.</span></span><br><span class="line">      <span class="attr">dockerfile:</span> <span class="string">Dockerfile</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">verify_client</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./nodes.json:/app/nodes.json:ro</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br></pre></td></tr></table></figure>
+
+<p>此处使用了<a href="fredliang44/derper-docker">Github项目</a>，免得自己构建docker镜像，此处TLS的证书，我是使用了certbot申请了泛域名证书，得到的文件名并不能直接被derper使用，因此有一个小脚本cp到了适合的文件名<br>update_cert_and_restart_docker.sh</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 复制证书文件</span></span><br><span class="line">cp /etc/letsencrypt/live/domain.com/fullchain.pem /etc/letsencrypt/live/domain.com/xx.domain.com.crt</span><br><span class="line">cp /etc/letsencrypt/live/domain.com/privkey.pem /etc/letsencrypt/live/domain.com/xx.domain.com.key</span><br><span class="line"></span><br><span class="line"><span class="comment"># 重建并重启 Docker 容器</span></span><br><span class="line">/usr/bin/docker compose -f /root/derper/docker-compose.yml up --build --force-recreate -d</span><br></pre></td></tr></table></figure>
+<p>另外加入了cron定时任务，让它每半个月重启一次，以使用新证书</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">0 2 1,15 * * /root/derper/update_cert_and_restart_docker.sh</span><br></pre></td></tr></table></figure>
+
+<h3 id="防白嫖配置"><a href="#防白嫖配置" class="headerlink" title="防白嫖配置"></a>防白嫖配置</h3><p>放在公网上，derp还是有比较明显的特征的，因此我决定加一个鉴权，本来打算基于tailscale的API写一个的，但是它的API最多90天，这样限制就比较大，需要经常更新，我个人的节点很固定，所以我决定写死，有新设备加入手动修改</p>
+<p>获得当前网络中所有的节点，写入nodes.json文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tailscale status --json | jq &#39;[recurse | objects | with_entries(select(.key &#x3D;&#x3D; &quot;PublicKey&quot;)) | .[]] | sort&#39;</span><br></pre></td></tr></table></figure>
+
+<p>写了一个最简的鉴权脚本verify_client.go</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> main</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> (</span><br><span class="line">	<span class="string">&quot;encoding/json&quot;</span></span><br><span class="line">	<span class="string">&quot;log&quot;</span></span><br><span class="line">	<span class="string">&quot;net/http&quot;</span></span><br><span class="line">	<span class="string">&quot;os&quot;</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> DERPAdmitClientRequest <span class="keyword">struct</span> &#123;</span><br><span class="line">	NodePublic <span class="keyword">string</span></span><br><span class="line">	Source     <span class="keyword">string</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">type</span> DERPAdmitClientResponse <span class="keyword">struct</span> &#123;</span><br><span class="line">	Allow <span class="keyword">bool</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">var</span> allowedNodes []<span class="keyword">string</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">loadNodes</span><span class="params">(filename <span class="keyword">string</span>)</span> <span class="title">error</span></span> &#123;</span><br><span class="line">	data, err := os.ReadFile(filename)</span><br><span class="line">	<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">var</span> nodeKeys []<span class="keyword">string</span></span><br><span class="line">	<span class="keyword">if</span> err := json.Unmarshal(data, &amp;nodeKeys); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> err</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> _, nodeStr := <span class="keyword">range</span> nodeKeys &#123;</span><br><span class="line">		allowedNodes = <span class="built_in">append</span>(allowedNodes, nodeStr)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">handleAdmitRequest</span><span class="params">(w http.ResponseWriter, r *http.Request)</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> r.Method != http.MethodPost &#123;</span><br><span class="line">		w.WriteHeader(http.StatusMethodNotAllowed)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">var</span> req DERPAdmitClientRequest</span><br><span class="line">	<span class="keyword">if</span> err := json.NewDecoder(r.Body).Decode(&amp;req); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		w.WriteHeader(http.StatusBadRequest)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	allowed := <span class="literal">false</span></span><br><span class="line">	<span class="keyword">for</span> _, node := <span class="keyword">range</span> allowedNodes &#123;</span><br><span class="line">		<span class="keyword">if</span> node == req.NodePublic &#123;</span><br><span class="line">			allowed = <span class="literal">true</span></span><br><span class="line">			<span class="keyword">break</span></span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	resp := DERPAdmitClientResponse&#123;Allow: allowed&#125;</span><br><span class="line">	<span class="keyword">if</span> err := json.NewEncoder(w).Encode(resp); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		w.WriteHeader(http.StatusInternalServerError)</span><br><span class="line">		<span class="keyword">return</span></span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> allowed &#123;</span><br><span class="line">		log.Printf(<span class="string">&quot;Node admitted: %x&quot;</span>, req.NodePublic)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> err := loadNodes(<span class="string">&quot;nodes.json&quot;</span>); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatal(<span class="string">&quot;Failed to load nodes:&quot;</span>, err)</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	http.HandleFunc(<span class="string">&quot;/&quot;</span>, handleAdmitRequest)</span><br><span class="line"></span><br><span class="line">	log.Println(<span class="string">&quot;Server listening on :3000&quot;</span>)</span><br><span class="line">	<span class="keyword">if</span> err := http.ListenAndServe(<span class="string">&quot;:3000&quot;</span>, <span class="literal">nil</span>); err != <span class="literal">nil</span> &#123;</span><br><span class="line">		log.Fatal(err)</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>构建脚本</p>
+<p>Dockerfile</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">FROM golang:alpine3.20 AS builder</span><br><span class="line">WORKDIR &#x2F;app</span><br><span class="line">COPY verify_client.go .&#x2F;</span><br><span class="line">RUN go build -o verify_client verify_client.go</span><br><span class="line"></span><br><span class="line">FROM alpine:latest</span><br><span class="line">WORKDIR &#x2F;app</span><br><span class="line">COPY --from&#x3D;builder &#x2F;app&#x2F;verify_client &#x2F;app&#x2F;</span><br><span class="line">CMD [&quot;.&#x2F;verify_client&quot;]</span><br></pre></td></tr></table></figure>
+
+<p>至此，部署完毕，在Tailscale 后台设置一下，我个人是禁用了默认的DERP</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">&quot;derpMap&quot;: &#123;</span><br><span class="line">    &quot;OmitDefaultRegions&quot;: true,</span><br><span class="line">    &quot;Regions&quot;: &#123;</span><br><span class="line">        &quot;900&quot;: &#123;</span><br><span class="line">            &quot;RegionID&quot;:   900,</span><br><span class="line">            &quot;RegionCode&quot;: &quot;my&quot;,</span><br><span class="line">            &quot;Nodes&quot;: [&#123;</span><br><span class="line">                &quot;Name&quot;:     &quot;1&quot;,</span><br><span class="line">                &quot;RegionID&quot;: 900,</span><br><span class="line">                &quot;HostName&quot;: &quot;xx.domain.com&quot;,</span><br><span class="line">                &quot;DERPPort&quot;: port,</span><br><span class="line">                &quot;STUNPort&quot;: stun_port,</span><br><span class="line">            &#125;],</span><br><span class="line">        &#125;,</span><br><span class="line">    &#125;,</span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure>
+
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><p><a href="https://www.xukecheng.tech/how-to-deploy-tailscale-custom-derper-servers-by-caddy">如何利用 Caddy 搭建 Tailscale 的 Custom DERP Servers</a></p>
+<p><a href="https://github.com/hellodword/tailscale-derp-client-verifier">tailscale-derp-client-verifier</a></p>
+
+            
+
+
+        </div>
+    </div>
+    <div id="post-footer" class="post-footer main-content-wrap">
+        
+        
+            <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2024/10/06/automator_quick_action/"
+                    data-tooltip="Finder右键添加快捷方式"
+                    aria-label="下一篇: Finder右键添加快捷方式"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2024/11/11/derp_setup/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2024/11/11/derp_setup/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2024/11/11/derp_setup/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+        
+        
+            
+        
+    </div>
+</article>
+
+
+
+                <footer id="footer" class="main-content-wrap">
+    <span class="copyrights">
+        Copyrights &copy; 2024 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+    </span>
+</footer>
+
+            </div>
+            
+                <div id="bottom-bar" class="post-bottom-bar" data-behavior="4">
+                    <div class="post-actions-wrap">
+    <nav>
+        <ul class="post-actions post-action-nav">
+            <li class="post-action">
+                
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
+                        <i class="fa fa-angle-left" aria-hidden="true"></i>
+                        <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
+                    </a>
+            </li>
+            <li class="post-action">
+                
+                    
+                <a
+                    class="post-action-btn btn btn--default tooltip--top"
+                    href="/2024/10/06/automator_quick_action/"
+                    data-tooltip="Finder右键添加快捷方式"
+                    aria-label="下一篇: Finder右键添加快捷方式"
+                >
+                    
+                        <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
+                        <i class="fa fa-angle-right" aria-hidden="true"></i>
+                    </a>
+            </li>
+        </ul>
+    </nav>
+    <ul class="post-actions post-action-share">
+        <li class="post-action hide-lg hide-md hide-sm">
+            <a
+                class="post-action-btn btn btn--default btn-open-shareoptions"
+                href="#btn-open-shareoptions"
+                aria-label="Diesen Beitrag teilen"
+            >
+                <i class="fa fa-share-alt" aria-hidden="true"></i>
+            </a>
+        </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2024/11/11/derp_setup/"
+                    title="分享到 Facebook"
+                    aria-label="分享到 Facebook"
+                >
+                    <i class="fab fa-facebook" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2024/11/11/derp_setup/"
+                    title="分享到 Twitter"
+                    aria-label="分享到 Twitter"
+                >
+                    <i class="fab fa-twitter" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+            
+            
+            <li class="post-action hide-xs">
+                <a
+                    class="post-action-btn btn btn--default"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2024/11/11/derp_setup/"
+                    title="分享到 Google+"
+                    aria-label="分享到 Google+"
+                >
+                    <i class="fab fa-google-plus" aria-hidden="true"></i>
+                </a>
+            </li>
+        
+        
+            
+        
+        <li class="post-action">
+            
+                <a class="post-action-btn btn btn--default" href="#" aria-label="Nach oben">
+            
+                <i class="fa fa-list" aria-hidden="true"></i>
+            </a>
+        </li>
+    </ul>
+</div>
+
+
+                </div>
+                
+    <div id="share-options-bar" class="share-options-bar" data-behavior="4">
+        <i id="btn-close-shareoptions" class="fa fa-times"></i>
+        <ul class="share-options">
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2024/11/11/derp_setup/"
+                        aria-label="分享到 Facebook"
+                    >
+                        <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2024/11/11/derp_setup/"
+                        aria-label="分享到 Twitter"
+                    >
+                        <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
+                    </a>
+                </li>
+            
+                
+                
+                <li class="share-option">
+                    <a
+                        class="share-option-btn"
+                        target="new"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2024/11/11/derp_setup/"
+                        aria-label="分享到 Google+"
+                    >
+                        <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
+                    </a>
+                </li>
+            
+        </ul>
+    </div>
+
+
+            
+        </div>
+        
+
+
+<div id="about">
+    <div id="about-card">
+        <div id="about-btn-close">
+            <i class="fa fa-times"></i>
+        </div>
+        
+            <h4 id="about-card-name">ficapy</h4>
+        
+            <div id="about-card-bio"><p>author.bio</p>
+</div>
+        
+        
+            <div id="about-card-job">
+                <i class="fa fa-briefcase"></i>
+                <br/>
+                <p>author.job</p>
+
+            </div>
+        
+        
+            <div id="about-card-location">
+                <i class="fa fa-map-marker-alt"></i>
+                <br/>
+                深圳
+            </div>
+        
+    </div>
+</div>
+
+        
+            <div id="algolia-search-modal" class="modal-container">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="close-button"><i class="fa fa-times"></i></span>
+            <a href="https://algolia.com" target="_blank" rel="noopener" class="searchby-algolia text-color-light link-unstyled">
+                <span class="searchby-algolia-text text-color-light text-small">by</span>
+                <img class="searchby-algolia-logo" src="/assets/images/logo-algolia-nebula-blue-full.svg">
+            </a>
+            <i class="search-icon fa fa-search"></i>
+            <form id="algolia-search-form">
+                <input type="text" id="algolia-search-input" name="search"
+                    class="form-control input--large search-input" placeholder="Search "
+                    />
+            </form>
+        </div>
+        <div class="modal-body">
+            <div class="no-result text-color-light text-center">没有找到文章</div>
+            <div class="results">
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/29/hello_world/"
+                            aria-label=": 博客起航"
+                        >
+                            <h3 class="media-heading">博客起航</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月29日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>不知道从某年某月起，我接触了电脑，接触了网络，深深的为它着迷~~~~~~</p>
+<p>：</p>
+<p>为了占行此处无耻的掠过N个字</p>
+<p>:</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/09/30/idm-internet-download-manager/"
+                            aria-label=": IDM-Internet Download Manager"
+                        >
+                            <h3 class="media-heading">IDM-Internet Download Manager</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年9月30日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>创建一个新目录，善用佳软</p>
+<p>名字没什么新意，因为有个推荐好软件的名字就是善用佳软:<a href="http://xbeta.info/">http://xbeta.info/</a>，我也在上面找到过几个适合自己的好软件。好软件何其多，找到适合自己的并不那么容易，装了卸，卸了装，反反复复、大浪淘沙，最后留下的我认为就是对自己友好的、有价值的好软件。作为一个博客，我会推荐我自己一直用的，感觉很不错的软件分享给大家。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/02/everything_magical_file_search_software/"
+                            aria-label=": everything--文件搜索神器"
+                        >
+                            <h3 class="media-heading">everything--文件搜索神器</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月2日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg" alt="everything"></p>
+<p>官方网站:<a href="http://www.voidtools.com/">www.voidtools.com</a></p>
+<p>算是一款牛B到爆，如果你是小白第一次用类似的软件，绝对会产生一种想见恨晚的感觉。对比windows自带的搜索，everything几秒钟完成索引，瞬间搜索完成。再根据文件修改日期或者路径就能瞬间找到想要的文件。有人用了这个软件之后戏称平时热衷文件管理的人自从用了它文件都是随处乱放，反正根据文件名马上就能找到。呵呵，虽然是个笑话（个人认为有条理的整理文件还是很有道理的，比如要调出某个月和某个人的所有文件往来，随便放你就只能呵呵了），但是它给我们搜索文档带来的便利性可见一斑。办公族必备！</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                            aria-label=": everything进阶教程"
+                        >
+                            <h3 class="media-heading">everything进阶教程</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月6日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/12/cputure_image_and_convert_software/"
+                            aria-label=": Snagit-截图兼图片转换软件"
+                        >
+                            <h3 class="media-heading">Snagit-截图兼图片转换软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月12日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>好几天没写文章了，不是因为不想写，只是被一些小问题折腾的太蛋疼了，共享扫描仪、VBA、wordpress排版、共享X墙云云，一一解决后有兴趣我会发上来~~~~</p>
+<p>今天介绍的是一款据说主打截图的软件-snagit</p>
+<p><img src="https://blogimg.ficapy.com/blogimg/snagit.png" alt="snagit"> 官方网站：<a href="http://www.techsmith.com/">http://www.techsmith.com/</a></p>
+<p>主界面可以看到功能全部和截图之后的处理有关，添加文字、添加各种效果等等，用图层管理用起来不错，而且目测很强调分享功能，截图插入到office、邮件、camtasia<br>studio甚至是youtube等等。使用起来非常容易上手。此功能略过~~~~</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/10/25/xnview_image_view/"
+                            aria-label=": xnview-图片查看"
+                        >
+                            <h3 class="media-heading">xnview-图片查看</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年10月25日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p><img src="https://blogimg.ficapy.com/blogimg/xnview.jpg" alt="xnview"></p>
+<p>官网地址：<a href="http://www.xnview.com/">http://www.xnview.com</a></p>
+<p>XnView為一圖片瀏覽、轉換、編輯的多平台軟體，可改變其介面語言，亦可易其工具栏按鈕至某一程度，或以換面板方式易工具列按鈕。並支援讀取超過400種的圖檔格式及部份音频文件格式及视频文件格式，亦支援寫入75種圖片格式。提供免費的個人使用及簡易操作。可將壓縮檔以資料夾方式開啟、依EXIF及IPTC作圖片搜尋、圖片相似比對、對圖片作批次命名、格式轉換及套用影像調整，並支援無損耗旋轉。類似功能之軟體有ACDSee。—–摘自<a href="http://zh.wikipedia.org/wiki/XnView">维基百科</a></p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/05/deskpins_top_window/"
+                            aria-label=": DeskPins-窗口置顶"
+                        >
+                            <h3 class="media-heading">DeskPins-窗口置顶</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月5日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/11/28/disktool_recommend/"
+                            aria-label=": 傲梅分区助手--傻瓜化分区软件"
+                        >
+                            <h3 class="media-heading">傲梅分区助手--傻瓜化分区软件</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年11月28日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>很久没更新博客了，不能把它当做一份工作，当做爱好还得靠自己的热情更新~~~~~~导致的结果就是如此吧，稍微忙那么一点点就懒得更新博客了。最近开始自学我很久前就想踏入但是时至今日才真正踏入的领域~~~编程，学习大伙说最简单最明了的语言Python。身边没有环境自学这玩意儿就感觉痛苦多欢乐少。丫的胜利的喜悦总是被下一个未知的问题很快淹没。就吐槽这么多吧~~~希望我的第一个demo能在回家前做出来。</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/20/excel_batch_print/"
+                            aria-label=": excel数字递增批量打印"
+                        >
+                            <h3 class="media-heading">excel数字递增批量打印</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月20日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>工作中经常需要打印输出资料。其中又有特别多的资料打印的步骤是这样的。一个excel工作薄中有N个工作表。把所有工作表打印→替换字符”N栋”到”N+1栋”打印→替换字符”N+1栋”到”N+2栋”打印………..（所有栋号不包含4）</p>
+<p>经常一次性会打印上千张，这样一个简单的活儿却也能生出很多事儿。就像下面这样：</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+                <div class="media">
+                    
+                    <div class="media-body">
+                        <a
+                            class="link-unstyled"
+                            href="https://www.zoulei.net/2013/12/27/pip_use_china_mirror/"
+                            aria-label=": pip使用国内镜像"
+                        >
+                            <h3 class="media-heading">pip使用国内镜像</h3>
+                        </a>
+                        <span class="media-meta">
+                            <span class="media-date text-small">
+                                
+                                    2013年12月27日
+                                
+                            </span>
+                        </span>
+                        <div class="media-content hide-xs font-merryweather"><p>作为一个不懂不会用linux的小白却想学编程的表示很无奈，各种折腾伤不起~~~~~<br>用的pycharm的IDE，绝大多数时候使用pip安装第三方库的时候都是失败的。虽然有详尽的错误报告。但是真心看不懂。</p>
+<p>今日突闻可能是伟大的墙在作怪，换成国内镜像可能会有所好转。作为一个小白，发现有教程可以解决一直以来的烦心事当然是万分欣喜滴。（心里默念100遍shit）但是后来才发现这TM才是最烦心时刻的开始。于是有了下面这些折腾.</p></div>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <hr>
+                </div>
+                
+            </div>
+        </div>
+        <div class="modal-footer">
+            <p class="results-count text-medium"
+                data-message-zero="没有找到文章"
+                data-message-one="找到 1 篇文章"
+                data-message-other="找到 {n} 篇文章">
+                找到 115 篇文章
+            </p>
+        </div>
+    </div>
+</div>
+
+        
+        
+<div id="cover" style="background-image:url('/assets/images/cover.jpg');"></div>
+        <!--SCRIPTS-->
+
+<script src="/assets/js/script-mdmhmndjqtxgrnbcqxwfotdukip0lyvqjtoun1q59tiszh2pjvmu0dun2kvx.min.js"></script>
+
+<!--SCRIPTS END-->
+
+
+    
+
+
+
+    
+<script src="/assets/js/moment-with-locales.js"></script>
+
+    
+<script src="/assets/js/algoliasearch.js"></script>
+
+    <script>
+      var algoliaClient = algoliasearch('CX8LZHBELF', '3fcc4f94219bf4d5f5714b449373ba3c');
+      var algoliaIndex = algoliaClient.initIndex('Blog');
+    </script>
+
+
+    </body>
+</html>
