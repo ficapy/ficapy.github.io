@@ -235,6 +235,76 @@
     <section class="postShorten-group main-content-wrap">
     
     
+    <article class="postShorten postShorten--thumbnailimg-bottom">
+        <div class="postShorten-wrap">
+            
+            <div class="postShorten-header">
+                <h1 class="postShorten-title">
+                    
+                        <a
+                            class="link-unstyled"
+                            href="/2025/01/06/how_volta_works/"
+                            aria-label=": volta如何工作"
+                        >
+                            volta如何工作
+                        </a>
+                    
+                </h1>
+                <div class="postShorten-meta">
+    <time datetime="2025-01-06T17:00:00+08:00">
+	
+		    1月 06, 2025
+    	
+    </time>
+    
+        <span>发布在 </span>
+        
+    <a class="category-link" href="/categories/%E9%9A%8F%E7%AC%94/">随笔</a>
+
+
+    
+</div>
+
+            </div>
+            
+                <div class="postShorten-content">
+                    <p>各个编程语言都有多版本管理工具，从一开始的能用，到现在的追求快速，好用，也经历了很多代的发展。光我试过的就有nvm、asdf、fnm、volta。目前最火的是volta，我就粗略翻了一下它的源代码看看它是怎么管理的</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl https://get.volta.sh | bash</span><br></pre></td></tr></table></figure>
+
+<p>它会自动的将以下内容增加到bash</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> VOLTA_HOME=<span class="string">&quot;<span class="variable">$HOME</span>/.volta&quot;</span>                                                                                                         </span><br><span class="line"><span class="built_in">export</span> PATH=<span class="string">&quot;<span class="variable">$VOLTA_HOME</span>/bin:<span class="variable">$PATH</span>&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>执行<code>ls -alh $VOLTA_HOME/bin</code>可以看到node,npm,npx,pnpm,yarn,yarnpkg均被指向了<code>$HOME/.volta/volta-shim</code>文件</p>
+<p>查看volta-shim的执行逻辑，主要是找到对应的需要的工具版本(package.json -&gt; default -&gt; system)，然后找到安装的可执行文件执行即可</p>
+<p>执行它 <code>VOLTA_LOGLEVEL=debug node</code>可以看到类似输出</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">[</span>verbose<span class="punctuation">]</span> Found default configuration at &#x27;/Users/ficapy/.volta/tools/user/platform.json&#x27;</span><br><span class="line"><span class="punctuation">[</span>verbose<span class="punctuation">]</span> node@<span class="number">20.16</span><span class="number">.0</span> has already been fetched<span class="punctuation">,</span> skipping download</span><br><span class="line"><span class="punctuation">[</span>verbose<span class="punctuation">]</span> yarn@<span class="number">1.22</span><span class="number">.22</span> has already been fetched<span class="punctuation">,</span> skipping download</span><br><span class="line"><span class="punctuation">[</span>verbose<span class="punctuation">]</span> Active Image<span class="punctuation">:</span></span><br><span class="line">    Node<span class="punctuation">:</span> <span class="number">20.16</span><span class="number">.0</span> from project configuration</span><br><span class="line">    npm<span class="punctuation">:</span> <span class="number">10.8</span><span class="number">.1</span> from project configuration</span><br><span class="line">    pnpm<span class="punctuation">:</span> None</span><br><span class="line">    Yarn<span class="punctuation">:</span> <span class="number">1.22</span><span class="number">.22</span> from default configuration</span><br></pre></td></tr></table></figure>
+
+<p>可以看到node版本来自于project配置(即package.json)</p>
+<p>这个<a href="https://en.wikipedia.org/wiki/Shim_(computing)">slim</a>比较有意思的是完全劫持了node,npm…etc这些命令行的访问，和其它方案，比如python的多版本管理(一般需要在shell里面添加一些脚本，每次当目录变换的时候执行一下环境检查，如果检查到新环境，就调用<code>source .venv/bin/activate.fish</code>)侵入性更强，但是用户更加无感知</p>
+
+                    
+                        
+
+
+                    
+                    
+                        <p>
+                            <a
+                                href="/2025/01/06/how_volta_works/#post-footer"
+                                class="postShorten-excerpt_link link"
+                                aria-label=""
+                            >
+                                评论和共享
+                            </a>
+                        </p>
+                    
+                </div>
+            
+        </div>
+        
+    </article>
+    
+    
     <article class="postShorten postShorten--thumbnailimg-right">
         <div class="postShorten-wrap">
             
@@ -754,59 +824,6 @@ style="color: #ff0000; text-decoration: underline;">基于默认设置的python�
         
     </article>
     
-    
-    <article class="postShorten postShorten--thumbnailimg-right">
-        <div class="postShorten-wrap">
-            
-            <div class="postShorten-header">
-                <h1 class="postShorten-title">
-                    
-                        <a
-                            class="link-unstyled"
-                            href="/2015/03/09/linode-rescue-mode-reset-root-password/"
-                            aria-label=": Linode紧急模式修改密码"
-                        >
-                            Linode紧急模式修改密码
-                        </a>
-                    
-                </h1>
-                <div class="postShorten-meta">
-    <time datetime="2015-03-09T09:45:00+08:00">
-	
-		    3月 09, 2015
-    	
-    </time>
-    
-        <span>发布在 </span>
-        
-    <a class="category-link" href="/categories/%E9%9A%8F%E7%AC%94/">随笔</a>
-
-
-    
-</div>
-
-            </div>
-            
-                <div class="postShorten-excerpt">
-                    <p>VPS运行太久了，也没怎么上去看。前些天重装电脑没保存VPS的登陆信息。等需要上去看的时候才知道<strong>粗大事了！</strong>登陆不上去了</p>
-<p>我前期因为安全需要设置了禁用密码登陆，改用密匙，修改了端口，无奈去问Linode客服，得到答复如下</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">Hello;</span><br><span class="line"></span><br><span class="line">You can reset your root password by following the following steps:</span><br><span class="line"></span><br><span class="line">1) Go to your Linode&#39;s dashboard  </span><br><span class="line">2) Shut down your Linode  </span><br><span class="line">3) Go to the &quot;Rescue&quot; tab of the Linode&#39;s dashboard  </span><br><span class="line">4) Type the new password in the &quot;Reset Root Password&quot; field  </span><br><span class="line">5) Reset  </span><br><span class="line">6) Wait for the process to finish (you&#39;ll see it in your host job</span><br><span class="line">queue)  </span><br><span class="line">7) Boot your Linode</span><br><span class="line"></span><br><span class="line">Best regards,</span><br><span class="line"></span><br><span class="line">Dave Russell Jr  </span><br><span class="line">Linode Support Specialist  </span><br></pre></td></tr></table></figure>
-                    
-                        <a
-                            href="/2015/03/09/linode-rescue-mode-reset-root-password/"
-                            class="postShorten-excerpt_link link"
-                            aria-label=": Linode紧急模式修改密码"
-                        >
-                            阅读全文
-                        </a>
-                        
-                    
-                </div>
-            
-        </div>
-        
-    </article>
-    
     <div class="pagination-bar">
     <ul class="pagination">
         
@@ -832,7 +849,7 @@ style="color: #ff0000; text-decoration: underline;">基于默认设置的python�
 
                 <footer id="footer" class="main-content-wrap">
     <span class="copyrights">
-        Copyrights &copy; 2024 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
+        Copyrights &copy; 2025 ficapy. <a href="https://beian.miit.gov.cn/">粤ICP备17077609号</a>All Rights Reserved.
     </span>
 </footer>
 
@@ -1141,7 +1158,7 @@ style="color: #ff0000; text-decoration: underline;">基于默认设置的python�
                 data-message-zero="没有找到文章"
                 data-message-one="找到 1 篇文章"
                 data-message-other="找到 {n} 篇文章">
-                找到 115 篇文章
+                找到 116 篇文章
             </p>
         </div>
     </div>
