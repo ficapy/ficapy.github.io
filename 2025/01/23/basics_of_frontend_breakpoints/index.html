@@ -6,28 +6,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="generator" content="邹雷">
-    <title>everything进阶教程 - 邹雷</title>
+    <title>前端断点的基础理解 - 邹雷</title>
     <meta name="author" content="ficapy">
     
     
     
-    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。\n\n但是出现了这么一次。我需要确定搜索文件的大小范围和时间范围。问一些使用everything的朋友他们也不知道，在网上也没看到类似的资料，甚至有些网友回答用everything不能做到。很简单的一个问题却困扰了我很久。so，有了这篇文章。本篇博文只是在基础上进行了一些延伸。不建立在修改设置的基础之上。希望能帮到过往的朋友~~\n\n首先你得在everything官网下载最新版（beta版本），不要下载稳定版。因为稳定版没有搜索语法帮助文件，不利于查看语法帮助。\n其次看帮助文件最好看英文原版，否则会把你坑的不轻~~~~\n从截图的帮助文件看出everything提供了3种帮助文件-搜索语法、正则语法、命令行。。。。其中第三种基本可以无视。基本上关于搜索的结果都是调用图形界面。还有些蛋疼的功能估计也没必要听闻~~~例举如下：\nWIN+R 输入CMD                                   #进入命令行界面\nD:                                                                #切换到everything安装盘\ncd \\Program Files\\Everything       #进入安装目录\neverything.exe -search dropbox #其结果是打开everything搜索dropbox\n加强搜索的帮助是搜索语法和正则，其中正则的帮助文件异常简单。用很简单的语言介绍了几个元字符的用法。如果你有正则表达式的基础在everything上面完全没问题。你会知道什么时候使用正则会让你马上找到你需要的结果（目测要用到正则的情况并不多见）。如果没有，推荐你看正则表达式的入门教程，呵呵。30分钟入门，绝对超赞的教程额~~~但是everything对正则的支持稍显薄弱。可用元字符不多，另外无法和函数搭配使用也是一大遗憾。\n让你的搜索技巧提升到一个高度，其实用函数才是最简单同时也是最有效的办法。函数是个大杀器。例举如下\n要搜索在13年6到9月创建的一个文件名为某某计划的excel文档，文件大小大概在10到30kb之间，如果你直接用”计划.xls”搜索按时间排序无法确定文件大小。单独按照文件大小排序同理~~~~难道只能用windows自带的搜索，忍受那坑爹的速度么，用它的函数功能异常简单，”*计划.xls file: dm:2013/6-2013/9size:10kb-30kb”（加了些无用的东西，方便下面说明）\n但是初看everything的函数语法帮助文件并不好理解，分为了几大类操作符、通配符、宏、修饰符、函数、函数语法、大小语法、大小常数、日期语法、属性常数~~~~~这介绍的确让人纳闷。用刚才的举例来说明\n操作符:大概用的最多的就是空格了，and，or，not很好理解，至于还有2个~~~我也没明白；\n通配符:* ？*.算是填充不确定的位置吧，前2个好像没必要使用，用空格可以代替。第三个指定搜索为文件夹不为文件；\n宏:不明~~~~\n修饰符:增加条件，进一步缩小范围，比如文中的file:代表只显示文件，不显示文件夹；\n函数:基本包含了精确搜索的主要功能了，有关日期，大小，类型，文件属性，文件名长度等，其中日期有2种，文件创建日期和修日期。我一般会使用文件修改日期，因为和everything主界面的更新日期含义一致，如果用dc：…….你可能会怀疑是不是软件出错了~~~~；\n函数语法:无它，就是让你确定函数参数的值和范围；\n特别注明：everything搜索文件名超快，但是基于其他的条件未知，搜索条件可能是从左到右，所以尽量先添加一些限定条件把文件限制的一定的范围，比如文件格式”.txt”等，最后添加函数比如”size:&gt;1mb”，如果你输入”size:&gt;1mbA”等格式~~轻则软件提示停止搜索，重则会导致需强制注销\n–引用自:http://forum.voidtools.com/viewtopic.php?f=2&amp;t=1640#\n后面的大小语法等就没说的必要了，就是函数的参数部分内容。特别注明，请尽量使用英文帮助。中文你会看到比较坑的地方，比如中文关于日期语法是这样的日期语法：yearmonth/yearday/month/year\n英文版是这样的,Date Syntax:yearmonth/year or year/month depending on locale settingsday/month/year, month/day/year or year/month/day depending on localesettings…看到区别了吗depending on localesettings，中文帮助或许没跟上。这部分是直接略过的，让我纠结了很长时间，甚至发现了年月格式可以用jan/2013等，顺便吐槽下学好英语在实际应用中的重要性&gt;_&lt;~~~\n","dateCreated":"2013-10-06T11:22:00+08:00","dateModified":"2019-07-26T14:53:30+08:00","datePublished":"2013-10-06T11:22:00+08:00","description":"你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。","headline":"everything进阶教程","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2013/10/06/everything_tutorial/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2013/10/06/everything_tutorial/","keywords":"everything函数, everything进阶, everything高级教程"}</script>
-    <meta name="description" content="你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。">
+    <script type="application/ld+json">{"@context":"http://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"},"articleBody":"\n代码中写debug\njs运行时遇到debug允许暂停，并向外部发送一条通知，此时调试客户端和js运行时会双向通信，执行continue、step into、step over等流程\n\n调试分为调试客户端 和 JS运行时，可以简单理解为CS架构当node --inspect test.js执行js脚本的时候在chrome中打开chrome://inspect，remote target打开即可调试此时，本机的node是server, chrome是client\n假设项目是一个React网站，使用vscode开发最简单的调试方案是，在React代码中添加debug; 此时chrome同时担任server和client另外一种方案是启动一个chrome，指定参数–remote-debugging-pipe(由vscode自动完成)，配合dev模式下的source map，即可以在vscode上断点调试，此时chrome担任server,vscode担任client\n参考解密 VS Code 断点调试的原理\n","dateCreated":"2025-01-23T16:00:00+08:00","dateModified":"2025-01-23T16:25:52+08:00","datePublished":"2025-01-23T16:00:00+08:00","description":"","headline":"前端断点的基础理解","image":[],"mainEntityOfPage":{"@type":"WebPage","@id":"https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"},"publisher":{"@type":"Organization","name":"ficapy","sameAs":["https://github.com/ficapy","mailto:afexcg@gmail.com"],"image":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66","logo":{"@type":"ImageObject","url":"https://www.gravatar.com/avatar/be6268177c26b987066b089d191aea66"}},"url":"https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"}</script>
+    <meta name="description" content="代码中写debug js运行时遇到debug允许暂停，并向外部发送一条通知，此时调试客户端和js运行时会双向通信，执行continue、step into、step over等流程  调试分为调试客户端 和 JS运行时，可以简单理解为CS架构当node --inspect test.js执行js脚本的时候在chrome中打开chrome:&#x2F;&#x2F;inspect，remote target打开即可调试">
 <meta property="og:type" content="blog">
-<meta property="og:title" content="everything进阶教程">
-<meta property="og:url" content="https://www.zoulei.net/2013/10/06/everything_tutorial/index.html">
+<meta property="og:title" content="前端断点的基础理解">
+<meta property="og:url" content="https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/index.html">
 <meta property="og:site_name" content="邹雷">
-<meta property="og:description" content="你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。">
+<meta property="og:description" content="代码中写debug js运行时遇到debug允许暂停，并向外部发送一条通知，此时调试客户端和js运行时会双向通信，执行continue、step into、step over等流程  调试分为调试客户端 和 JS运行时，可以简单理解为CS架构当node --inspect test.js执行js脚本的时候在chrome中打开chrome:&#x2F;&#x2F;inspect，remote target打开即可调试">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://blogimg.ficapy.com/blogimg/everything.jpg">
-<meta property="article:published_time" content="2013-10-06T03:22:00.000Z">
-<meta property="article:modified_time" content="2019-07-26T06:53:30.622Z">
+<meta property="article:published_time" content="2025-01-23T08:00:00.000Z">
+<meta property="article:modified_time" content="2025-01-23T08:25:52.412Z">
 <meta property="article:author" content="ficapy">
-<meta property="article:tag" content="everything函数">
-<meta property="article:tag" content="everything进阶">
-<meta property="article:tag" content="everything高级教程">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://blogimg.ficapy.com/blogimg/everything.jpg">
     
     
         
@@ -249,20 +244,20 @@
         <div class="post-header main-content-wrap text-left">
     
         <h1 class="post-title">
-            everything进阶教程
+            前端断点的基础理解
         </h1>
     
     
         <div class="post-meta">
-    <time datetime="2013-10-06T11:22:00+08:00">
+    <time datetime="2025-01-23T16:00:00+08:00">
 	
-		    10月 06, 2013
+		    1月 23, 2025
     	
     </time>
     
         <span>发布在 </span>
         
-    <a class="category-link" href="/categories/%E4%BC%AA%E6%8A%80%E6%9C%AF/">伪技术</a>
+    <a class="category-link" href="/categories/%E9%9A%8F%E7%AC%94/">随笔</a>
 
 
     
@@ -274,38 +269,13 @@
     
     <div class="post-content markdown">
         <div class="main-content-wrap">
-            <p>你是否只会在everything的搜索栏里面输入几个关键字，之后点击文件大小或者更新时间排列进行筛选找到目标。我一开始也是这样进行操作的，需求不高的时候借助它的高速搜索是完全没问题的。</p>
-<span id="more"></span>
-<p>但是出现了这么一次。我需要确定搜索文件的大小范围和时间范围。问一些使用everything的朋友他们也不知道，在网上也没看到类似的资料，甚至有些网友回答用everything不能做到。很简单的一个问题却困扰了我很久。so，有了这篇文章。本篇博文只是在基础上进行了一些延伸。不建立在修改设置的基础之上。希望能帮到过往的朋友~~</p>
-<p><img src="https://blogimg.ficapy.com/blogimg/everything.jpg"></p>
-<p><span style="color: #ff0000;">首先你得在<a href="http://www.voidtools.com/"><span
-style="color: #ff0000;">everything官网</span></a>下载最新版（beta版本），不要下载稳定版。因为稳定版没有搜索语法帮助文件，不利于查看语法帮助。</span></p>
-<p><span style="color: #ff0000;">其次看帮助文件最好看<span
-style="color: #0000ff;">英文原版</span>，否则会把你坑的不轻~~~~</span></p>
-<p>从截图的帮助文件看出everything提供了3种帮助文件-搜索语法、正则语法、命令行。。。。其中第三种基本可以无视。基本上关于搜索的结果都是调用图形界面。还有些蛋疼的功能估计也没必要听闻~~~例举如下：</p>
-<p>WIN+R 输入CMD                                   #进入命令行界面</p>
-<p>D:                                                                <br>#切换到everything安装盘</p>
-<p>cd \Program Files\Everything       #进入安装目录</p>
-<p>everything.exe -search dropbox #其结果是打开everything搜索dropbox</p>
-<p>加强搜索的帮助是搜索语法和正则，其中正则的帮助文件异常简单。用很简单的语言介绍了几个元字符的用法。如果你有正则表达式的基础在everything上面完全没问题。你会知道什么时候使用正则会让你马上找到你需要的结果（目测要用到正则的情况并不多见）。如果没有，推荐你看正则表达式的<span
-style="color: #0000ff;"><a href="http://www.cnblogs.com/deerchao/archive/2006/08/24/zhengzhe30fengzhongjiaocheng.html">入门教程</a>，<span
-style="color: #000000;">呵呵。30分钟入门，绝对超赞的教程额~~~但是everything对正则的支持稍显薄弱。可用元字符不多，另外<span
-style="color: #ff0000;">无法和函数搭配使用</span>也是一大遗憾。</span></span></p>
-<p>让你的搜索技巧提升到一个高度，其实用函数才是最简单同时也是最有效的办法。函数是个大杀器。例举如下</p>
-<p>要搜索在13年6到9月创建的一个文件名为某某计划的excel文档，文件大小大概在10到30kb之间，如果你直接用”计划<br>.xls”搜索按时间排序无法确定文件大小。单独按照文件大小排序同理~~~~难道只能用windows自带的搜索，忍受那坑爹的速度么，用它的函数功能异常简单，”*计划<br>.xls file: dm:2013/6-2013/9<br>size:10kb-30kb”（加了些无用的东西，方便下面说明）</p>
-<p>但是初看everything的函数语法帮助文件并不好理解，分为了几大类操作符、通配符、宏、修饰符、函数、函数语法、大小语法、大小常数、日期语法、属性常数~~~~~这介绍的确让人纳闷。用刚才的举例来说明</p>
-<p>操作符:大概用的最多的就是空格了，and，or，not很好理解，至于还有2个~~~我也没明白；</p>
-<p>通配符:* ？*.<br>算是填充不确定的位置吧，前2个好像没必要使用，用空格可以代替。第三个指定搜索为文件夹不为文件；</p>
-<p>宏:不明~~~~</p>
-<p>修饰符:增加条件，进一步缩小范围，比如文中的file:<br>代表只显示文件，不显示文件夹；</p>
-<p>函数:基本包含了精确搜索的主要功能了，有关日期，大小，类型，文件属性，文件名长度等，其中日期有2种，文件创建日期和修日期。我一般会使用文件修改日期，因为和everything主界面的更新日期含义一致，如果用dc：…….你可能会怀疑是不是软件出错了~~~~；</p>
-<p>函数语法:无它，就是让你确定函数参数的值和范围；</p>
-<p><span
-style="color: #0000ff;"><strong>特别注明</strong></span>：everything搜索文件名超快，但是基于其他的条件未知，搜索条件可能是从左到右，所以尽量先添加一些限定条件把文件限制的一定的范围，比如文件格式”.txt”等，最后添加函数比如”size:&gt;1mb”，如果你输入”size:&gt;1mb<br>A”等格式~~轻则软件提示停止搜索，重则会导致需强制注销</p>
-<p>–引用自:<a href="http://forum.voidtools.com/viewtopic.php?f=2&amp;t=1640#">http://forum.voidtools.com/viewtopic.php?f=2&amp;t=1640#</a></p>
-<p>后面的大小语法等就没说的必要了，就是函数的参数部分内容。<span
-style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中文你会看到比较坑的地方，比如中文关于日期语法是这样的日期语法：<br>year<br>month/year<br>day/month/year</p>
-<p>英文版是这样的,Date Syntax:<br>year<br>month/year or year/month depending on locale settings<br>day/month/year, month/day/year or year/month/day depending on locale<br>settings<br>…看到区别了吗depending on locale<br>settings，中文帮助或许没跟上。这部分是直接略过的，让我纠结了很长时间，甚至发现了年月格式可以用jan/2013等，顺便吐槽下学好英语在实际应用中的重要性&gt;_&lt;~~~</p>
+            <ol>
+<li>代码中写debug</li>
+<li>js运行时遇到debug允许暂停，并向外部发送一条通知，此时调试客户端和js运行时会双向通信，执行continue、step into、step over等流程</li>
+</ol>
+<p>调试分为调试客户端 和 JS运行时，可以简单理解为CS架构<br>当<code>node --inspect test.js</code>执行js脚本的时候<br>在chrome中打开<code>chrome://inspect</code>，<code>remote target</code>打开即可调试<br><strong>此时，本机的node是server, chrome是client</strong></p>
+<p>假设项目是一个React网站，使用vscode开发<br>最简单的调试方案是，在React代码中添加debug; <strong>此时chrome同时担任server和client</strong><br>另外一种方案是启动一个chrome，指定参数–remote-debugging-pipe(由vscode自动完成)，配合dev模式下的source map，即可以在vscode上断点调试，<strong>此时chrome担任server,vscode担任client</strong></p>
+<h4 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h4><p><a href="https://www.barretlee.com/blog/2019/11/15/vscode-study-03-debug-protocol/">解密 VS Code 断点调试的原理</a></p>
 
             
 
@@ -314,27 +284,17 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
     </div>
     <div id="post-footer" class="post-footer main-content-wrap">
         
-            <div class="post-footer-tags">
-                <span class="text-color-light text-small">标签</span><br/>
-                
-    <a class="tag tag--primary tag--small t-none-link" href="/tags/everything%E5%87%BD%E6%95%B0/" rel="tag">everything函数</a> <a class="tag tag--primary tag--small t-none-link" href="/tags/everything%E8%BF%9B%E9%98%B6/" rel="tag">everything进阶</a> <a class="tag tag--primary tag--small t-none-link" href="/tags/everything%E9%AB%98%E7%BA%A7%E6%95%99%E7%A8%8B/" rel="tag">everything高级教程</a>
-
-            </div>
-        
         
             <div class="post-actions-wrap">
     <nav>
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    
-                <a
-                    class="post-action-btn btn btn--default tooltip--top"
-                    href="/2013/10/12/cputure_image_and_convert_software/"
-                    data-tooltip="Snagit-截图兼图片转换软件"
-                    aria-label="上一篇: Snagit-截图兼图片转换软件"
-                >
-                    
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
                         <i class="fa fa-angle-left" aria-hidden="true"></i>
                         <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
                     </a>
@@ -344,9 +304,9 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
                     
                 <a
                     class="post-action-btn btn btn--default tooltip--top"
-                    href="/2013/10/02/everything_magical_file_search_software/"
-                    data-tooltip="everything--文件搜索神器"
-                    aria-label="下一篇: everything--文件搜索神器"
+                    href="/2025/01/06/how_volta_works/"
+                    data-tooltip="volta如何工作"
+                    aria-label="下一篇: volta如何工作"
                 >
                     
                         <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
@@ -371,7 +331,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"
                     title="分享到 Facebook"
                     aria-label="分享到 Facebook"
                 >
@@ -384,7 +344,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"
                     title="分享到 Twitter"
                     aria-label="分享到 Twitter"
                 >
@@ -397,7 +357,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"
                     title="分享到 Google+"
                     aria-label="分享到 Google+"
                 >
@@ -442,14 +402,11 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
         <ul class="post-actions post-action-nav">
             <li class="post-action">
                 
-                    
-                <a
-                    class="post-action-btn btn btn--default tooltip--top"
-                    href="/2013/10/12/cputure_image_and_convert_software/"
-                    data-tooltip="Snagit-截图兼图片转换软件"
-                    aria-label="上一篇: Snagit-截图兼图片转换软件"
-                >
-                    
+                    <a
+                        class="post-action-btn btn btn--disabled"
+                        aria-hidden="true"
+                    >
+                        
                         <i class="fa fa-angle-left" aria-hidden="true"></i>
                         <span class="hide-xs hide-sm text-small icon-ml">上一篇</span>
                     </a>
@@ -459,9 +416,9 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
                     
                 <a
                     class="post-action-btn btn btn--default tooltip--top"
-                    href="/2013/10/02/everything_magical_file_search_software/"
-                    data-tooltip="everything--文件搜索神器"
-                    aria-label="下一篇: everything--文件搜索神器"
+                    href="/2025/01/06/how_volta_works/"
+                    data-tooltip="volta如何工作"
+                    aria-label="下一篇: volta如何工作"
                 >
                     
                         <span class="hide-xs hide-sm text-small icon-mr">下一篇</span>
@@ -486,7 +443,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                    target="new" href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"
                     title="分享到 Facebook"
                     aria-label="分享到 Facebook"
                 >
@@ -499,7 +456,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                    target="new" href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"
                     title="分享到 Twitter"
                     aria-label="分享到 Twitter"
                 >
@@ -512,7 +469,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
             <li class="post-action hide-xs">
                 <a
                     class="post-action-btn btn btn--default"
-                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                    target="new" href="https://plus.google.com/share?url=https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"
                     title="分享到 Google+"
                     aria-label="分享到 Google+"
                 >
@@ -546,7 +503,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
                     <a
                         class="share-option-btn"
                         target="new"
-                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                        href="https://www.facebook.com/sharer/sharer.php?u=https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"
                         aria-label="分享到 Facebook"
                     >
                         <i class="fab fa-facebook" aria-hidden="true"></i><span>分享到 Facebook</span>
@@ -559,7 +516,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
                     <a
                         class="share-option-btn"
                         target="new"
-                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                        href="https://twitter.com/intent/tweet?text=https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"
                         aria-label="分享到 Twitter"
                     >
                         <i class="fab fa-twitter" aria-hidden="true"></i><span>分享到 Twitter</span>
@@ -572,7 +529,7 @@ style="color: #ff0000;">特别注明，请尽量使用英文帮助</span>。中�
                     <a
                         class="share-option-btn"
                         target="new"
-                        href="https://plus.google.com/share?url=https://www.zoulei.net/2013/10/06/everything_tutorial/"
+                        href="https://plus.google.com/share?url=https://www.zoulei.net/2025/01/23/basics_of_frontend_breakpoints/"
                         aria-label="分享到 Google+"
                     >
                         <i class="fab fa-google-plus" aria-hidden="true"></i><span>分享到 Google+</span>
